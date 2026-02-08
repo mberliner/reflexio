@@ -78,43 +78,25 @@ optimization:
 
 **Beneficio:** Un mismo código puede ejecutar múltiples experimentos simultáneos con parámetros lógicos distintos simplemente pasando diferentes archivos YAML, sin colisiones de variables de entorno globales.
 
-## 5. Mejoras Pendientes
+## 5. Cache de DSPy (Baseline = Optimized)
 
-### Cache de DSPy (Baseline = Optimized)
-
-**Problema Detectado:** Las ejecuciones muestran `baseline_score == optimized_score` consistentemente. DSPy tiene cache activo por defecto en `~/.dspy_cache`. Si el mismo prompt+input se envia al LLM, devuelve resultado cacheado sin llamar al modelo.
+**Problema Detectado:** Las ejecuciones mostraban `baseline_score == optimized_score` consistentemente. DSPy tiene cache activo por defecto en `~/.dspy_cache`. Si el mismo prompt+input se envia al LLM, devuelve resultado cacheado sin llamar al modelo.
 
 **Impacto:** La evaluacion baseline y optimizada usan los mismos ejemplos de validacion. El cache devuelve los mismos resultados, impidiendo ver diferencias reales.
 
-**Solucion Propuesta:**
+**Solucion Implementada:**
 
-1. Agregar atributo `cache` al dataclass `LLMConfig` en `shared/llm/config.py`:
-```python
-max_tokens: int = 1000
-cache: bool = True  # DSPy LM cache (False = resultados frescos)
-```
+Atributo `cache` en `LLMConfig` (`shared/llm/config.py`) con default `False`. Se inyecta solo en `get_dspy_lm()` (no en `litellm.completion()` que no soporta el parametro como bool).
 
-2. Modificar `to_kwargs()` para incluir cache:
-```python
-def to_kwargs(self) -> Dict[str, Any]:
-    kwargs = {
-        "model": self.model,
-        "temperature": self.temperature,
-        "max_tokens": self.max_tokens,
-        "cache": self.cache,
-    }
-    # ... resto igual
-```
+Configuracion por prioridad (mayor a menor):
 
-3. Opcion para desactivar via variable de entorno en `from_env()`:
-```python
-cache=os.getenv("LLM_CACHE", "true").lower() == "true"
-```
+| Nivel | Ubicacion | Ejemplo |
+|---|---|---|
+| YAML (dspy_gepa_poc) | `models.cache` | `cache: true` |
+| Variable de entorno | `.env` | `LLM_CACHE=true` |
+| Default en codigo | `shared/llm/config.py` | `cache: bool = False` |
 
-**Workaround Temporal:** Limpiar cache antes de cada ejecucion:
-```bash
-rm -rf ~/.dspy_cache/*
-```
+Ver `docs/LLM_CONFIG.md` para referencia completa de variables de entorno.
 
 ## 6. Comparativa Directa: DSPy+GEPA vs GEPA Standalone (Email Urgency)
 

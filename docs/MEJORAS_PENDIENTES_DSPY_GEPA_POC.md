@@ -325,59 +325,9 @@ shared/
 ## 17. Control de Cache DSPy
 
 **Prioridad:** Alta
-**Estado:** Pendiente
-**Fecha deteccion:** 2026-02-04
+**Estado:** Completado (2026-02-07)
 
-### Problema
-
-Las ejecuciones muestran `baseline_score == optimized_score` consistentemente. DSPy tiene cache activo por defecto en `~/.dspy_cache`. Si el mismo prompt+input se envia al LLM, devuelve resultado cacheado sin llamar al modelo.
-
-**Impacto:** La evaluacion baseline y optimizada usan los mismos ejemplos de validacion. El cache devuelve los mismos resultados, impidiendo ver diferencias reales entre prompts.
-
-### Workaround Temporal
-
-```bash
-rm -rf ~/.dspy_cache/*
-```
-
-### Solucion Definitiva
-
-#### Archivo 1: `shared/llm/config.py`
-
-```python
-# Agregar atributo cache al dataclass (linea ~33)
-max_tokens: int = 1000
-cache: bool = True  # DSPy LM cache (False = resultados frescos)
-
-# Modificar from_env() para leer LLM_CACHE (linea ~65)
-cache=os.getenv("LLM_CACHE", "true").lower() == "true",
-
-# Agregar cache a to_kwargs() (linea ~85)
-kwargs = {
-    "model": self.model,
-    "temperature": self.temperature,
-    "max_tokens": self.max_tokens,
-    "cache": self.cache,
-}
-```
-
-#### Archivo 2: `docs/LLM_CONFIG.md`
-
-Agregar a tabla de variables de entorno:
-
-| Variable | Valores | Default | Descripcion |
-|----------|---------|---------|-------------|
-| LLM_CACHE | true/false | true | Habilitar cache de respuestas DSPy |
-
-#### Uso
-
-```bash
-# Opcion 1: Via .env
-LLM_CACHE=false
-
-# Opcion 2: Via override en codigo
-config = LLMConfig.from_env("task", cache=False)
-```
+Implementado en `shared/llm/config.py` con default `False`. Configurable via YAML (`models.cache`), variable de entorno (`LLM_CACHE`) o codigo. Solo se inyecta en `get_dspy_lm()`, no en `litellm.completion()`. Ver `docs/LECCIONES_APRENDIDAS.md` seccion 5 y `docs/LLM_CONFIG.md` para detalles.
 
 ---
 

@@ -130,6 +130,10 @@ data:
   csv_filename: "sentiment.csv"
   input_column: "text"
 
+models:
+  temperature: 0.1          # Override de temperatura (opcional)
+  cache: false              # Cache DSPy (default: false, true = cachea respuestas)
+
 optimization:
   max_metric_calls: 50      # Presupuesto manual (Prioritario)
   auto_budget: "light"      # Presupuesto automático (Fallback)

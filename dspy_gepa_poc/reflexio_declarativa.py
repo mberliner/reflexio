@@ -59,10 +59,13 @@ class ReflexioDeclarativa:
         self.task_config = LLMConfig.from_env("task")
         self.reflection_config = LLMConfig.from_env("reflection")
 
-        # Apply temperature from YAML config if specified
+        # Apply overrides from YAML config if specified
         models_config = self.config.raw_config.get('models', {})
         if 'temperature' in models_config:
             self.task_config.temperature = models_config['temperature']
+        if 'cache' in models_config:
+            self.task_config.cache = models_config['cache']
+            self.reflection_config.cache = models_config['cache']
 
         task_model_name = self.task_config.model
         reflection_model_name = self.reflection_config.model
@@ -198,41 +201,46 @@ class ReflexioDeclarativa:
         self.load_data()
         self.create_module_and_metric()
 
-        print_header("STARTING OPTIMIZATION")
+        case_name = self.config.raw_config['case']['name']
+        print_header(f"GEPA Optimization: {case_name}")
 
-        # 0. Calculate Baseline Score (Validation)
-        print("\nCalculating Baseline Score on Validation Set...")
+        print(f"\nDataset: {len(self.trainset)} train, {len(self.valset)} val, {len(self.testset)} test")
         num_threads = self.config.raw_config.get('optimization', {}).get('num_threads', 1)
+
+        # 1. BASELINE
+        print_section("BASELINE PERFORMANCE")
+        print(">> Evaluando prompt inicial en conjunto de validacion...")
         evaluator_val = Evaluate(devset=self.valset, metric=self.metric, num_threads=num_threads, display_progress=True)
         baseline_score = self._to_float_score(evaluator_val(self.student))
-        print(f"Baseline Score: {self._format_score(baseline_score)}")
+        print(f"Precision Baseline: {self._format_score(baseline_score)}")
 
-        # Initialize Optimizer
+        # 2. GEPA OPTIMIZATION
+        print_section("GEPA OPTIMIZATION")
         optimizer = GEPAOptimizer(
             metric=self.metric,
             reflection_lm=self.reflection_lm,
             config=self.config.gepa
         )
 
-        # Run Compilation
         self.optimized_student = optimizer.compile(
             student=self.student,
             trainset=self.trainset,
             valset=self.valset
         )
-        
-        # 3. Calculate Optimized Score (Validation) - to confirm improvement on dev set
-        print("\nCalculating Optimized Score on Validation Set...")
-        optimized_score = self._to_float_score(evaluator_val(self.optimized_student))
-        print(f"Optimized Score (Val): {self._format_score(optimized_score)}")
 
-        # 4. Final Robustness Test (on held-out Test Set)
-        print_header("FINAL ROBUSTNESS TEST (HELD-OUT DATA)")
-        
+        # 3. OPTIMIZED PERFORMANCE
+        print_section("OPTIMIZED PERFORMANCE")
+        print(">> Midiendo desempeno del mejor prompt encontrado...")
+        optimized_score = self._to_float_score(evaluator_val(self.optimized_student))
+        print(f"Precision Optimizada (Val): {self._format_score(optimized_score)}")
+
+        # 4. ROBUSTNESS TEST
+        print_section("ROBUSTNESS TEST")
+        print(">> Verificando generalizacion en conjunto de prueba...")
         if len(self.testset) > 0:
             evaluator_test = Evaluate(devset=self.testset, metric=self.metric, num_threads=num_threads, display_progress=True)
             test_score = self._to_float_score(evaluator_test(self.optimized_student))
-            print(f"\nFinal Test Score: {self._format_score(test_score)}")
+            print(f"Precision Test: {self._format_score(test_score)}")
         else:
             print("No test set available. Skipping robustness test.")
             test_score = 0.0

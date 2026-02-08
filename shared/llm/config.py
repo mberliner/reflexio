@@ -31,7 +31,7 @@ class LLMConfig:
     api_version: str = "2024-02-15-preview"
     temperature: float = 0.7
     max_tokens: int = 1000
-    cache: bool = True  # DSPy LM cache (False = resultados frescos cada llamada)
+    cache: bool = False  # DSPy LM cache (True = cachea respuestas, False = resultados frescos)
 
     @classmethod
     def from_env(cls, model_name: str = "task", **overrides) -> "LLMConfig":
@@ -64,7 +64,7 @@ class LLMConfig:
             api_base=os.getenv("LLM_API_BASE"),
             api_version=os.getenv("LLM_API_VERSION", "2024-02-15-preview"),
         )
-        config.cache = os.getenv("LLM_CACHE", "true").lower() == "true"
+        config.cache = os.getenv("LLM_CACHE", "false").lower() == "true"
 
         # Apply overrides
         for key, value in overrides.items():
