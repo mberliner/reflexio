@@ -51,35 +51,6 @@ el proyecto accesible (quickstart), despues iterar sobre mejoras incrementales.
 
 ---
 
-## Tier 1 - Alto Impacto, Esfuerzo Medio
-
-Reproducibilidad y cobertura de logica critica.
-
-### [T1-1] Reproducibilidad y trazabilidad
-
-- **Objetivo:** Guardar semillas, version de modelos y config usada junto a cada run.
-- **Justificacion:** Sin seeds ni version de modelo, dos ejecuciones del mismo config
-  dan resultados diferentes sin explicacion. Invalida comparaciones y el leaderboard
-  pierde sentido como herramienta de decision.
-- **Alcance:** Snapshot de config + seed + model version en el directorio de cada run.
-- **Esfuerzo:** Medio.
-
-### [T1-2] Tests para adapters (gepa_standalone)
-
-- **Objetivo:** Tests unitarios para los 4 adapters en `gepa_standalone/adapters/`.
-- **Justificacion:** 829 lineas de logica critica con 0% cobertura. El RAG adapter
-  (354 lineas) tiene logica compleja de retry y content filters. Los adapters definen
-  directamente la calidad de la optimizacion GEPA. Un bug aqui produce optimizaciones
-  silenciosamente incorrectas.
-- **Alcance:**
-  - `simple_classifier_adapter.py` (117 lineas)
-  - `simple_extractor_adapter.py` (203 lineas)
-  - `simple_sql_adapter.py` (105 lineas)
-  - `simple_rag_adapter.py` (354 lineas) - prioridad por complejidad
-- **Esfuerzo:** Medio.
-
----
-
 ## Tier 2 - Impacto Medio, Esfuerzo Medio
 
 Mejoras incrementales sobre base ya funcional.
