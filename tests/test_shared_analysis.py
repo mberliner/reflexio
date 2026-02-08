@@ -76,7 +76,7 @@ def test_load_metrics_auto_discovery(tmp_path):
     assert data[0]["Run ID"] == "auto123"
 
 
-def test_load_metrics_merge_multiple(tmp_path):
+def test_load_metrics_merge_multiple(tmp_path, monkeypatch):
     """Combine multiple CSVs when merge=True."""
     project1 = tmp_path / "proj1" / "results" / "experiments"
     project2 = tmp_path / "proj2" / "results" / "experiments"
@@ -94,9 +94,15 @@ def test_load_metrics_merge_multiple(tmp_path):
     csv1.write_text(content_template.format(run_id="run1"), encoding="utf-8")
     csv2.write_text(content_template.format(run_id="run2"), encoding="utf-8")
 
+    # Mock get_shared_root to return our tmp_path
+    monkeypatch.setattr(base, "get_shared_root", lambda: tmp_path)
+
     data = base.load_metrics(csv_path=None, project=None, merge=True)
 
-    assert len(data) >= 2
+    assert len(data) == 2
+    run_ids = {d["Run ID"] for d in data}
+    assert "run1" in run_ids
+    assert "run2" in run_ids
 
 
 def test_parse_float_european():
