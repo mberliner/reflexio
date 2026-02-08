@@ -2,24 +2,22 @@
 
 > **Tipo:** Documento efimero de implementacion
 > **Fecha de revision:** 2026-02-02
-> **Estado:** Fases 1-3 mayormente completadas, Fase 4 (modulos compartidos) pendiente
+> **Estado:** Fases 1-4 completadas (modulos compartidos integrados)
 > **Eliminar despues de:** Implementar todas las mejoras
 
 ---
 
 ## Resumen Ejecutivo
 
-Revision exhaustiva del proyecto `dspy_gepa_poc`. Se identificaron **2 problemas de codigo**, **1 debilidad arquitectonica** y **3 gaps de documentacion**.
+Revision exhaustiva del proyecto `dspy_gepa_poc`. Quedan pendientes mejoras menores de codigo y gaps de documentacion.
 
-**Evaluacion general:** Arquitectura solida con oportunidades de mejora en modularidad y consistencia.
+**Evaluacion general:** Arquitectura solida. Modulos compartidos integrados. Pendiente documentacion y calidad.
 
 ---
 
 ## 1. PROBLEMAS DE CODIGO
 
-### 1.1 Prioridad Media
-
-#### [P5] Magic Numbers para Deteccion de Escala
+### [P5] Magic Numbers para Deteccion de Escala
 
 **Archivo:** `reflexio_declarativa.py:149-150`
 
@@ -46,45 +44,6 @@ print(f"Baseline Score: {format_score(baseline_score)}")
 
 **Archivos a modificar:**
 - `dspy_gepa_poc/reflexio_declarativa.py`
-
----
-
-### 1.2 Prioridad Baja
-
-#### [P9] DataConfig No Utilizada
-
-**Archivo:** `config.py:115-124`
-
-**Problema:** Clase definida pero nunca usada.
-
-```python
-@dataclass
-class DataConfig:
-    train_size: int = 20
-    val_size: int = 10
-    random_seed: int = 42
-```
-
-**Solucion:** Eliminar clase o integrar en AppConfig.
-
-**Archivos a modificar:**
-- `dspy_gepa_poc/config.py:115-124`
-
----
-
-## 2. DEBILIDADES ARQUITECTONICAS
-
-### [A3] Imports Dentro de Funciones
-
-**Archivo:** `reflexio_declarativa.py:139`
-
-```python
-def run(self):
-    ...
-    from dspy.evaluate import Evaluate  # Import dentro de funcion
-```
-
-**Solucion:** Mover al inicio del archivo.
 
 ---
 
@@ -141,12 +100,10 @@ def run(self):
 
 ## 4. CHECKLIST DE IMPLEMENTACION
 
-### Fase 2: Prioridad Media - PARCIALMENTE COMPLETADA (2026-01-17)
-- [ ] [P5] Extraer constantes magic numbers (reflexio_declarativa.py:201,227,252)
+### Codigo
+- [ ] [P5] Extraer constantes magic numbers (reflexio_declarativa.py)
 
-### Fase 3: Prioridad Baja - PARCIALMENTE COMPLETADA (2026-02-02)
-- [ ] [P9] Eliminar DataConfig no utilizada
-- [ ] [A3] Mover imports al inicio (reflexio_declarativa.py:142,191)
+### Documentacion
 - [ ] [D2] Crear docs/YAML_CONFIG_REFERENCE.md
 - [ ] [D4] Actualizar README.md
 
@@ -167,61 +124,28 @@ def run(self):
 
 Analisis de funcionalidades duplicadas entre `dspy_gepa_poc/` y `gepa_standalone/` que pueden extraerse a `shared/`.
 
-### 6.1 Estructura Propuesta
+### 6.1 Estructura Implementada
 
 ```
 shared/
-├── llm/           # Ya existe - Configuracion LLM unificada
+├── llm/           # Configuracion LLM unificada
 ├── validation/    # ConfigValidator base + validacion CSV
-├── logging/       # ResultsLogger unificado
-├── paths/         # Gestion centralizada de rutas
-└── display/       # Formateo terminal
+├── logging/       # Logger CSV compartido (BaseCSVLogger)
+├── paths/         # Gestion centralizada de rutas (BasePaths -> GEPAPaths, DSPyPaths)
+├── display/       # Formateo terminal
+└── analysis/      # Utilidades de analisis (leaderboard, ROI)
 ```
 
-### 6.2 Candidatos Identificados
+### 6.2 Pendiente
 
-#### [S3] shared/paths/ - PRIORIDAD MEDIA
-
-**Estado:** Solo existe en `gepa_standalone/utils/paths.py` (294 lineas)
-
-**Funcionalidades:**
-- Gestion centralizada de rutas del proyecto
-- Soporte para paths legados
-- Creacion automatica de directorios
-
-**Propuesta:**
-- Mover a `shared/paths/` para uso en ambos proyectos
-- Reemplazar `AppConfig` paths en `dspy_gepa_poc/config.py`
-
----
-
-#### [S4] shared/display/ - PRIORIDAD BAJA
-
-**Estado:** Solo existe en `gepa_standalone/utils/display.py` (106 lineas)
-
-**Funcionalidades:**
-- Formateo consistente para terminal
-- Funciones de presentacion de resultados
-
-**Propuesta:**
-- Mover a `shared/display/` para consistencia visual entre proyectos
-
----
-
-### 6.3 Checklist de Implementacion - Modulos Compartidos
-
-#### Fase 4: Modulos Compartidos - EN PROGRESO
-- [ ] [S3] Mover `paths.py` a `shared/paths/`
-- [ ] [S4] Mover `display.py` a `shared/display/`
 - [ ] Agregar tests unitarios para modulos compartidos
 
-### 6.4 Metricas de Duplicacion
+### 6.3 Metricas de Duplicacion Restante
 
-| Categoria | Lineas Duplicadas | Similitud | Estado |
-|-----------|-------------------|-----------|--------|
-| Data loading | ~70 lineas | 60% | Pendiente |
-| Orquestacion | ~200 lineas | 50% | Pendiente |
-| **Total pendiente** | **~270 lineas** | - | - |
+| Categoria | Lineas Duplicadas | Similitud |
+|-----------|-------------------|-----------|
+| Data loading | ~70 lineas | 60% |
+| Orquestacion | ~200 lineas | 50% |
 
 ---
 
@@ -231,8 +155,6 @@ shared/
     Declarative Self-improving Python
 
 ---
-
-## 8. Versionar en GIT
 
 ## 9. Pipeline de CI
 - Test unitarios, lint, seguridad, calidad de codigo
@@ -289,45 +211,6 @@ shared/
 ### [M6] Tests minimos de humo
 - **Objetivo:** Tests basicos de import y ejecucion de un pipeline minimo.
 - **Impacto:** Deteccion temprana de roturas.
-
----
-
-## 16. Mejoras Detectadas en Revision de Codigo (2026-02-04)
-
-- **Reflexio Declarativa**
-- [x] Mover `from dspy.evaluate import Evaluate` al inicio del archivo.
-- [x] Extraer helpers `format_score()` y `to_float_score()` para evitar duplicacion en baseline/optimized/test.
-- [x] Parametrizar `num_threads` en `Evaluate` desde YAML (`optimization.num_threads`).
-
-- **Inferencia**
-- [x] Usar `predictor_type` desde `config_snapshot.yaml` (no hardcodear `"cot"`).
-- [x] Cargar `.env` del proyecto de forma consistente (mismo criterio que `config.py`).
-- [x] Error claro si falta `config_snapshot.yaml`.
-- [x] Eliminar imports no usados.
-
-- **Schema**
-- [x] Permitir `optimization.auto_budget` como alternativa a `optimization.max_metric_calls`.
-- [x] Validar CSV con `signature.outputs` cuando `module.type == "dynamic"`.
-
-- **Data Loader**
-- [x] Warning si hay filas sin `split`.
-- [x] Evitar `.strip()` sobre valores `None`.
-
-- **Config**
-- [x] Eliminar `DataConfig` no usada o integrarla.
-- [x] Usar `yaml.safe_dump` al guardar `config_snapshot.yaml`.
-
-- **Results Logger**
-- [x] Warning si `run_dir` no existe al loggear.
-
----
-
-## 17. Control de Cache DSPy
-
-**Prioridad:** Alta
-**Estado:** Completado (2026-02-07)
-
-Implementado en `shared/llm/config.py` con default `False`. Configurable via YAML (`models.cache`), variable de entorno (`LLM_CACHE`) o codigo. Solo se inyecta en `get_dspy_lm()`, no en `litellm.completion()`. Ver `docs/LECCIONES_APRENDIDAS.md` seccion 5 y `docs/LLM_CONFIG.md` para detalles.
 
 ---
 

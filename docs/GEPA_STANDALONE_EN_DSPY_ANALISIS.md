@@ -101,43 +101,13 @@ test,"Ejemplo 3","neutral",...
 
 ---
 
-## 5. Configuración (YAML)
+## 5. Configuracion (YAML)
 
-El sistema utiliza configuración declarativa validada por esquema.
+El sistema utiliza configuracion declarativa validada por esquema. Los archivos YAML se ubican en `dspy_gepa_poc/configs/`.
 
-### Ejemplo Completo (Modo V2 Dinámico)
+Para la referencia completa de todos los campos disponibles, ver **`docs/YAML_CONFIG_REFERENCE.md`** (seccion 1: DSPy + GEPA).
 
-```yaml
-case:
-  name: "Customer Sentiment Analysis"
-
-module:
-  type: "dynamic"  # Activa el modo Zero-Code
-
-# Definición de la Tarea (Solo requerida si type: dynamic)
-signature:
-  instruction: "Analyze the sentiment of the text. Output positive, negative, or neutral."
-  inputs:
-    - name: "text"
-      desc: "The customer feedback text."
-  outputs:
-    - name: "sentiment"
-      desc: "Classification: positive, negative, neutral."
-    - name: "reasoning"
-      desc: "Why this sentiment was chosen."
-
-data:
-  csv_filename: "sentiment.csv"
-  input_column: "text"
-
-models:
-  temperature: 0.1          # Override de temperatura (opcional)
-  cache: false              # Cache DSPy (default: false, true = cachea respuestas)
-
-optimization:
-  max_metric_calls: 50      # Presupuesto manual (Prioritario)
-  auto_budget: "light"      # Presupuesto automático (Fallback)
-```
+Los ejemplos funcionales se encuentran en `dspy_gepa_poc/configs/`.
 
 ---
 

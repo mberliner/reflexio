@@ -1,8 +1,17 @@
 import csv
 import logging
 import os
+import sys
 import dspy
+from pathlib import Path
 from typing import List, Tuple, Dict, Any
+
+# Add project root to path for shared module access
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from shared.paths import get_dspy_paths
 
 logger = logging.getLogger(__name__)
 
@@ -13,26 +22,18 @@ class CSVDataLoader:
     Separates data (CSV) from logic (Python), enabling the GEPA V1 architecture.
     """
 
-    # Default path (can be overridden via AppConfig.DATASETS_DIR)
-    _DEFAULT_DATASETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datasets")
-
     def __init__(self, datasets_dir: str = None):
         """
         Initialize the loader.
 
         Args:
             datasets_dir: Path to directory containing CSVs.
-                          Defaults to AppConfig.DATASETS_DIR if available, else package/datasets.
+                          Defaults to DSPyPaths.datasets via shared paths.
         """
         if datasets_dir:
             self.datasets_dir = datasets_dir
         else:
-            # Use centralized config if available, else fallback
-            try:
-                from .config import AppConfig
-                self.datasets_dir = AppConfig.DATASETS_DIR
-            except ImportError:
-                self.datasets_dir = self._DEFAULT_DATASETS_DIR
+            self.datasets_dir = str(get_dspy_paths().datasets)
 
     def load_dataset(
         self, 

@@ -34,6 +34,10 @@ Estructura de alto nivel:
 reflexio/
 +-- analyze                 # CLI unificado para análisis
 +-- shared/llm/             # Configuración LLM unificada (LiteLLM)
++-- shared/paths/           # Gestión centralizada de rutas (BasePaths, GEPAPaths, DSPyPaths)
++-- shared/display/         # Formateo consistente para terminal
++-- shared/logging/         # Logger CSV compartido (BaseCSVLogger)
++-- shared/validation/      # Validación de configuración
 +-- shared/analysis/        # Utilidades de análisis compartidas
 +-- dspy_gepa_poc/          # Integración DSPy + GEPA
 +-- gepa_standalone/        # GEPA puro (sin DSPy)

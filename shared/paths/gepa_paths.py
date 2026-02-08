@@ -12,33 +12,20 @@ Benefits:
 - Backward compatibility with legacy paths
 """
 
-import os
 import warnings
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+from .base_paths import BasePaths
 
-class GEPAPaths:
+
+class GEPAPaths(BasePaths):
     """Manages all paths for GEPA standalone system."""
 
-    def __init__(self, root_override: Optional[Path] = None):
-        """
-        Initialize paths manager.
-
-        Args:
-            root_override: Optional override for root directory (useful for testing)
-        """
-        if root_override:
-            self._root = Path(root_override).resolve()
-        else:
-            # Root is the gepa_standalone directory (sibling of shared/)
-            self._root = Path(__file__).parent.parent.parent.resolve() / "gepa_standalone"
-
-    @property
-    def root(self) -> Path:
-        """Root directory of gepa_standalone package."""
-        return self._root
+    @staticmethod
+    def _default_root() -> Path:
+        return Path(__file__).parent.parent.parent.resolve() / "gepa_standalone"
 
     # ==================== INPUT PATHS ====================
 
@@ -125,33 +112,7 @@ class GEPAPaths:
         # If neither exists, return new path
         return new_path
 
-    # ==================== OUTPUT PATHS ====================
-
-    @property
-    def results(self) -> Path:
-        """Base results directory (all outputs)."""
-        path = self._root / "results"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @property
-    def experiments_log(self) -> Path:
-        """Directory for experiment tracking logs."""
-        path = self.results / "experiments"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
-
-    @property
-    def summary_csv(self) -> Path:
-        """Path to main experiments tracking CSV (metricas_optimizacion without prompts)."""
-        return self.experiments_log / "metricas_optimizacion.csv"
-
-    @property
-    def runs(self) -> Path:
-        """Base directory for individual experiment runs."""
-        path = self.results / "runs"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+    # ==================== OUTPUT PATHS (GEPA-specific) ====================
 
     def case_runs_dir(self, case_name: str) -> Path:
         """

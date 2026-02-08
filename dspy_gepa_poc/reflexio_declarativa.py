@@ -26,6 +26,11 @@ from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
 from dspy_gepa_poc.metrics import create_dynamic_metric
 from dspy.evaluate import Evaluate
 from shared.display import print_header, print_section
+from shared.paths import get_dspy_paths
+
+# Scores <= 1.0 are normalized (0.0-1.0), > 1.0 are raw percentages
+NORMALIZED_SCORE_MAX = 1.0
+
 
 class ConfigurationError(Exception):
     """Error de configuracion con mensaje claro para el usuario."""
@@ -41,14 +46,15 @@ class ReflexioDeclarativa:
     def __init__(self, config_path: str):
         print(f"Iniciando Reflexio Declarativa con config: {config_path}")
         self.config = AppConfig(yaml_path=config_path)
-        self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_ts = datetime.now()
+        self.run_id = run_ts.strftime("%Y%m%d_%H%M%S")
         self.logger = ResultsLogger()
-        
-        # Setup output paths using centralized config
-        # Sanitize case name: replace spaces with _, remove parentheses
-        safe_case_name = self.config.raw_config['case']['name'].replace(' ', '_').replace('(', '').replace(')', '')
-        self.results_dir = Path(AppConfig.RESULTS_DIR) / f"{safe_case_name}_{self.run_id}"
-        self.results_dir.mkdir(parents=True, exist_ok=True)
+
+        # Setup output paths using shared paths
+        self.results_dir = get_dspy_paths().run_dir(
+            case_name=self.config.raw_config['case']['name'],
+            timestamp=run_ts
+        )
         print(f"Results will be saved to: {self.results_dir}")
 
     def setup_models(self):
@@ -302,7 +308,7 @@ class ReflexioDeclarativa:
 
     @staticmethod
     def _format_score(score_value: float) -> str:
-        return f"{score_value:.2f}%" if score_value > 1.0 else f"{score_value:.2%}"
+        return f"{score_value:.2f}%" if score_value > NORMALIZED_SCORE_MAX else f"{score_value:.2%}"
 
 
 def main():

@@ -17,6 +17,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from shared.llm import LLMConfig, LLMConnectionError
+from shared.paths import get_dspy_paths
 
 # Load environment variables from project .env
 _PROJECT_DIR = Path(__file__).parent
@@ -61,11 +62,11 @@ class AppConfig:
     Mirroring the 'Universal Optimizer' approach from gepa_standalone.
     """
 
-    # Centralized path configuration (relative to package directory)
-    _PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATASETS_DIR = os.path.join(_PACKAGE_DIR, "datasets")
-    RESULTS_DIR = os.path.join(_PACKAGE_DIR, "results", "runs")
-    EXPERIMENTS_DIR = os.path.join(_PACKAGE_DIR, "results", "experiments")
+    # Centralized path configuration via shared paths
+    _dspy_paths = get_dspy_paths()
+    DATASETS_DIR = str(_dspy_paths.datasets)
+    RESULTS_DIR = str(_dspy_paths.runs)
+    EXPERIMENTS_DIR = str(_dspy_paths.experiments_log)
 
     def __init__(self, yaml_path: Optional[str] = None):
         self.gepa = GEPAConfig()
@@ -109,5 +110,5 @@ class AppConfig:
         """Get the absolute path to the dataset CSV."""
         if "data" not in self.raw_config:
             return ""
-        return os.path.join(self.DATASETS_DIR, self.raw_config["data"]["csv_filename"])
+        return str(get_dspy_paths().dataset(self.raw_config["data"]["csv_filename"]))
 

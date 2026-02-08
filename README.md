@@ -36,7 +36,13 @@ En conjunto, el nombre define un ecosistema donde **la declaración es el objeto
 
 ```
 reflexio/
-├── shared/                  # Modulos compartidos (LLM, validacion, logging)
+├── shared/                  # Modulos compartidos entre proyectos
+│   ├── llm/                 # Configuracion LLM unificada (LiteLLM)
+│   ├── paths/               # Gestion centralizada de rutas (BasePaths, GEPAPaths, DSPyPaths)
+│   ├── display/             # Formateo consistente para terminal
+│   ├── logging/             # Logger CSV compartido (BaseCSVLogger)
+│   ├── validation/          # Validacion de configuracion
+│   └── analysis/            # Utilidades de analisis (leaderboard, ROI)
 ├── dspy_gepa_poc/           # Integracion principal DSPy + GEPA
 │   ├── configs/             # Configuraciones YAML para experimentos
 │   ├── datasets/            # Conjuntos de datos en formato CSV

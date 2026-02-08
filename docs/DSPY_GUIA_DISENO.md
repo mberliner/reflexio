@@ -118,11 +118,6 @@ La metrica dinamica (`dspy_gepa_poc/metrics.py`) soporta 3 modos de comparacion 
 | `normalized` | Elimina puntuacion, normaliza espacios, luego compara | Extraction con formatos variables (moneda, fechas) |
 | `fuzzy` | `SequenceMatcher.ratio() >= threshold` sobre texto normalizado | Near-misses (plurales, variaciones menores) |
 
-Configuracion en YAML (`optimization`):
-```yaml
-optimization:
-  match_mode: "normalized"
-  fuzzy_threshold: 0.85       # solo aplica en modo fuzzy
-```
+Configuracion en YAML: campos `optimization.match_mode` y `optimization.fuzzy_threshold`. Ver **`docs/YAML_CONFIG_REFERENCE.md`** (seccion 1, tabla Optimization) para valores y defaults.
 
 Ver `docs/LECCIONES_APRENDIDAS.md` (Seccion 1) para el diagnostico detallado del problema que motivo esta implementacion.

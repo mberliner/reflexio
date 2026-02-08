@@ -5,7 +5,6 @@ Uses shared logging utilities for consistent formatting across projects.
 """
 
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import Dict, Any
@@ -23,6 +22,7 @@ from shared.logging import (
     fmt_score,
     make_path_relative,
 )
+from shared.paths import get_dspy_paths
 
 logger = logging.getLogger(__name__)
 
@@ -38,26 +38,18 @@ class ResultsLogger(BaseCSVLogger):
     Uses European CSV format (semicolon delimiter, comma decimal).
     """
 
-    # Default path (can be overridden via AppConfig.EXPERIMENTS_DIR)
-    _DEFAULT_EXPERIMENTS_DIR = Path(__file__).parent / "results" / "experiments"
-
     def __init__(self, experiments_dir: str = None):
         """
         Initialize the logger.
 
         Args:
             experiments_dir: Path for experiment logs.
-                             Defaults to AppConfig.EXPERIMENTS_DIR if available.
+                             Defaults to DSPyPaths.experiments_log via shared paths.
         """
         if experiments_dir:
             exp_dir = Path(experiments_dir)
         else:
-            # Use centralized config if available, else fallback
-            try:
-                from .config import AppConfig
-                exp_dir = Path(AppConfig.EXPERIMENTS_DIR)
-            except ImportError:
-                exp_dir = self._DEFAULT_EXPERIMENTS_DIR
+            exp_dir = get_dspy_paths().experiments_log
 
         csv_path = exp_dir / "metricas_optimizacion.csv"
         super().__init__(csv_path=csv_path, column_mapping=STANDARD_COLUMN_MAPPING)
@@ -93,8 +85,7 @@ class ResultsLogger(BaseCSVLogger):
         if run_dir_raw != "N/A" and not Path(run_dir_raw).exists():
             logger.warning("run_dir no existe: %s", run_dir_raw)
         try:
-            from .config import AppConfig
-            results_base = Path(AppConfig.RESULTS_DIR).parent
+            results_base = get_dspy_paths().results
             data["run_dir"] = make_path_relative(run_dir_raw, str(results_base))
         except Exception:
             data["run_dir"] = run_dir_raw
