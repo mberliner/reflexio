@@ -69,6 +69,7 @@ def _collect_framework_versions() -> dict[str, str | None]:
     for pkg in ("dspy", "litellm", "gepa"):
         try:
             from importlib.metadata import version
+
             versions[pkg] = version(pkg)
         except Exception:
             versions[pkg] = None
@@ -155,7 +156,9 @@ class MetadataManager:
                 existing["previous_dataset_hash"] = prev_hash
                 logger.warning(
                     "Dataset hash changed for experiment '%s': %s -> %s",
-                    experiment_name, prev_hash[:12], current_hash[:12],
+                    experiment_name,
+                    prev_hash[:12],
+                    current_hash[:12],
                 )
             existing["dataset_hash"] = current_hash
             data = existing
