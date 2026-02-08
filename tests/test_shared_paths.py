@@ -4,16 +4,9 @@ Unit tests for shared/paths/ module.
 Tests BasePaths (via concrete subclasses), GEPAPaths, and DSPyPaths.
 """
 
-import sys
-from pathlib import Path
 from datetime import datetime
 
 import pytest
-
-# Ensure project root is in path
-_PROJECT_ROOT = Path(__file__).parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
 
 from shared.paths import BasePaths, GEPAPaths, DSPyPaths, get_paths, get_dspy_paths
 
