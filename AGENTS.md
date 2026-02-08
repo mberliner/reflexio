@@ -12,6 +12,7 @@ A continuación se lista la documentación disponible en `docs/`. Cada archivo a
 - **`docs/LLM_CONFIG.md`**: SSOT para configuracion LLM unificada (shared/llm). Variables de entorno, formatos de modelo, uso en codigo.
 - **`docs/YAML_CONFIG_REFERENCE.md`**: SSOT para campos de configuracion YAML de ambos proyectos. Tablas de referencia rapida con tipos, defaults y descripciones.
 - **`docs/ANALISIS_UTILIDADES.md`**: SSOT para utilidades de analisis compartidas (shared/analysis). CLI unificado, leaderboard, ROI, estadisticas.
+- **`docs/METADATA_REPRODUCIBILIDAD.md`**: SSOT para metadata de reproducibilidad en 3 niveles (environment, experiment, run). Seeds, hashes de dataset, versiones de frameworks.
 - **`docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md`**: SSOT para la arquitectura de integracion y metodologia de 3 conjuntos. Analisis detallado de diferencias entre GEPA standalone y DSPy.
 - **`docs/LECCIONES_APRENDIDAS.md`**: Recopilacion de hallazgos criticos, errores comunes (metrica exacta, efecto techo) y comparativas de rendimiento (ingles vs espanol) obtenidos durante la experimentacion.
 
@@ -76,6 +77,7 @@ CI: `.github/workflows/ci.yml` ejecuta pytest + ruff en cada push/PR.
 - **LLM unificado**: shared/llm/ via LiteLLM. Configuracion en `.env` de cada subproyecto. Variables: `LLM_API_KEY`, `LLM_MODEL_TASK`, `LLM_MODEL_REFLECTION`. Ver `docs/LLM_CONFIG.md`.
 - **Validacion temprana**: `BaseConfigValidator` y `CSVValidator` (shared/validation/) validan configs YAML y datasets CSV antes de ejecutar. Fallos antes de gastar tokens.
 - **Logger compartido**: `BaseCSVLogger` (shared/logging/csv_writer.py) para registro consistente de metricas.
+- **MetadataManager**: `MetadataManager` (shared/logging/metadata.py) escribe metadata de reproducibilidad en 3 niveles: environment.json (frameworks), experiment.meta.json (dataset hash, contador), run.json (seed, modelos). Integracion automatica en entry points. Ver `docs/METADATA_REPRODUCIBILIDAD.md`.
 
 ## Invariantes
 
