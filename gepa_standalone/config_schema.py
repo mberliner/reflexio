@@ -14,7 +14,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from shared.validation import BaseConfigValidator, CSVValidator, format_validation_errors
-from gepa_standalone.utils.paths import get_paths
+from shared.paths import get_paths
 
 
 class ConfigValidator(BaseConfigValidator):

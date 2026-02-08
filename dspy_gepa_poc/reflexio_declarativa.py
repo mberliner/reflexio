@@ -25,6 +25,7 @@ from dspy_gepa_poc.results_logger import ResultsLogger
 from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
 from dspy_gepa_poc.metrics import create_dynamic_metric
 from dspy.evaluate import Evaluate
+from shared.display import print_header, print_section
 
 class ConfigurationError(Exception):
     """Error de configuracion con mensaje claro para el usuario."""
@@ -197,9 +198,7 @@ class ReflexioDeclarativa:
         self.load_data()
         self.create_module_and_metric()
 
-        print("\n" + "="*50)
-        print("STARTING OPTIMIZATION")
-        print("="*50)
+        print_header("STARTING OPTIMIZATION")
 
         # 0. Calculate Baseline Score (Validation)
         print("\nCalculating Baseline Score on Validation Set...")
@@ -228,9 +227,7 @@ class ReflexioDeclarativa:
         print(f"Optimized Score (Val): {self._format_score(optimized_score)}")
 
         # 4. Final Robustness Test (on held-out Test Set)
-        print("\n" + "="*50)
-        print("FINAL ROBUSTNESS TEST (HELD-OUT DATA)")
-        print("="*50)
+        print_header("FINAL ROBUSTNESS TEST (HELD-OUT DATA)")
         
         if len(self.testset) > 0:
             evaluator_test = Evaluate(devset=self.testset, metric=self.metric, num_threads=num_threads, display_progress=True)

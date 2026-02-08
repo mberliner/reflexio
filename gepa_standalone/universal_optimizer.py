@@ -36,9 +36,9 @@ from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from gepa_standalone.adapters.simple_rag_adapter import SimpleRAGAdapter
 from gepa_standalone.data.data_loader import load_gepa_data
 from gepa_standalone.core.llm_factory import create_reflection_lm_function, get_reflection_config, get_task_config
-from gepa_standalone.utils.display import print_header, print_section, print_summary, print_detailed_results
+from shared.display import print_header, print_section, print_summary, print_detailed_results
 from gepa_standalone.utils.results_logger import save_run_details, log_experiment_result
-from gepa_standalone.utils.paths import get_paths
+from shared.paths import get_paths
 from gepa_standalone.config import Config
 
 

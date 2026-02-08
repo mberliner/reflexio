@@ -31,6 +31,7 @@ class LLMConfig:
     api_version: str = "2024-02-15-preview"
     temperature: float = 0.7
     max_tokens: int = 1000
+    cache: bool = True  # DSPy LM cache (False = resultados frescos cada llamada)
 
     @classmethod
     def from_env(cls, model_name: str = "task", **overrides) -> "LLMConfig":
@@ -63,6 +64,7 @@ class LLMConfig:
             api_base=os.getenv("LLM_API_BASE"),
             api_version=os.getenv("LLM_API_VERSION", "2024-02-15-preview"),
         )
+        config.cache = os.getenv("LLM_CACHE", "true").lower() == "true"
 
         # Apply overrides
         for key, value in overrides.items():
@@ -76,7 +78,8 @@ class LLMConfig:
         Convert config to kwargs dict for LLM calls.
 
         Returns:
-            Dictionary with non-None values suitable for dspy.LM or litellm.completion.
+            Dictionary with non-None values suitable for litellm.completion.
+            DSPy-specific params (cache) are added in get_dspy_lm().
         """
         kwargs = {
             "model": self.model,
@@ -103,7 +106,9 @@ class LLMConfig:
             dspy.LM instance configured with this config.
         """
         import dspy
-        return dspy.LM(**self.to_kwargs())
+        kwargs = self.to_kwargs()
+        kwargs["cache"] = self.cache
+        return dspy.LM(**kwargs)
 
     def get_lm_function(self) -> Callable[[str], str]:
         """

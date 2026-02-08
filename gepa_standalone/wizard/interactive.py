@@ -13,7 +13,7 @@ from datetime import datetime
 
 import yaml
 
-from gepa_standalone.utils.paths import get_paths
+from shared.paths import get_paths
 
 
 class InteractiveWizard:

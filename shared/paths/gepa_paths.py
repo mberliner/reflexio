@@ -32,8 +32,8 @@ class GEPAPaths:
         if root_override:
             self._root = Path(root_override).resolve()
         else:
-            # Root is the gepa_standalone directory (parent of utils/)
-            self._root = Path(__file__).parent.parent.resolve()
+            # Root is the gepa_standalone directory (sibling of shared/)
+            self._root = Path(__file__).parent.parent.parent.resolve() / "gepa_standalone"
 
     @property
     def root(self) -> Path:

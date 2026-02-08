@@ -66,6 +66,7 @@ LLM_MODEL_REFLECTION=azure/gpt-4o
 | `LLM_API_VERSION` | Version de API Azure | No (default: 2024-02-15-preview) |
 | `LLM_MODEL_TASK` | Modelo para tareas (estudiante) | No (default: azure/gpt-4.1-mini) |
 | `LLM_MODEL_REFLECTION` | Modelo para reflexion (profesor) | No (default: azure/gpt-4o) |
+| `LLM_CACHE` | Cache de respuestas DSPy (true/false). False = llamada fresca siempre | No (default: true) |
 
 ## Formato de Modelos
 

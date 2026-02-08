@@ -25,7 +25,7 @@ from shared.logging import (
     make_path_relative,
 )
 
-from gepa_standalone.utils.paths import get_paths
+from shared.paths import get_paths
 
 
 def save_run_details(

@@ -12,6 +12,7 @@ if __name__ == "__main__" and __package__ is None:
         sys.path.insert(0, str(project_root))
 
 from dspy_gepa_poc import LLMConfig, DynamicModuleFactory
+from shared.display import print_header
 
 def run_production_inference(run_dir_path: str):
     # 1. Cargar Variables de Entorno (API Keys)
@@ -63,9 +64,7 @@ def run_production_inference(run_dir_path: str):
         print("Advertencia: No se encontró optimized_program.json, usando modelo base sin optimizar.")
 
     # 6. Ejecutar Inferencia (Loop Interactivo)
-    print("\n" + "="*50)
-    print("LISTO PARA ANÁLISIS (Escribe 'salir' para terminar)")
-    print("="*50)
+    print_header("LISTO PARA ANALISIS (Escribe 'salir' para terminar)")
     
     # Detectar nombre del campo de entrada (generalmente 'text')
     input_fields = raw_config['signature']['inputs']

@@ -5,6 +5,7 @@ GEPA optimizer integration for DSPy programs.
 import dspy
 from typing import List, Callable, Optional
 from .config import GEPAConfig
+from shared.display import print_section
 
 
 class GEPAOptimizer:
@@ -93,7 +94,7 @@ class GEPAOptimizer:
 
         # Print statistics if available
         if self.config.track_stats and hasattr(self.optimizer, 'detailed_results'):
-            print("\n=== GEPA Optimization Statistics ===")
+            print_section("GEPA Optimization Statistics")
             self._print_stats()
 
         return optimized_program

@@ -18,7 +18,7 @@ Uso:
 import os
 import csv
 from typing import Tuple, List, Dict, Any
-from gepa_standalone.utils.paths import get_paths
+from shared.paths import get_paths
 
 
 def load_gepa_data(
