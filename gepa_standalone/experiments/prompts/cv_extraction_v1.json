@@ -1,0 +1,3 @@
+{
+    "system_prompt": "Extrae los siguientes campos del CV:\n- nombre\n- email\n- años_experiencia\n- skills\n- educacion_principal\n\nRetorna como JSON."
+}

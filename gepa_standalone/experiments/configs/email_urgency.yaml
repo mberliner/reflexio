@@ -1,0 +1,40 @@
+# GEPA Universal Optimizer Configuration
+# Caso: Email Urgency Classification
+
+case:
+  name: "email_urgency"
+  title: "Email Urgency"
+  description: "Clasificacion de urgencia de emails corporativos"
+
+adapter:
+  type: "classifier"
+  valid_classes:
+    - "urgent"
+    - "normal"
+    - "low"
+
+data:
+  csv_filename: "email_urgency.csv"
+  input_column: "text"
+  output_columns:
+    - "urgency"
+
+models:
+  temperature: 0.1
+
+prompt:
+  filename: "email_urgency_v1.json"
+
+adapter:
+  type: "classifier"
+  valid_classes:
+    - "urgent"
+    - "normal"
+    - "low"
+  max_text_length: 1000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 50
+  skip_perfect_score: true
+  display_progress_bar: true

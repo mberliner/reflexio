@@ -1,0 +1,27 @@
+# GEPA Universal Optimizer Configuration
+# Caso: RAG (Retrieval-Augmented Generation) Optimization
+
+case:
+  name: "rag_optimization"
+  title: "RAG Optimization"
+  description: "Optimización de respuestas basadas en contexto usando LLM-as-a-Judge"
+
+adapter:
+  type: "rag"
+  rag_context_max_length: 1500
+  rag_max_positive_examples: 2
+
+data:
+  csv_filename: "rag_qa.csv"
+  input_column: "question"
+  output_columns:
+    - "context"
+    - "answer"
+
+prompt:
+  filename: "rag.json"
+
+optimization:
+  max_metric_calls: 60
+  skip_perfect_score: true
+  display_progress_bar: true

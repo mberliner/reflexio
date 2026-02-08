@@ -1,0 +1,38 @@
+case:
+  name: "Order Extraction (Hard - English - Zero-Shot)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Extract order information from the text. Identify customer name, product, quantity, date, and amount."
+  inputs:
+    - name: "text"
+      desc: "The order description text to extract information from."
+  outputs:
+    - name: "customer_name"
+      desc: "The full name of the customer."
+    - name: "product"
+      desc: "The product ordered."
+    - name: "quantity"
+      desc: "The quantity ordered (as a number)."
+    - name: "date"
+      desc: "The order date (in the same format as mentioned in the text)."
+    - name: "amount"
+      desc: "The total amount paid (including currency symbol)."
+
+data:
+  csv_filename: "extraction_hard.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 1000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 30
+  auto_budget: "medium"
+  use_few_shot: false
+  few_shot_count: 3
+  ignore_in_metric: []
+  match_mode: "normalized"

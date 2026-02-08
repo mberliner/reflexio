@@ -1,0 +1,3 @@
+{
+    "system_prompt": "Clasifica la urgencia del siguiente email en: urgent, normal o low.\nResponde solo con el nivel de urgencia."
+}

@@ -1,0 +1,34 @@
+case:
+  name: "Email Urgency Classification (Few-Shot)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Clasifica la urgencia del siguiente email en: urgent, normal o low.\nResponde solo con el nivel de urgencia."
+  inputs:
+    - name: "text"
+      desc: "El texto del email a clasificar."
+  outputs:
+    - name: "urgency"
+      desc: "El nivel de urgencia del email (urgent, normal, low)."
+
+data:
+  csv_filename: "email_urgency.csv"
+  input_column: "text"
+
+models:
+  temperature: 0.1
+
+adapter:
+  max_text_length: 1000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 50
+  auto_budget: "medium"
+  predictor_type: "predict"
+  use_few_shot: true
+  few_shot_count: 3
+  match_mode: "exact"
+  ignore_in_metric: []

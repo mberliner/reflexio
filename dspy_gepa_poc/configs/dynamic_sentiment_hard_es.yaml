@@ -1,0 +1,31 @@
+case:
+  name: "Dynamic Sentiment Analysis (Hard Mode - Spanish)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Analiza el sentimiento del texto. Presta mucha atención al sarcasmo, la ironía, las dobles negaciones y el contexto. Salida: positivo, negativo o neutral."
+  inputs:
+    - name: "text"
+      desc: "El texto a analizar."
+  outputs:
+    - name: "sentiment"
+      desc: "La clasificación del sentimiento (positivo, negativo, neutral)."
+    - name: "reasoning"
+      desc: "Explicación detallada del razonamiento detrás del sentimiento."
+
+data:
+  csv_filename: "sentiment_hard_es.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 1000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 30
+  auto_budget: "medium"
+  use_few_shot: true
+  few_shot_count: 3
+  ignore_in_metric: ["reasoning"]

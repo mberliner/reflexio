@@ -155,13 +155,12 @@ cython_debug/
 .claude/
 .DS_Store
 
-# Temporary results (optional, adjust as needed)
+# Temporary files
 *.bak
-runs/
-results/
-configs/
-datasets/
-prompts/
+
+# Results (generated outputs, regenerable with ./analyze and experiment runs)
+**/results/
+shared/analysis/output/
+
+# Presentation
 gepa_standalone/GEPA-Optimizacion-Automatica-de-Prompts-con-Reflexion.pptx
-shared/analysis/output/leaderboard.csv
-shared/analysis/output/leaderboard.md

@@ -1,0 +1,36 @@
+# GEPA Universal Optimizer Configuration
+# Caso: CV Data Extraction
+
+case:
+  name: "cv_extraction"
+  title: "CV Extraction"
+  description: "Extraccion estructurada de datos de CVs"
+
+adapter:
+  type: "extractor"
+  required_fields:
+    - "nombre"
+    - "email"
+    - "años_experiencia"
+    - "skills"
+    - "educacion_principal"
+  max_text_length: 1000
+  extractor_max_positive_examples: 0
+
+data:
+  csv_filename: "cv_extraction.csv"
+  input_column: "text"
+  output_columns:
+    - "nombre"
+    - "email"
+    - "años_experiencia"
+    - "skills"
+    - "educacion_principal"
+
+prompt:
+  filename: "cv_extraction_v1.json"
+
+optimization:
+  max_metric_calls: 40
+  skip_perfect_score: true
+  display_progress_bar: true

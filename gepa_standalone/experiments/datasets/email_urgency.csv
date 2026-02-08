@@ -1,0 +1,31 @@
+split,text,urgency
+train,"URGENTE: ¡Servidor caído! Producción afectada. ¡Necesitamos acción inmediata!",urgent
+train,"CRÍTICO: Brecha de seguridad detectada en sistema de pagos. ¡Actúa AHORA!",urgent
+train,"Caída del sistema - todos los servicios fuera de línea. Clientes llamando. ¡Por favor escalar ASAP!",urgent
+train,"Hola, cuando tengas tiempo, podrías revisar el reporte trimestral? Sin prisa.",low
+train,"FYI: Nueva máquina de café instalada en la sala de descanso. ¡Disfrútala!",low
+train,"Artículo interesante sobre tendencias de la industria. Vale la pena leerlo cuando tengas tiempo.",low
+train,"Recordatorio de reunión: Mañana 10am, por favor confirma asistencia antes del fin del día.",normal
+train,"Por favor envía tu hoja de horas antes del viernes. Procedimiento mensual estándar.",normal
+train,"Sesión de planificación de presupuesto la próxima semana. Prepara estimados del Q4.",normal
+train,"Importante: Documentos de revisión anual necesitan completarse. Fecha límite el próximo lunes.",normal
+train,"Alta prioridad: Discusión de renovación de contrato. Agendemos algo esta semana.",normal
+train,"FYI - Cliente mencionó que están considerando a la competencia. Quizás quieras hacer seguimiento.",normal
+train,"Necesito tu opinión sobre la propuesta. Cliente espera respuesta pronto.",normal
+train,"Cuando tengas un momento, por favor revisa los logs de errores. Parece haber un patrón.",low
+train,"Alerta automática: Espacio en disco al 85% en servidor DB-01. Se recomienda monitorear.",normal
+val,"ASAP: Reunión de junta directiva en 1 hora, ¡falta la presentación!",urgent
+val,"Aviso: Nueva política efectiva el próximo mes. Detalles adjuntos.",low
+val,"Recordatorio: Reportes de gastos vencen al final de la semana.",normal
+val,"Importante: Revisar contrato antes del fin del día para reunión de mañana.",urgent
+val,"FYI - Respaldo de datos falló anoche. TI investigando.",normal
+val,"Solo revisando si tuviste tiempo de ver mi email de la semana pasada?",low
+val,"Queja de cliente escalada. Se espera respuesta en 24 horas.",normal
+val,"Pregunta rápida cuando tengas 5 minutos: ¿Cómo resetear contraseña?",low
+val,"Mantenimiento de servidor esta noche 2am-4am. Se espera interrupción.",normal
+val,"URGENTE: Sistema de pagos mostrando errores. ¡Múltiples transacciones fallando!",urgent
+test,"Alerta roja: ¡Base de datos corrupta! ¡Se necesita restauración de respaldo inmediatamente!",urgent
+test,"Compartiendo algunas ideas sobre la estrategia Q3. Avísame qué piensas.",low
+test,"Por favor completa el módulo de capacitación antes de fin de mes. Requerido para cumplimiento.",normal
+test,"Bug crítico en producción. Usuarios reportando fallas de login. ¡Necesitamos arreglarlo ASAP!",urgent
+test,"Recordatorio amable: Evento de integración del equipo el próximo viernes. Confirma si asistes.",low

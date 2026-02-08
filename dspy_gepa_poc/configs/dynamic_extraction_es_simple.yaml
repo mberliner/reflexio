@@ -1,0 +1,38 @@
+case:
+  name: "Order Extraction (Hard - Spanish - Zero-Shot)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Extrae la informacion del pedido del texto. Identifica el nombre del cliente, producto, cantidad, fecha y monto."
+  inputs:
+    - name: "text"
+      desc: "El texto de descripcion del pedido del cual extraer informacion."
+  outputs:
+    - name: "customer_name"
+      desc: "El nombre completo del cliente."
+    - name: "product"
+      desc: "El producto ordenado."
+    - name: "quantity"
+      desc: "La cantidad ordenada (como numero)."
+    - name: "date"
+      desc: "La fecha del pedido (en el mismo formato mencionado en el texto)."
+    - name: "amount"
+      desc: "El monto total pagado (incluyendo simbolo de moneda)."
+
+data:
+  csv_filename: "extraction_hard_es.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 1000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 30
+  auto_budget: "medium"
+  use_few_shot: false
+  few_shot_count: 3
+  ignore_in_metric: []
+  match_mode: "normalized"

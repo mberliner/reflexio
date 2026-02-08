@@ -1,0 +1,26 @@
+case:
+  name: "Dynamic Sentiment Analysis (Hard Mode)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Analyze the sentiment of the text. Pay close attention to sarcasm, irony, double negatives, and context. Output positive, negative, or neutral."
+  inputs:
+    - name: "text"
+      desc: "The text to analyze."
+  outputs:
+    - name: "sentiment"
+      desc: "The sentiment classification (positive, negative, neutral)."
+
+data:
+  csv_filename: "sentiment_hard.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 1000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 30
+  auto_budget: "medium"

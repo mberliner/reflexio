@@ -1,0 +1,109 @@
+split,text,nombre,email,años_experiencia,skills,educacion_principal
+train,"JUAN PÉREZ
+juan.perez@email.com
+
+EXPERIENCIA: 5 años en desarrollo de software
+
+HABILIDADES:
+• Python
+• Machine Learning
+• Docker
+• AWS
+
+EDUCACIÓN:
+Licenciatura en Ciencias de la Computación, UNAM, 2018",Juan Pérez,juan.perez@email.com,5,"Python, Machine Learning, Docker, AWS","Licenciatura Ciencias Computación, UNAM"
+train,"María González (maria.g@company.com) es una desarrolladora senior con más de 8 años de experiencia en desarrollo web. Competente en React, Node.js y AWS. Graduada de la Universidad de Madrid con Maestría en Ingeniería en Computación en 2015.",María González,maria.g@company.com,8,"React, Node.js, AWS","Maestría Ingeniería Computación, Universidad Madrid"
+train,"ROBERTO CHEN
+Email: r.chen@techcorp.com
+
+Historial Laboral: Ingeniero de Software (2019-2024)
+Habilidades Técnicas: Java, Spring Boot, Kubernetes, PostgreSQL
+
+Educación: Licenciatura en Ciencias en Tecnología de la Información
+Universidad de California, Berkeley",Roberto Chen,r.chen@techcorp.com,5,"Java, Spring Boot, Kubernetes, PostgreSQL","Licenciatura Ciencias Tecnología Información, UC Berkeley"
+train,"Sara Williams | sarah.w@devmail.com
+
+Resumen Profesional:
+- 10 años exp en ciencia de datos
+- Experta en Python, R, TensorFlow, scikit-learn
+
+Educación:
+- PhD Ciencia de Datos, Stanford (2013)",Sara Williams,sarah.w@devmail.com,10,"Python, R, TensorFlow, scikit-learn","PhD Ciencia de Datos, Stanford"
+train,"AHMED HASSAN
+Contacto: ahmed.hassan@email.net
+
+EXPERIENCIA PROFESIONAL
+Ingeniero DevOps - 2021 a Presente (3 años)
+Responsable de pipelines CI/CD usando Jenkins y Docker.
+Desplegó aplicaciones en Kubernetes y administró infraestructura cloud con Terraform.
+
+EDUCACIÓN
+MSc Ciencias de la Computación, Universidad de Toronto, 2020",Ahmed Hassan,ahmed.hassan@email.net,3,"Jenkins, Docker, Kubernetes, Terraform","MSc Ciencias Computación, Universidad Toronto"
+train,"Jennifer López
+j.lopez@marketing.com
+
+Experiencia: Gerente de Marketing desde 2017 (7 años)
+Competencias clave: SEO, Google Analytics, Estrategia de Contenido, Redes Sociales
+
+Formación Académica: Licenciatura Marketing, NYU",Jennifer López,j.lopez@marketing.com,7,"SEO, Google Analytics, Estrategia de Contenido, Redes Sociales","Licenciatura Marketing, NYU"
+train,"Miguel Brown <m.brown@consultant.com>
+
+Historial de Carrera:
+• Consultor Senior (2020-2024): 4 años
+• Analista (2018-2020): 2 años
+Total: 6 años
+
+Habilidades: Excel, Tableau, SQL, Power BI
+
+Educación: MBA, Harvard Business School, 2018",Miguel Brown,m.brown@consultant.com,6,"Excel, Tableau, SQL, Power BI","MBA, Harvard Business School"
+train,"Emma Watson
+emma.watson@design.io
+
+Diseñadora UX | 4 años de experiencia
+Habilidades: Figma, Adobe XD, Investigación de Usuarios, Prototipado
+Título: BFA Diseño Gráfico, RISD",Emma Watson,emma.watson@design.io,4,"Figma, Adobe XD, Investigación de Usuarios, Prototipado","BFA Diseño Gráfico, RISD"
+val,"David Kim
+davidkim@techstart.com
+
+Desarrollador Full Stack - 6 años
+Stack Tecnológico: JavaScript, React, Node.js, MongoDB, GraphQL
+
+Educación: Licenciatura Ingeniería de Software, Georgia Tech (2018)",David Kim,davidkim@techstart.com,6,"JavaScript, React, Node.js, MongoDB, GraphQL","Licenciatura Ingeniería Software, Georgia Tech"
+val,"Lisa Anderson | lisa.a@sales.com
+
+Ejecutiva de Ventas con más de 12 años en ventas B2B de software. Experiencia en CRM (Salesforce), Generación de Leads y Negociación de Contratos. MBA de Wharton, 2011.",Lisa Anderson,lisa.a@sales.com,12,"Salesforce, Generación de Leads, Negociación de Contratos","MBA, Wharton"
+val,"THOMAS MILLER
+thomas.miller@cloudeng.com
+
+Arquitecto Cloud (2019-presente)
+Años de Experiencia: 5
+Tecnologías: AWS, Azure, GCP, Terraform, Ansible
+
+Formación: MS Computación en la Nube, Universidad Carnegie Mellon",Thomas Miller,thomas.miller@cloudeng.com,5,"AWS, Azure, GCP, Terraform, Ansible","MS Computación Nube, Carnegie Mellon"
+val,"Sophia Rodríguez
+Contacto: sophia.r@biotech.org
+
+Científica de Investigación - Bioinformática
+Experiencia: 9 años (2015-2024)
+Habilidades: Python, R, BioConductor, Análisis NGS
+
+PhD Biología Computacional, Johns Hopkins, 2015",Sophia Rodríguez,sophia.r@biotech.org,9,"Python, R, BioConductor, Análisis NGS","PhD Biología Computacional, Johns Hopkins"
+val,"James Taylor <j.taylor@finance.net>
+
+Analista Cuantitativo | 7 años
+Competente en: Python, C++, Modelado Financiero, Análisis de Riesgo
+
+Educado en: MSc Ingeniería Financiera, Universidad de Columbia (2017)",James Taylor,j.taylor@finance.net,7,"Python, C++, Modelado Financiero, Análisis de Riesgo","MSc Ingeniería Financiera, Universidad Columbia"
+test,"Anna Kowalski
+📧 anna.kowalski@pm.com
+
+Gerente de Producto @ TechCorp
+🕐 8 años en gestión de producto
+
+Habilidades Clave: Agile, JIRA, Planificación de Roadmap, Historias de Usuario
+
+🎓 MBA Gestión de Producto, Northwestern Kellogg, 2016",Anna Kowalski,anna.kowalski@pm.com,8,"Agile, JIRA, Planificación de Roadmap, Historias de Usuario","MBA Gestión de Producto, Northwestern Kellogg"
+test,"Carlos Méndez | carlos@dev.mx | Dev Backend | 5a exp
+Stack: Go, Microservicios, gRPC, Kubernetes
+Lic. CS, UNAM 2019",Carlos Méndez,carlos@dev.mx,5,"Go, Microservicios, gRPC, Kubernetes","Lic. CS, UNAM"
+test,"La Dra. Elena Petrov (elena.petrov@research.edu) ha dedicado 15 años a la investigación en inteligencia artificial. Su experiencia abarca Aprendizaje Profundo, NLP, Visión por Computadora y Aprendizaje por Refuerzo. Obtuvo su PhD en Inteligencia Artificial del MIT en 2009.",Elena Petrov,elena.petrov@research.edu,15,"Aprendizaje Profundo, NLP, Visión por Computadora, Aprendizaje por Refuerzo","PhD Inteligencia Artificial, MIT"
