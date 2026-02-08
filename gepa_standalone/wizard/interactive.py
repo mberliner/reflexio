@@ -7,9 +7,9 @@ Guides users through creating YAML configuration files via interactive questions
 import csv
 import json
 import re
-from pathlib import Path
-from typing import Dict, List, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -19,7 +19,7 @@ from shared.paths import get_paths
 class InteractiveWizard:
     """Interactive wizard for generating GEPA config YAML."""
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> dict[str, Any]:
         """
         Execute wizard and return config dict.
 
@@ -62,7 +62,7 @@ class InteractiveWizard:
         print("\nEste wizard te guiara para crear una configuracion YAML que podras")
         print("reutilizar en futuras ejecuciones.\n")
 
-    def _ask_case_metadata(self) -> Dict[str, str]:
+    def _ask_case_metadata(self) -> dict[str, str]:
         """Ask for case name and title."""
         print("-" * 70)
         print("1. METADATA DEL CASO")
@@ -72,7 +72,7 @@ class InteractiveWizard:
             name = input(">> Nombre del caso (snake_case, sin espacios): ").strip()
 
             # Validate: only alphanumeric and underscores
-            if not re.match(r'^[a-z0-9_]+$', name):
+            if not re.match(r"^[a-z0-9_]+$", name):
                 print("   [ERROR] Solo letras minusculas, numeros y guiones bajos (_)")
                 continue
 
@@ -111,7 +111,7 @@ class InteractiveWizard:
             else:
                 print("   [ERROR] Opcion invalida. Ingresa 1, 2 o 3.")
 
-    def _ask_adapter_config(self, adapter_type: str) -> Dict[str, Any]:
+    def _ask_adapter_config(self, adapter_type: str) -> dict[str, Any]:
         """Ask for adapter-specific parameters."""
         print("\n" + "-" * 70)
         print(f"3. PARAMETROS DEL ADAPTADOR ({adapter_type.upper()})")
@@ -157,7 +157,7 @@ class InteractiveWizard:
 
         return adapter_config
 
-    def _ask_data_config(self, adapter_type: str) -> Dict[str, Any]:
+    def _ask_data_config(self, adapter_type: str) -> dict[str, Any]:
         """Ask for CSV filename and columns."""
         print("\n" + "-" * 70)
         print("4. DATOS")
@@ -187,7 +187,7 @@ class InteractiveWizard:
 
             # Preview CSV structure
             print("\nLeyendo estructura del CSV...")
-            with open(csv_path, 'r', encoding='utf-8') as f:
+            with open(csv_path, encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 headers = reader.fieldnames
 
@@ -222,14 +222,14 @@ class InteractiveWizard:
         return {
             "csv_filename": csv_filename,
             "input_column": input_col,
-            "output_columns": output_columns
+            "output_columns": output_columns,
         }
 
     def _preview_data(self, csv_path: Path):
         """Preview dataset split counts."""
         counts = {"train": 0, "val": 0, "test": 0}
 
-        with open(csv_path, 'r', encoding='utf-8') as f:
+        with open(csv_path, encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 split = row.get("split", "").lower()
@@ -241,7 +241,7 @@ class InteractiveWizard:
         print(f"  Val:   {counts['val']} ejemplos")
         print(f"  Test:  {counts['test']} ejemplos")
 
-    def _ask_prompt_config(self) -> Dict[str, str]:
+    def _ask_prompt_config(self) -> dict[str, str]:
         """Ask for prompt JSON filename."""
         print("\n" + "-" * 70)
         print("5. PROMPT INICIAL")
@@ -271,11 +271,11 @@ class InteractiveWizard:
 
             # Validate JSON and preview
             try:
-                with open(prompt_path, 'r', encoding='utf-8') as f:
+                with open(prompt_path, encoding="utf-8") as f:
                     prompt_data = json.load(f)
 
                 if "system_prompt" in prompt_data:
-                    print(f"\nPrompt cargado:")
+                    print("\nPrompt cargado:")
                     preview = prompt_data["system_prompt"][:150]
                     if len(prompt_data["system_prompt"]) > 150:
                         preview += "..."
@@ -291,7 +291,7 @@ class InteractiveWizard:
 
         return {"filename": prompt_filename}
 
-    def _ask_optimization_params(self) -> Dict[str, Any]:
+    def _ask_optimization_params(self) -> dict[str, Any]:
         """Ask for GEPA optimization parameters."""
         print("\n" + "-" * 70)
         print("6. PARAMETROS DE OPTIMIZACION")
@@ -299,7 +299,9 @@ class InteractiveWizard:
 
         # max_metric_calls
         while True:
-            max_calls_str = input(">> Maximo de llamadas a metrica (40-150, recomendado 50): ").strip()
+            max_calls_str = input(
+                ">> Maximo de llamadas a metrica (40-150, recomendado 50): "
+            ).strip()
 
             try:
                 max_calls = int(max_calls_str)
@@ -311,7 +313,9 @@ class InteractiveWizard:
                 print("   [ERROR] Ingresa un numero entero")
 
         # skip_perfect_score
-        skip_str = input(">> Detener si se alcanza score perfecto? (s/n, default: s): ").strip().lower()
+        skip_str = (
+            input(">> Detener si se alcanza score perfecto? (s/n, default: s): ").strip().lower()
+        )
         skip_perfect = skip_str != "n"
 
         # display_progress_bar
@@ -321,10 +325,10 @@ class InteractiveWizard:
         return {
             "max_metric_calls": max_calls,
             "skip_perfect_score": skip_perfect,
-            "display_progress_bar": display_progress
+            "display_progress_bar": display_progress,
         }
 
-    def _display_config_summary(self, config: Dict[str, Any]):
+    def _display_config_summary(self, config: dict[str, Any]):
         """Display config summary for review."""
         print("\n" + "=" * 70)
         print("RESUMEN DE CONFIGURACION")
@@ -333,9 +337,9 @@ class InteractiveWizard:
         print(f"Caso: {config['case']['name']} ({config['case'].get('title', 'N/A')})")
         print(f"Adaptador: {config['adapter']['type']}")
 
-        if config['adapter']['type'] == "classifier":
+        if config["adapter"]["type"] == "classifier":
             print(f"  - Clases: {', '.join(config['adapter']['valid_classes'])}")
-        elif config['adapter']['type'] == "extractor":
+        elif config["adapter"]["type"] == "extractor":
             print(f"  - Campos: {', '.join(config['adapter']['required_fields'])}")
             print(f"  - Ejemplos positivos: {config['adapter'].get('max_positive_examples', 0)}")
 
@@ -345,7 +349,7 @@ class InteractiveWizard:
 
         print(f"Prompt: {config['prompt']['filename']}")
 
-        print(f"Optimizacion:")
+        print("Optimizacion:")
         print(f"  - Max calls: {config['optimization']['max_metric_calls']}")
         print(f"  - Skip perfect: {config['optimization']['skip_perfect_score']}")
         print(f"  - Progress bar: {config['optimization']['display_progress_bar']}")
@@ -357,7 +361,7 @@ class InteractiveWizard:
         save_str = input(">> Guardar esta configuracion? (s/n): ").strip().lower()
         return save_str == "s"
 
-    def _save_config_yaml(self, config: Dict[str, Any]):
+    def _save_config_yaml(self, config: dict[str, Any]):
         """Save config to YAML file."""
         configs_dir = get_paths().experiments / "configs"
         configs_dir.mkdir(parents=True, exist_ok=True)
@@ -367,14 +371,18 @@ class InteractiveWizard:
         # Add header comment
         yaml_content = f"""# GEPA Universal Optimizer Configuration
 # Generado: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-# Caso: {config['case']['name']}
+# Caso: {config["case"]["name"]}
 
 """
-        yaml_content += yaml.dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)
+        yaml_content += yaml.dump(
+            config, sort_keys=False, allow_unicode=True, default_flow_style=False
+        )
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(yaml_content)
 
         print(f"\nConfig guardado en: {output_path}")
         print("\nPara ejecutar esta optimizacion en el futuro, usa:")
-        print(f"  python universal_optimizer.py --config {output_path.relative_to(get_paths().root)}")
+        print(
+            f"  python universal_optimizer.py --config {output_path.relative_to(get_paths().root)}"
+        )

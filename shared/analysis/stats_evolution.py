@@ -6,29 +6,26 @@ Divides experiments into temporal batches and shows trends.
 """
 
 import statistics
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 from .base import (
+    detect_scale,
     load_metrics,
     parse_float,
-    format_float,
-    print_table,
-    detect_scale,
 )
 
 
-def parse_date(date_str: str) -> Optional[datetime]:
+def parse_date(date_str: str) -> datetime | None:
     """Parse date string to datetime."""
     try:
-        return datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
     except (ValueError, TypeError):
         return None
 
 
-def format_trend(val_prev: Optional[float], val_curr: Optional[float]) -> str:
+def format_trend(val_prev: float | None, val_curr: float | None) -> str:
     """Format trend indicator between two values (expects % scale)."""
     if val_prev is None or val_curr is None:
         return "N/A"
@@ -37,13 +34,10 @@ def format_trend(val_prev: Optional[float], val_curr: Optional[float]) -> str:
         return "^"  # Improved (using ^ instead of triangle for compatibility)
     if diff < -0.5:
         return "v"  # Worsened
-    return "="      # Equal
+    return "="  # Equal
 
 
-def calculate_batch_boundaries(
-    data: List[Dict],
-    num_batches: int = 3
-) -> List[datetime]:
+def calculate_batch_boundaries(data: list[dict], num_batches: int = 3) -> list[datetime]:
     """
     Calculate batch boundaries based on data timestamps.
 
@@ -58,7 +52,7 @@ def calculate_batch_boundaries(
     """
     dates = []
     for row in data:
-        dt = parse_date(row.get('Fecha', ''))
+        dt = parse_date(row.get("Fecha", ""))
         if dt:
             dates.append(dt)
 
@@ -77,13 +71,13 @@ def calculate_batch_boundaries(
 
     boundaries = []
     for i in range(1, num_batches):
-        boundary = min_date + (datetime.fromtimestamp(min_date.timestamp() + batch_span * i) - min_date)
+        min_date + (datetime.fromtimestamp(min_date.timestamp() + batch_span * i) - min_date)
         boundaries.append(datetime.fromtimestamp(min_date.timestamp() + batch_span * i))
 
     return boundaries
 
 
-def assign_batch(dt: datetime, boundaries: List[datetime]) -> int:
+def assign_batch(dt: datetime, boundaries: list[datetime]) -> int:
     """Assign a datetime to a batch number."""
     for i, boundary in enumerate(boundaries):
         if dt < boundary:
@@ -96,7 +90,7 @@ def run(
     project: str = None,
     case_filter: str = None,
     num_batches: int = 3,
-    cuts: str = None
+    cuts: str = None,
 ):
     """
     Run batch evolution analysis.
@@ -111,7 +105,7 @@ def run(
     data = load_metrics(csv_path=csv_path, project=project, merge=True)
 
     if case_filter:
-        data = [d for d in data if case_filter.lower() in d.get('Caso', '').lower()]
+        data = [d for d in data if case_filter.lower() in d.get("Caso", "").lower()]
 
     if not data:
         print("No hay datos para analizar.")
@@ -121,9 +115,9 @@ def run(
     if cuts:
         # Manual cuts provided
         boundaries = []
-        for cut in cuts.split(','):
+        for cut in cuts.split(","):
             try:
-                dt = datetime.strptime(cut.strip(), '%Y-%m-%d')
+                dt = datetime.strptime(cut.strip(), "%Y-%m-%d")
                 boundaries.append(dt)
             except ValueError:
                 print(f"Formato de fecha invalido: {cut}")
@@ -138,26 +132,26 @@ def run(
         return
 
     # Initialize batch data structures
-    batch_data = [defaultdict(lambda: {'opt': [], 'rob': []}) for _ in range(len(boundaries) + 1)]
+    batch_data = [defaultdict(lambda: {"opt": [], "rob": []}) for _ in range(len(boundaries) + 1)]
 
     # Assign data to batches
     for row in data:
-        dt = parse_date(row.get('Fecha', ''))
+        dt = parse_date(row.get("Fecha", ""))
         if not dt:
             continue
 
         batch_idx = assign_batch(dt, boundaries)
         key = (
-            row.get('Caso', 'Unknown'),
-            row.get('Modelo Tarea', 'Unknown'),
-            row.get('Modelo Profesor', 'Unknown')
+            row.get("Caso", "Unknown"),
+            row.get("Modelo Tarea", "Unknown"),
+            row.get("Modelo Profesor", "Unknown"),
         )
 
-        opt_score = parse_float(row.get('Optimizado Score', '0'))
-        rob_score = parse_float(row.get('Robustez Score', '0'))
+        opt_score = parse_float(row.get("Optimizado Score", "0"))
+        rob_score = parse_float(row.get("Robustez Score", "0"))
 
-        batch_data[batch_idx][key]['opt'].append(opt_score)
-        batch_data[batch_idx][key]['rob'].append(rob_score)
+        batch_data[batch_idx][key]["opt"].append(opt_score)
+        batch_data[batch_idx][key]["rob"].append(rob_score)
 
     # Collect all keys and detect scale per key for normalization
     all_keys = set()
@@ -169,8 +163,8 @@ def run(
     for key in all_keys:
         all_scores = []
         for bd in batch_data:
-            all_scores.extend(bd[key]['opt'])
-            all_scores.extend(bd[key]['rob'])
+            all_scores.extend(bd[key]["opt"])
+            all_scores.extend(bd[key]["rob"])
         key_scales[key] = detect_scale(all_scores) if all_scores else 1.0
 
     # Print header
@@ -180,20 +174,27 @@ def run(
     print()
     print("Limites de lotes:")
     for i, boundary in enumerate(boundaries):
-        print(f"  Lote {i} -> Lote {i+1}: {boundary.strftime('%Y-%m-%d %H:%M')}")
+        print(f"  Lote {i} -> Lote {i + 1}: {boundary.strftime('%Y-%m-%d %H:%M')}")
     print()
 
     # Build headers
-    batch_headers = [f"L{i}" for i in range(len(boundaries) + 1)]
+    [f"L{i}" for i in range(len(boundaries) + 1)]
 
     # Calculate dynamic column widths from data
     col_case = max(len("Caso"), *(len(k[0]) for k in all_keys)) if all_keys else len("Caso")
-    col_models = max(len("Modelos"), *(len(f"{k[1]}/{k[2]}") for k in all_keys)) if all_keys else len("Modelos")
+    col_models = (
+        max(len("Modelos"), *(len(f"{k[1]}/{k[2]}") for k in all_keys))
+        if all_keys
+        else len("Modelos")
+    )
     col_scores = 40
 
     total_width = col_case + col_models + col_scores * 2 + 9  # 9 for separators
     print("-" * total_width)
-    print(f"{'Caso':<{col_case}} | {'Modelos':<{col_models}} | {'Optimizado %':<{col_scores}} | {'Robustez %':<{col_scores}}")
+    print(
+        f"{'Caso':<{col_case}} | {'Modelos':<{col_models}} | "
+        f"{'Optimizado %':<{col_scores}} | {'Robustez %':<{col_scores}}"
+    )
     print("-" * total_width)
 
     # Sort and print
@@ -206,12 +207,12 @@ def run(
         opt_avgs = []
         rob_avgs = []
         for bd in batch_data:
-            if bd[key]['opt']:
-                opt_avgs.append(statistics.mean(bd[key]['opt']) * to_pct)
+            if bd[key]["opt"]:
+                opt_avgs.append(statistics.mean(bd[key]["opt"]) * to_pct)
             else:
                 opt_avgs.append(None)
-            if bd[key]['rob']:
-                rob_avgs.append(statistics.mean(bd[key]['rob']) * to_pct)
+            if bd[key]["rob"]:
+                rob_avgs.append(statistics.mean(bd[key]["rob"]) * to_pct)
             else:
                 rob_avgs.append(None)
 
@@ -225,15 +226,18 @@ def run(
             opt_parts.append(fmt(opt_avgs[i]))
             rob_parts.append(fmt(rob_avgs[i]))
             if i < len(opt_avgs) - 1:
-                opt_parts.append(format_trend(opt_avgs[i], opt_avgs[i+1]))
-                rob_parts.append(format_trend(rob_avgs[i], rob_avgs[i+1]))
+                opt_parts.append(format_trend(opt_avgs[i], opt_avgs[i + 1]))
+                rob_parts.append(format_trend(rob_avgs[i], rob_avgs[i + 1]))
 
         opt_display = " ".join(opt_parts)
         rob_display = " ".join(rob_parts)
 
         models_str = f"{task}/{reflect}"
 
-        print(f"{case:<{col_case}} | {models_str:<{col_models}} | {opt_display:<{col_scores}} | {rob_display:<{col_scores}}")
+        print(
+            f"{case:<{col_case}} | {models_str:<{col_models}} | "
+            f"{opt_display:<{col_scores}} | {rob_display:<{col_scores}}"
+        )
 
     print("-" * total_width)
     print("Leyenda: ^ Mejoro | v Empeoro | = Igual | - Sin datos")

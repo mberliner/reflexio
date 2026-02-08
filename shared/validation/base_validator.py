@@ -6,10 +6,10 @@ by project-specific validators.
 """
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
 
 from .csv_validator import CSVValidator
-from .errors import format_validation_errors, ValidationError
+from .errors import ValidationError, format_validation_errors
 
 
 class BaseConfigValidator:
@@ -28,7 +28,7 @@ class BaseConfigValidator:
     """
 
     # Override in subclasses
-    REQUIRED_FIELDS: Dict[str, List[str]] = {
+    REQUIRED_FIELDS: dict[str, list[str]] = {
         "case": ["name"],
         "data": ["csv_filename"],
         "optimization": ["max_metric_calls"],
@@ -37,14 +37,14 @@ class BaseConfigValidator:
     # Type validation config (override in subclasses)
     TYPE_SECTION: str = ""  # e.g., "module" or "adapter"
     TYPE_FIELD: str = "type"
-    TYPE_SCHEMAS: Dict[str, Dict[str, List[str]]] = {}
+    TYPE_SCHEMAS: dict[str, dict[str, list[str]]] = {}
 
     @classmethod
     def validate(
         cls,
-        config: Dict[str, Any],
-        datasets_dir: Optional[str] = None,
-    ) -> List[str]:
+        config: dict[str, Any],
+        datasets_dir: str | None = None,
+    ) -> list[str]:
         """
         Validate complete configuration dictionary.
 
@@ -76,8 +76,8 @@ class BaseConfigValidator:
     @classmethod
     def validate_or_raise(
         cls,
-        config: Dict[str, Any],
-        datasets_dir: Optional[str] = None,
+        config: dict[str, Any],
+        datasets_dir: str | None = None,
     ) -> None:
         """
         Validate configuration and raise exception if invalid.
@@ -94,7 +94,7 @@ class BaseConfigValidator:
             raise ValidationError(errors)
 
     @classmethod
-    def _validate_required_sections(cls, config: Dict[str, Any]) -> List[str]:
+    def _validate_required_sections(cls, config: dict[str, Any]) -> list[str]:
         """
         Validate that required sections and fields exist.
 
@@ -118,7 +118,7 @@ class BaseConfigValidator:
         return errors
 
     @classmethod
-    def _validate_type_schema(cls, config: Dict[str, Any]) -> List[str]:
+    def _validate_type_schema(cls, config: dict[str, Any]) -> list[str]:
         """
         Validate type-specific schema requirements.
 
@@ -161,9 +161,9 @@ class BaseConfigValidator:
     @classmethod
     def _validate_csv_file(
         cls,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         datasets_dir: str,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Validate CSV file existence and structure.
 
@@ -199,7 +199,7 @@ class BaseConfigValidator:
         return errors
 
     @classmethod
-    def get_valid_types(cls) -> List[str]:
+    def get_valid_types(cls) -> list[str]:
         """
         Get list of valid type names.
 
@@ -209,7 +209,7 @@ class BaseConfigValidator:
         return list(cls.TYPE_SCHEMAS.keys())
 
     @staticmethod
-    def display_errors(errors: List[str]) -> str:
+    def display_errors(errors: list[str]) -> str:
         """
         Format errors for display.
 

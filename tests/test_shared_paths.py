@@ -5,16 +5,22 @@ Tests BasePaths (via concrete subclasses), GEPAPaths, and DSPyPaths.
 """
 
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
-from shared.paths import BasePaths, GEPAPaths, DSPyPaths, get_paths, get_dspy_paths
-
+from shared.paths import BasePaths, DSPyPaths, GEPAPaths, get_dspy_paths, get_paths
+from shared.paths.gepa_paths import (
+    create_run_dir,
+    get_dataset_path,
+    get_prompt_path,
+    get_summary_csv_path,
+)
 
 # ==================== BasePaths (abstract) ====================
 
-class TestBasePaths:
 
+class TestBasePaths:
     def test_cannot_instantiate_directly(self):
         with pytest.raises(TypeError):
             BasePaths()
@@ -33,8 +39,8 @@ class TestBasePaths:
 
 # ==================== GEPAPaths ====================
 
-class TestGEPAPaths:
 
+class TestGEPAPaths:
     @pytest.fixture
     def paths(self, tmp_path):
         return GEPAPaths(root_override=tmp_path)
@@ -55,7 +61,8 @@ class TestGEPAPaths:
         assert paths.experiments_log.exists()
 
     def test_summary_csv(self, paths, tmp_path):
-        assert paths.summary_csv == tmp_path / "results" / "experiments" / "metricas_optimizacion.csv"
+        expected = tmp_path / "results" / "experiments" / "metricas_optimizacion.csv"
+        assert paths.summary_csv == expected
 
     def test_datasets(self, paths, tmp_path):
         assert paths.datasets == tmp_path / "experiments" / "datasets"
@@ -90,12 +97,51 @@ class TestGEPAPaths:
     def test_run_dir(self, paths, tmp_path):
         ts = datetime(2026, 1, 15, 10, 30, 0)
         result = paths.run_dir("email_urgency", "abc123", timestamp=ts)
-        assert result == tmp_path / "results" / "runs" / "email_urgency" / "2026-01-15_103000_abc123"
+        expected = tmp_path / "results" / "runs" / "email_urgency" / "2026-01-15_103000_abc123"
+        assert result == expected
         assert result.exists()
 
     def test_latest_run_symlink(self, paths, tmp_path):
         result = paths.latest_run_symlink("email_urgency")
         assert result.name == "latest"
+
+    def test_prompt_prefers_new_location(self, paths, tmp_path):
+        new_file = tmp_path / "experiments" / "prompts" / "system.json"
+        new_file.parent.mkdir(parents=True, exist_ok=True)
+        new_file.touch()
+
+        assert paths.prompt("system.json") == new_file
+
+    def test_prompt_falls_back_to_legacy(self, paths, tmp_path):
+        legacy_file = tmp_path / "prompts" / "old.json"
+        legacy_file.parent.mkdir(parents=True, exist_ok=True)
+        legacy_file.touch()
+
+        with pytest.warns(DeprecationWarning, match="legacy location"):
+            result = paths.prompt("old.json")
+        assert result == legacy_file
+
+    def test_prompt_returns_new_path_if_none_exist(self, paths, tmp_path):
+        result = paths.prompt("missing.json")
+        assert result == tmp_path / "experiments" / "prompts" / "missing.json"
+
+    def test_run_dir_auto_timestamp(self, paths):
+        result = paths.run_dir("test_case", "xyz789")
+        assert result.exists()
+        assert "xyz789" in result.name
+
+    def test_archived(self, paths, tmp_path):
+        assert paths.archived == tmp_path / "results" / "archived"
+        assert paths.archived.exists()
+
+    def test_demos(self, paths, tmp_path):
+        assert paths.demos == tmp_path / "demos"
+
+    def test_legacy_prompts(self, paths, tmp_path):
+        assert paths.legacy_prompts == tmp_path / "prompts"
+
+    def test_legacy_resultados(self, paths, tmp_path):
+        assert paths.legacy_resultados == tmp_path / "resultados"
 
     def test_default_root_points_to_gepa_standalone(self):
         root = GEPAPaths._default_root()
@@ -107,8 +153,8 @@ class TestGEPAPaths:
 
 # ==================== DSPyPaths ====================
 
-class TestDSPyPaths:
 
+class TestDSPyPaths:
     @pytest.fixture
     def paths(self, tmp_path):
         return DSPyPaths(root_override=tmp_path)
@@ -126,7 +172,8 @@ class TestDSPyPaths:
         assert paths.experiments_log == tmp_path / "results" / "experiments"
 
     def test_summary_csv(self, paths, tmp_path):
-        assert paths.summary_csv == tmp_path / "results" / "experiments" / "metricas_optimizacion.csv"
+        expected = tmp_path / "results" / "experiments" / "metricas_optimizacion.csv"
+        assert paths.summary_csv == expected
 
     def test_datasets(self, paths, tmp_path):
         assert paths.datasets == tmp_path / "datasets"
@@ -166,8 +213,8 @@ class TestDSPyPaths:
 
 # ==================== Singletons ====================
 
-class TestSingletons:
 
+class TestSingletons:
     def test_get_paths_returns_gepa(self):
         p = get_paths()
         assert isinstance(p, GEPAPaths)
@@ -187,12 +234,41 @@ class TestSingletons:
         assert p.root == tmp_path
 
 
+# ==================== Convenience Functions ====================
+
+
+class TestConvenienceFunctions:
+    def test_get_dataset_path(self, tmp_path):
+        get_paths(root_override=tmp_path)
+        result = get_dataset_path("test.csv")
+        assert result == tmp_path / "experiments" / "datasets" / "test.csv"
+
+    def test_get_prompt_path(self, tmp_path):
+        get_paths(root_override=tmp_path)
+        result = get_prompt_path("system.json")
+        assert result == tmp_path / "experiments" / "prompts" / "system.json"
+
+    def test_get_summary_csv_path(self, tmp_path):
+        get_paths(root_override=tmp_path)
+        result = get_summary_csv_path()
+        expected = tmp_path / "results" / "experiments" / "metricas_optimizacion.csv"
+        assert result == expected
+
+    def test_create_run_dir(self, tmp_path):
+        get_paths(root_override=tmp_path)
+        ts = datetime(2026, 6, 1, 12, 0, 0)
+        result = create_run_dir("my_case", "run123", timestamp=ts)
+        assert result.exists()
+        assert "run123" in result.name
+
+
 # ==================== Backward Compatibility ====================
 
-class TestBackwardCompat:
 
+class TestBackwardCompat:
     def test_appconfig_paths_match_dspy_paths(self):
         from dspy_gepa_poc.config import AppConfig
+
         dspy_p = get_dspy_paths()
 
         assert AppConfig.DATASETS_DIR == str(dspy_p.datasets)

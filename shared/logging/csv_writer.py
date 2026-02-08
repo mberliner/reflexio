@@ -9,9 +9,9 @@ import csv
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-from .formatters import generate_run_id, get_timestamp, fmt_score
+from .formatters import fmt_score, generate_run_id, get_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class BaseCSVLogger:
     def __init__(
         self,
         csv_path: Path,
-        column_mapping: Optional[Dict[str, str]] = None,
+        column_mapping: dict[str, str] | None = None,
         create_if_missing: bool = True,
     ):
         """
@@ -91,7 +91,7 @@ class BaseCSVLogger:
             writer = csv.writer(f, **EUROPEAN_CSV_CONFIG)
             writer.writerow(self.headers)
 
-    def _prepare_row(self, data: Dict[str, Any]) -> List[str]:
+    def _prepare_row(self, data: dict[str, Any]) -> list[str]:
         """
         Prepare a row for CSV output from a data dictionary.
 
@@ -115,7 +115,7 @@ class BaseCSVLogger:
 
         return row
 
-    def append_row(self, data: Dict[str, Any]) -> None:
+    def append_row(self, data: dict[str, Any]) -> None:
         """
         Append a single row to the CSV file.
 
@@ -142,7 +142,7 @@ class BaseCSVLogger:
 
     def log_run(
         self,
-        run_data: Dict[str, Any],
+        run_data: dict[str, Any],
         auto_generate_id: bool = True,
         auto_timestamp: bool = True,
     ) -> str:
@@ -175,7 +175,7 @@ class BaseCSVLogger:
 def make_path_relative(
     absolute_path: str,
     base_path: str,
-    fallback: Optional[str] = None,
+    fallback: str | None = None,
 ) -> str:
     """
     Convert an absolute path to a relative path.

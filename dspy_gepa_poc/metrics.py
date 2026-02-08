@@ -3,8 +3,10 @@ Evaluation metrics for DSPy + GEPA optimization.
 """
 
 import re
+from collections.abc import Callable
 from difflib import SequenceMatcher
-from typing import Any, Callable, Dict, List, Union
+from typing import Any
+
 import dspy
 
 
@@ -15,8 +17,8 @@ def _compare_exact(expected: str, actual: str) -> bool:
 
 def _normalize_text(text: str) -> str:
     """Elimina puntuacion y normaliza espacios."""
-    text = re.sub(r'[^\w\s]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
     return text
 
 
@@ -34,11 +36,11 @@ def _compare_fuzzy(expected: str, actual: str, threshold: float) -> bool:
 
 
 def create_dynamic_metric(
-    eval_fields: List[str],
+    eval_fields: list[str],
     normalize: bool = True,
     match_mode: str = "exact",
-    fuzzy_threshold: float = 0.85
-) -> Callable[[dspy.Example, dspy.Prediction, Any], Union[bool, float]]:
+    fuzzy_threshold: float = 0.85,
+) -> Callable[[dspy.Example, dspy.Prediction, Any], bool | float]:
     """
     Factory para crear metricas dinamicas basadas en campos de evaluacion.
 
@@ -51,6 +53,7 @@ def create_dynamic_metric(
     Returns:
         Funcion metrica compatible con DSPy/GEPA
     """
+
     def dynamic_metric(example, pred, trace=None, pred_name=None, pred_trace=None):
         matches = 0
         total = len(eval_fields)
@@ -92,12 +95,8 @@ def sentiment_accuracy_metric(gold: dspy.Example, pred: dspy.Prediction, trace=N
 
 
 def sentiment_with_feedback_metric(
-    gold: dspy.Example,
-    pred: dspy.Prediction,
-    trace=None,
-    pred_name: str = None,
-    pred_trace=None
-) -> Union[float, Dict[str, Union[float, str]]]:
+    gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name: str = None, pred_trace=None
+) -> float | dict[str, float | str]:
     """
     Sentiment metric with textual feedback for GEPA optimization.
 
@@ -123,8 +122,8 @@ def sentiment_with_feedback_metric(
             feedback = f"Correct classification as '{pred.sentiment}'. Good reasoning provided."
         else:
             feedback = (
-                f"Incorrect classification. Expected '{gold.sentiment}' but got '{pred.sentiment}'. "
-                f"The text was: '{gold.text}'. "
+                f"Incorrect classification. Expected '{gold.sentiment}' "
+                f"but got '{pred.sentiment}'. The text was: '{gold.text}'. "
                 f"Consider analyzing the emotional tone and word choice more carefully."
             )
         return {"score": score, "feedback": feedback}
@@ -133,11 +132,7 @@ def sentiment_with_feedback_metric(
     return score
 
 
-def extraction_accuracy_metric(
-    gold: dspy.Example,
-    pred: dspy.Prediction,
-    trace=None
-) -> float:
+def extraction_accuracy_metric(gold: dspy.Example, pred: dspy.Prediction, trace=None) -> float:
     """
     Metric for information extraction accuracy.
     Checks how many fields were correctly extracted.
@@ -168,12 +163,8 @@ def extraction_accuracy_metric(
 
 
 def extraction_with_feedback_metric(
-    gold: dspy.Example,
-    pred: dspy.Prediction,
-    trace=None,
-    pred_name: str = None,
-    pred_trace=None
-) -> Union[float, Dict[str, Union[float, str]]]:
+    gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name: str = None, pred_trace=None
+) -> float | dict[str, float | str]:
     """
     Information extraction metric with textual feedback for GEPA.
 
@@ -204,9 +195,7 @@ def extraction_with_feedback_metric(
             if str(pred_value).strip().lower() == str(expected_value).strip().lower():
                 correct_fields += 1
             else:
-                errors.append(
-                    f"{field_name}: expected '{expected_value}', got '{pred_value}'"
-                )
+                errors.append(f"{field_name}: expected '{expected_value}', got '{pred_value}'")
         else:
             errors.append(f"{field_name}: field not extracted")
 
@@ -228,11 +217,7 @@ def extraction_with_feedback_metric(
     return score
 
 
-def combined_metric(
-    gold: dspy.Example,
-    pred: dspy.Prediction,
-    trace=None
-) -> float:
+def combined_metric(gold: dspy.Example, pred: dspy.Prediction, trace=None) -> float:
     """
     Combined metric that checks both correctness and reasoning quality.
 
@@ -252,9 +237,7 @@ def combined_metric(
 
     # Check if reasoning is provided and non-empty
     has_reasoning = (
-        hasattr(pred, "reasoning") and
-        pred.reasoning and
-        len(pred.reasoning.strip()) > 10
+        hasattr(pred, "reasoning") and pred.reasoning and len(pred.reasoning.strip()) > 10
     )
     reasoning_score = 1.0 if has_reasoning else 0.5
 

@@ -7,7 +7,6 @@ in both dspy_gepa_poc and gepa_standalone projects.
 
 import uuid
 from datetime import datetime
-from typing import Union
 
 
 def generate_run_id() -> str:
@@ -33,7 +32,7 @@ def get_timestamp(fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
     return datetime.now().strftime(fmt)
 
 
-def fmt_score(val: Union[float, int, str], decimal_separator: str = ",") -> str:
+def fmt_score(val: float | int | str, decimal_separator: str = ",") -> str:
     """
     Format a score value with specified decimal separator.
 

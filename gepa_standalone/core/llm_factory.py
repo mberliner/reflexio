@@ -6,15 +6,15 @@ Usa el modulo compartido shared.llm con LiteLLM.
 """
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 # Add project root to path for shared module access
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from shared.llm import LLMConfig
+from shared.llm import LLMConfig  # noqa: E402
 
 
 def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
@@ -35,11 +35,11 @@ def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
 
     def lm_func(prompt: str) -> str:
         content = base_func(prompt)
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("[TASK LM]")
-        print("="*80)
+        print("=" * 80)
         print(content.strip())
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
         return content
 
     return lm_func
@@ -64,11 +64,11 @@ def create_reflection_lm_function(verbose: bool = False) -> Callable[[str], str]
 
     def lm_func(prompt: str) -> str:
         content = base_func(prompt)
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("[REFLECTION LM]")
-        print("="*80)
+        print("=" * 80)
         print(content.strip())
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
         return content
 
     return lm_func

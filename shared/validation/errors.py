@@ -4,8 +4,6 @@ Error formatting utilities for validation.
 Provides consistent error formatting across all validation operations.
 """
 
-from typing import List
-
 
 class ValidationError(Exception):
     """
@@ -16,13 +14,15 @@ class ValidationError(Exception):
         formatted: Pre-formatted error string for display
     """
 
-    def __init__(self, errors: List[str], message: str = "Configuration validation failed"):
+    def __init__(self, errors: list[str], message: str = "Configuration validation failed"):
         self.errors = errors
         self.formatted = format_validation_errors(errors)
         super().__init__(f"{message}\n{self.formatted}")
 
 
-def format_validation_errors(errors: List[str], title: str = "CONFIGURATION ERRORS DETECTED") -> str:
+def format_validation_errors(
+    errors: list[str], title: str = "CONFIGURATION ERRORS DETECTED"
+) -> str:
     """
     Format validation errors for display.
 
@@ -66,10 +66,12 @@ def format_validation_errors(errors: List[str], title: str = "CONFIGURATION ERRO
         lines.append(f"{i}. {error}")
         lines.append("")
 
-    lines.extend([
-        separator,
-        "Please fix these errors and try again.",
-        "",
-    ])
+    lines.extend(
+        [
+            separator,
+            "Please fix these errors and try again.",
+            "",
+        ]
+    )
 
     return "\n".join(lines)

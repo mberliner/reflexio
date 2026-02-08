@@ -7,6 +7,7 @@ La configuracion LLM se maneja en shared/llm.
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde el .env del proyecto
@@ -54,13 +55,13 @@ class Config:
             return
 
         adapter_cfg = yaml_config["adapter"]
-        
+
         # Mapeo de campos YAML a variables de Config
         mapping = {
             "max_text_length": ["CLASSIFIER_TEXT_MAX_LENGTH", "EXTRACTOR_TEXT_MAX_LENGTH"],
             "rag_context_max_length": ["RAG_CONTEXT_MAX_LENGTH"],
             "rag_max_positive_examples": ["RAG_MAX_POSITIVE_EXAMPLES"],
-            "extractor_max_positive_examples": ["EXTRACTOR_MAX_POSITIVE_EXAMPLES"]
+            "extractor_max_positive_examples": ["EXTRACTOR_MAX_POSITIVE_EXAMPLES"],
         }
 
         for yaml_key, config_keys in mapping.items():

@@ -5,8 +5,7 @@ Clase base abstracta para todos los adaptadores de GEPA.
 Usa LiteLLM para conexion con LLMs.
 """
 
-from typing import Dict, Any, Optional
-from gepa_standalone.core.llm_factory import get_task_config, call_llm
+from gepa_standalone.core.llm_factory import call_llm, get_task_config
 
 
 class BaseAdapter:
@@ -44,7 +43,9 @@ class BaseAdapter:
     def evaluate(self, batch, candidate, capture_traces=False):
         """Método abstracto que debe ser implementado por las subclases."""
         raise NotImplementedError("Cada adaptador debe implementar su propio método evaluate()")
-    
+
     def make_reflective_dataset(self, candidate, eval_batch, components_to_update):
         """Método abstracto que debe ser implementado por las subclases."""
-        raise NotImplementedError("Cada adaptador debe implementar su propio método make_reflective_dataset()")
+        raise NotImplementedError(
+            "Cada adaptador debe implementar su propio método make_reflective_dataset()"
+        )

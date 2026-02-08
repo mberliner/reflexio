@@ -7,22 +7,21 @@ Uses shared logging utilities for consistent formatting across projects.
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 # Add project root to path for shared module access
 _PROJECT_ROOT = Path(__file__).parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from shared.logging import (
-    BaseCSVLogger,
+from shared.logging import (  # noqa: E402
     STANDARD_COLUMN_MAPPING,
+    BaseCSVLogger,
     generate_run_id,
     get_timestamp,
-    fmt_score,
     make_path_relative,
 )
-from shared.paths import get_dspy_paths
+from shared.paths import get_dspy_paths  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,7 @@ class ResultsLogger(BaseCSVLogger):
         # Store for path resolution
         self.experiments_dir = exp_dir
 
-    def log_run(self, run_data: Dict[str, Any]) -> None:
+    def log_run(self, run_data: dict[str, Any]) -> None:
         """
         Append a new run result to the master log.
 

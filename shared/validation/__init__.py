@@ -7,7 +7,7 @@ and CSV dataset files across dspy_gepa_poc and gepa_standalone projects.
 
 from .base_validator import BaseConfigValidator
 from .csv_validator import CSVValidator
-from .errors import format_validation_errors, ValidationError
+from .errors import ValidationError, format_validation_errors
 
 __all__ = [
     "BaseConfigValidator",

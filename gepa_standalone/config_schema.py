@@ -6,15 +6,19 @@ Uses shared validation utilities for consistent validation across projects.
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 # Add project root to path for shared module access
 _PROJECT_ROOT = Path(__file__).parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from shared.validation import BaseConfigValidator, CSVValidator, format_validation_errors
-from shared.paths import get_paths
+from shared.paths import get_paths  # noqa: E402
+from shared.validation import (  # noqa: E402
+    BaseConfigValidator,
+    CSVValidator,
+    format_validation_errors,
+)
 
 
 class ConfigValidator(BaseConfigValidator):
@@ -60,7 +64,7 @@ class ConfigValidator(BaseConfigValidator):
     MAX_METRIC_CALLS_MAX = 500
 
     @classmethod
-    def validate(cls, config: Dict[str, Any]) -> List[str]:
+    def validate(cls, config: dict[str, Any]) -> list[str]:
         """
         Validate complete config dictionary.
 
@@ -92,7 +96,7 @@ class ConfigValidator(BaseConfigValidator):
         return errors
 
     @classmethod
-    def _validate_adapter_specific(cls, config: Dict[str, Any]) -> List[str]:
+    def _validate_adapter_specific(cls, config: dict[str, Any]) -> list[str]:
         """
         Validate adapter-specific field values.
 
@@ -129,7 +133,7 @@ class ConfigValidator(BaseConfigValidator):
         return errors
 
     @classmethod
-    def _validate_optimization_params(cls, config: Dict[str, Any]) -> List[str]:
+    def _validate_optimization_params(cls, config: dict[str, Any]) -> list[str]:
         """
         Validate optimization parameter values.
 
@@ -159,7 +163,7 @@ class ConfigValidator(BaseConfigValidator):
         return errors
 
     @classmethod
-    def _validate_prompt_file(cls, config: Dict[str, Any]) -> List[str]:
+    def _validate_prompt_file(cls, config: dict[str, Any]) -> list[str]:
         """
         Validate prompt file existence if specified.
 
@@ -188,7 +192,7 @@ class ConfigValidator(BaseConfigValidator):
         return errors
 
     @classmethod
-    def _validate_csv_file(cls, config: Dict[str, Any], datasets_dir: str) -> List[str]:
+    def _validate_csv_file(cls, config: dict[str, Any], datasets_dir: str) -> list[str]:
         """
         Validate CSV file with GEPA-specific column handling.
 
@@ -231,7 +235,7 @@ class ConfigValidator(BaseConfigValidator):
         return errors
 
     @staticmethod
-    def display_errors(errors: List[str]) -> str:
+    def display_errors(errors: list[str]) -> str:
         """
         Format errors for display.
 

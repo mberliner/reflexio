@@ -13,9 +13,8 @@ Benefits:
 """
 
 import warnings
-from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
 
 from .base_paths import BasePaths
 
@@ -66,7 +65,7 @@ class GEPAPaths(BasePaths):
                 f"Dataset '{filename}' found in legacy location (data/csv/). "
                 f"Consider moving to experiments/datasets/ for better organization.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             return legacy_path
 
@@ -105,7 +104,7 @@ class GEPAPaths(BasePaths):
                 f"Prompt '{filename}' found in legacy location (prompts/). "
                 f"Consider moving to experiments/prompts/ for better organization.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             return legacy_path
 
@@ -128,12 +127,7 @@ class GEPAPaths(BasePaths):
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def run_dir(
-        self,
-        case_name: str,
-        run_id: str,
-        timestamp: Optional[datetime] = None
-    ) -> Path:
+    def run_dir(self, case_name: str, run_id: str, timestamp: datetime | None = None) -> Path:
         """
         Generate directory path for a specific run.
 
@@ -201,10 +195,10 @@ class GEPAPaths(BasePaths):
 
 # ==================== GLOBAL INSTANCE ====================
 
-_paths_instance: Optional[GEPAPaths] = None
+_paths_instance: GEPAPaths | None = None
 
 
-def get_paths(root_override: Optional[Path] = None) -> GEPAPaths:
+def get_paths(root_override: Path | None = None) -> GEPAPaths:
     """
     Get the global GEPAPaths instance.
 
@@ -225,6 +219,7 @@ def get_paths(root_override: Optional[Path] = None) -> GEPAPaths:
 
 # ==================== CONVENIENCE FUNCTIONS ====================
 
+
 def get_dataset_path(filename: str) -> Path:
     """Convenience function to get dataset path."""
     return get_paths().dataset(filename)
@@ -240,7 +235,7 @@ def get_summary_csv_path() -> Path:
     return get_paths().summary_csv
 
 
-def create_run_dir(case_name: str, run_id: str, timestamp: Optional[datetime] = None) -> Path:
+def create_run_dir(case_name: str, run_id: str, timestamp: datetime | None = None) -> Path:
     """
     Convenience function to create a run directory.
 

@@ -6,9 +6,10 @@ Provides a unified configuration dataclass that works with both:
 - litellm.completion (for gepa_standalone)
 """
 
-from dataclasses import dataclass
-from typing import Optional, Callable, Dict, Any
 import os
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -26,8 +27,8 @@ class LLMConfig:
     """
 
     model: str
-    api_key: Optional[str] = None
-    api_base: Optional[str] = None
+    api_key: str | None = None
+    api_base: str | None = None
     api_version: str = "2024-02-15-preview"
     temperature: float = 0.7
     max_tokens: int = 1000
@@ -73,7 +74,7 @@ class LLMConfig:
 
         return config
 
-    def to_kwargs(self) -> Dict[str, Any]:
+    def to_kwargs(self) -> dict[str, Any]:
         """
         Convert config to kwargs dict for LLM calls.
 
@@ -106,6 +107,7 @@ class LLMConfig:
             dspy.LM instance configured with this config.
         """
         import dspy
+
         kwargs = self.to_kwargs()
         kwargs["cache"] = self.cache
         return dspy.LM(**kwargs)
@@ -120,14 +122,12 @@ class LLMConfig:
             Function that takes a prompt string and returns the response string.
         """
         import litellm
+
         kwargs = self.to_kwargs()
 
         def lm_func(prompt: str) -> str:
             """Call LLM with prompt and return response text."""
-            response = litellm.completion(
-                messages=[{"role": "user", "content": prompt}],
-                **kwargs
-            )
+            response = litellm.completion(messages=[{"role": "user", "content": prompt}], **kwargs)
             return response.choices[0].message.content
 
         return lm_func
@@ -158,7 +158,7 @@ class LLMConfig:
                 model=self.model,
                 endpoint=self.api_base,
                 api_version=self.api_version,
-                suggestions=[f"Set {var} in your .env file" for var in missing]
+                suggestions=[f"Set {var} in your .env file" for var in missing],
             )
 
     def validate_connection(self) -> bool:
@@ -171,11 +171,12 @@ class LLMConfig:
         Raises:
             LLMConnectionError: If connection fails with diagnostic info.
         """
-        from .errors import LLMConnectionError
         import litellm
 
+        from .errors import LLMConnectionError
+
         try:
-            response = litellm.completion(
+            litellm.completion(
                 model=self.model,
                 messages=[{"role": "user", "content": "Respond only 'OK'"}],
                 api_key=self.api_key,
@@ -195,7 +196,9 @@ class LLMConfig:
                     return "<unavailable>"
 
             response_obj = getattr(e, "response", None)
-            response_text = getattr(response_obj, "text", None) if response_obj is not None else None
+            response_text = (
+                getattr(response_obj, "text", None) if response_obj is not None else None
+            )
             extra_details = {
                 "error_type": type(e).__name__,
                 "error_repr": _truncate(repr(e)),
@@ -249,4 +252,4 @@ class LLMConfig:
                 original_error=error_str[:500],
                 extra_details=extra_details,
                 suggestions=suggestions,
-            )
+            ) from e

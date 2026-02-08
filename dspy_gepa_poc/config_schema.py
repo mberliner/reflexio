@@ -6,15 +6,14 @@ Uses shared validation utilities for consistent validation across projects.
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 # Add project root to path for shared module access
 _PROJECT_ROOT = Path(__file__).parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from shared.validation import BaseConfigValidator, CSVValidator, format_validation_errors
-
+from shared.validation import BaseConfigValidator, CSVValidator  # noqa: E402
 
 # Documentation for optional optimization fields
 OPTIONAL_OPTIMIZATION_FIELDS = {
@@ -70,7 +69,7 @@ class ConfigValidator(BaseConfigValidator):
     DYNAMIC_SIGNATURE_FIELDS = ["instruction", "inputs", "outputs"]
 
     @classmethod
-    def validate(cls, config: Dict[str, Any], datasets_dir: str = None) -> List[str]:
+    def validate(cls, config: dict[str, Any], datasets_dir: str = None) -> list[str]:
         """
         Validate complete config dictionary.
 
@@ -103,13 +102,15 @@ class ConfigValidator(BaseConfigValidator):
                 schema = cls.TYPE_SCHEMAS[module_type]
                 for req_field in schema.get("required", []):
                     # Check both module and data sections
-                    if req_field not in config.get("module", {}) and req_field not in config.get("data", {}):
+                    if req_field not in config.get("module", {}) and req_field not in config.get(
+                        "data", {}
+                    ):
                         errors.append(f"Module '{module_type}' requires field: '{req_field}'")
 
         return errors
 
     @classmethod
-    def _validate_signature(cls, signature: Dict[str, Any]) -> List[str]:
+    def _validate_signature(cls, signature: dict[str, Any]) -> list[str]:
         """
         Validate dynamic signature structure.
 
@@ -130,18 +131,18 @@ class ConfigValidator(BaseConfigValidator):
         if "inputs" in signature:
             for idx, inp in enumerate(signature["inputs"]):
                 if "name" not in inp:
-                    errors.append(f"Signature input #{idx+1} missing 'name'")
+                    errors.append(f"Signature input #{idx + 1} missing 'name'")
 
         # Validate outputs structure
         if "outputs" in signature:
             for idx, out in enumerate(signature["outputs"]):
                 if "name" not in out:
-                    errors.append(f"Signature output #{idx+1} missing 'name'")
+                    errors.append(f"Signature output #{idx + 1} missing 'name'")
 
         return errors
 
     @classmethod
-    def _validate_csv_file(cls, config: Dict[str, Any], datasets_dir: str) -> List[str]:
+    def _validate_csv_file(cls, config: dict[str, Any], datasets_dir: str) -> list[str]:
         """
         Validate CSV file with DSPy-specific column handling.
 
@@ -174,7 +175,11 @@ class ConfigValidator(BaseConfigValidator):
         # For dynamic modules, use signature.outputs when available
         module_type = config.get("module", {}).get("type")
         if module_type == "dynamic":
-            sig_outputs = [o.get("name") for o in config.get("signature", {}).get("outputs", []) if isinstance(o, dict)]
+            sig_outputs = [
+                o.get("name")
+                for o in config.get("signature", {}).get("outputs", [])
+                if isinstance(o, dict)
+            ]
             if sig_outputs:
                 output_columns = sig_outputs
 

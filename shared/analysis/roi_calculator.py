@@ -15,31 +15,31 @@ gpt-4.1-mini    | $0.15             | $0.60
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 from pathlib import Path
 
 from .base import (
-    load_metrics,
-    parse_float,
+    extract_budget_from_rows,
     format_currency,
     format_percentage,
-    get_output_dir,
-    print_table,
-    extract_budget_from_rows,
+    load_metrics,
+    parse_float,
 )
 
 
 @dataclass
 class ModelPricing:
     """Pricing per 1M tokens (Azure OpenAI, Global Standard)"""
+
     name: str
-    input_price: float   # USD per 1M tokens
+    input_price: float  # USD per 1M tokens
     output_price: float  # USD per 1M tokens
 
     def cost_per_call(self, input_tokens: int, output_tokens: int) -> float:
         """Calculate cost of a single call"""
-        return (input_tokens * self.input_price / 1_000_000 +
-                output_tokens * self.output_price / 1_000_000)
+        return (
+            input_tokens * self.input_price / 1_000_000
+            + output_tokens * self.output_price / 1_000_000
+        )
 
 
 # Default pricing (can be overridden)
@@ -73,7 +73,7 @@ DEFAULT_VAL_SIZES = {
 }
 
 
-def get_model_pricing(model_name: str, pricing: Dict = None) -> ModelPricing:
+def get_model_pricing(model_name: str, pricing: dict = None) -> ModelPricing:
     """Get pricing for a model, with fallback to defaults."""
     pricing = pricing or DEFAULT_PRICING
     model_key = model_name.lower().replace("azure/", "")
@@ -86,9 +86,9 @@ def calculate_optimization_cost(
     reflection_model: str,
     max_calls: int = FALLBACK_MAX_CALLS,
     val_size: int = None,
-    token_estimates: Dict = None,
-    pricing: Dict = None
-) -> Dict:
+    token_estimates: dict = None,
+    pricing: dict = None,
+) -> dict:
     """
     Calculate the cost of GEPA optimization.
 
@@ -146,9 +146,9 @@ def calculate_production_roi(
     expensive_model: str,
     cheap_model: str,
     production_calls: int,
-    token_estimates: Dict = None,
-    pricing: Dict = None
-) -> Dict:
+    token_estimates: dict = None,
+    pricing: dict = None,
+) -> dict:
     """
     Calculate ROI for a given production volume.
 
@@ -188,10 +188,9 @@ def calculate_production_roi(
     roi_percentage = (savings / optimization_cost * 100) if optimization_cost > 0 else 0
 
     # Break-even point
-    cost_per_call_diff = (
-        expensive_pricing.cost_per_call(tokens["input"], tokens["output"]) -
-        cheap_pricing.cost_per_call(tokens["input"], tokens["output"])
-    )
+    cost_per_call_diff = expensive_pricing.cost_per_call(
+        tokens["input"], tokens["output"]
+    ) - cheap_pricing.cost_per_call(tokens["input"], tokens["output"])
     breakeven_calls = int(optimization_cost / cost_per_call_diff) if cost_per_call_diff > 0 else 0
 
     return {
@@ -206,12 +205,7 @@ def calculate_production_roi(
     }
 
 
-def run(
-    csv_path: Path = None,
-    project: str = None,
-    case_filter: str = None,
-    volume: int = 1000
-):
+def run(csv_path: Path = None, project: str = None, case_filter: str = None, volume: int = 1000):
     """
     Run ROI analysis on experiment data.
 
@@ -227,7 +221,7 @@ def run(
     data = load_metrics(csv_path=csv_path, project=project, merge=True)
 
     if case_filter:
-        data = [d for d in data if case_filter.lower() in d.get('Caso', '').lower()]
+        data = [d for d in data if case_filter.lower() in d.get("Caso", "").lower()]
 
     if not data:
         print("No hay datos para analizar.")
@@ -243,9 +237,12 @@ def run(
     print(f"{'Modelo':<15} | {'Input (USD)':>12} | {'Output (USD)':>12}")
     print("-" * 45)
     seen = set()
-    for key, price in DEFAULT_PRICING.items():
+    for _key, price in DEFAULT_PRICING.items():
         if price.name not in seen:
-            print(f"{price.name:<15} | {format_currency(price.input_price):>12} | {format_currency(price.output_price):>12}")
+            print(
+                f"{price.name:<15} | {format_currency(price.input_price):>12} | "
+                f"{format_currency(price.output_price):>12}"
+            )
             seen.add(price.name)
     print()
 
@@ -253,9 +250,9 @@ def run(
     groups = defaultdict(list)
     for exp in data:
         gkey = (
-            exp.get('Caso', 'Unknown'),
-            exp.get('Modelo Tarea', 'gpt-4o-mini'),
-            exp.get('Modelo Profesor', 'gpt-4o'),
+            exp.get("Caso", "Unknown"),
+            exp.get("Modelo Tarea", "gpt-4o-mini"),
+            exp.get("Modelo Profesor", "gpt-4o"),
         )
         groups[gkey].append(exp)
 
@@ -265,8 +262,8 @@ def run(
         max_calls = extract_budget_from_rows(rows, FALLBACK_MAX_CALLS)
 
         # Calculate average delta (robustez - baseline) to determine if optimization helped
-        base_scores = [parse_float(r.get('Baseline Score', '0')) for r in rows]
-        rob_scores = [parse_float(r.get('Robustez Score', '0')) for r in rows]
+        base_scores = [parse_float(r.get("Baseline Score", "0")) for r in rows]
+        rob_scores = [parse_float(r.get("Robustez Score", "0")) for r in rows]
         avg_delta = mean(rob_scores) - mean(base_scores)
 
         opt_cost = calculate_optimization_cost(
@@ -275,37 +272,37 @@ def run(
 
         # ROI only meaningful when optimization improved results
         if avg_delta <= 0:
-            results.append({
-                "case_name": case_name,
-                "task_model": task_model,
-                "reflection_model": reflection_model,
-                "max_calls": max_calls,
-                "avg_delta": avg_delta,
-                "opt_cost": opt_cost,
-                "roi_data": None,
-                "breakeven": None,
-            })
+            results.append(
+                {
+                    "case_name": case_name,
+                    "task_model": task_model,
+                    "reflection_model": reflection_model,
+                    "max_calls": max_calls,
+                    "avg_delta": avg_delta,
+                    "opt_cost": opt_cost,
+                    "roi_data": None,
+                    "breakeven": None,
+                }
+            )
         else:
             roi_data = calculate_production_roi(
-                case_name,
-                opt_cost['total_cost'],
-                reflection_model,
-                task_model,
-                volume
+                case_name, opt_cost["total_cost"], reflection_model, task_model, volume
             )
-            results.append({
-                "case_name": case_name,
-                "task_model": task_model,
-                "reflection_model": reflection_model,
-                "max_calls": max_calls,
-                "avg_delta": avg_delta,
-                "opt_cost": opt_cost,
-                "roi_data": roi_data,
-                "breakeven": roi_data['breakeven_calls'],
-            })
+            results.append(
+                {
+                    "case_name": case_name,
+                    "task_model": task_model,
+                    "reflection_model": reflection_model,
+                    "max_calls": max_calls,
+                    "avg_delta": avg_delta,
+                    "opt_cost": opt_cost,
+                    "roi_data": roi_data,
+                    "breakeven": roi_data["breakeven_calls"],
+                }
+            )
 
     # Sort: profitable first (by breakeven ascending), then N/A
-    results.sort(key=lambda x: (x['breakeven'] is None, x['breakeven'] or 0))
+    results.sort(key=lambda x: (x["breakeven"] is None, x["breakeven"] or 0))
 
     # Print results
     for res in results:
@@ -317,19 +314,27 @@ def run(
         print(f"Budget (max_calls): {res['max_calls']}")
         print()
 
-        opt = res['opt_cost']
+        opt = res["opt_cost"]
         print("COSTO DE OPTIMIZACION:")
-        print(f"  - Llamadas Task Model: {opt['task_calls']:,} = {format_currency(opt['task_cost'])}")
-        print(f"  - Llamadas Reflection: {opt['reflection_calls']:,} = {format_currency(opt['reflection_cost'])}")
+        print(
+            f"  - Llamadas Task Model: {opt['task_calls']:,} = {format_currency(opt['task_cost'])}"
+        )
+        print(
+            f"  - Llamadas Reflection: {opt['reflection_calls']:,} = "
+            f"{format_currency(opt['reflection_cost'])}"
+        )
         print(f"  - TOTAL: {format_currency(opt['total_cost'])}")
         print()
 
-        if res['roi_data'] is None:
-            print(f"ROI EN PRODUCCION: N/A (delta promedio: {res['avg_delta']:+.2f}, optimizacion no mejoro)")
-            print(f"PUNTO DE EQUILIBRIO: N/A")
+        if res["roi_data"] is None:
+            print(
+                f"ROI EN PRODUCCION: N/A "
+                f"(delta promedio: {res['avg_delta']:+.2f}, optimizacion no mejoro)"
+            )
+            print("PUNTO DE EQUILIBRIO: N/A")
         else:
             print(f"ROI EN PRODUCCION (volumen: {volume:,} llamadas):")
-            roi = res['roi_data']
+            roi = res["roi_data"]
             print(f"  - Sin GEPA: {format_currency(roi['cost_without_gepa'])}")
             print(f"  - Con GEPA: {format_currency(roi['cost_with_gepa_total'])}")
             print(f"  - Ahorro: {format_currency(roi['savings'])}")

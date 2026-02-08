@@ -6,7 +6,7 @@ Provides common CSV validation functionality for dataset files.
 
 import csv
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Set
+from typing import Any
 
 
 class CSVValidator:
@@ -26,12 +26,12 @@ class CSVValidator:
     @staticmethod
     def validate(
         csv_path: Path,
-        required_columns: Optional[List[str]] = None,
-        input_columns: Optional[List[str]] = None,
-        output_columns: Optional[List[str]] = None,
+        required_columns: list[str] | None = None,
+        input_columns: list[str] | None = None,
+        output_columns: list[str] | None = None,
         require_split: bool = True,
         encoding: str = "utf-8-sig",
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Validate CSV file structure.
 
@@ -100,7 +100,7 @@ class CSVValidator:
         return errors
 
     @staticmethod
-    def _read_headers(csv_path: Path, encoding: str = "utf-8-sig") -> Optional[List[str]]:
+    def _read_headers(csv_path: Path, encoding: str = "utf-8-sig") -> list[str] | None:
         """
         Read CSV headers from file.
 
@@ -111,12 +111,12 @@ class CSVValidator:
         Returns:
             List of header names, or None if file is empty
         """
-        with open(csv_path, "r", encoding=encoding) as f:
+        with open(csv_path, encoding=encoding) as f:
             reader = csv.DictReader(f)
             return reader.fieldnames
 
     @staticmethod
-    def _validate_split_column(headers: List[str], csv_path: Path) -> List[str]:
+    def _validate_split_column(headers: list[str], csv_path: Path) -> list[str]:
         """
         Validate presence of split column.
 
@@ -139,7 +139,7 @@ class CSVValidator:
         return errors
 
     @staticmethod
-    def get_headers(csv_path: Path, encoding: str = "utf-8-sig") -> List[str]:
+    def get_headers(csv_path: Path, encoding: str = "utf-8-sig") -> list[str]:
         """
         Get list of headers from CSV file.
 
@@ -167,11 +167,11 @@ class CSVValidator:
     @staticmethod
     def validate_from_config(
         csv_path: Path,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         input_key: str = "input_column",
         output_key: str = "output_columns",
         data_section: str = "data",
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Validate CSV structure using configuration dictionary.
 

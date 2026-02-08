@@ -2,10 +2,13 @@
 GEPA optimizer integration for DSPy programs.
 """
 
+from collections.abc import Callable
+
 import dspy
-from typing import List, Callable, Optional
-from .config import GEPAConfig
+
 from shared.display import print_section
+
+from .config import GEPAConfig
 
 
 class GEPAOptimizer:
@@ -13,12 +16,7 @@ class GEPAOptimizer:
     Wrapper class for GEPA optimizer with configuration management.
     """
 
-    def __init__(
-        self,
-        metric: Callable,
-        reflection_lm: dspy.LM,
-        config: Optional[GEPAConfig] = None
-    ):
+    def __init__(self, metric: Callable, reflection_lm: dspy.LM, config: GEPAConfig | None = None):
         """
         Initialize GEPA optimizer.
 
@@ -34,16 +32,16 @@ class GEPAOptimizer:
         # Initialize GEPA optimizer with configuration
         # Use only core parameters that are universally supported
         gepa_params = {
-            'metric': metric,
-            'reflection_lm': reflection_lm,
+            "metric": metric,
+            "reflection_lm": reflection_lm,
         }
 
         # Priority: Manual budget > Auto budget
         if self.config.max_metric_calls is not None:
             print(f"Using manual budget: {self.config.max_metric_calls} metric calls")
-            gepa_params['max_metric_calls'] = self.config.max_metric_calls
+            gepa_params["max_metric_calls"] = self.config.max_metric_calls
         else:
-            gepa_params['auto'] = self.config.auto_budget
+            gepa_params["auto"] = self.config.auto_budget
 
         # Add optional parameters only if they exist in this version of GEPA
         try:
@@ -60,14 +58,17 @@ class GEPAOptimizer:
             )
         except TypeError:
             # Fallback to basic parameters if some are not supported
-            print("Note: Using basic GEPA configuration (some parameters not supported in this version)")
+            print(
+                "Note: Using basic GEPA configuration "
+                "(some parameters not supported in this version)"
+            )
             self.optimizer = dspy.GEPA(**gepa_params)
 
     def compile(
         self,
         student: dspy.Module,
-        trainset: List[dspy.Example],
-        valset: Optional[List[dspy.Example]] = None,
+        trainset: list[dspy.Example],
+        valset: list[dspy.Example] | None = None,
     ) -> dspy.Module:
         """
         Compile (optimize) a DSPy program using GEPA.
@@ -87,13 +88,11 @@ class GEPAOptimizer:
 
         # Run GEPA optimization
         optimized_program = self.optimizer.compile(
-            student=student,
-            trainset=trainset,
-            valset=valset
+            student=student, trainset=trainset, valset=valset
         )
 
         # Print statistics if available
-        if self.config.track_stats and hasattr(self.optimizer, 'detailed_results'):
+        if self.config.track_stats and hasattr(self.optimizer, "detailed_results"):
             print_section("GEPA Optimization Statistics")
             self._print_stats()
 
@@ -101,7 +100,7 @@ class GEPAOptimizer:
 
     def _print_stats(self):
         """Print optimization statistics."""
-        if hasattr(self.optimizer, 'detailed_results'):
+        if hasattr(self.optimizer, "detailed_results"):
             results = self.optimizer.detailed_results
             print(f"Detailed results available: {results}")
         else:
@@ -114,18 +113,18 @@ class GEPAOptimizer:
         Returns:
             Best outputs if track_best_outputs was enabled, None otherwise
         """
-        if hasattr(self.optimizer, 'best_outputs'):
+        if hasattr(self.optimizer, "best_outputs"):
             return self.optimizer.best_outputs
         return None
 
 
 def optimize_with_gepa(
     module: dspy.Module,
-    trainset: List[dspy.Example],
-    valset: List[dspy.Example],
+    trainset: list[dspy.Example],
+    valset: list[dspy.Example],
     metric: Callable,
     reflection_lm: dspy.LM,
-    config: Optional[GEPAConfig] = None
+    config: GEPAConfig | None = None,
 ) -> dspy.Module:
     """
     Convenience function to optimize a DSPy module with GEPA.
@@ -141,14 +140,6 @@ def optimize_with_gepa(
     Returns:
         Optimized module
     """
-    optimizer = GEPAOptimizer(
-        metric=metric,
-        reflection_lm=reflection_lm,
-        config=config
-    )
+    optimizer = GEPAOptimizer(metric=metric, reflection_lm=reflection_lm, config=config)
 
-    return optimizer.compile(
-        student=module,
-        trainset=trainset,
-        valset=valset
-    )
+    return optimizer.compile(student=module, trainset=trainset, valset=valset)

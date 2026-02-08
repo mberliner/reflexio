@@ -4,7 +4,7 @@ LLM Error classes.
 Provides structured error handling for LLM connection issues.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 
 class LLMConnectionError(Exception):
@@ -19,11 +19,11 @@ class LLMConnectionError(Exception):
         message: str,
         provider: str,
         model: str,
-        endpoint: Optional[str] = None,
-        api_version: Optional[str] = None,
-        original_error: Optional[str] = None,
-        extra_details: Optional[Dict[str, Any]] = None,
-        suggestions: Optional[List[str]] = None,
+        endpoint: str | None = None,
+        api_version: str | None = None,
+        original_error: str | None = None,
+        extra_details: dict[str, Any] | None = None,
+        suggestions: list[str] | None = None,
     ):
         """
         Initialize LLMConnectionError.
@@ -68,27 +68,33 @@ class LLMConnectionError(Exception):
             lines.append(f"  - API Version: {self.api_version}")
 
         if self.original_error:
-            lines.extend([
-                "",
-                "Original error:",
-                f"  {self.original_error}",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Original error:",
+                    f"  {self.original_error}",
+                ]
+            )
 
         if self.extra_details:
-            lines.extend([
-                "",
-                "Details:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Details:",
+                ]
+            )
             for key, value in self.extra_details.items():
                 if value is None or value == "":
                     continue
                 lines.append(f"  - {key}: {value}")
 
         if self.suggestions:
-            lines.extend([
-                "",
-                "Suggested actions:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Suggested actions:",
+                ]
+            )
             for i, suggestion in enumerate(self.suggestions, 1):
                 lines.append(f"  {i}. {suggestion}")
 

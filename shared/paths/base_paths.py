@@ -7,13 +7,12 @@ while allowing each project to define its own root and input paths.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
 
 
 class BasePaths(ABC):
     """Base class with shared path logic for all projects."""
 
-    def __init__(self, root_override: Optional[Path] = None):
+    def __init__(self, root_override: Path | None = None):
         if root_override:
             self._root = Path(root_override).resolve()
         else:

@@ -5,27 +5,24 @@ Uses shared logging utilities for consistent formatting across projects.
 """
 
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 # Add project root to path for shared module access
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from shared.logging import (
-    BaseCSVLogger,
+from shared.logging import (  # noqa: E402
     STANDARD_COLUMN_MAPPING,
+    BaseCSVLogger,
     generate_run_id,
     get_timestamp,
-    fmt_score,
     make_path_relative,
 )
-
-from shared.paths import get_paths
+from shared.paths import get_paths  # noqa: E402
 
 
 def save_run_details(
@@ -33,9 +30,9 @@ def save_run_details(
     run_id: str,
     initial_prompt: str,
     final_prompt: str,
-    metadata: Dict[str, Any],
-    results: Dict[str, Any],
-    timestamp: Optional[datetime] = None
+    metadata: dict[str, Any],
+    results: dict[str, Any],
+    timestamp: datetime | None = None,
 ) -> Path:
     """
     Guarda detalles completos de un run en archivos individuales.
@@ -77,17 +74,17 @@ def save_run_details(
 
     # 1. Guardar prompt inicial
     initial_prompt_file = run_dir / "initial_prompt.txt"
-    with open(initial_prompt_file, 'w', encoding='utf-8') as f:
+    with open(initial_prompt_file, "w", encoding="utf-8") as f:
         f.write(initial_prompt)
 
     # 2. Guardar prompt final
     final_prompt_file = run_dir / "final_prompt.txt"
-    with open(final_prompt_file, 'w', encoding='utf-8') as f:
+    with open(final_prompt_file, "w", encoding="utf-8") as f:
         f.write(final_prompt)
 
     # 3. Guardar config (metadata)
     config_file = run_dir / "config.json"
-    with open(config_file, 'w', encoding='utf-8') as f:
+    with open(config_file, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
     # 4. Guardar results
@@ -95,12 +92,12 @@ def save_run_details(
     # Convertir objetos complejos a diccionarios si es necesario
     serializable_results = {}
     for key, value in results.items():
-        if hasattr(value, '__dict__'):
+        if hasattr(value, "__dict__"):
             serializable_results[key] = value.__dict__
         else:
             serializable_results[key] = value
 
-    with open(results_file, 'w', encoding='utf-8') as f:
+    with open(results_file, "w", encoding="utf-8") as f:
         json.dump(serializable_results, f, indent=2, ensure_ascii=False)
 
     # 5. Actualizar symlink 'latest'
@@ -111,7 +108,7 @@ def save_run_details(
         latest_symlink.symlink_to(run_dir.name, target_is_directory=True)
     except OSError:
         # En Windows o sistemas sin soporte de symlinks, crear un archivo de texto
-        with open(latest_symlink, 'w') as f:
+        with open(latest_symlink, "w") as f:
             f.write(str(run_dir))
 
     print(f"\n>> [LOG] Detalles del run guardados en: {run_dir}")
@@ -147,7 +144,7 @@ class GEPAResultsLogger(BaseCSVLogger):
         run_directory: str,
         has_positive_reflection: bool = False,
         budget: int = None,
-        notes: str = ""
+        notes: str = "",
     ) -> str:
         """
         Log an experiment result to the CSV.
@@ -169,9 +166,7 @@ class GEPAResultsLogger(BaseCSVLogger):
         """
         # Convert run_dir to relative path
         rel_run_dir = make_path_relative(
-            run_directory,
-            str(self._paths.results),
-            fallback=run_directory
+            run_directory, str(self._paths.results), fallback=run_directory
         )
 
         data = {
@@ -206,7 +201,7 @@ def log_experiment_result(
     run_directory: str,
     has_positive_reflection: bool = False,
     budget: int = None,
-    notes: str = ""
+    notes: str = "",
 ):
     """
     Registra los resultados de un experimento GEPA en el CSV de resumen.

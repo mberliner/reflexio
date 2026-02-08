@@ -12,40 +12,44 @@ Usage:
     python universal_optimizer.py
 """
 
-import sys
-import os
-import json
 import argparse
+import json
+import os
+import sys
 import traceback
 import uuid
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # Ensure parent directory is in path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import yaml
 from gepa import optimize
 
-from gepa_standalone.config_schema import ConfigValidator
-from gepa_standalone.wizard.interactive import InteractiveWizard
 from gepa_standalone.adapters.simple_classifier_adapter import SimpleClassifierAdapter
 from gepa_standalone.adapters.simple_extractor_adapter import SimpleExtractorAdapter
-from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from gepa_standalone.adapters.simple_rag_adapter import SimpleRAGAdapter
-from gepa_standalone.data.data_loader import load_gepa_data
-from gepa_standalone.core.llm_factory import create_reflection_lm_function, get_reflection_config, get_task_config
-from shared.display import print_header, print_section, print_summary, print_detailed_results
-from gepa_standalone.utils.results_logger import save_run_details, log_experiment_result
-from shared.paths import get_paths
+from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from gepa_standalone.config import Config
+from gepa_standalone.config_schema import ConfigValidator
+from gepa_standalone.core.llm_factory import (
+    create_reflection_lm_function,
+    get_reflection_config,
+    get_task_config,
+)
+from gepa_standalone.data.data_loader import load_gepa_data
+from gepa_standalone.utils.results_logger import log_experiment_result, save_run_details
+from gepa_standalone.wizard.interactive import InteractiveWizard
+from shared.display import print_detailed_results, print_header, print_section, print_summary
+from shared.paths import get_paths
 
 
 class UniversalOptimizer:
     """Orquestador universal de optimización GEPA."""
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: str | None = None):
         """
         Initialize optimizer.
 
@@ -74,7 +78,7 @@ class UniversalOptimizer:
                 fallback_path = script_dir / self.config_path
                 if fallback_path.exists():
                     config_path = fallback_path
-                
+
         if config_path:
             self.config_path = str(config_path)
             print(f"\n[INFO] Loading config from: {self.config_path}")
@@ -109,18 +113,19 @@ class UniversalOptimizer:
         # Save a snapshot of the YAML config used
         if self.config:
             import shutil
+
             snapshot_path = run_dir / "config_snapshot.yaml"
             if self.config_path and Path(self.config_path).exists():
                 shutil.copy2(self.config_path, snapshot_path)
             else:
                 # If from wizard, write the dict to yaml
-                with open(snapshot_path, 'w', encoding='utf-8') as f:
+                with open(snapshot_path, "w", encoding="utf-8") as f:
                     yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
             print(f">> [LOG] Config snapshot saved: {snapshot_path}")
 
         print("\n[SUCCESS] Optimization completed!")
 
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self) -> dict[str, Any]:
         """
         Load and parse YAML config file.
 
@@ -137,18 +142,18 @@ class UniversalOptimizer:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
             print(f"[INFO] Config loaded successfully: {config['case']['name']}")
             return config
 
         except yaml.YAMLError as e:
-            print(f"\n[ERROR] Invalid YAML format in config file:")
+            print("\n[ERROR] Invalid YAML format in config file:")
             print(f"  {e}")
             raise
 
-    def run_wizard(self) -> Dict[str, Any]:
+    def run_wizard(self) -> dict[str, Any]:
         """
         Run interactive wizard to generate config.
 
@@ -177,63 +182,63 @@ class UniversalOptimizer:
 
     def load_data(self):
         """Load dataset using universal data loader."""
-        csv_filename = self.config['data']['csv_filename']
-        input_column = self.config['data'].get('input_column', 'text')
-        output_columns = self.config['data'].get('output_columns')
+        csv_filename = self.config["data"]["csv_filename"]
+        input_column = self.config["data"].get("input_column", "text")
+        output_columns = self.config["data"].get("output_columns")
 
         print(f"\n[INFO] Loading data from: {csv_filename}")
 
         # If output_columns not specified, infer from CSV
         if not output_columns:
             csv_path = get_paths().dataset(csv_filename)
-            with open(csv_path, 'r', encoding='utf-8') as f:
+            with open(csv_path, encoding="utf-8") as f:
                 import csv
+
                 reader = csv.DictReader(f)
                 all_cols = reader.fieldnames
-                output_columns = [c for c in all_cols if c not in ['split', input_column]]
+                output_columns = [c for c in all_cols if c not in ["split", input_column]]
 
         # Load using universal function
         self.train_data, self.val_data, self.test_data = load_gepa_data(
-            csv_filename=csv_filename,
-            input_column=input_column,
-            output_columns=output_columns
+            csv_filename=csv_filename, input_column=input_column, output_columns=output_columns
         )
 
-        print(f"[INFO] Loaded: {len(self.train_data)} train, {len(self.val_data)} val, {len(self.test_data)} test")
+        print(
+            f"[INFO] Loaded: {len(self.train_data)} train, "
+            f"{len(self.val_data)} val, {len(self.test_data)} test"
+        )
 
     def initialize_adapter(self):
         """Initialize adapter based on config type."""
-        adapter_type = self.config['adapter']['type']
+        adapter_type = self.config["adapter"]["type"]
         # Capture actual temperature used for reporting consistency
-        self.active_temperature = self.config.get('models', {}).get('temperature', 0.0)
+        self.active_temperature = self.config.get("models", {}).get("temperature", 0.0)
 
         print(f"[INFO] Initializing {adapter_type} adapter...")
 
         if adapter_type == "classifier":
-            valid_classes = self.config['adapter']['valid_classes']
+            valid_classes = self.config["adapter"]["valid_classes"]
             self.adapter = SimpleClassifierAdapter(
-                valid_classes=valid_classes,
-                temperature=self.active_temperature
+                valid_classes=valid_classes, temperature=self.active_temperature
             )
 
         elif adapter_type == "extractor":
-            required_fields = self.config['adapter']['required_fields']
-            max_pos = self.config['adapter'].get('max_positive_examples')
+            required_fields = self.config["adapter"]["required_fields"]
+            max_pos = self.config["adapter"].get("max_positive_examples")
 
             self.adapter = SimpleExtractorAdapter(
                 required_fields=required_fields,
                 temperature=self.active_temperature,
-                max_positive_examples=max_pos
+                max_positive_examples=max_pos,
             )
 
         elif adapter_type == "sql":
             self.adapter = SimpleSQLAdapter(temperature=self.active_temperature)
 
         elif adapter_type == "rag":
-            max_pos = self.config['adapter'].get('max_positive_examples')
+            max_pos = self.config["adapter"].get("max_positive_examples")
             self.adapter = SimpleRAGAdapter(
-                temperature=self.active_temperature,
-                max_positive_examples=max_pos
+                temperature=self.active_temperature, max_positive_examples=max_pos
             )
 
         else:
@@ -243,30 +248,30 @@ class UniversalOptimizer:
 
     def _has_positive_reflection(self) -> bool:
         """Determine if this run uses positive reflection."""
-        adapter_type = self.config['adapter']['type']
+        adapter_type = self.config["adapter"]["type"]
         if adapter_type in ["extractor", "rag"]:
-            max_pos = self.config['adapter'].get('max_positive_examples', 0)
+            max_pos = self.config["adapter"].get("max_positive_examples", 0)
             return max_pos > 0
         return False
 
-    def load_prompt(self) -> Dict[str, str]:
+    def load_prompt(self) -> dict[str, str]:
         """
         Load initial prompt from JSON file.
 
         Returns:
             Prompt dictionary with 'system_prompt' key
         """
-        prompt_filename = self.config['prompt']['filename']
+        prompt_filename = self.config["prompt"]["filename"]
         prompt_path = get_paths().prompt(prompt_filename)
 
         print(f"[INFO] Loading prompt from: {prompt_filename}")
 
-        with open(prompt_path, 'r', encoding='utf-8') as f:
+        with open(prompt_path, encoding="utf-8") as f:
             prompt = json.load(f)
 
         return prompt
 
-    def execute_gepa_pipeline(self, initial_prompt: Dict[str, str], verbose: bool = False):
+    def execute_gepa_pipeline(self, initial_prompt: dict[str, str], verbose: bool = False):
         """
         Execute complete GEPA optimization pipeline.
 
@@ -274,14 +279,15 @@ class UniversalOptimizer:
             initial_prompt: Initial prompt dictionary
             verbose: If True, show reflection analysis in console
         """
-        case_title = self.config['case'].get('title', self.config['case']['name'])
+        case_title = self.config["case"].get("title", self.config["case"]["name"])
 
         # Header
         print_header(f"GEPA Optimization: {case_title}")
 
         # Dataset info
         from gepa_standalone.data.data_loader import print_dataset_info
-        print_dataset_info(self.config['data']['csv_filename'])
+
+        print_dataset_info(self.config["data"]["csv_filename"])
 
         print(f"\nPROMPT INICIAL:\n{initial_prompt['system_prompt']}")
 
@@ -289,16 +295,18 @@ class UniversalOptimizer:
         print_section("BASELINE PERFORMANCE")
         print(">> Evaluando prompt inicial en conjunto de validacion...")
         eval_baseline = self.adapter.evaluate(self.val_data, initial_prompt)
-        baseline_avg = sum(eval_baseline.scores) / len(eval_baseline.scores) if eval_baseline.scores else 0.0
-        print(f"Precision Baseline: {baseline_avg*100:.1f}%")
+        baseline_avg = (
+            sum(eval_baseline.scores) / len(eval_baseline.scores) if eval_baseline.scores else 0.0
+        )
+        print(f"Precision Baseline: {baseline_avg * 100:.1f}%")
 
         # 2. OPTIMIZATION
         print_section("GEPA OPTIMIZATION")
         reflection_lm = create_reflection_lm_function(verbose=verbose)
 
         # Snapshot parameters for consistency
-        self.active_max_metric_calls = self.config['optimization']['max_metric_calls']
-        self.active_skip_perfect_score = self.config['optimization'].get('skip_perfect_score', True)
+        self.active_max_metric_calls = self.config["optimization"]["max_metric_calls"]
+        self.active_skip_perfect_score = self.config["optimization"].get("skip_perfect_score", True)
 
         result = optimize(
             seed_candidate=initial_prompt,
@@ -309,7 +317,7 @@ class UniversalOptimizer:
             reflection_lm=reflection_lm,
             max_metric_calls=self.active_max_metric_calls,
             skip_perfect_score=self.active_skip_perfect_score,
-            display_progress_bar=self.config['optimization'].get('display_progress_bar', True)
+            display_progress_bar=self.config["optimization"].get("display_progress_bar", True),
         )
 
         optimized_prompt = result.best_candidate
@@ -335,7 +343,7 @@ class UniversalOptimizer:
             test_avg=test_avg,
             task_model=self.adapter.model,
             reflection_model=get_reflection_config().model,
-            budget_used=result.total_metric_calls
+            budget_used=result.total_metric_calls,
         )
 
         print(f"\nPROMPT ORIGINAL:\n{initial_prompt['system_prompt']}")
@@ -343,12 +351,12 @@ class UniversalOptimizer:
 
         # Store results for logging
         self.results = {
-            "initial_prompt": initial_prompt['system_prompt'],
-            "final_prompt": optimized_prompt['system_prompt'],
+            "initial_prompt": initial_prompt["system_prompt"],
+            "final_prompt": optimized_prompt["system_prompt"],
             "baseline_score": baseline_avg,
             "optimized_score": opt_avg,
             "test_score": test_avg,
-            "total_metric_calls": result.total_metric_calls
+            "total_metric_calls": result.total_metric_calls,
         }
 
     def save_results(self) -> Path:
@@ -359,40 +367,40 @@ class UniversalOptimizer:
             Path to the run directory
         """
         run_id = str(uuid.uuid4())[:8]
-        
+
         # Determine model names
         task_config = get_task_config()
         reflect_config = get_reflection_config()
-        
+
         # Prepare metadata
         metadata = {
-            "case": self.config['case']['name'],
+            "case": self.config["case"]["name"],
             "task_model": task_config.model,
             "reflection_model": reflect_config.model,
-            "max_metric_calls": self.config['optimization']['max_metric_calls'],
-            "timestamp": datetime.now().isoformat()
+            "max_metric_calls": self.config["optimization"]["max_metric_calls"],
+            "timestamp": datetime.now().isoformat(),
         }
-        
+
         # Save detailed results
         run_dir = save_run_details(
-            case_name=self.config['case']['name'],
+            case_name=self.config["case"]["name"],
             run_id=run_id,
-            initial_prompt=self.results['initial_prompt'],
-            final_prompt=self.results['final_prompt'],
+            initial_prompt=self.results["initial_prompt"],
+            final_prompt=self.results["final_prompt"],
             metadata=metadata,
-            results=self.results
+            results=self.results,
         )
-        
+
         # Log to master CSV
         log_experiment_result(
-            case_title=self.config['case']['title'],
+            case_title=self.config["case"]["title"],
             task_model=task_config.model,
             reflection_model=reflect_config.model,
-            baseline_score=self.results['baseline_score'],
-            optimized_score=self.results['optimized_score'],
-            robustness_score=self.results['test_score'],
+            baseline_score=self.results["baseline_score"],
+            optimized_score=self.results["optimized_score"],
+            robustness_score=self.results["test_score"],
             run_directory=str(run_dir),
-            budget=metadata['max_metric_calls'],
+            budget=metadata["max_metric_calls"],
         )
 
         return run_dir
@@ -412,17 +420,17 @@ Examples:
   python universal_optimizer.py
 
 For more info, see: gepa_standalone/experiments/configs/
-        """
+        """,
     )
     parser.add_argument(
         "--config",
         type=str,
-        help="Path to YAML config file. If not provided or doesn't exist, wizard mode activates."
+        help="Path to YAML config file. If not provided or doesn't exist, wizard mode activates.",
     )
     parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Show real-time reflection analysis from the Teacher model."
+        help="Show real-time reflection analysis from the Teacher model.",
     )
 
     args = parser.parse_args()

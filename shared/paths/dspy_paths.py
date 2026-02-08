@@ -5,9 +5,8 @@ Provides paths for the dspy_gepa_poc project, following the same
 structure conventions as GEPAPaths but with DSPy-specific layout.
 """
 
-from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
 
 from .base_paths import BasePaths
 
@@ -37,11 +36,7 @@ class DSPyPaths(BasePaths):
 
     # ==================== OUTPUT PATHS ====================
 
-    def run_dir(
-        self,
-        case_name: str,
-        timestamp: Optional[datetime] = None
-    ) -> Path:
+    def run_dir(self, case_name: str, timestamp: datetime | None = None) -> Path:
         """
         Generate directory path for a specific run.
 
@@ -55,7 +50,7 @@ class DSPyPaths(BasePaths):
         if timestamp is None:
             timestamp = datetime.now()
 
-        safe_name = case_name.replace(' ', '_').replace('(', '').replace(')', '')
+        safe_name = case_name.replace(" ", "_").replace("(", "").replace(")", "")
         ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
         dirname = f"{safe_name}_{ts_str}"
 
@@ -66,10 +61,10 @@ class DSPyPaths(BasePaths):
 
 # ==================== GLOBAL INSTANCE ====================
 
-_dspy_paths_instance: Optional[DSPyPaths] = None
+_dspy_paths_instance: DSPyPaths | None = None
 
 
-def get_dspy_paths(root_override: Optional[Path] = None) -> DSPyPaths:
+def get_dspy_paths(root_override: Path | None = None) -> DSPyPaths:
     """
     Get the global DSPyPaths instance.
 
