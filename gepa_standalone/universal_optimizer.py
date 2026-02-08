@@ -43,6 +43,7 @@ from gepa_standalone.data.data_loader import load_gepa_data
 from gepa_standalone.utils.results_logger import log_experiment_result, save_run_details
 from gepa_standalone.wizard.interactive import InteractiveWizard
 from shared.display import print_detailed_results, print_header, print_section, print_summary
+from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_paths
 
 
@@ -94,6 +95,10 @@ class UniversalOptimizer:
 
         # 2. Validate config
         self.validate_config()
+
+        # Initialize metadata tracking
+        self.metadata_mgr = MetadataManager(get_paths().results)
+        self.seed = generate_seed()
 
         # 3. Load data
         self.load_data()
@@ -372,6 +377,17 @@ class UniversalOptimizer:
         task_config = get_task_config()
         reflect_config = get_reflection_config()
 
+        # Write reproducibility metadata (3 levels)
+        self.metadata_mgr.ensure_environment()
+        self.metadata_mgr.ensure_experiment(
+            experiment_name=self.config["case"]["name"],
+            dataset_path=get_paths().dataset(self.config["data"]["csv_filename"]),
+            base_config={
+                "adapter_type": self.config["adapter"]["type"],
+                "optimization": self.config.get("optimization", {}),
+            },
+        )
+
         # Prepare metadata
         metadata = {
             "case": self.config["case"]["name"],
@@ -389,6 +405,14 @@ class UniversalOptimizer:
             final_prompt=self.results["final_prompt"],
             metadata=metadata,
             results=self.results,
+        )
+
+        # Write run-level metadata
+        self.metadata_mgr.create_run(
+            run_dir=run_dir,
+            experiment_name=self.config["case"]["name"],
+            seed=self.seed,
+            models=collect_model_info(task_config, reflect_config),
         )
 
         # Log to master CSV

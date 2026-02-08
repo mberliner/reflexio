@@ -21,6 +21,7 @@ from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
 from dspy_gepa_poc.metrics import create_dynamic_metric
 from dspy_gepa_poc.results_logger import ResultsLogger
 from shared.display import print_header, print_section
+from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_dspy_paths
 
 # Scores <= 1.0 are normalized (0.0-1.0), > 1.0 are raw percentages
@@ -51,6 +52,7 @@ class ReflexioDeclarativa:
         self.results_dir = get_dspy_paths().run_dir(
             case_name=self.config.raw_config["case"]["name"], timestamp=run_ts
         )
+        self.metadata_mgr = MetadataManager(get_dspy_paths().results)
         print(f"Results will be saved to: {self.results_dir}")
 
     def setup_models(self):
@@ -71,6 +73,8 @@ class ReflexioDeclarativa:
 
         task_model_name = self.task_config.model
         reflection_model_name = self.reflection_config.model
+
+        self.seed = generate_seed()
 
         # Validate configuration
         self.task_config.validate()
@@ -293,6 +297,23 @@ class ReflexioDeclarativa:
         few_shot_info = f"Few-Shot: {'Yes' if opt_config.get('use_few_shot') else 'No'}"
         if opt_config.get("use_few_shot"):
             few_shot_info += f" (k={opt_config.get('few_shot_count', 3)})"
+
+        # Write reproducibility metadata (3 levels)
+        self.metadata_mgr.ensure_environment()
+        self.metadata_mgr.ensure_experiment(
+            experiment_name=self.config.raw_config["case"]["name"],
+            dataset_path=Path(self.config.dataset_path),
+            base_config={
+                "module_type": self.config.raw_config["module"]["type"],
+                "optimization": opt_config,
+            },
+        )
+        self.metadata_mgr.create_run(
+            run_dir=self.results_dir,
+            experiment_name=self.config.raw_config["case"]["name"],
+            seed=self.seed,
+            models=collect_model_info(self.task_config, self.reflection_config),
+        )
 
         # Log to master CSV
         self.logger.log_run(

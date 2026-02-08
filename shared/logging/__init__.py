@@ -12,6 +12,7 @@ from .csv_writer import (
     make_path_relative,
 )
 from .formatters import fmt_score, generate_run_id, get_timestamp
+from .metadata import MetadataManager, collect_model_info, generate_seed
 
 __all__ = [
     "generate_run_id",
@@ -21,4 +22,7 @@ __all__ = [
     "EUROPEAN_CSV_CONFIG",
     "STANDARD_COLUMN_MAPPING",
     "make_path_relative",
+    "MetadataManager",
+    "collect_model_info",
+    "generate_seed",
 ]
