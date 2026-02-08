@@ -10,6 +10,7 @@ A continuación se lista la documentación disponible en `docs/`. Cada archivo a
 
 ### General e Integracion
 - **`docs/LLM_CONFIG.md`**: SSOT para configuracion LLM unificada (shared/llm). Variables de entorno, formatos de modelo, uso en codigo.
+- **`docs/YAML_CONFIG_REFERENCE.md`**: SSOT para campos de configuracion YAML de ambos proyectos. Tablas de referencia rapida con tipos, defaults y descripciones.
 - **`docs/ANALISIS_UTILIDADES.md`**: SSOT para utilidades de analisis compartidas (shared/analysis). CLI unificado, leaderboard, ROI, estadisticas.
 - **`docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md`**: SSOT para la arquitectura de integracion y metodologia de 3 conjuntos. Analisis detallado de diferencias entre GEPA standalone y DSPy.
 - **`docs/LECCIONES_APRENDIDAS.md`**: Recopilacion de hallazgos criticos, errores comunes (metrica exacta, efecto techo) y comparativas de rendimiento (ingles vs espanol) obtenidos durante la experimentacion.

@@ -10,6 +10,7 @@ A continuación se lista la documentación disponible en `docs/`. Cada archivo a
 
 ### General e Integracion
 - **`docs/LLM_CONFIG.md`**: SSOT para configuracion LLM unificada (shared/llm). Variables de entorno, formatos de modelo, uso en codigo.
+- **`docs/YAML_CONFIG_REFERENCE.md`**: SSOT para campos de configuracion YAML de ambos proyectos. Tablas de referencia rapida con tipos, defaults y descripciones.
 - **`docs/ANALISIS_UTILIDADES.md`**: SSOT para utilidades de analisis compartidas (shared/analysis). CLI unificado, leaderboard, ROI, estadisticas.
 - **`docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md`**: SSOT para la arquitectura de integracion y metodologia de 3 conjuntos. Analisis detallado de diferencias entre GEPA standalone y DSPy.
 - **`docs/LECCIONES_APRENDIDAS.md`**: Recopilacion de hallazgos criticos, errores comunes (metrica exacta, efecto techo) y comparativas de rendimiento (ingles vs espanol) obtenidos durante la experimentacion.
@@ -32,8 +33,14 @@ Estructura de alto nivel:
 
 ```
 reflexio/
-+-- shared/llm/             # Configuracion LLM unificada (LiteLLM)
-+-- dspy_gepa_poc/          # Integracion DSPy + GEPA
++-- analyze                 # CLI unificado para análisis
++-- shared/llm/             # Configuración LLM unificada (LiteLLM)
++-- shared/paths/           # Gestión centralizada de rutas (BasePaths, GEPAPaths, DSPyPaths)
++-- shared/display/         # Formateo consistente para terminal
++-- shared/logging/         # Logger CSV compartido (BaseCSVLogger)
++-- shared/validation/      # Validación de configuración
++-- shared/analysis/        # Utilidades de análisis compartidas
++-- dspy_gepa_poc/          # Integración DSPy + GEPA
 +-- gepa_standalone/        # GEPA puro (sin DSPy)
 +-- docs/                   # Documentación detallada
 ```

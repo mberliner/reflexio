@@ -124,6 +124,7 @@ GEPA mejora los prompts usados por DSPy mediante un ciclo de evolucion reflexiva
 | Dominio | Archivo |
 |---|---|
 | Configuracion LLM | `docs/LLM_CONFIG.md` |
+| Configuracion YAML | `docs/YAML_CONFIG_REFERENCE.md` |
 | Guia de DSPy | `docs/DSPY_DOCUMENTACION.md` |
 | Diseño de Sistemas | `docs/DSPY_GUIA_DISENO.md` |
 | Optimizador GEPA | `docs/GEPA_DOCUMENTACION.md` |

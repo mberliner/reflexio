@@ -1,216 +1,218 @@
-# Mejoras Pendientes: dspy_gepa_poc
+# Mejoras Pendientes: Reflexio
 
 > **Tipo:** Documento efimero de implementacion
-> **Fecha de revision:** 2026-02-02
-> **Estado:** Fases 1-4 completadas (modulos compartidos integrados)
+> **Fecha de revision:** 2026-02-08
 > **Eliminar despues de:** Implementar todas las mejoras
 
 ---
 
 ## Resumen Ejecutivo
 
-Revision exhaustiva del proyecto `dspy_gepa_poc`. Quedan pendientes mejoras menores de codigo y gaps de documentacion.
+Arquitectura solida (~7,361 lineas de produccion). Modulos compartidos integrados.
+45 tests existentes con 19% de cobertura en `shared/`. Zero TODOs o hacks en codigo.
 
-**Evaluacion general:** Arquitectura solida. Modulos compartidos integrados. Pendiente documentacion y calidad.
+**Problema principal:** La base funcional esta bien construida pero desprotegida (sin CI,
+cobertura baja en modulos criticos) y con friccion de onboarding (sin quickstart ejecutable).
 
----
-
-## 1. PROBLEMAS DE CODIGO
-
-### [P5] Magic Numbers para Deteccion de Escala
-
-**Archivo:** `reflexio_declarativa.py:149-150`
-
-**Problema actual:**
-```python
-if baseline_score > 1.0: print(f"Baseline Score: {baseline_score:.2f}%")
-else: print(f"Baseline Score: {baseline_score:.2%}")
-```
-
-**Solucion propuesta:**
-```python
-# Al inicio del archivo
-NORMALIZED_SCORE_MAX = 1.0  # Scores <= 1.0 son normalizados, > 1.0 son porcentajes
-
-def format_score(score: float) -> str:
-    """Formatea score segun escala detectada."""
-    if score > NORMALIZED_SCORE_MAX:
-        return f"{score:.2f}%"
-    return f"{score:.2%}"
-
-# Uso:
-print(f"Baseline Score: {format_score(baseline_score)}")
-```
-
-**Archivos a modificar:**
-- `dspy_gepa_poc/reflexio_declarativa.py`
+**Estrategia:** Primero proteger lo que ya funciona (CI + tests criticos), luego hacer
+el proyecto accesible (quickstart), despues iterar sobre mejoras incrementales.
 
 ---
 
-## 3. DOCUMENTACION FALTANTE
+## Estado Actual del Codebase
 
-### [D2] docs/YAML_CONFIG_REFERENCE.md
-- **Estado:** No existe
-- **Accion:** Crear documentacion de campos YAML
+| Componente | Lineas | Tests | Cobertura |
+|---|---|---|---|
+| `shared/paths/` | 429 | 33 | 77-100% |
+| `shared/llm/` | 359 | 2 (smoke) | 12-22% |
+| `shared/validation/` | 520 | 1 (smoke) | 24-31% |
+| `shared/logging/` | 288 | 1 (smoke) | 27-40% |
+| `shared/display/` | 116 | 1 (smoke) | 7% |
+| `shared/analysis/` | 1,676 | 0 | 0% |
+| `dspy_gepa_poc/` | 1,446 | 7 (smoke) | - |
+| `gepa_standalone/` | 2,570 | 0 | - |
 
-**Contenido sugerido:**
-```markdown
-# Referencia de Configuracion YAML
+### Fortalezas (Mantener)
 
-## Secciones Requeridas
-
-### case
-- `name` (string): Nombre del experimento
-
-### module
-- `type` (string): Tipo de modulo. Valores: "dynamic"
-
-### data
-- `csv_filename` (string): Archivo CSV en datasets/
-- `input_column` (string): Columna de entrada
-
-### optimization
-- `max_metric_calls` (int): Budget de llamadas a metrica
-
-## Secciones Opcionales
-
-### signature (para type="dynamic")
-- `instruction` (string): Prompt base
-- `inputs` (list): Lista de {name, desc}
-- `outputs` (list): Lista de {name, desc}
-
-### optimization (campos opcionales)
-- `auto_budget` (string): "light", "medium", "heavy"
-- `use_few_shot` (bool): Habilitar few-shot
-- `few_shot_count` (int): Numero de ejemplos
-- `ignore_in_metric` (list): Campos a ignorar
-- `predictor_type` (string): "cot" o "predict"
-```
-
-### [D4] Actualizar README.md
-- Readme para seres humanos
-- Actualizar seccion Features, diferencia entre gepa standalone y dspyt + gepa
-- Referenciar forma de configuracion de yamsl que no existe
-
-### [D5] Documentación de arquitectura y buenas practicas de SW
-- traer de otros proyectos o crear ad hoc?
-- Contribuciones
-
----
-
-## 4. CHECKLIST DE IMPLEMENTACION
-
-### Codigo
-- [ ] [P5] Extraer constantes magic numbers (reflexio_declarativa.py)
-
-### Documentacion
-- [ ] [D2] Crear docs/YAML_CONFIG_REFERENCE.md
-- [ ] [D4] Actualizar README.md
-
----
-
-## 5. NOTAS ADICIONALES
-
-### Fortalezas Identificadas (Mantener)
 - Patron Factory en DynamicModuleFactory
 - Validacion temprana con ConfigValidator
-- Separacion clara de capas
+- Separacion clara de capas (shared, dspy, gepa)
 - Zero-code experimentation via YAML
-- Soporte multilingue
+- Soporte multilingue (ES/EN)
+- Manejo de errores robusto (137 sitios, excepciones custom)
+- Cero TODOs/FIXMEs/HACKs en codigo
 
-## 6. MODULOS COMPARTIDOS PROPUESTOS
-
-> **Fecha de analisis:** 2026-02-02
-
-Analisis de funcionalidades duplicadas entre `dspy_gepa_poc/` y `gepa_standalone/` que pueden extraerse a `shared/`.
-
-### 6.1 Estructura Implementada
-
-```
-shared/
-├── llm/           # Configuracion LLM unificada
-├── validation/    # ConfigValidator base + validacion CSV
-├── logging/       # Logger CSV compartido (BaseCSVLogger)
-├── paths/         # Gestion centralizada de rutas (BasePaths -> GEPAPaths, DSPyPaths)
-├── display/       # Formateo terminal
-└── analysis/      # Utilidades de analisis (leaderboard, ROI)
-```
-
-### 6.2 Pendiente
-
-- [ ] Agregar tests unitarios para modulos compartidos
-
-### 6.3 Metricas de Duplicacion Restante
+### Duplicacion Restante
 
 | Categoria | Lineas Duplicadas | Similitud |
-|-----------|-------------------|-----------|
+|---|---|---|
 | Data loading | ~70 lineas | 60% |
 | Orquestacion | ~200 lineas | 50% |
 
 ---
 
-## 7. Verificar nombres de dspy_gepa_poc
-    Es POC? o mas...
-    Es un optimizador o una plataforma de intención diferente?
-    Declarative Self-improving Python
+## Tier 1 - Alto Impacto, Bajo Esfuerzo
+
+Proteger la base funcional y desbloquear el onboarding.
+
+### [T1-1] Pipeline de CI (tests + lint)
+
+- **Objetivo:** GitHub Actions basico que ejecute `pytest` y un linter en cada push/PR.
+- **Justificacion:** 45 tests que nadie ejecuta automaticamente. Un bug en `shared/llm/`
+  o en los adapters afecta todos los experimentos. CI es la red de seguridad minima.
+- **Alcance:** pytest, ruff o flake8, fail en coverage < umbral.
+- **Esfuerzo:** Bajo.
+
+### [T1-2] Tests para shared/llm/ y shared/validation/
+
+- **Objetivo:** Cobertura real (no solo imports) para los dos modulos mas criticos.
+- **Justificacion:** `shared/llm/config.py` (252 lineas, 22% cobertura) es el punto de
+  entrada de toda interaccion con LLMs. `shared/validation/` (520 lineas, 24-31%)
+  previene errores de configuracion. Un bug en cualquiera de estos rompe todo el proyecto.
+- **Alcance:**
+  - `shared/llm/config.py`: validacion de conexion, parsing de modelos, manejo de errores.
+  - `shared/llm/errors.py`: formateo de diagnosticos.
+  - `shared/validation/base_validator.py`: validacion de campos, tipos, valores permitidos.
+  - `shared/validation/csv_validator.py`: estructura de CSVs.
+  - `shared/validation/errors.py`: formateo de errores de validacion.
+- **Esfuerzo:** Bajo-Medio.
+
+### [T1-3] Datasets de ejemplo versionados
+
+- **Objetivo:** 1-2 CSV pequenos commiteados y documentados para que `git clone` +
+  `pip install` + un comando = resultado visible.
+- **Justificacion:** Bloqueador #1 de onboarding. Ya existen 13 CSVs en el proyecto;
+  falta verificar que los esenciales esten commiteados y documentar cual usar primero.
+- **Esfuerzo:** Bajo.
 
 ---
 
-## 9. Pipeline de CI
-- Test unitarios, lint, seguridad, calidad de codigo
-- CD?
+## Tier 2 - Alto Impacto, Esfuerzo Medio
 
----
+Reproducibilidad, accesibilidad y cobertura de logica critica.
 
-## 10. Documentacion Nueva (DX)
+### [T2-1] Reproducibilidad y trazabilidad
 
-### [M1] Quickstart ejecutable y minimo
-- **Objetivo:** Un flujo end-to-end con dataset pequeño y un solo comando.
-- **Impacto:** Onboarding inmediato y validacion rapida de instalacion.
-
-### [M7] Guia de contribucion y convenciones
-- **Objetivo:** `CONTRIBUTING.md` con flujo para agregar modulos, metricas y scripts.
-- **Impacto:** Escalabilidad del proyecto con colaboradores.
-
----
-
-## 11. Validacion / DX
-
-### [M2] Validacion de config + errores claros
-- **Objetivo:** Validar YAMLs en `dspy_gepa_poc` y `gepa_standalone` con mensajes legibles.
-- **Impacto:** Menos tiempo perdido por typos y campos invalidos.
-
----
-
-## 12. Reproducibilidad
-
-### [M3] Reproducibilidad y trazabilidad
 - **Objetivo:** Guardar semillas, version de modelos y config usada junto a cada run.
-- **Impacto:** Comparabilidad entre experimentos sin ambiguedad.
+- **Justificacion:** Sin seeds ni version de modelo, dos ejecuciones del mismo config
+  dan resultados diferentes sin explicacion. Invalida comparaciones y el leaderboard
+  pierde sentido como herramienta de decision.
+- **Alcance:** Snapshot de config + seed + model version en el directorio de cada run.
+- **Esfuerzo:** Medio.
+
+### [T2-2] Quickstart ejecutable
+
+- **Objetivo:** Un flujo end-to-end con dataset pequeno y un solo comando
+  (ej: `make demo` o `./quickstart.sh`).
+- **Justificacion:** El README tiene instrucciones pero no hay forma de validar que
+  todo funciona en un paso. Reduce friccion de "quiero probarlo" a minutos.
+- **Dependencia:** Requiere [T1-3] datasets de ejemplo.
+- **Esfuerzo:** Medio.
+
+### [T2-3] Tests para adapters (gepa_standalone)
+
+- **Objetivo:** Tests unitarios para los 4 adapters en `gepa_standalone/adapters/`.
+- **Justificacion:** 829 lineas de logica critica con 0% cobertura. El RAG adapter
+  (354 lineas) tiene logica compleja de retry y content filters. Los adapters definen
+  directamente la calidad de la optimizacion GEPA. Un bug aqui produce optimizaciones
+  silenciosamente incorrectas.
+- **Alcance:**
+  - `simple_classifier_adapter.py` (117 lineas)
+  - `simple_extractor_adapter.py` (203 lineas)
+  - `simple_sql_adapter.py` (105 lineas)
+  - `simple_rag_adapter.py` (354 lineas) - prioridad por complejidad
+- **Esfuerzo:** Medio.
 
 ---
 
-## 13. Resultados / Artefactos
+## Tier 3 - Impacto Medio, Esfuerzo Medio
 
-### [M4] Estructura de resultados unificada
+Mejoras incrementales sobre base ya funcional.
+
+### [T3-1] Tests para shared/analysis/
+
+- **Objetivo:** Cobertura para el modulo de analisis (1,676 lineas, 0% cobertura).
+- **Justificacion:** Importante para confiabilidad del leaderboard y calculos de ROI,
+  pero no bloquea funcionalidad core (es post-procesamiento).
+- **Alcance:** leaderboard.py, roi_calculator.py, stats_evolution.py, budget_breakdown.py.
+- **Esfuerzo:** Medio.
+
+### [T3-2] Naming definitivo de dspy_gepa_poc
+
+- **Objetivo:** Decidir si el nombre refleja el estado actual del proyecto.
+- **Justificacion:** "POC" comunica algo temporal y experimental. Si el proyecto ya es
+  funcional y se usa en produccion, el nombre deberia reflejarlo. Renombrar afecta
+  imports en todo el proyecto.
+- **Opciones consideradas:**
+  - Mantener `dspy_gepa_poc` (si sigue siendo experimental)
+  - `dspy_gepa` (si ya supero la fase POC)
+  - `reflexio_dspy` (alineado con nombre del proyecto)
+- **Esfuerzo:** Medio (renombrar modulo + actualizar imports).
+
+### [T3-3] Validacion de config mejorada
+
+- **Objetivo:** Mensajes de error mas claros y validacion mas granular en YAMLs.
+- **Justificacion:** Ya existe validacion (base_validator 31% cobertura), el valor
+  es incremental. Menos tiempo perdido por typos y campos invalidos.
+- **Esfuerzo:** Medio.
+
+---
+
+## Tier 4 - Valioso, Puede Esperar
+
+Mejoras de percepcion, documentacion y escalabilidad futura.
+
+### [T4-1] Actualizar README.md
+
+- **Objetivo:** README orientado a humanos, con diferencia clara entre modos de operacion.
+- **Justificacion:** El actual es funcional pero denso. Mejora percepcion, no funcionalidad.
+- **Esfuerzo:** Bajo.
+
+### [T4-2] Estructura de resultados unificada
+
 - **Objetivo:** Esquema fijo para outputs (metricas, prompts optimizados, logs).
-- **Impacto:** Analisis posterior y automatizacion mas simple.
+- **Justificacion:** Ya existen CSVs y directorios por run. Formalizar el esquema
+  facilita analisis posterior y automatizacion.
+- **Esfuerzo:** Medio.
+
+### [T4-3] Guias de contribucion y arquitectura
+
+- **Objetivo:** CONTRIBUTING.md, ARCHITECTURE.md, SECURITY.md, DEVELOPMENT.md.
+- **Justificacion:** Solo relevante si se esperan colaboradores externos pronto.
+  Sin colaboradores activos, es documentacion sin audiencia.
+- **Esfuerzo:** Alto.
+
+### [T4-4] Reducir duplicacion restante
+
+- **Objetivo:** Unificar ~70 lineas de data loading y ~200 de orquestacion.
+- **Justificacion:** Duplicacion baja (50-60% similitud). Riesgo actual es minimo
+  dado que cada proyecto tiene necesidades ligeramente diferentes.
+- **Esfuerzo:** Medio.
 
 ---
 
-## 14. Datos de Ejemplo
+## Checklist Consolidado (por Tier)
 
-### [M5] Datasets pequenos de ejemplo versionados
-- **Objetivo:** 1-2 CSV tiny en `dspy_gepa_poc/datasets/` con tareas simples.
-- **Impacto:** Demo sin dependencias externas.
+### Tier 1 - Hacer ahora
+- [ ] [T1-1] Pipeline de CI (GitHub Actions: pytest + lint)
+- [ ] [T1-2] Tests para shared/llm/ y shared/validation/
+- [ ] [T1-3] Datasets de ejemplo versionados
 
----
+### Tier 2 - Hacer pronto
+- [ ] [T2-1] Reproducibilidad (semillas, versiones, config snapshot)
+- [ ] [T2-2] Quickstart ejecutable (depende de T1-3)
+- [ ] [T2-3] Tests para adapters de gepa_standalone
 
-## 15. Calidad / Tests
+### Tier 3 - Planificar
+- [ ] [T3-1] Tests para shared/analysis/
+- [ ] [T3-2] Naming definitivo de dspy_gepa_poc
+- [ ] [T3-3] Validacion de config mejorada
 
-### [M6] Tests minimos de humo
-- **Objetivo:** Tests basicos de import y ejecucion de un pipeline minimo.
-- **Impacto:** Deteccion temprana de roturas.
+### Tier 4 - Backlog
+- [ ] [T4-1] Actualizar README.md
+- [ ] [T4-2] Estructura de resultados unificada
+- [ ] [T4-3] Guias de contribucion y arquitectura
+- [ ] [T4-4] Reducir duplicacion restante
 
 ---
 
