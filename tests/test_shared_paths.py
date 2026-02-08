@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+import shared.paths.dspy_paths as _dspy_module
+import shared.paths.gepa_paths as _gepa_module
 from shared.paths import BasePaths, DSPyPaths, GEPAPaths, get_dspy_paths, get_paths
 from shared.paths.gepa_paths import (
     create_run_dir,
@@ -16,6 +18,15 @@ from shared.paths.gepa_paths import (
     get_prompt_path,
     get_summary_csv_path,
 )
+
+
+@pytest.fixture(autouse=True)
+def _reset_path_singletons():
+    """Reset path singletons after each test to prevent cross-test contamination."""
+    yield
+    _gepa_module._paths_instance = None
+    _dspy_module._dspy_paths_instance = None
+
 
 # ==================== BasePaths (abstract) ====================
 
