@@ -16,9 +16,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 try:
     import litellm
+
     from shared.llm import LLMConfig
 except ImportError:
-    print("Error: Could not import required modules. Make sure you are running from the project root.")
+    print(
+        "Error: Could not import required modules. Make sure you are running from the project root."
+    )
     sys.exit(1)
 
 
@@ -29,30 +32,30 @@ def test_deployment(config, deployment_name, verbose=False):
     """
     # Construir el nombre del modelo para LiteLLM (agregando prefijo azure/)
     model_id = f"azure/{deployment_name}"
-    
+
     # Create a temp config just for this deployment check
     test_config = LLMConfig(
         model=model_id,
         api_key=config.api_key,
         api_base=config.api_base,
-        api_version=config.api_version
+        api_version=config.api_version,
     )
-    
+
     kwargs = test_config.to_kwargs()
     # Remove model from kwargs as we pass it explicitly
-    model = kwargs.pop('model')
-    
+    model = kwargs.pop("model")
+
     # Manejo especial de temperatura para modelos de razonamiento (o1, o3, gpt-5)
     # Estos modelos solo aceptan temperatura = 1.0
     is_reasoning = any(x in deployment_name for x in ["o1", "o3", "o4", "gpt-5"])
-    
+
     if is_reasoning:
-        kwargs['temperature'] = 1.0
-    
+        kwargs["temperature"] = 1.0
+
     # Remove max_tokens if present
-    if 'max_tokens' in kwargs:
-        del kwargs['max_tokens']
-    
+    if "max_tokens" in kwargs:
+        del kwargs["max_tokens"]
+
     try:
         # Intentar primero con max_completion_tokens (estándar nuevo para o1/gpt-5)
         # y luego fallback a max_tokens si falla por parámetro no soportado
@@ -60,8 +63,8 @@ def test_deployment(config, deployment_name, verbose=False):
             litellm.completion(
                 model=model,
                 messages=[{"role": "user", "content": "Hi"}],
-                max_completion_tokens=20, 
-                **kwargs
+                max_completion_tokens=20,
+                **kwargs,
             )
             return True
         except Exception as e:
@@ -70,11 +73,11 @@ def test_deployment(config, deployment_name, verbose=False):
                 litellm.completion(
                     model=model,
                     messages=[{"role": "user", "content": "Hi"}],
-                    max_tokens=1, 
-                    **kwargs
+                    max_tokens=1,
+                    **kwargs,
                 )
                 return True
-            raise e # Si no es error de parámetro, relanzar
+            raise e  # Si no es error de parámetro, relanzar
 
     except Exception as e:
         if verbose:
@@ -235,24 +238,24 @@ def check_config(available_deployments, base_config):
     # Load configs from env
     task_conf = LLMConfig.from_env("task")
     ref_conf = LLMConfig.from_env("reflection")
-    
+
     # Extract plain names (removing azure/ prefix if present)
     task_raw = task_conf.model
     ref_raw = ref_conf.model
-    
+
     task_name = task_raw.replace("azure/", "") if task_raw.startswith("azure/") else task_raw
     ref_name = ref_raw.replace("azure/", "") if ref_raw.startswith("azure/") else ref_raw
 
     task_ok = task_name in available_deployments
     ref_ok = ref_name in available_deployments
-    
+
     # Check individually if not found in scan list
     if not task_ok:
         print(f"Verificando Task Model '{task_name}' manualmente...")
         if test_deployment(base_config, task_name, verbose=True):
             task_ok = True
             available_deployments.append(task_name)
-    
+
     if not ref_ok and ref_name != task_name:
         print(f"Verificando Reflection Model '{ref_name}' manualmente...")
         if test_deployment(base_config, ref_name, verbose=True):
@@ -309,11 +312,14 @@ def main():
         help="Solo verifica la configuración actual sin escanear todos los deployments",
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Muestra progreso detallado del escaneo y errores"
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Muestra progreso detallado del escaneo y errores",
     )
 
     args = parser.parse_args()
-    
+
     # Load base config to get credentials (using 'task' as default source)
     try:
         base_config = LLMConfig.from_env("task")

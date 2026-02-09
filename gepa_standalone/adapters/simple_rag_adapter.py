@@ -275,7 +275,6 @@ class SimpleRAGAdapter(BaseAdapter):
         eval_batch: EvaluationBatch,
         components_to_update: list[str],
     ) -> dict[str, list[dict[str, Any]]]:
-
         reflective_datasets = {component: [] for component in components_to_update}
 
         if "system_prompt" not in components_to_update:

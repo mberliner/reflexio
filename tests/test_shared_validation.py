@@ -234,7 +234,6 @@ class TestBaseConfigValidator:
         assert BaseConfigValidator.get_valid_types() == []
 
     def test_get_valid_types_subclass(self):
-
         class CustomValidator(BaseConfigValidator):
             TYPE_SCHEMAS = {"foo": {}, "bar": {}}
 
