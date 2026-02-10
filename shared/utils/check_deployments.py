@@ -30,6 +30,11 @@ def test_deployment(config, deployment_name, verbose=False):
     Prueba si un deployment funciona. Retorna True si funciona.
     Asume que el deployment es en Azure.
     """
+    if not config.api_base or not config.api_key:
+        if verbose:
+            print(f"   [Error en {deployment_name}]: Falta api_base o api_key")
+        return False
+
     # Construir el nombre del modelo para LiteLLM (agregando prefijo azure/)
     model_id = f"azure/{deployment_name}"
 

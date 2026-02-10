@@ -35,28 +35,51 @@ class LLMConfig:
     cache: bool = False  # DSPy LM cache (True = cachea respuestas, False = resultados frescos)
 
     @classmethod
-    def from_env(cls, model_name: str = "task", **overrides) -> "LLMConfig":
+    def from_env(cls, model_name: str = "task", load_env: bool = True, **overrides) -> "LLMConfig":
         """
         Load configuration from environment variables.
 
         Args:
             model_name: Name of the model to load (e.g., "task", "reflection", "embedding").
                        Reads from LLM_MODEL_{NAME} environment variable.
+            load_env: If True, attempts to load .env files automatically.
             **overrides: Override any config attribute.
 
         Returns:
             LLMConfig instance with values from environment.
-
-        Example:
-            # Reads LLM_MODEL_TASK
-            task_config = LLMConfig.from_env("task")
-
-            # Reads LLM_MODEL_REFLECTION
-            reflection_config = LLMConfig.from_env("reflection")
-
-            # With overrides
-            config = LLMConfig.from_env("task", temperature=0.0)
         """
+        if load_env:
+            from dotenv import load_dotenv
+
+            # 1. Intentar cargar .env del directorio actual
+            load_dotenv()
+
+            # 2. Si no hay API KEY, buscar en directorios raíz y subproyectos
+            if not os.getenv("LLM_API_KEY"):
+                current = os.getcwd()
+                # Subir hasta encontrar la raíz o llegar al tope (5 niveles)
+                for _ in range(5):
+                    # Probar en el directorio actual
+                    load_dotenv(os.path.join(current, ".env"))
+                    if os.getenv("LLM_API_KEY"):
+                        break
+
+                    # Probar en subcarpetas específicas si estamos en la raíz del proyecto
+                    for sub in ["gepa_standalone", "dspy_gepa_poc"]:
+                        env_path = os.path.join(current, sub, ".env")
+                        if os.path.exists(env_path):
+                            load_dotenv(env_path)
+                            if os.getenv("LLM_API_KEY"):
+                                break
+                    if os.getenv("LLM_API_KEY"):
+                        break
+
+                    # Subir un nivel
+                    parent = os.path.dirname(current)
+                    if parent == current:
+                        break
+                    current = parent
+
         model_var = f"LLM_MODEL_{model_name.upper()}"
 
         config = cls(
@@ -176,13 +199,13 @@ class LLMConfig:
         from .errors import LLMConnectionError
 
         try:
+            # Usar to_kwargs para evitar pasar parámetros None que rompen el logger de litellm
+            kwargs = self.to_kwargs()
+            # Forzar max_tokens pequeño para el test
+            kwargs["max_tokens"] = 5
+
             litellm.completion(
-                model=self.model,
-                messages=[{"role": "user", "content": "Respond only 'OK'"}],
-                api_key=self.api_key,
-                api_base=self.api_base,
-                api_version=self.api_version,
-                max_tokens=5,
+                messages=[{"role": "user", "content": "Respond only 'OK'"}], **kwargs
             )
             return True
         except Exception as e:

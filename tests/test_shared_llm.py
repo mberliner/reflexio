@@ -145,7 +145,7 @@ class TestLLMConfigFromEnv:
         assert config.cache is False
 
     def test_defaults_without_env(self, clear_env):
-        config = LLMConfig.from_env("task")
+        config = LLMConfig.from_env("task", load_env=False)
         assert config.model == "azure/gpt-4.1-mini"
         assert config.api_key is None
 
