@@ -145,6 +145,26 @@ Comparacion controlada entre GEPA ejecutado via DSPy (`dspy_gepa_poc`) y GEPA pu
 
 La optimizacion reflexiva (GEPA) es el factor dominante en la mejora, no la infraestructura que la ejecuta. DSPy aporta ventajas operativas (configuracion YAML, modularidad, Signatures tipadas) sin sacrificar rendimiento, con una ligera ventaja en estabilidad y robustness.
 
+## 7. Flujos Simples vs. Multietapa (Multi-stage)
+
+**Hallazgo:** Pasar de un prompt único a un flujo de varias capas (ej: Clasificación -> Respuesta) cambia fundamentalmente la dinámica de optimización y el costo operativo.
+
+### Comparativa Conceptual
+
+| Característica | Capa Única (Single) | Multietapa (Multi-stage) | Condicional (Conditional) |
+|---|---|---|---|
+| **Estructura** | Un solo prompt | Cadena de prompts | Árbol de decisión |
+| **Optimización** | Local (Mejora el texto) | Global (Optimiza la cadena) | Eficiente (Optimiza ramas) |
+| **Costo Token** | Bajo (1 llamada) | Alto (N llamadas) | Variable (1 a N llamadas) |
+| **Precisión** | Media (Riesgo de "olvido") | Alta (Enfoque específico) | Máxima (Especialización) |
+
+### Lecciones sobre Flujos Complejos
+
+1.  **Métrica Unificada:** Para comparar un flujo multietapa contra uno simple en las estadísticas globales, se debe definir una métrica de "éxito final" del flujo completo. Si una etapa intermedia falla, el flujo se considera fallido.
+2.  **Propagación de Errores:** En un flujo multietapa, un error en la Capa 1 (ej: mala clasificación) se amplifica en la Capa 2. Por ello, la Capa 1 debe ser la más robusta (usar `ChainOfThought`).
+3.  **Análisis de ROI Crítico:** Los flujos multietapa consumen significativamente más tokens. El Leaderboard debe usarse para verificar si el incremento en Accuracy justifica el múltiplo de costo (ej: ¿vale la pena pagar 3x tokens por un +5% de precisión?).
+4.  **Lógica Condicional como Optimizador:** Implementar lógica condicional no solo mejora la calidad, sino que es una herramienta de ahorro de costos. Permite derivar casos simples a modelos baratos y reservar los flujos complejos para casos críticos.
+
 ### Archivos relacionados
 
 - Configs: `dspy_gepa_poc/configs/dynamic_email_urgency.yaml`, `dynamic_email_urgency_fewshot.yaml`

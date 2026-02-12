@@ -122,6 +122,24 @@ Mejoras de percepcion, documentacion y escalabilidad futura.
 
 ---
 
+## Tier 4 - Evolución Funcional y Flujos Complejos
+
+Capacidades avanzadas para escalar la complejidad de las tareas.
+
+### [T4-1] Soporte para Flujos Multietapa (Multi-stage) en DSPy
+
+- **Objetivo:** Extender la arquitectura para permitir encadenar múltiples predictores/signatures en un solo módulo.
+- **Justificación:** Muchas tareas complejas no se pueden resolver con un solo prompt. Dividir el problema en sub-tareas (ej: Clasificar -> Resumir -> Responder) mejora drásticamente la precisión.
+- **Esfuerzo:** Alto (requiere extender `DynamicModuleFactory` y el esquema YAML).
+
+### [T4-2] Implementación de Lógica Condicional en Módulos
+
+- **Objetivo:** Permitir que la ejecución de una etapa dependa del resultado de la anterior (ej: solo redactar respuesta si se detecta urgencia).
+- **Justificación:** Ahorro de tokens y mayor control sobre el flujo de trabajo del LLM. Evita procesar innecesariamente casos informativos o fuera de scope.
+- **Esfuerzo:** Medio.
+
+---
+
 ## Checklist Consolidado (por Tier)
 
 ### Tier 1 - Alto Impacto, Esfuerzo Medio
@@ -138,6 +156,10 @@ Mejoras de percepcion, documentacion y escalabilidad futura.
 - [ ] [T3-2] Estructura de resultados unificada
 - [ ] [T3-3] ARCHITECTURE.md detallado
 - [ ] [T3-4] Reducir duplicacion restante
+
+### Tier 4 - Evolución Funcional
+- [ ] [T4-1] Soporte para Flujos Multietapa (Multi-stage) en DSPy
+- [ ] [T4-2] Implementación de Lógica Condicional en Módulos
 
 ---
 
