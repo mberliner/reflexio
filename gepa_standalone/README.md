@@ -68,7 +68,7 @@ Aunque GEPA siempre optimiza texto, existen diferencias fundamentales según la 
 *   **Optimización de Prompt (Demos 1-3):** Busca mejorar la lógica, el formato o la capacidad de clasificación del modelo usando su conocimiento interno. Se mide con comparaciones exactas.
 *   **Optimización de RAG (Demo 4):** Busca **eliminar alucinaciones**. GEPA entrena al prompt para que el modelo ignore lo que sabe y responda **únicamente** basándose en el contexto adjunto. Requiere un **Juez LLM** para evaluar la fidelidad semántica.
 
-Para comparación detallada RAG vs Prompt, ver `DEMO4_RAG_GUIDE.md`.
+Para comparación detallada RAG vs Prompt, ver `docs/DEMO4_RAG_GUIDE.md`.
 
 ---
 
@@ -91,7 +91,7 @@ Traduce lenguaje natural a consultas SQL.
 ### 4. Optimización RAG (QA Políticas)
 Mejora respuestas basadas en contexto usando evaluación "LLM-as-a-Judge".
 *   **Comando:** `python universal_optimizer.py --config experiments/configs/rag_optimization.yaml`
-*   **Guía específica:** `gepa_standalone/DEMO4_RAG_GUIDE.md`
+*   **Guía específica:** `gepa_standalone/docs/DEMO4_RAG_GUIDE.md`
 
 ---
 
@@ -116,7 +116,7 @@ python gepa_standalone/universal_optimizer.py --config experiments/configs/mi_ca
 *   **Logging automático**: Incluye reflexión positiva y notas en metricas_optimizacion.csv
 *   **Reutilizable**: Configs versionables y compartibles
 
-Ver guía completa en `UNIVERSAL_OPTIMIZER.md`
+Ver guía completa en `docs/UNIVERSAL_OPTIMIZER.md`
 
 ---
 

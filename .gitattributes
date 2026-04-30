@@ -1,0 +1,6 @@
+*.sh       text eol=lf
+*.drawio   text eol=lf
+*.md       text eol=lf
+*.png      binary
+*.pdf      binary
+*.pptx     binary

@@ -68,6 +68,19 @@ LLM_MODEL_REFLECTION=azure/gpt-4o
 | `LLM_MODEL_REFLECTION` | Modelo para reflexion (profesor) | No (default: azure/gpt-4o) |
 | `LLM_CACHE` | Cache de respuestas DSPy (true/false). False = llamada fresca siempre | No (default: false) |
 
+### Estrategia Profesor-Estudiante
+
+`LLM_MODEL_TASK` y `LLM_MODEL_REFLECTION` cumplen roles distintos por diseño:
+
+| Rol | Variable | Cuándo se usa | Perfil recomendado |
+|-----|----------|---------------|--------------------|
+| **Profesor** (reflexión) | `LLM_MODEL_REFLECTION` | Solo durante optimización. Lee errores del Estudiante y propone mutaciones del prompt. | Caro y potente (ej: gpt-4o) |
+| **Estudiante** (tarea) | `LLM_MODEL_TASK` | Cada evaluación durante optimización Y todas las llamadas en producción. | Barato y rápido (ej: gpt-4.1-mini) |
+
+**Por qué importa configurarlos asimétricamente:** pagás la inteligencia del modelo caro una sola vez para destilar instrucciones que un modelo ~10x más barato sabe seguir. Con esa configuración, el ROI se materializa después de ~100 llamadas en producción. Justificación económica completa con números reales en `gepa_standalone/docs/ROI_ANALYSIS.md`.
+
+Si configurás ambos al mismo modelo (ej: gpt-4o/gpt-4o), GEPA sigue funcionando, pero perdés la ventaja económica: solo mejorás calidad, no reducís costo de inferencia.
+
 ## Formato de Modelos
 
 Se usa el formato LiteLLM: `provider/model`

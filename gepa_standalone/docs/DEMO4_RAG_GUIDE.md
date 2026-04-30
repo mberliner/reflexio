@@ -19,6 +19,34 @@ A diferencia de los demos de clasificación (donde la respuesta es correcta/inco
 2.  **Generador (Student)**: El modelo que estamos optimizando (ej. GPT-4o-mini). Genera una respuesta.
 3.  **Evaluador (Teacher/Judge)**: Un modelo más potente (ej. GPT-4o). Compara la respuesta generada con la respuesta ideal (Ground Truth).
 
+### ¿Qué prompt optimiza GEPA en la cadena RAG?
+
+El prompt que evoluciona vive en la **etapa final de síntesis**. La recuperación se asume resuelta upstream y entra al adapter como input pre-computado en la columna `context` del CSV.
+
+```
+[Indexación offline]   docs → chunks → embeddings → vector DB
+                                                            
+[Query time]
+   pregunta
+       ↓
+   embedder            (no se optimiza)
+       ↓
+   vector search       (no se optimiza)
+       ↓
+   prompt builder  →  SYSTEM_PROMPT + contexto + pregunta
+       ↓                       ↑
+   LLM generador               GEPA optimiza ESTE prompt
+       ↓
+   respuesta
+```
+
+| Componente              | ¿Lo optimiza GEPA? |
+|-------------------------|--------------------|
+| Embedder / chunking     | No                 |
+| Recuperación / re-rank  | No                 |
+| Prompt de síntesis      | **Sí**             |
+| Modelo generador        | No (es el Estudiante del `.env`) |
+
 ### ¿En qué se diferencia optimizar RAG de un Prompt normal?
 
 | Característica | Optimización de Prompt (Demo 1) | Optimización de RAG (Demo 4) |

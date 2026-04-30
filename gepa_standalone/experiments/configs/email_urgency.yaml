@@ -6,13 +6,6 @@ case:
   title: "Email Urgency"
   description: "Clasificacion de urgencia de emails corporativos"
 
-adapter:
-  type: "classifier"
-  valid_classes:
-    - "urgent"
-    - "normal"
-    - "low"
-
 data:
   csv_filename: "email_urgency.csv"
   input_column: "text"

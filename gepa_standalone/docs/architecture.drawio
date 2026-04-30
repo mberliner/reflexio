@@ -1,0 +1,106 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="gepa-arch" name="Arquitectura GEPA">
+    <mxGraphModel dx="2606" dy="646" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="L1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;" value="ENTRADAS   (versionadas en git)" vertex="1">
+          <mxGeometry height="140" width="860" x="20" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="L1a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;align=center;" value="casos_test.csv&#xa;train / val / test" vertex="1">
+          <mxGeometry height="60" width="197" x="30" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="L1b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;align=center;" value="caso_prompt_inicial.json&#xa;prompt inicial" vertex="1">
+          <mxGeometry height="60" width="197" x="237" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="L1c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;align=center;" value="caso_config.yaml&#xa;hiperparámetros" vertex="1">
+          <mxGeometry height="60" width="197" x="444" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="L1d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;align=center;" value=".env&#xa;LLM_API_KEY+ &#xa;modelos Profesor/Estudiante" vertex="1">
+          <mxGeometry height="60" width="197" x="651" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="arr1" edge="1" parent="1" source="L1" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="L2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="L2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;" value="ORQUESTADOR   (universal_optimizer.py)" vertex="1">
+          <mxGeometry height="160" width="860" x="20" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="L2a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;align=center;" value="1. Leer YAML&#xa;+ validar config" vertex="1">
+          <mxGeometry height="60" width="156" x="30" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="L2b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;align=center;" value="2. Cargar CSV&#xa;+ inicializar adapter" vertex="1">
+          <mxGeometry height="60" width="156" x="196" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="L2c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;align=center;" value="3. Cargar&#xa;prompt JSON" vertex="1">
+          <mxGeometry height="60" width="156" x="362" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="L2d" parent="1" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=center;" value="4. Llamar&#xa;gepa.optimize()" vertex="1">
+          <mxGeometry height="60" width="156" x="528" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="L2e" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=10;align=center;" value="5. Guardar resultados&#xa;+ metadata + CSV log" vertex="1">
+          <mxGeometry height="60" width="156" x="694" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="arr2call" edge="1" parent="1" source="L2d" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;fontSize=10;fontStyle=2;align=left;" target="L3" value="gepa.optimize(&#xa;seed, train, val,&#xa;adapter, reflection_lm)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr2ret" edge="1" parent="1" source="L3" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.7;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;dashed=1;fontSize=10;fontStyle=2;endArrow=block;startArrow=none;" target="L2e" value="best_candidate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="L3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;" value="GEPA   (pip install gepa — biblioteca externa)" vertex="1">
+          <mxGeometry height="160" width="860" x="20" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="L3a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;align=center;" value="Estudiante (TASK)&#xa;modelo barato&#xa;evalúa cada candidato" vertex="1">
+          <mxGeometry height="70" width="267" x="30" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="L3b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;align=center;" value="Loop reflexivo&#xa;mutar → evaluar val&#xa;→ aceptar / descartar" vertex="1">
+          <mxGeometry height="70" width="267" x="307" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="L3c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;align=center;" value="Profesor (REFLECTION)&#xa;modelo caro&#xa;propone mutaciones al prompt" vertex="1">
+          <mxGeometry height="70" width="267" x="584" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="L4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;" value="SALIDAS   (results/ — gitignoreado, regenerable)" vertex="1">
+          <mxGeometry height="160" width="860" x="20" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="L4a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="final_prompt.txt&#xa;artefacto clave" vertex="1">
+          <mxGeometry height="60" width="156" x="40" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="L4b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="results.json&#xa;baseline / opt / test scores" vertex="1">
+          <mxGeometry height="60" width="156" x="206" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="L4c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="run.json&#xa;seed + modelos + versiones" vertex="1">
+          <mxGeometry height="60" width="156" x="372" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="L4d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="metrics.csv&#xa;traza por iteración" vertex="1">
+          <mxGeometry height="60" width="156" x="538" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="L4e" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="leaderboard.csv&#xa;agregado histórico" vertex="1">
+          <mxGeometry height="60" width="156" x="704" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="L5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;" value="ANÁLISIS Y VISUALIZACIÓN   (python analyze ...)" vertex="1">
+          <mxGeometry height="170" width="860" x="-880" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="L5a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="leaderboard&#xa;ranking + anomalías + ROI&#xa;→ tabla ASCII / MD / PNG" vertex="1">
+          <mxGeometry height="80" width="197" x="-870" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="L5b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="roi&#xa;costo optim. vs ahorro prod.&#xa;→ tabla ASCII" vertex="1">
+          <mxGeometry height="80" width="197" x="-663" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="L5c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="stats&#xa;evolución temporal por lotes&#xa;→ tabla ASCII" vertex="1">
+          <mxGeometry height="80" width="197" x="-456" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="L5d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="budget&#xa;presupuesto por modelo&#xa;→ tabla ASCII" vertex="1">
+          <mxGeometry height="80" width="197" x="-249" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="FWP5QR6z3n_0Qv1nb-Sf-2" edge="1" parent="1" source="L5" style="endArrow=classic;html=1;rounded=0;entryX=-0.005;entryY=0.422;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.49;exitY=0.982;exitDx=0;exitDy=0;exitPerimeter=0;edgeStyle=orthogonalEdgeStyle;" target="L4" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="-459" y="677" />
+            </Array>
+            <mxPoint x="-249" y="500" as="sourcePoint" />
+            <mxPoint x="-199" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

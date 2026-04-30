@@ -365,7 +365,7 @@ score = result.best_score
 - Query reformulation, context synthesis, reranking (librería GEPA completa)
 
 **Implementaciones**:
-- **Demo educativo**: `gepa_standalone/DEMO4_RAG_GUIDE.md` - Optimización con evaluación LLM-as-a-Judge
+- **Demo educativo**: `gepa_standalone/docs/DEMO4_RAG_GUIDE.md` - Optimización con evaluación LLM-as-a-Judge
 - **Producción**: Librería GEPA con soporte para ChromaDB, Weaviate, Qdrant, Milvus, LanceDB
 
 **Para comenzar**: `python gepa_standalone/demos/demo4_rag_optimization.py`

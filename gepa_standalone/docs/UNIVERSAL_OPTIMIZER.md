@@ -161,12 +161,56 @@ optimization:
 
 ## Parámetros por Tipo de Adaptador
 
-| Parámetro | Classifier | Extractor | SQL | Descripción |
-|-----------|------------|-----------|-----|-------------|
-| `type` | ✓ | ✓ | ✓ | Tipo de adaptador (REQUERIDO) |
-| `valid_classes` | ✓ | - | - | Lista de clases válidas (REQUERIDO) |
-| `required_fields` | - | ✓ | - | Campos a extraer (REQUERIDO) |
-| `max_positive_examples` | - | ✓ | - | Ejemplos exitosos en reflexión (0-3) |
+| Parámetro | Classifier | Extractor | SQL | RAG | Descripción |
+|-----------|------------|-----------|-----|-----|-------------|
+| `type` | ✓ | ✓ | ✓ | ✓ | Tipo de adaptador (REQUERIDO) |
+| `valid_classes` | ✓ | - | - | - | Lista de clases válidas (REQUERIDO en classifier) |
+| `required_fields` | - | ✓ | - | - | Campos a extraer (REQUERIDO en extractor) |
+| `max_positive_examples` | - | ✓ | - | - | Ejemplos exitosos en reflexión (0-3) |
+| `rag_context_max_length` | - | - | - | ✓ | Límite de tokens del contexto |
+| `rag_max_positive_examples` | - | - | - | ✓ | Ejemplos exitosos en reflexión |
+
+---
+
+## Anatomía del adapter
+
+El adapter es el **único punto de extensión** que conecta tu dominio con el motor evolutivo de GEPA. Hay dos caminos según el caso de uso.
+
+### Camino 1: Usar un adapter built-in (95% de los casos)
+
+Solo configurás la sección `adapter:` del YAML — no escribís código. Los 4 tipos cubren los patrones más comunes:
+
+| `adapter.type` | Patrón de tarea         | Estrategia de scoring                        |
+|----------------|-------------------------|----------------------------------------------|
+| `classifier`   | Clase de un set cerrado | Match exacto contra `valid_classes`          |
+| `extractor`    | N campos estructurados  | Score parcial por campo correcto             |
+| `sql`          | Generación de query     | Ejecutar SQL y comparar resultados (no strings) |
+| `rag`          | Respuesta libre + contexto | LLM-as-Judge (semántico + fundamentación)  |
+
+> Cada adapter elige una métrica acorde a la naturaleza de la salida. La métrica define qué puede aprender GEPA — ver `docs/LECCIONES_APRENDIDAS.md` sección 1.
+
+### Camino 2: Crear un adapter nuevo
+
+Heredás de `BaseAdapter` (`adapters/base_adapter.py`) e implementás dos métodos:
+
+```python
+class MiAdapter(BaseAdapter):
+    def evaluate(self, batch, candidate, capture_traces=False) -> EvaluationBatch:
+        # Llama al LLM con el prompt candidato, scorea cada ejemplo (0..1)
+        ...
+
+    def make_reflective_dataset(self, candidate, eval_batch, components_to_update):
+        # Construye el material que ve el LLM Profesor para proponer mutaciones
+        ...
+```
+
+Tamaños reales como referencia:
+- `simple_classifier_adapter.py` — 123 líneas
+- `simple_sql_adapter.py` — 109 líneas
+- `simple_extractor_adapter.py` — 234 líneas
+- `simple_rag_adapter.py` — 360 líneas (el más complejo, por LLM-as-Judge)
+
+Todo lo demás —loop evolutivo, selección Pareto, logging, reproducibilidad, snapshots de config— se hereda gratis del framework.
 
 ---
 

@@ -42,6 +42,19 @@ optimization:
 
 **Leccion:** Para tareas de extraction con campos de formato variable (moneda, fechas, cantidades), usar `match_mode: "normalized"` como minimo. Reservar `exact` solo para clasificacion o campos con valores cerrados.
 
+### Resumen: Métrica por Tipo de Adapter
+
+La métrica define qué puede aprender GEPA. Cada adapter built-in elige una estrategia acorde a la naturaleza de su salida — esta tabla resume las decisiones tomadas en `gepa_standalone`:
+
+| Adapter      | Métrica de scoring                          | Resuelve                                            | Riesgo si se usara match exacto |
+|--------------|---------------------------------------------|-----------------------------------------------------|---------------------------------|
+| `classifier` | Match exacto contra `valid_classes`         | Etiquetas de un set cerrado                         | Ninguno (es la opción correcta) |
+| `extractor`  | Score parcial por campo correcto            | N campos con formato heterogéneo (monedas, fechas)  | Falsos negativos por puntuación/plurales (ver arriba) |
+| `sql`        | Ejecutar SQL y comparar tablas resultado    | Queries equivalentes con sintaxis distinta          | Penalizar SQL semánticamente correcto |
+| `rag`        | LLM-as-Judge (precisión + fundamentación)   | Texto libre, alucinación, fidelidad al contexto     | Imposible: ninguna respuesta libre matchea exacto |
+
+**Lección general:** antes de elegir un adapter built-in o crear uno nuevo, identificá qué señal necesita ver el optimizador para mejorar. Si tu score solo da 0/1, GEPA tiene poco gradiente. Si tu score es continuo y refleja la calidad parcial, la optimización converge mucho más rápido.
+
 ## 2. Datos y Complejidad de la Tarea
 
 ### El Efecto Techo (Ceiling Effect)
