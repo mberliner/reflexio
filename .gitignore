@@ -163,4 +163,4 @@ cython_debug/
 shared/analysis/output/
 
 # Presentation
-gepa_standalone/GEPA-Optimizacion-Automatica-de-Prompts-con-Reflexion.pptx
+*.pptx
