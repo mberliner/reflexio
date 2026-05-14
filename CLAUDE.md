@@ -84,7 +84,7 @@ CI: `.github/workflows/ci.yml` ejecuta pytest + ruff en cada push/PR.
 - Cada subproyecto (dspy_gepa_poc/, gepa_standalone/) tiene su propio `.env` para configuracion LLM independiente.
 - Inputs versionados: configs YAML, datasets CSV y prompts JSON se trackean en git.
 - Outputs no versionados: todo bajo `**/results/` esta gitignoreado (runs, leaderboards, metricas). Son regenerables.
-- Datasets CSV requieren columna `split` con valores `train`/`dev`/`test`.
+- Datasets CSV requieren columna `split` con valores `train`/`val`/`test`.
 - Punto de entrada GEPA: `gepa_standalone/universal_optimizer.py --config <yaml>`.
 - Punto de entrada DSPy: `dspy_gepa_poc/reflexio_declarativa.py --config <yaml>` (--config es obligatorio).
 

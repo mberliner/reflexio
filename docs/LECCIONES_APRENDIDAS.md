@@ -183,3 +183,63 @@ La optimizacion reflexiva (GEPA) es el factor dominante en la mejora, no la infr
 - Configs: `dspy_gepa_poc/configs/dynamic_email_urgency.yaml`, `dynamic_email_urgency_fewshot.yaml`
 - Script batch: `dspy_gepa_poc/run_email_urgency_comparison.sh`
 - Dataset: `dspy_gepa_poc/datasets/email_urgency.csv`
+
+## 8. Cuando GEPA NO aporta vs cuando SI: extracción vs triage de CVs
+
+**Hallazgo:** El valor real de GEPA depende fuertemente de la combinación tarea + modelo + métrica. La misma infraestructura puede no producir mejora alguna en una tarea (extracción) y +25pp en otra (clasificación con razonamiento), usando el mismo modelo y dataset base.
+
+### Experimento: extracción ampliada de perfil (cv_profile)
+
+Se construyó un extractor de 10 campos (`nombre`, `email`, `años_experiencia`, `skills`, `educacion_principal`, `seniority_declarado`, `stack_principal`, `idiomas`, `ubicacion`, `industria_previa`) sobre 45 CVs (16 originales + 17 sintéticos claros + 12 ambiguos diseñados para estresar al baseline).
+
+**Modelo:** `gpt-4.1-mini` (task) + `gpt-4o` (reflection).
+
+| Variante | Baseline val | Optimizado val | Δ |
+|---|---|---|---|
+| 33 filas, `match_mode: normalized` | 82.22% | 82.22% | 0 |
+| 45 filas, `match_mode: normalized` | ~81% | 80.83% | -0.17 |
+| 45 filas, `match_mode: exact` | 80.00% | (no se corrió, sin margen) | — |
+
+**Diagnóstico del techo:**
+- `gpt-4.1-mini` produce strings literal-perfect en la mayoría de los campos (cambiar `normalized` por `exact` solo bajó 1pp).
+- El few-shot de 3 ejemplos ya captura la mayor parte de la señal extractiva.
+- Agregar 12 CVs ambiguos (fechas implícitas, abreviaturas, skills enterrados en prosa, distractores) solo bajó el baseline ~1pp: los modelos frontera ya manejan estos casos.
+
+**Lección:** Para extracción de campos estructurados con modelos frontera modernos, **GEPA no aporta valor medible**. El gradiente "instrucción mínima + few-shot" → "instrucción optimizada" ya está saturado.
+
+### Experimento: triage de candidatos (cv_triage)
+
+Mismo dataset de CVs, pero la tarea cambió a clasificación: dado un CV + una descripción de puesto fija (Backend Senior Python LATAM), asignar `fit_alto` / `fit_medio` / `no_fit` + justificación.
+
+| Métrica | Baseline | Optimizado | Δ |
+|---|---|---|---|
+| Val (12 ejemplos) | 58.33% | **83.33%** | **+25.00 pp** |
+| Test (8 ejemplos) | 87.50% | 87.50% | 0 |
+
+**Por qué funcionó acá:**
+- Tarea estructuralmente harder: requiere **razonamiento sobre múltiples requisitos** (stack, seniority, idiomas, ubicación, industria) y trade-offs entre ellos, no solo extracción literal.
+- Baseline modesto (58% val) → margen real para mejorar sin chocar techo.
+- `match_mode: exact` sobre una clase enumerada → métrica honesta, sin enmascarar errores.
+
+**Qué hizo GEPA (prompt optimizado):** convirtió una instrucción narrativa de ~600 chars en un prompt operativo de ~3000 chars con 5 secciones: criterios por categoría con sub-bullets, factores de contexto memorizados, 4 reglas operativas, formato de respuesta explícito y un ejemplo resuelto in-context. **Internalizó la JD dentro de la instrucción** (especialización por puesto fijo).
+
+### Conclusión operativa: dónde invertir esfuerzo de optimización
+
+| Tipo de tarea | GEPA aporta | Por qué |
+|---|---|---|
+| Extracción de campos canónicos con modelos frontera | No, en general | El baseline ya satura |
+| Extracción con campos ambiguos + modelos viejos/baratos | Sí | Hay margen estructural |
+| Clasificación multi-criterio con razonamiento | **Sí** | El prompt debe articular criterios tácitos |
+| Pipelines compuestos (extracción → razonamiento) | Sí en la etapa de razonamiento, no en la de extracción | Cada etapa decide por separado |
+
+**Regla práctica:** Antes de invertir tokens en GEPA, medir el baseline. Si está >75-80% en una tarea de extracción simple, probablemente no haya espacio. Si está <70% o la tarea requiere razonamiento, vale la pena.
+
+### Trade-off observado: especialización vs generalización
+
+El prompt optimizado por GEPA en triage memorizó los detalles de **una JD específica** (stack, países LATAM enumerados, niveles de inglés). Para una empresa con una vacante recurrente esto es óptimo; para multi-JD no sirve directamente y obliga a re-optimizar o a una variante con la JD parametrizada.
+
+### Archivos relacionados
+
+- Configs: `dspy_gepa_poc/configs/dynamic_cv_profile.yaml`, `dynamic_cv_triage.yaml`
+- Datasets: `dspy_gepa_poc/datasets/cv_profile.csv` (45 filas), `cv_triage.csv` (mismas filas + fit_label)
+- Scripts: `dspy_gepa_poc/scripts/build_cv_profile.py`, `build_cv_triage.py`, `dryrun_config.py`, `baseline_only.py`
