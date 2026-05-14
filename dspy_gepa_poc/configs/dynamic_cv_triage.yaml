@@ -1,0 +1,37 @@
+case:
+  name: "CV Triage (Backend Senior Python LATAM)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Dada una descripcion de puesto (job_description) y el texto de un CV (cv_text), clasifica el grado de fit del candidato como uno de tres valores exactos: 'fit_alto', 'fit_medio', 'no_fit'. Tambien produce una justificacion corta (1-2 oraciones) citando evidencia concreta del CV.\n\nCriterios:\n- fit_alto: cumple stack tecnico, seniority, idiomas y ubicacion sin observaciones.\n- fit_medio: cumple el nucleo tecnico pero falla en al menos un requisito (idioma, seniority, ubicacion, o stack adyacente).\n- no_fit: perfil tecnico desalineado (otro lenguaje, otra disciplina) o falla en multiples requisitos criticos.\n\nNo inventes informacion que el CV no menciona."
+  inputs:
+    - name: "cv_text"
+      desc: "Texto completo del CV del candidato."
+    - name: "job_description"
+      desc: "Descripcion del puesto a cubrir, con requisitos de stack, seniority, idiomas, ubicacion e industria."
+  outputs:
+    - name: "fit_label"
+      desc: "Clasificacion exacta. Valores permitidos: 'fit_alto', 'fit_medio', 'no_fit'."
+    - name: "justificacion"
+      desc: "Justificacion corta (1-2 oraciones) citando evidencia del CV que respalda la clasificacion."
+
+data:
+  csv_filename: "cv_triage.csv"
+  input_columns:
+    - "cv_text"
+    - "job_description"
+
+adapter:
+  max_text_length: 2500
+  max_positive_examples: 3
+
+optimization:
+  max_metric_calls: 60
+  auto_budget: "medium"
+  use_few_shot: true
+  few_shot_count: 3
+  ignore_in_metric:
+    - "justificacion"
+  match_mode: "exact"

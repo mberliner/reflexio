@@ -1,0 +1,653 @@
+split,cv_text,job_description,fit_label,justificacion
+train,"JUAN PÉREZ
+juan.perez@email.com
+
+EXPERIENCIA: 5 años en desarrollo de software
+
+HABILIDADES:
+• Python
+• Machine Learning
+• Docker
+• AWS
+
+EDUCACIÓN:
+Licenciatura en Ciencias de la Computación, UNAM, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Python+Docker+AWS, 5 anos. Falta FastAPI/Django/PostgreSQL explicito e idiomas declarados."
+train,"María González (maria.g@company.com) es una desarrolladora senior con más de 8 años de experiencia en desarrollo web. Competente en React, Node.js y AWS. Graduada de la Universidad de Madrid con Maestría en Ingeniería en Computación en 2015.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Stack desalineado (React/Node, no backend Python)."
+train,"ROBERTO CHEN
+Email: r.chen@techcorp.com
+
+Historial Laboral: Ingeniero de Software (2019-2024)
+Habilidades Técnicas: Java, Spring Boot, Kubernetes, PostgreSQL
+
+Educación: Licenciatura en Ciencias en Tecnología de la Información
+Universidad de California, Berkeley","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Stack Java/Spring, no Python."
+train,"Sara Williams | sarah.w@devmail.com
+
+Resumen Profesional:
+- 10 años exp en ciencia de datos
+- Experta en Python, R, TensorFlow, scikit-learn
+
+Educación:
+- PhD Ciencia de Datos, Stanford (2013)","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil de ciencia de datos, no backend de produccion."
+train,"AHMED HASSAN
+Contacto: ahmed.hassan@email.net
+
+EXPERIENCIA PROFESIONAL
+Ingeniero DevOps - 2021 a Presente (3 años)
+Responsable de pipelines CI/CD usando Jenkins y Docker.
+Desplegó aplicaciones en Kubernetes y administró infraestructura cloud con Terraform.
+
+EDUCACIÓN
+MSc Ciencias de la Computación, Universidad de Toronto, 2020","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil DevOps, no backend Python. Solo 3 anos."
+train,"Jennifer López
+j.lopez@marketing.com
+
+Experiencia: Gerente de Marketing desde 2017 (7 años)
+Competencias clave: SEO, Google Analytics, Estrategia de Contenido, Redes Sociales
+
+Formación Académica: Licenciatura Marketing, NYU","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil de marketing, no tecnico."
+train,"Miguel Brown <m.brown@consultant.com>
+
+Historial de Carrera:
+• Consultor Senior (2020-2024): 4 años
+• Analista (2018-2020): 2 años
+Total: 6 años
+
+Habilidades: Excel, Tableau, SQL, Power BI
+
+Educación: MBA, Harvard Business School, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Consultor de negocio (Excel/Tableau), no developer."
+train,"Emma Watson
+emma.watson@design.io
+
+Diseñadora UX | 4 años de experiencia
+Habilidades: Figma, Adobe XD, Investigación de Usuarios, Prototipado
+Título: BFA Diseño Gráfico, RISD","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil de diseno UX, no tecnico."
+val,"David Kim
+davidkim@techstart.com
+
+Desarrollador Full Stack - 6 años
+Stack Tecnológico: JavaScript, React, Node.js, MongoDB, GraphQL
+
+Educación: Licenciatura Ingeniería de Software, Georgia Tech (2018)","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Full-stack JavaScript, no backend Python."
+val,"Lisa Anderson | lisa.a@sales.com
+
+Ejecutiva de Ventas con más de 12 años en ventas B2B de software. Experiencia en CRM (Salesforce), Generación de Leads y Negociación de Contratos. MBA de Wharton, 2011.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil de ventas, no tecnico."
+val,"THOMAS MILLER
+thomas.miller@cloudeng.com
+
+Arquitecto Cloud (2019-presente)
+Años de Experiencia: 5
+Tecnologías: AWS, Azure, GCP, Terraform, Ansible
+
+Formación: MS Computación en la Nube, Universidad Carnegie Mellon","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Arquitecto cloud, no backend Python."
+val,"Sophia Rodríguez
+Contacto: sophia.r@biotech.org
+
+Científica de Investigación - Bioinformática
+Experiencia: 9 años (2015-2024)
+Habilidades: Python, R, BioConductor, Análisis NGS
+
+PhD Biología Computacional, Johns Hopkins, 2015","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Bioinformatica con Python, no backend web."
+val,"James Taylor <j.taylor@finance.net>
+
+Analista Cuantitativo | 7 años
+Competente en: Python, C++, Modelado Financiero, Análisis de Riesgo
+
+Educado en: MSc Ingeniería Financiera, Universidad de Columbia (2017)","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Analista cuantitativo, no backend de produccion."
+test,"Anna Kowalski
+📧 anna.kowalski@pm.com
+
+Gerente de Producto @ TechCorp
+🕐 8 años en gestión de producto
+
+Habilidades Clave: Agile, JIRA, Planificación de Roadmap, Historias de Usuario
+
+🎓 MBA Gestión de Producto, Northwestern Kellogg, 2016","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Gerente de producto, no tecnico."
+test,"Carlos Méndez | carlos@dev.mx | Dev Backend | 5a exp
+Stack: Go, Microservicios, gRPC, Kubernetes
+Lic. CS, UNAM 2019","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Backend pero stack Go, no Python."
+test,"La Dra. Elena Petrov (elena.petrov@research.edu) ha dedicado 15 años a la investigación en inteligencia artificial. Su experiencia abarca Aprendizaje Profundo, NLP, Visión por Computadora y Aprendizaje por Refuerzo. Obtuvo su PhD en Inteligencia Artificial del MIT en 2009.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Investigadora AI academica, no backend de produccion."
+train,"MARTÍN ACOSTA
+martin.acosta@dev.com.ar | Buenos Aires, Argentina
+
+Desarrollador Backend Senior - 7 años
+
+EXPERIENCIA:
+• Tech Lead Backend en fintech (2021-presente)
+• Backend Engineer en e-commerce (2017-2021)
+
+STACK PRINCIPAL:
+- Python (7 años), FastAPI (4 años)
+- PostgreSQL, Redis, Docker, Kubernetes, AWS
+- Microservicios, CI/CD con GitHub Actions
+
+IDIOMAS: Español (nativo), Inglés (B2)
+
+EDUCACIÓN: Ingeniería en Informática, UBA, 2017","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Backend Python/FastAPI/PostgreSQL/Docker, 7 anos como Tech Lead, fintech, AR, ingles B2."
+train,"Lucía Fernández
+lucia.fernandez@correo.mx | Ciudad de México
+
+Senior Backend Developer (Django) - 6 años
+
+Experiencia: Desarrollo de plataforma e-commerce escalable. Liderazgo técnico de equipo de 4 personas.
+
+Stack: Python, Django, Django REST Framework, PostgreSQL, Docker, AWS (ECS, RDS, S3), Celery, Redis
+
+Idiomas: Español nativo, Inglés C1 (certificado IELTS 7.5)
+
+Formación: Licenciatura en Ingeniería de Software, ITESM, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Backend Senior Django, 6 anos, e-commerce MX, ingles C1. Stack completo."
+train,"DIEGO RAMÍREZ
+diego.ramirez@saas.co | Medellín, Colombia
+
+Backend Engineer - 5 años de experiencia
+
+EMPRESAS: SaaS B2B (analytics) desde 2020
+
+HABILIDADES TÉCNICAS:
+- Python 3, FastAPI, SQLAlchemy
+- PostgreSQL, Docker, Kubernetes
+- AWS (EKS, RDS, Lambda)
+- Arquitectura de microservicios
+
+IDIOMAS: Español (nativo) | Inglés (B2, TOEFL 95)
+
+Educación: Ing. de Sistemas, Universidad EAFIT, 2019","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Python/FastAPI/PostgreSQL/Docker/K8s, 5 anos SaaS, CO, ingles B2."
+val,"Florencia Sosa
+florencia.sosa@fintech.uy
+Montevideo, Uruguay
+
+Tech Lead Backend - 8 años
+
+Trayectoria en fintech regional: pagos, billeteras virtuales, integraciones bancarias.
+
+Tecnologías: Python, Django, FastAPI, PostgreSQL, Docker, Kubernetes, AWS, RabbitMQ, gRPC
+
+Idiomas: Español nativo, Inglés B2
+
+Estudios: Licenciatura en Computación, UdelaR, 2016","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Tech Lead Backend, 8 anos en fintech UY, Django+FastAPI, ingles B2."
+test,"ANDRÉS VARGAS
+andres.vargas@ecomm.cl | Santiago de Chile
+
+Senior Backend Developer | 6 años
+
+Experiencia profesional en e-commerce de alto tráfico (>1M pedidos/mes).
+
+Stack: Python, FastAPI, PostgreSQL, Docker, Kubernetes, microservicios, Redis, Kafka.
+
+Idiomas: Español (nativo), Inglés (C1).
+
+Formación: Ingeniería Civil Informática, Universidad de Chile, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Senior Backend Python/FastAPI/PostgreSQL/Docker, 6 anos e-commerce CL, ingles C1."
+train,"Pablo Giménez
+pablo.gimenez@correo.com.ar | Buenos Aires
+
+Desarrollador Backend Senior - 6 años en fintech argentino
+
+Stack: Python, Django, PostgreSQL, Docker, AWS
+
+Idiomas: Español nativo, Inglés básico (A2, en formación)
+
+Educación: Licenciatura en Sistemas, UTN, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Stack y seniority correctos, pero ingles A2 incumple el B2 excluyente."
+train,"Inés Mora
+ines.mora@tech.es
+Madrid, España
+
+Senior Backend Engineer - 7 años en SaaS
+
+Experta en Python, FastAPI, PostgreSQL, Docker, Kubernetes, AWS.
+
+Idiomas: Español nativo, Inglés B2.
+
+Máster en Ingeniería Informática, Universidad Politécnica de Madrid, 2017","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Perfil tecnico ideal pero reside en Espana, fuera de LATAM."
+val,"Tomás Herrera
+tomas.herrera@dev.com.ar | Córdoba, Argentina
+
+Desarrollador Backend Junior - 2 años
+
+He trabajado con: Python, FastAPI, PostgreSQL, Docker, Git.
+
+Idiomas: Español nativo, Inglés B1.
+
+Estudiante avanzado de Ingeniería en Sistemas, UNC. Bootcamp Backend Python 2022.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Stack alineado y LATAM, pero junior con solo 2 anos (la JD pide 4+)."
+val,"Camila Torres
+camila.torres@shop.mx | Guadalajara, México
+
+Desarrolladora Backend - 5 años en e-commerce regional
+
+Tecnologías: Python, Flask, PostgreSQL, MySQL, AWS EC2, Git.
+Experiencia en mantenimiento de APIs y desarrollo de features.
+
+Idiomas: Español nativo, Inglés B2.
+
+Educación: Ingeniería en Computación, UDG, 2019","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Backend Python en LATAM, pero stack Flask en vez de FastAPI/Django y sin Docker."
+train,"Nicolás Bravo
+nicolas.bravo@frontend.com.ar | Buenos Aires
+
+Senior Frontend Developer - 7 años
+
+Stack: React, TypeScript, Next.js, Tailwind CSS, Redux, Vite.
+
+Idiomas: Español nativo, Inglés B2.
+
+Licenciatura en Sistemas, UADE, 2017","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil frontend (React/TS/Next), no backend."
+train,"Romina Espinosa
+romina.espinosa@web.mx | CDMX
+
+Frontend Engineer - 5 años
+
+Vue.js, Nuxt, JavaScript, CSS3, Figma (handoff), pruebas con Cypress.
+
+Idiomas: Español nativo, Inglés B1.
+
+Ingeniería en Sistemas Computacionales, IPN, 2019","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil frontend (Vue/Nuxt), no backend."
+train,"Sebastián Pino
+sebastian.pino@rails.cl | Santiago, Chile
+
+Desarrollador Backend Ruby on Rails - 6 años
+
+Tecnologías: Ruby, Ruby on Rails, PostgreSQL, Sidekiq, Heroku, RSpec.
+
+Idiomas: Español nativo, Inglés B2.
+
+Ingeniería Civil Informática, PUC, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Stack Ruby on Rails, no Python."
+train,"Verónica Castro
+veronica.castro@laravel.co | Bogotá, Colombia
+
+Desarrolladora Backend PHP - 8 años
+
+Stack: PHP, Laravel, MySQL, jQuery, Apache, Linux.
+
+Idiomas: Español nativo, Inglés A2.
+
+Ingeniería de Sistemas, Universidad Nacional de Colombia, 2016","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Stack PHP/Laravel, no Python."
+train,"Mateo Salinas
+mateo.salinas@ios.com.ar | Buenos Aires
+
+iOS Developer - 5 años
+
+Swift, SwiftUI, UIKit, Combine, Core Data, Xcode, TestFlight.
+Publicación de 6 apps en App Store.
+
+Idiomas: Español nativo, Inglés B2.
+
+Licenciatura en Sistemas, UTN, 2019","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Desarrollador iOS, no backend."
+val,"Gabriela Núñez
+gabriela.nunez@data.mx | Monterrey, México
+
+Data Engineer Senior - 6 años
+
+Tecnologías: Apache Spark, Hadoop, Airflow, Hive, AWS EMR, Python (PySpark), SQL.
+Diseño de pipelines ETL para 5TB diarios.
+
+Idiomas: Español nativo, Inglés B2.
+
+Ingeniería en Sistemas, ITESM, 2018","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Data engineer (Spark/Hadoop), no backend de APIs."
+test,"Federico Aguilar
+federico.aguilar@qa.com.ar | Rosario, Argentina
+
+QA Engineer - 5 años
+
+Automatización con Selenium, Cypress, Postman, JMeter. Testing manual y exploratorio. Bug tracking en JIRA.
+
+Idiomas: Español nativo, Inglés B1.
+
+Tecnicatura en Programación, UTN, 2019","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil QA, no developer backend."
+test,"Patricia Maldonado
+patricia.maldonado@pm.uy | Montevideo, Uruguay
+
+Project Manager / Scrum Master Certificada - 9 años
+
+Certificaciones: PMP, PSM-II.
+Competencias: Agile, Scrum, Kanban, JIRA, Confluence, gestión de stakeholders.
+
+Idiomas: Español nativo, Inglés C1.
+
+Licenciatura en Administración, UCU, 2014","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Project Manager / Scrum Master, no tecnica."
+train,"Diego Salgado | diego.salgado@dev.com.ar
+
+Comencé como backend developer en 2018 en una fintech porteña. Durante esos años desarrollé APIs REST con FastAPI sobre PostgreSQL e implementé pipelines CI/CD con Docker. En 2023 me sumé como Tech Lead a un equipo SaaS B2B donde sigo hoy trabajando en microservicios sobre Kubernetes.
+
+Nativo de español, inglés B2 (uso diario con HQ).
+Resido en Buenos Aires, Argentina.
+Estudios: Ingeniería en Sistemas, UTN FRBA, 2017.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Backend Python/FastAPI/PostgreSQL/Docker/K8s, 8 anos como Tech Lead en fintech y SaaS, AR, ingles B2. Cumple todo."
+train,"Sofia Velez | sofia.velez@tech.mx
+Senior Backend Engineer | 3a exp
+Stack: Python, FastAPI, PostgreSQL, Docker
+Idiomas: ES nativo, EN B2
+Ubicación: Monterrey, MX
+Edu: Ing. en Sist. Computacionales, UANL","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Stack alineado en MX con ingles B2, pero solo 3 anos pese a titulo Senior (la JD pide 4+)."
+train,"Karina Mendel
+karina.mendel@research.io
+
+Mi trayectoria profesional comenzó tras egresar del MIT en 2015 con un PhD en visión por computadora. Desde entonces he dedicado mi carrera a la investigación académica en deep learning, publicando más de 30 papers en conferencias top-tier (NeurIPS, ICML, CVPR). Mi expertise técnico incluye PyTorch, TensorFlow, distributed training y arquitecturas transformer.
+Trabajo desde Boston.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil de investigacion academica (deep learning), no backend de produccion. Ubicacion en Boston, fuera de LATAM."
+train,"Joaquín Aravena
+joaquin.aravena@dev.cl
+
+Ingeniero backend con 9 años de experiencia construyendo sistemas distribuidos. Mi camino comenzó en 2017 en un e-commerce regional escribiendo servicios en Python con Django; después de tres años pasé a una fintech donde implementé el motor de pagos sobre FastAPI y PostgreSQL, además de orquestar despliegues en Kubernetes vía Helm. Desde 2024 lidero la plataforma de un SaaS B2B donde uso Docker, AWS y Kafka.
+Español nativo, inglés C1.
+Santiago, Chile.
+Ing. Civil Informática, Universidad de Chile, 2017.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Backend Python (Django/FastAPI/PostgreSQL/Docker/K8s), 9 anos, fintech y SaaS, CL, ingles C1."
+train,"Daniela Köhler | daniela.kohler@frontend.com.ar
+Senior Frontend Engineer with 6 years of experience.
+Stack principal: React, TypeScript, Next.js, Tailwind, Vite.
+Hobby: bouldering. Pets: 2 gatos. Coffee: oat milk.
+I love clean code and pair programming.
+Spanish native speaker, German A2, English C1.
+Ubicación: Buenos Aires.
+Education: Lic. en Sistemas, ITBA, 2019.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil frontend (React/TS/Next), no backend."
+train,"Hernán Cabezas
+hernan.cabezas@dev.com
+
+Senior backend developer, 7 años de experiencia.
+Stack: Python, FastAPI, PostgreSQL, Docker, AWS.
+Trabajo de forma remota desde Latinoamérica.
+Idiomas: español nativo, inglés B2.
+Educación: Ingeniería en Computación, 2018.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Stack y seniority perfectos con ingles B2, pero ubicacion solo declara 'Latinoamerica' sin pais especifico."
+train,"Ricardo Tanaka | ricardo.tanaka@mobile.com
+Mobile dev. Android desde 2019, iOS desde 2022.
+Stack: Kotlin, Jetpack Compose, Swift, SwiftUI, Firebase, Realm.
+Trabajo remoto.
+Idiomas: español nativo, inglés B2, japonés A2.
+Ing. en Computación, 2019.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Desarrollador mobile (Kotlin/Swift), no backend. Ubicacion solo 'remoto' sin pais."
+val,"Valentina Aguirre
+valentina.aguirre@data.uy
+
+Mi área de expertise es la ingeniería de datos. He trabajado en el diseño de pipelines ETL para empresas de retail, procesando volúmenes de hasta 10TB diarios mediante Apache Spark, Airflow y herramientas del ecosistema Hadoop. También tengo experiencia en almacenes de datos analíticos sobre Snowflake y Redshift. Mi formación es en estadística (Licenciatura, UdelaR, 2018) y desde entonces (8 años) me dedico a esta práctica.
+
+Resido en Montevideo. Hablo español como lengua materna e inglés a nivel C1.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Data engineer (Spark/Hadoop/Airflow) en retail, no backend de APIs."
+val,"R. Espinoza | r.espinoza@dev.pe
+PHP/Laravel dev | 4a en e-comm, 3a en gobierno
+Stack: PHP, Laravel, MySQL, Redis, Vue.js
+ES nat, EN B1
+Lima, Perú
+Tit: Ing. Sistemas, UNI","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Stack PHP/Laravel, no Python. Ademas ingles B1 incumple el B2 excluyente."
+val,"Mauricio Esposito | mauricio.esposito@correo.com.ar
+
+Sobre mí: nací en Rosario, soy fanático de Newell's, padre de mellizos, corro maratones (mejor marca 3h12) y hago asado los domingos. En lo profesional, soy desarrollador backend con 6 años de experiencia. Mi día a día actual se reparte entre escribir endpoints con FastAPI conectados a PostgreSQL, mantener containers Docker para nuestro stack de microservicios y atender deployments en AWS ECS. Trabajo en una fintech de medios de pago desde 2022 (antes pasé por una startup de delivery). Mi inglés llegó a nivel B2 después de un intercambio en Canadá. Vivo en Rosario.
+
+Edu: Ing. en Sistemas, UTN, 2020.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_alto,"Backend Python/FastAPI/PostgreSQL/Docker/AWS, 6 anos, fintech, AR, ingles B2."
+test,"Lukas Müller
+lukas.mueller@design.de
+
+UX/UI Designer with 5+ years of expertise in product design.
+Tools: Figma, Sketch, Adobe XD, Principle, Lottie.
+Process: I follow double diamond and design tokens methodology.
+Idiomas: alemán nativo, inglés C2, español B1.
+Currently remote. Originally from Berlin.
+MFA Diseño Industrial, Universität der Künste Berlin, 2020.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",no_fit,"Perfil UX/UI designer, no backend. Aleman nativo (no espanol)."
+test,"Constanza Rivas
+constanza.rivas@correo.com.ar
+
+Llevo trabajando en backend Python desde mediados de 2021. Empecé en una agencia digital donde armé varios productos pequeños y desde 2024 estoy en una startup de logística donde diseño servicios sobre FastAPI con PostgreSQL como almacenamiento principal. Uso Docker para empaquetar y desplegar en AWS. Mi inglés es intermedio (B1, intento mejorarlo) y mi español es nativo. Vivo en Mendoza.
+
+Estudios: Licenciatura en Ciencias de la Computación, UNCuyo, 2021.","Puesto: Desarrollador/a Backend Senior
+Stack requerido: Python, FastAPI o Django, PostgreSQL, Docker
+Stack deseable: AWS, Kubernetes, experiencia en microservicios
+Experiencia minima: 4 anos en backend (idealmente 6+)
+Idiomas: espanol nativo, ingles intermedio (B2) excluyente para reuniones con HQ
+Ubicacion: remoto desde LATAM (Argentina, Mexico, Colombia, Chile, Uruguay, Peru)
+Industria valorada: fintech, e-commerce o SaaS B2B",fit_medio,"Stack ideal y ubicacion AR, pero ingles B1 incumple el B2 excluyente."
