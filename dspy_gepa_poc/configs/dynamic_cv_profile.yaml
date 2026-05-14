@@ -1,0 +1,48 @@
+case:
+  name: "CV Profile Extraction (Espanol)"
+
+module:
+  type: "dynamic"
+
+signature:
+  instruction: "Extrae un perfil estructurado del candidato a partir del texto del CV. Identifica los datos personales, experiencia profesional, stack tecnico, idiomas, ubicacion e industria previa. Si un campo no esta explicitamente mencionado en el CV, devolvelo como cadena vacia. No inventes informacion."
+  inputs:
+    - name: "text"
+      desc: "El texto completo del CV del cual extraer el perfil del candidato."
+  outputs:
+    - name: "nombre"
+      desc: "El nombre completo del candidato."
+    - name: "email"
+      desc: "La direccion de email de contacto."
+    - name: "años_experiencia"
+      desc: "Total de años de experiencia profesional (como numero entero, sin texto adicional)."
+    - name: "skills"
+      desc: "Lista de habilidades y tecnologias mencionadas, separadas por coma."
+    - name: "educacion_principal"
+      desc: "Titulo academico mas alto e institucion (formato: 'Titulo, Institucion')."
+    - name: "seniority_declarado"
+      desc: "Nivel de seniority si esta declarado explicitamente en el CV. Valores posibles: junior, semi_senior, senior, lead. Cadena vacia si no esta declarado."
+    - name: "stack_principal"
+      desc: "Tecnologias principales separadas por punto y coma. Si el CV indica años de experiencia por tecnologia, usar formato 'Tecnologia:años' (ej: 'Python:5; Django:3'). Si no, solo el nombre."
+    - name: "idiomas"
+      desc: "Idiomas con su nivel, separados por punto y coma. Formato: 'idioma:nivel' (ej: 'español:nativo; inglés:b2'). Cadena vacia si no se mencionan."
+    - name: "ubicacion"
+      desc: "Ciudad y pais de residencia del candidato (ej: 'Buenos Aires, Argentina'). Cadena vacia si no se menciona."
+    - name: "industria_previa"
+      desc: "Industria principal en la que se desempeño el candidato (ej: 'Fintech', 'E-commerce', 'Marketing'). Cadena vacia si no es identificable."
+
+data:
+  csv_filename: "cv_profile.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 2000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 50
+  auto_budget: "medium"
+  use_few_shot: true
+  few_shot_count: 3
+  ignore_in_metric: []
+  match_mode: "exact"
