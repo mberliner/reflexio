@@ -288,8 +288,8 @@ class ReflexioDeclarativa:
         import yaml
 
         config_out = self.results_dir / "config_snapshot.yaml"
-        with open(config_out, "w") as f:
-            yaml.safe_dump(self.config.raw_config, f)
+        with open(config_out, "w", encoding="utf-8") as f:
+            yaml.safe_dump(self.config.raw_config, f, allow_unicode=True)
         print(f"  - Config snapshot saved: {config_out}")
 
         # Prepare notes (free-form metadata, budget goes in dedicated column)

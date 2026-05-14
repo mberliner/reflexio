@@ -39,7 +39,7 @@ def run_production_inference(run_dir_path: str):
         print(f"Error: No se encontró config_snapshot.yaml en {run_dir}")
         return
 
-    with open(config_path) as f:
+    with open(config_path, encoding="utf-8") as f:
         raw_config = yaml.safe_load(f)
 
     # 3. Configurar SOLO el Modelo Estudiante (Barato/Rapido)

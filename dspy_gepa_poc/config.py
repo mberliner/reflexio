@@ -82,7 +82,7 @@ class AppConfig:
         if not os.path.exists(path):
             raise FileNotFoundError(f"Config file not found: {path}")
 
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             self.raw_config = yaml.safe_load(f)
 
         # Validate using our schema validator
