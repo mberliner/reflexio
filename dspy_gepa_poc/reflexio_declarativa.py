@@ -107,12 +107,19 @@ class ReflexioDeclarativa:
         print(f"Loading dataset: {self.config.dataset_path}")
         loader = CSVDataLoader()
 
-        # Determine input keys based on config
-        input_key = self.config.raw_config["data"]["input_column"]
+        # Determine input keys: acepta 'input_column' (string, legacy)
+        # o 'input_columns' (lista, multi-input).
+        data_cfg = self.config.raw_config["data"]
+        if "input_columns" in data_cfg:
+            input_keys = data_cfg["input_columns"]
+            if not isinstance(input_keys, list):
+                input_keys = [input_keys]
+        else:
+            input_keys = [data_cfg["input_column"]]
 
         # Load the CSV
         self.trainset, self.valset, self.testset = loader.load_dataset(
-            filename=self.config.raw_config["data"]["csv_filename"], input_keys=[input_key]
+            filename=data_cfg["csv_filename"], input_keys=input_keys
         )
         print(
             f"Loaded {len(self.trainset)} training, {len(self.valset)} validation, "

@@ -38,7 +38,7 @@ class ConfigValidator(BaseConfigValidator):
     REQUIRED_FIELDS = {
         "case": ["name"],
         "module": ["type"],
-        "data": ["csv_filename", "input_column"],
+        "data": ["csv_filename"],
         "optimization": [],
     }
 
@@ -94,6 +94,11 @@ class ConfigValidator(BaseConfigValidator):
         opt = config.get("optimization", {})
         if "max_metric_calls" not in opt and "auto_budget" not in opt:
             errors.append("Optimization requires 'max_metric_calls' or 'auto_budget'")
+
+        # Validate data inputs: requiere 'input_column' (string) o 'input_columns' (lista)
+        data = config.get("data", {})
+        if "input_column" not in data and "input_columns" not in data:
+            errors.append("data section requires 'input_column' (string) or 'input_columns' (list)")
 
         # Validate module-specific fields in data section
         if "module" in config and "type" in config["module"]:
@@ -162,9 +167,15 @@ class ConfigValidator(BaseConfigValidator):
             errors.append(f"CSV file not found at: {csv_path}")
             return errors
 
-        # Get input column
-        input_col = data_config.get("input_column")
-        input_columns = [input_col] if input_col else None
+        # Get input column(s): acepta 'input_column' (string, legacy) o
+        # 'input_columns' (lista, multi-input).
+        if "input_columns" in data_config:
+            input_columns = data_config["input_columns"]
+            if not isinstance(input_columns, list):
+                input_columns = [input_columns]
+        else:
+            input_col = data_config.get("input_column")
+            input_columns = [input_col] if input_col else None
 
         # Get output columns (can be in module section for DSPy)
         output_cols = config.get("module", {}).get("output_columns", [])
