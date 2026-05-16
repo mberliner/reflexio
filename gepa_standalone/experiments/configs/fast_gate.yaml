@@ -1,0 +1,47 @@
+# GEPA Universal Optimizer Configuration
+# Caso: Fast Gate Intake + Triage
+
+case:
+  name: "fast_gate"
+  title: "Fast Gate"
+  description: "Evaluación integral del intake: triage inicial y derivación P1-P5"
+
+data:
+  csv_filename: "fast_gate_cases.csv"
+  input_column: "text"
+  output_columns:
+    - "triage_decision"
+    - "triage_etapa"
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
+    - "clasificacion"
+
+prompt:
+  filename: "fast_gate_v1.json"
+
+adapter:
+  type: "extractor"
+  required_fields:
+    - "triage_decision"
+    - "triage_etapa"
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
+    - "clasificacion"
+  max_text_length: 4000
+  extractor_max_positive_examples: 0
+
+models:
+  cache: false
+  temperature: 1.0
+  max_tokens: 16000
+
+optimization:
+  max_metric_calls: 60
+  skip_perfect_score: true
+  display_progress_bar: true
