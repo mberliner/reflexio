@@ -36,6 +36,34 @@ jobs:
       - name: Check formatting
         run: .venv/bin/ruff format --check .
 
+  security:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - run: uv python install 3.13
+
+      - name: Install security tools
+        run: |
+          uv venv
+          uv pip install bandit pip-audit
+
+      - name: bandit - static analysis
+        run: >
+          .venv/bin/bandit -r .
+          --exclude .venv,tests,docs
+          --severity-level medium
+          --confidence-level medium
+          -f txt
+
+      - name: pip-audit - dependency vulnerabilities
+        run: >
+          .venv/bin/pip-audit -r requirements.txt
+          --ignore-vuln CVE-2025-69872
+
   test:
     needs: lint
     runs-on: ubuntu-latest
