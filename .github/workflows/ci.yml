@@ -54,7 +54,7 @@ jobs:
       - name: bandit - static analysis
         run: >
           .venv/bin/bandit -r .
-          --exclude .venv,tests,docs
+          --exclude ./.venv,./tests,./docs
           --severity-level medium
           --confidence-level medium
           -f txt
