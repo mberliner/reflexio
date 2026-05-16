@@ -4,13 +4,18 @@ ROI Calculator for GEPA Optimizations
 Calculates return on investment for using GEPA to optimize prompts,
 considering optimization cost vs production savings with cheaper models.
 
-PRICING REFERENCE (Azure OpenAI - January 2026):
+PRICING REFERENCE (OpenAI API - May 2026):
 -------------------------------------------------
-Model           | Input (1M tokens) | Output (1M tokens)
-----------------+-------------------+-------------------
-gpt-4o          | $2.50             | $10.00
-gpt-4o-mini     | $0.15             | $0.60
-gpt-4.1-mini    | $0.15             | $0.60
+Model             | Input (1M tokens) | Output (1M tokens)
+------------------+-------------------+-------------------
+gpt-4o            | $2.50             | $10.00
+gpt-4o-mini       | $0.15             | $0.60
+gpt-4.1-mini      | $0.15             | $0.60
+gpt-5             | $1.25             | $10.00
+gpt-5-mini        | $0.25             | $2.00
+gpt-5.5           | $5.00             | $30.00
+gpt-5.4           | $2.50             | $15.00
+gpt-5.4-mini      | $0.75             | $4.50
 -------------------------------------------------
 """
 
@@ -43,10 +48,16 @@ class ModelPricing:
 
 
 # Default pricing (can be overridden)
+# Source: https://openai.com/api/pricing (May 2026)
 DEFAULT_PRICING = {
     "gpt-4o": ModelPricing("GPT-4o", 2.50, 10.00),
     "gpt-4.1-mini": ModelPricing("GPT-4.1-mini", 0.15, 0.60),
     "gpt-4o-mini": ModelPricing("GPT-4o-mini", 0.15, 0.60),
+    "gpt-5": ModelPricing("GPT-5", 1.25, 10.00),
+    "gpt-5-mini": ModelPricing("GPT-5-mini", 0.25, 2.00),
+    "gpt-5.5": ModelPricing("GPT-5.5", 5.00, 30.00),
+    "gpt-5.4": ModelPricing("GPT-5.4", 2.50, 15.00),
+    "gpt-5.4-mini": ModelPricing("GPT-5.4-mini", 0.75, 4.50),
 }
 
 # Default token estimates per use case
