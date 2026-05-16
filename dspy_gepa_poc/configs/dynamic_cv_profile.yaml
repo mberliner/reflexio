@@ -4,6 +4,11 @@ case:
 module:
   type: "dynamic"
 
+models:
+  cache: false
+  temperature: 1.0
+  max_tokens: 16000
+
 signature:
   instruction: "Extrae un perfil estructurado del candidato a partir del texto del CV. Identifica los datos personales, experiencia profesional, stack tecnico, idiomas, ubicacion e industria previa. Si un campo no esta explicitamente mencionado en el CV, devolvelo como cadena vacia. No inventes informacion."
   inputs:
