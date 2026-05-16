@@ -44,6 +44,7 @@
 | Campo | Tipo | Default | Descripcion |
 |-------|------|---------|-------------|
 | `models.temperature` | float | (del .env) | Override de temperatura |
+| `models.max_tokens` | int | 1000 | Override de max tokens. Requerido >= 16000 para reasoning models (gpt-5, o1, o3) |
 | `models.cache` | bool | false | Cache de respuestas DSPy (ver `docs/LLM_CONFIG.md`) |
 
 ### Adapter (opcionales)
@@ -95,7 +96,7 @@
 | Tipo | Campos Requeridos | Campos Opcionales |
 |------|-------------------|-------------------|
 | `classifier` | `valid_classes` (list) | `max_text_length`, `max_positive_examples` |
-| `extractor` | `required_fields` (list) | `max_positive_examples`, `max_text_length` |
+| `extractor` | `required_fields` (list) | `extractor_max_positive_examples`, `max_text_length` |
 | `sql` | - | `max_text_length` |
 | `rag` | - | `max_positive_examples`, `max_text_length` |
 

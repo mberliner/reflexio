@@ -67,6 +67,10 @@ class ReflexioDeclarativa:
         models_config = self.config.raw_config.get("models", {})
         if "temperature" in models_config:
             self.task_config.temperature = models_config["temperature"]
+            self.reflection_config.temperature = models_config["temperature"]
+        if "max_tokens" in models_config:
+            self.task_config.max_tokens = models_config["max_tokens"]
+            self.reflection_config.max_tokens = models_config["max_tokens"]
         if "cache" in models_config:
             self.task_config.cache = models_config["cache"]
             self.reflection_config.cache = models_config["cache"]

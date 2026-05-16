@@ -146,6 +146,7 @@ class LLMConfig:
         """
         import litellm
 
+        litellm.drop_params = True
         kwargs = self.to_kwargs()
 
         def lm_func(prompt: str) -> str:
@@ -200,6 +201,7 @@ class LLMConfig:
 
         try:
             # Usar to_kwargs para evitar pasar parámetros None que rompen el logger de litellm
+            litellm.drop_params = True
             kwargs = self.to_kwargs()
             # Forzar max_tokens pequeño para el test
             kwargs["max_tokens"] = 5

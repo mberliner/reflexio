@@ -45,18 +45,32 @@ def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
     return lm_func
 
 
-def create_reflection_lm_function(verbose: bool = False) -> Callable[[str], str]:
+def create_reflection_lm_function(
+    verbose: bool = False,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    cache: bool | None = None,
+) -> Callable[[str], str]:
     """
     Crea la funcion de Language Model para reflexion requerida por GEPA.
     Usa el modelo de reflexion (profesor).
 
     Args:
         verbose: Si True, imprime las reflexiones del modelo.
+        temperature: Override de temperatura (None = usa default del .env).
+        max_tokens: Override de max_tokens (None = usa 2000).
+        cache: Override de cache (None = usa default del .env).
 
     Returns:
         Funcion que toma un prompt y retorna la respuesta.
     """
     config = LLMConfig.from_env("reflection", max_tokens=2000)
+    if temperature is not None:
+        config.temperature = temperature
+    if max_tokens is not None:
+        config.max_tokens = max_tokens
+    if cache is not None:
+        config.cache = cache
     base_func = config.get_lm_function()
 
     if not verbose:
@@ -131,6 +145,7 @@ def call_llm(
     """
     import litellm
 
+    litellm.drop_params = True
     config = LLMConfig.from_env(model_name)
 
     messages = []

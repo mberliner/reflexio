@@ -229,12 +229,14 @@ class UniversalOptimizer:
 
         elif adapter_type == "extractor":
             required_fields = self.config["adapter"]["required_fields"]
-            max_pos = self.config["adapter"].get("max_positive_examples")
+            max_pos = self.config["adapter"].get("extractor_max_positive_examples")
+            max_resp = self.config.get("models", {}).get("max_tokens")
 
             self.adapter = SimpleExtractorAdapter(
                 required_fields=required_fields,
                 temperature=self.active_temperature,
                 max_positive_examples=max_pos,
+                max_response_tokens=max_resp,
             )
 
         elif adapter_type == "sql":
@@ -307,7 +309,13 @@ class UniversalOptimizer:
 
         # 2. OPTIMIZATION
         print_section("GEPA OPTIMIZATION")
-        reflection_lm = create_reflection_lm_function(verbose=verbose)
+        models_config = self.config.get("models", {})
+        reflection_lm = create_reflection_lm_function(
+            verbose=verbose,
+            temperature=models_config.get("temperature"),
+            max_tokens=models_config.get("max_tokens"),
+            cache=models_config.get("cache"),
+        )
 
         # Snapshot parameters for consistency
         self.active_max_metric_calls = self.config["optimization"]["max_metric_calls"]

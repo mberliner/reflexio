@@ -47,7 +47,7 @@ class ConfigValidator(BaseConfigValidator):
         },
         "extractor": {
             "required": ["required_fields"],
-            "optional": ["max_positive_examples"],
+            "optional": ["extractor_max_positive_examples"],
         },
         "sql": {
             "required": [],

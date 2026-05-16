@@ -24,6 +24,7 @@ class SimpleExtractorAdapter(BaseAdapter):
         required_fields: list[str],
         temperature: float = 0.0,
         max_positive_examples: int | None = None,
+        max_response_tokens: int | None = None,
     ):
         super().__init__(temperature=temperature)
         self.required_fields = required_fields
@@ -36,6 +37,8 @@ class SimpleExtractorAdapter(BaseAdapter):
             self.max_positive_examples = Config.EXTRACTOR_MAX_POSITIVE_EXAMPLES
         else:
             self.max_positive_examples = 2
+
+        self.max_response_tokens = max_response_tokens if max_response_tokens is not None else 4000
 
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
@@ -52,7 +55,8 @@ class SimpleExtractorAdapter(BaseAdapter):
 
             try:
                 extracted_text = self.call_model(
-                    system_prompt=system_prompt, user_content=user_text, max_tokens=300
+                    system_prompt=system_prompt, user_content=user_text,
+                    max_tokens=self.max_response_tokens,
                 )
 
                 # Parsear JSON
