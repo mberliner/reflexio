@@ -55,7 +55,8 @@ class SimpleExtractorAdapter(BaseAdapter):
 
             try:
                 extracted_text = self.call_model(
-                    system_prompt=system_prompt, user_content=user_text,
+                    system_prompt=system_prompt,
+                    user_content=user_text,
                     max_tokens=self.max_response_tokens,
                 )
 

@@ -7,6 +7,7 @@ Util para medir el punto de partida antes de invertir tokens en GEPA.
 Reutiliza ReflexioDeclarativa.setup_models / load_data / create_module_and_metric
 y luego ejecuta solo dspy.evaluate.Evaluate (sin optimizacion).
 """
+
 import argparse
 import sys
 from pathlib import Path

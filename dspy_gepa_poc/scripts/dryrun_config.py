@@ -7,6 +7,7 @@ Ejemplo:
     python dspy_gepa_poc/scripts/dryrun_config.py \\
         --config dspy_gepa_poc/configs/dynamic_cv_profile.yaml
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -84,8 +85,10 @@ def dryrun(config_path: Path) -> int:
 
         # 6. Sanity check: perfect prediction debe dar True/1.0
         print("\n[6] Sanity check (prediccion = ground truth)...")
+
         class FakePred:
             pass
+
         fake = FakePred()
         for f in output_fields:
             setattr(fake, f, getattr(ex0, f, ""))
