@@ -429,8 +429,9 @@ class UniversalOptimizer:
         """
         run_id = str(uuid.uuid4())[:8]
 
-        # Determine model names
+        # Determine model names; restore configured temperature for accurate logging
         task_config = get_task_config()
+        task_config.temperature = self.active_temperature
         reflect_config = get_reflection_config()
 
         # Write reproducibility metadata (3 levels)
