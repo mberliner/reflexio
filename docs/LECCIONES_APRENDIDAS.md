@@ -57,6 +57,29 @@ La métrica define qué puede aprender GEPA. Cada adapter built-in elige una est
 
 ## 2. Datos y Complejidad de la Tarea
 
+### Calibración de Urgencia en Modelos Reasoning (gpt-5-mini)
+
+**Hallazgo:** gpt-5-mini no mejora con GEPA en la tarea de Email Urgency, a pesar de que gpt-4.1-mini alcanza 96% de robustez en la misma tarea y dataset. La causa no es un bug de código ni de formato de respuesta.
+
+**Diagnóstico:** Se verificó que el flujo técnico funciona correctamente — `apply_reasoning_constraints` eleva `max_tokens` a 16000 y temperatura a 1.0, el modelo devuelve respuestas de una sola palabra en el formato correcto. El problema es una **desalineación sistemática de criterios** entre los labels del dataset y el modelo.
+
+Los 4 ejemplos donde gpt-5-mini difiere consistentemente:
+
+| Label dataset | gpt-5-mini | Texto |
+|---|---|---|
+| `low` | `normal` | *Aviso: Nueva política efectiva el próximo mes* |
+| `normal` | `urgent` | *FYI - Respaldo de datos falló anoche. TI investigando* |
+| `low` | `normal` | *Solo revisando si tuviste tiempo de ver mi email anterior* |
+| `normal` | `urgent` | *Queja de cliente escalada. Se espera respuesta en 24 horas* |
+
+El patrón es consistente: **gpt-5-mini escala la urgencia un nivel hacia arriba** en casos borderline (`low→normal`, `normal→urgent`). Con solo 10 ejemplos en val y 4 desacuerdos el baseline queda fijo en 0.6, que GEPA no logra superar independientemente del prompt generado. En contraste, el caso Fast Gate (extractor de dominio específico sin priors fuertes del modelo) sí mejora sustancialmente con GEPA y los mismos modelos.
+
+**Lección:**
+- Para tareas de clasificación donde el modelo tiene **priors de entrenamiento fuertes** (como urgencia de email), GEPA no puede overridear la calibración interna del modelo via prompt. El optimizador ve un baseline fijo e irreducible.
+- Este patrón no aparece en tareas de dominio específico (triage médico, extracción estructurada) donde el modelo no tiene priors propios y depende del prompt para guiar su razonamiento.
+- Antes de interpretar un baseline estancado como fallo del optimizador, verificar si el modelo y el dataset comparten los mismos criterios de clasificación para los casos borderline.
+- Si hay desalineación, las opciones son: re-etiquetar los casos ambiguos según el criterio del modelo, o documentar la diferencia de calibración como resultado de la experimentación.
+
 ### El Efecto Techo (Ceiling Effect)
 **Síntoma:** El modelo base obtenía 100% de efectividad en la primera prueba ("Zero-Shot").
 **Causa:** Los datos eran demasiado simples e inequívocos para un modelo potente como GPT-4o-mini.
