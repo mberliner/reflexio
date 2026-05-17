@@ -158,6 +158,8 @@ def call_llm(
         kwargs["temperature"] = temperature
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
+    # Re-apply after manual overrides: callers may pass unadjusted values from YAML
+    kwargs = config.apply_reasoning_constraints(kwargs)
 
     # Remove model from kwargs since we pass it separately
     model = kwargs.pop("model")

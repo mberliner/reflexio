@@ -7,9 +7,21 @@ Provides a unified configuration dataclass that works with both:
 """
 
 import os
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+
+# Same regex DSPy uses internally to detect reasoning models (o1/3/4/5, gpt-5 family)
+_REASONING_MODEL_PATTERN = re.compile(
+    r"^(?:o[1345](?:-(?:mini|nano|pro))?(?:-\d{4}-\d{2}-\d{2})?|gpt-5(?!-chat)(?:-.*)?)$"
+)
+_REASONING_TEMPERATURE = 1.0
+_REASONING_MIN_MAX_TOKENS = 16000
+
+
+def _is_reasoning(model: str) -> bool:
+    return bool(_REASONING_MODEL_PATTERN.match(model.split("/")[-1].lower()))
 
 
 @dataclass
@@ -33,6 +45,54 @@ class LLMConfig:
     temperature: float = 0.7
     max_tokens: int = 1000
     cache: bool = False  # DSPy LM cache (True = cachea respuestas, False = resultados frescos)
+
+    @property
+    def is_reasoning_model(self) -> bool:
+        """True when the model requires temperature=1.0 and max_tokens>=16000."""
+        return _is_reasoning(self.model)
+
+    def apply_reasoning_constraints(self, kwargs: dict) -> dict:
+        """
+        Enforce reasoning model parameter requirements on an already-built kwargs dict.
+
+        Safe to call on non-reasoning models (returns kwargs unchanged).
+        Used by to_kwargs() and call_llm() to re-apply after manual overrides.
+        """
+        if not self.is_reasoning_model:
+            return kwargs
+        kwargs["temperature"] = _REASONING_TEMPERATURE
+        if (kwargs.get("max_tokens") or 0) < _REASONING_MIN_MAX_TOKENS:
+            kwargs["max_tokens"] = _REASONING_MIN_MAX_TOKENS
+        return kwargs
+
+    def describe(self) -> str:
+        """
+        Return a formatted description of effective LM config for startup logging.
+
+        Shows model name, reasoning model flag, and effective temperature/max_tokens
+        with override notes when reasoning constraints changed the requested values.
+        """
+        effective = self.to_kwargs()
+        tag = " [reasoning model]" if self.is_reasoning_model else ""
+        lines = [f"{self.model}{tag}"]
+
+        temp_eff = effective["temperature"]
+        if self.is_reasoning_model and self.temperature != temp_eff:
+            lines.append(
+                f"    temperature: {self.temperature} (config) → {temp_eff} (reasoning override)"
+            )
+        else:
+            lines.append(f"    temperature: {temp_eff}")
+
+        tok_eff = effective["max_tokens"]
+        if self.is_reasoning_model and self.max_tokens != tok_eff:
+            lines.append(
+                f"    max_tokens:  {self.max_tokens} (config) → {tok_eff} (reasoning override)"
+            )
+        else:
+            lines.append(f"    max_tokens:  {tok_eff}")
+
+        return "\n".join(lines)
 
     @classmethod
     def from_env(cls, model_name: str = "task", load_env: bool = True, **overrides) -> "LLMConfig":
@@ -101,6 +161,9 @@ class LLMConfig:
         """
         Convert config to kwargs dict for LLM calls.
 
+        Reasoning model constraints (temperature=1.0, max_tokens>=16000) are applied
+        automatically when the model matches the reasoning model pattern.
+
         Returns:
             Dictionary with non-None values suitable for litellm.completion.
             DSPy-specific params (cache) are added in get_dspy_lm().
@@ -118,7 +181,7 @@ class LLMConfig:
         if self.api_version:
             kwargs["api_version"] = self.api_version
 
-        return kwargs
+        return self.apply_reasoning_constraints(kwargs)
 
     def get_dspy_lm(self):
         """
@@ -203,8 +266,8 @@ class LLMConfig:
             # Usar to_kwargs para evitar pasar parámetros None que rompen el logger de litellm
             litellm.drop_params = True
             kwargs = self.to_kwargs()
-            # Forzar max_tokens pequeño para el test
-            kwargs["max_tokens"] = 5
+            # Use small max_tokens for the probe; reasoning models require >= 16000
+            kwargs["max_tokens"] = _REASONING_MIN_MAX_TOKENS if self.is_reasoning_model else 5
 
             litellm.completion(
                 messages=[{"role": "user", "content": "Respond only 'OK'"}], **kwargs
