@@ -6,6 +6,7 @@ while allowing each project to define its own root and input paths.
 """
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 
 
@@ -65,3 +66,27 @@ class BasePaths(ABC):
     def dataset(self, filename: str) -> Path:
         """Get path to a specific dataset file."""
         return self.datasets / filename
+
+    # ==================== RUN DIRECTORY (unified contract) ====================
+
+    @abstractmethod
+    def run_dir(
+        self,
+        case_name: str,
+        run_id: str | None = None,
+        timestamp: datetime | None = None,
+    ) -> Path:
+        """
+        Generate directory path for a specific run.
+
+        Unified signature across projects. Concrete subclasses define the
+        on-disk layout but MUST accept this signature.
+
+        Args:
+            case_name: Name of case (e.g., 'email_urgency').
+            run_id: Optional unique run identifier (e.g., 8-char UUID).
+            timestamp: Optional timestamp (defaults to now).
+
+        Returns:
+            Path to (created) run directory.
+        """

@@ -11,7 +11,14 @@ import pytest
 
 import shared.paths.dspy_paths as _dspy_module
 import shared.paths.gepa_paths as _gepa_module
-from shared.paths import BasePaths, DSPyPaths, GEPAPaths, get_dspy_paths, get_paths
+from shared.paths import (
+    BasePaths,
+    DSPyPaths,
+    GEPAPaths,
+    get_dspy_paths,
+    get_gepa_paths,
+    get_paths,
+)
 from shared.paths.gepa_paths import (
     create_run_dir,
     get_dataset_path,
@@ -141,6 +148,13 @@ class TestGEPAPaths:
         assert result.exists()
         assert "xyz789" in result.name
 
+    def test_run_dir_without_run_id(self, paths, tmp_path):
+        ts = datetime(2026, 1, 15, 10, 30, 0)
+        result = paths.run_dir("email_urgency", timestamp=ts)
+        expected = tmp_path / "results" / "runs" / "email_urgency" / "2026-01-15_103000"
+        assert result == expected
+        assert result.exists()
+
     def test_archived(self, paths, tmp_path):
         assert paths.archived == tmp_path / "results" / "archived"
         assert paths.archived.exists()
@@ -214,6 +228,12 @@ class TestDSPyPaths:
         assert result.exists()
         assert "test_case_" in result.name
 
+    def test_run_dir_with_run_id(self, paths):
+        ts = datetime(2026, 3, 1, 8, 0, 0)
+        result = paths.run_dir("email_urgency", run_id="abc123", timestamp=ts)
+        assert result.name == "email_urgency_20260301_080000_abc123"
+        assert result.exists()
+
     def test_default_root_points_to_dspy_gepa_poc(self):
         root = DSPyPaths._default_root()
         assert root.name == "dspy_gepa_poc"
@@ -230,6 +250,11 @@ class TestSingletons:
         p = get_paths()
         assert isinstance(p, GEPAPaths)
         assert "gepa_standalone" in str(p.root)
+
+    def test_get_gepa_paths_alias_returns_same_instance(self):
+        p1 = get_paths()
+        p2 = get_gepa_paths()
+        assert p1 is p2
 
     def test_get_dspy_paths_returns_dspy(self):
         p = get_dspy_paths()

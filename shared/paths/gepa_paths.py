@@ -127,23 +127,31 @@ class GEPAPaths(BasePaths):
         path.mkdir(parents=True, exist_ok=True)
         return path
 
-    def run_dir(self, case_name: str, run_id: str, timestamp: datetime | None = None) -> Path:
+    def run_dir(
+        self,
+        case_name: str,
+        run_id: str | None = None,
+        timestamp: datetime | None = None,
+    ) -> Path:
         """
         Generate directory path for a specific run.
 
         Args:
             case_name: Name of case
-            run_id: Unique run identifier (typically 8-char UUID)
+            run_id: Optional unique run identifier (typically 8-char UUID).
+                If omitted, layout is runs/{case}/{YYYY-MM-DD_HHMMSS}/.
             timestamp: Optional timestamp (defaults to now)
 
         Returns:
-            Path to run directory with format: runs/{case}/{YYYY-MM-DD_HHMMSS}_{runid}/
+            Path to run directory with format:
+            runs/{case}/{YYYY-MM-DD_HHMMSS}_{runid}/ when run_id is provided,
+            else runs/{case}/{YYYY-MM-DD_HHMMSS}/.
         """
         if timestamp is None:
             timestamp = datetime.now()
 
         ts_str = timestamp.strftime("%Y-%m-%d_%H%M%S")
-        dirname = f"{ts_str}_{run_id}"
+        dirname = f"{ts_str}_{run_id}" if run_id else ts_str
 
         path = self.case_runs_dir(case_name) / dirname
         path.mkdir(parents=True, exist_ok=True)
@@ -198,9 +206,11 @@ class GEPAPaths(BasePaths):
 _paths_instance: GEPAPaths | None = None
 
 
-def get_paths(root_override: Path | None = None) -> GEPAPaths:
+def get_gepa_paths(root_override: Path | None = None) -> GEPAPaths:
     """
     Get the global GEPAPaths instance.
+
+    Canonical name (symmetric with get_dspy_paths). Prefer this over get_paths().
 
     Args:
         root_override: Optional override for root directory (mainly for testing)
@@ -215,6 +225,11 @@ def get_paths(root_override: Path | None = None) -> GEPAPaths:
         _paths_instance = GEPAPaths(root_override=root_override)
 
     return _paths_instance
+
+
+def get_paths(root_override: Path | None = None) -> GEPAPaths:
+    """Backward-compatible alias for get_gepa_paths()."""
+    return get_gepa_paths(root_override=root_override)
 
 
 # ==================== CONVENIENCE FUNCTIONS ====================

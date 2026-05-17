@@ -36,23 +36,31 @@ class DSPyPaths(BasePaths):
 
     # ==================== OUTPUT PATHS ====================
 
-    def run_dir(self, case_name: str, timestamp: datetime | None = None) -> Path:
+    def run_dir(
+        self,
+        case_name: str,
+        run_id: str | None = None,
+        timestamp: datetime | None = None,
+    ) -> Path:
         """
         Generate directory path for a specific run.
 
         Args:
             case_name: Name of case (e.g., 'Sentiment Analysis (Hard)')
+            run_id: Optional unique run identifier. When provided it is
+                appended to the directory name.
             timestamp: Optional timestamp (defaults to now)
 
         Returns:
-            Path to run directory with format: runs/{safe_case}_{YYYYMMDD_HHMMSS}/
+            Path to run directory with format
+            ``runs/{safe_case}_{YYYYMMDD_HHMMSS}[_{run_id}]/``.
         """
         if timestamp is None:
             timestamp = datetime.now()
 
         safe_name = case_name.replace(" ", "_").replace("(", "").replace(")", "")
         ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-        dirname = f"{safe_name}_{ts_str}"
+        dirname = f"{safe_name}_{ts_str}_{run_id}" if run_id else f"{safe_name}_{ts_str}"
 
         path = self.runs / dirname
         path.mkdir(parents=True, exist_ok=True)
