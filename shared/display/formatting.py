@@ -26,10 +26,10 @@ WIDTH = 72
 # Prefijos de severidad. Ancho fijo de 7 caracteres incluyendo el espacio
 # final, para que los mensajes queden alineados verticalmente.
 _PREFIX = {
-    "info":  "[INFO] ",
-    "warn":  "[WARN] ",
+    "info": "[INFO] ",
+    "warn": "[WARN] ",
     "error": "[ERROR]",
-    "ok":    "[OK]   ",
+    "ok": "[OK]   ",
     "debug": "[DEBUG]",
 }
 

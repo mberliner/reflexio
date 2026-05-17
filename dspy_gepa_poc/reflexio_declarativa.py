@@ -116,8 +116,7 @@ class ReflexioDeclarativa:
             filename=data_cfg["csv_filename"], input_keys=input_keys
         )
         log_ok(
-            f"Loaded: {len(self.trainset)} train, "
-            f"{len(self.valset)} val, {len(self.testset)} test"
+            f"Loaded: {len(self.trainset)} train, {len(self.valset)} val, {len(self.testset)} test"
         )
 
     def create_module_and_metric(self):
@@ -212,9 +211,7 @@ class ReflexioDeclarativa:
             )
 
         if not eval_fields:
-            log_warn(
-                "No hay campos para evaluar. Todos los outputs estan en ignore_in_metric."
-            )
+            log_warn("No hay campos para evaluar. Todos los outputs estan en ignore_in_metric.")
 
     def run(self):
         """Execute the optimization pipeline."""

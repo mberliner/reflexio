@@ -58,8 +58,7 @@ class GEPAOptimizer:
             )
         except TypeError:
             log_warn(
-                "Using basic GEPA configuration "
-                "(some parameters not supported in this version)"
+                "Using basic GEPA configuration (some parameters not supported in this version)"
             )
             self.optimizer = dspy.GEPA(**gepa_params)
 
