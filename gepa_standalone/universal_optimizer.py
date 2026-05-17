@@ -40,6 +40,7 @@ from gepa_standalone.data.data_loader import load_gepa_data
 from gepa_standalone.utils.results_logger import log_experiment_result, save_run_details
 from gepa_standalone.wizard.interactive import InteractiveWizard
 from shared.display import print_detailed_results, print_header, print_section, print_summary
+from shared.llm import LLMConnectionError
 from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_paths
 
@@ -92,6 +93,9 @@ class UniversalOptimizer:
 
         # 2. Validate config
         self.validate_config()
+
+        # 2b. Validate LLM connections upfront (terminate if endpoints unreachable)
+        self.validate_llm_connections()
 
         # Initialize metadata tracking
         self.metadata_mgr = MetadataManager(get_paths().results)
@@ -181,6 +185,37 @@ class UniversalOptimizer:
             raise ValueError(f"Config validation failed with {len(errors)} error(s)")
 
         print("[INFO] Config validation passed")
+
+    def validate_llm_connections(self):
+        """
+        Validate Task and Reflection LM connections with a real probe.
+
+        Raises:
+            LLMConnectionError: If any endpoint is unreachable or misconfigured.
+        """
+        models_cfg = self.config.get("models", {})
+
+        task_cfg = get_task_config()
+        if models_cfg.get("temperature") is not None:
+            task_cfg.temperature = models_cfg["temperature"]
+        if models_cfg.get("max_tokens"):
+            task_cfg.max_tokens = models_cfg["max_tokens"]
+
+        ref_cfg = get_reflection_config()
+        if models_cfg.get("temperature") is not None:
+            ref_cfg.temperature = models_cfg["temperature"]
+        if models_cfg.get("max_tokens"):
+            ref_cfg.max_tokens = models_cfg["max_tokens"]
+
+        print("[INFO] Validando conexion con Task LM...")
+        task_cfg.validate()
+        task_cfg.validate_connection()
+        print("[OK] Task LM conectado")
+
+        print("[INFO] Validando conexion con Reflection LM...")
+        ref_cfg.validate()
+        ref_cfg.validate_connection()
+        print("[OK] Reflection LM conectado")
 
     def load_data(self):
         """Load dataset using universal data loader."""
@@ -486,6 +521,13 @@ For more info, see: gepa_standalone/experiments/configs/
 
     try:
         optimizer.run(verbose=args.verbose)
+    except LLMConnectionError as e:
+        # Connection failure: print formatted diagnostic and terminate
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n\nOptimizacion cancelada por el usuario.")
+        sys.exit(130)
     except Exception as e:
         print(f"\n[ERROR] Optimization failed: {e}")
         traceback.print_exc()

@@ -11,6 +11,7 @@ from typing import Any
 from gepa import EvaluationBatch
 
 from gepa_standalone.adapters.base_adapter import BaseAdapter
+from shared.llm import LLMConnectionError
 
 
 class SimpleSQLAdapter(BaseAdapter):
@@ -60,6 +61,9 @@ class SimpleSQLAdapter(BaseAdapter):
                         }
                     )
 
+            except LLMConnectionError:
+                # Connection-level failure: abort optimization
+                raise
             except Exception as e:
                 print(f"[WARNING] Error técnico en ejemplo {idx}, descartando: {e}")
 

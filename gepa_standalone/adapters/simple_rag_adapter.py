@@ -15,6 +15,7 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
+from shared.llm import LLMConnectionError
 
 
 class SimpleRAGAdapter(BaseAdapter):
@@ -187,6 +188,9 @@ class SimpleRAGAdapter(BaseAdapter):
                         }
                     )
 
+            except LLMConnectionError:
+                # Connection-level failure: abort optimization
+                raise
             except Exception as e:
                 print(f"[WARNING] Error en ejemplo {idx}: {e}")
                 # Penalizar fallos técnicos
