@@ -15,7 +15,14 @@ from pathlib import Path
 from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc.reflexio_declarativa import ReflexioDeclarativa
-from shared.display import print_header, print_section
+from shared.display import (
+    log_error,
+    log_info,
+    log_warn,
+    print_header,
+    print_kv,
+    print_section,
+)
 
 
 def run_baseline(config_path: Path) -> int:
@@ -25,12 +32,13 @@ def run_baseline(config_path: Path) -> int:
     orchestrator.create_module_and_metric()
 
     case_name = orchestrator.config.raw_config["case"]["name"]
-    print_header(f"BASELINE ONLY: {case_name}")
+    print_header(f"[DSPY+GEPA / BASELINE-ONLY] {case_name}")
+    log_info(f"Command: {' '.join(sys.argv)}")
 
     num_threads = orchestrator.config.raw_config.get("optimization", {}).get("num_threads", 1)
 
     print_section("BASELINE EN VAL SET")
-    print(f">> Evaluando prompt inicial sobre {len(orchestrator.valset)} ejemplos de val...")
+    log_info(f"Evaluando prompt inicial sobre {len(orchestrator.valset)} ejemplos de val...")
     evaluator_val = Evaluate(
         devset=orchestrator.valset,
         metric=orchestrator.metric,
@@ -38,14 +46,14 @@ def run_baseline(config_path: Path) -> int:
         display_progress=True,
     )
     baseline_val = ReflexioDeclarativa._to_float_score(evaluator_val(orchestrator.student))
-    print(f"\n>>> Baseline VAL: {ReflexioDeclarativa._format_score(baseline_val)}")
+    print_kv("Baseline VAL", ReflexioDeclarativa._format_score(baseline_val))
 
     print_section("BASELINE EN TEST SET")
     if not orchestrator.testset:
-        print("Test set vacio, salteando.")
+        log_warn("Test set vacio, salteando.")
         return 0
 
-    print(f">> Evaluando prompt inicial sobre {len(orchestrator.testset)} ejemplos de test...")
+    log_info(f"Evaluando prompt inicial sobre {len(orchestrator.testset)} ejemplos de test...")
     evaluator_test = Evaluate(
         devset=orchestrator.testset,
         metric=orchestrator.metric,
@@ -53,12 +61,12 @@ def run_baseline(config_path: Path) -> int:
         display_progress=True,
     )
     baseline_test = ReflexioDeclarativa._to_float_score(evaluator_test(orchestrator.student))
-    print(f"\n>>> Baseline TEST: {ReflexioDeclarativa._format_score(baseline_test)}")
+    print_kv("Baseline TEST", ReflexioDeclarativa._format_score(baseline_test))
 
     print_section("RESUMEN")
-    print(f"Val:  {ReflexioDeclarativa._format_score(baseline_val)}")
-    print(f"Test: {ReflexioDeclarativa._format_score(baseline_test)}")
-    print("\nResultados NO se guardan en results/ (modo baseline-only).")
+    print_kv("Val", ReflexioDeclarativa._format_score(baseline_val))
+    print_kv("Test", ReflexioDeclarativa._format_score(baseline_test))
+    log_info("Resultados NO se guardan en results/ (modo baseline-only).")
     return 0
 
 
@@ -69,7 +77,7 @@ def main():
 
     config_path = Path(args.config).resolve()
     if not config_path.exists():
-        print(f"Error: config no existe: {config_path}", file=sys.stderr)
+        log_error(f"config no existe: {config_path}")
         sys.exit(1)
 
     sys.exit(run_baseline(config_path))

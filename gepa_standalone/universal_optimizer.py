@@ -39,10 +39,25 @@ from gepa_standalone.core.llm_factory import (
 from gepa_standalone.data.data_loader import load_gepa_data
 from gepa_standalone.utils.results_logger import log_experiment_result, save_run_details
 from gepa_standalone.wizard.interactive import InteractiveWizard
-from shared.display import print_detailed_results, print_header, print_section, print_summary
+from shared.display import (
+    log_error,
+    log_info,
+    log_ok,
+    log_warn,
+    print_detailed_results,
+    print_header,
+    print_kv,
+    print_step,
+    print_summary,
+)
 from shared.llm import LLMConnectionError
 from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_paths
+
+# Total de pasos del pipeline canonico (compartido con dspy_gepa_poc).
+TOTAL_STEPS = 7
+# Identificador del motor que aparece en el header del run.
+ENGINE = "GEPA-STANDALONE"
 
 
 class UniversalOptimizer:
@@ -65,14 +80,14 @@ class UniversalOptimizer:
 
     def run(self, verbose: bool = False):
         """Execute complete optimization workflow."""
-        # 1. Load or generate config
+        # STEP 1: Config
+        print_step(1, TOTAL_STEPS, "CONFIG")
         config_path = None
         if self.config_path:
             p = Path(self.config_path)
             if p.exists():
                 config_path = p
             else:
-                # Try relative to script directory
                 script_dir = Path(__file__).parent
                 fallback_path = script_dir / self.config_path
                 if fallback_path.exists():
@@ -80,43 +95,39 @@ class UniversalOptimizer:
 
         if config_path:
             self.config_path = str(config_path)
-            print(f"\n[INFO] Loading config from: {self.config_path}")
+            log_info(f"Loading config from: {self.config_path}")
             self.config = self.load_config()
         else:
             if self.config_path:
-                print(f"\n[WARNING] Config file not found: {self.config_path}")
-            print("\n[INFO] Activating interactive wizard...\n")
+                log_warn(f"Config file not found: {self.config_path}")
+            log_info("Activating interactive wizard...")
             self.config = self.run_wizard()
 
-        # Apply YAML overrides to global Config
         Config.apply_yaml_config(self.config)
-
-        # 2. Validate config
         self.validate_config()
 
-        # 2b. Validate LLM connections upfront (terminate if endpoints unreachable)
+        # STEP 2: LLM check
+        print_step(2, TOTAL_STEPS, "LLM CONNECTION CHECK")
         self.validate_llm_connections()
 
-        # Initialize metadata tracking
         self.metadata_mgr = MetadataManager(get_paths().results)
         self.seed = generate_seed()
 
-        # 3. Load data
+        # STEP 3: Data
+        print_step(3, TOTAL_STEPS, "DATA")
         self.load_data()
 
-        # 4. Initialize adapter
+        # STEP 4: Adapter
+        print_step(4, TOTAL_STEPS, "ADAPTER")
         self.initialize_adapter()
-
-        # 5. Load initial prompt
         initial_prompt = self.load_prompt()
 
-        # 6. Execute GEPA pipeline
+        # STEPS 5-7 (Baseline, Optimization, Test+Summary) ocurren dentro de
+        # execute_gepa_pipeline para preservar el flujo actual.
         self.execute_gepa_pipeline(initial_prompt, verbose=verbose)
 
-        # 7. Save results
         run_dir = self.save_results()
 
-        # Save a snapshot of the YAML config used
         if self.config:
             import shutil
 
@@ -124,12 +135,11 @@ class UniversalOptimizer:
             if self.config_path and Path(self.config_path).exists():
                 shutil.copy2(self.config_path, snapshot_path)
             else:
-                # If from wizard, write the dict to yaml
                 with open(snapshot_path, "w", encoding="utf-8") as f:
                     yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
-            print(f">> [LOG] Config snapshot saved: {snapshot_path}")
+            log_info(f"Config snapshot saved: {snapshot_path}")
 
-        print("\n[SUCCESS] Optimization completed!")
+        log_ok("Optimization completed.")
 
     def load_config(self) -> dict[str, Any]:
         """
@@ -151,12 +161,12 @@ class UniversalOptimizer:
             with open(config_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
 
-            print(f"[INFO] Config loaded successfully: {config['case']['name']}")
+            log_ok(f"Config loaded: {config['case']['name']}")
             return config
 
         except yaml.YAMLError as e:
-            print("\n[ERROR] Invalid YAML format in config file:")
-            print(f"  {e}")
+            log_error("Invalid YAML format in config file:")
+            log_error(f"  {e}")
             raise
 
     def run_wizard(self) -> dict[str, Any]:
@@ -184,7 +194,7 @@ class UniversalOptimizer:
             print(error_msg)
             raise ValueError(f"Config validation failed with {len(errors)} error(s)")
 
-        print("[INFO] Config validation passed")
+        log_ok("Config validation passed")
 
     def validate_llm_connections(self):
         """
@@ -207,15 +217,15 @@ class UniversalOptimizer:
         if models_cfg.get("max_tokens"):
             ref_cfg.max_tokens = models_cfg["max_tokens"]
 
-        print("[INFO] Validando conexion con Task LM...")
+        log_info("Validando conexion con Task LM...")
         task_cfg.validate()
         task_cfg.validate_connection()
-        print("[OK] Task LM conectado")
+        log_ok(f"Task LM conectado: {task_cfg.describe()}")
 
-        print("[INFO] Validando conexion con Reflection LM...")
+        log_info("Validando conexion con Reflection LM...")
         ref_cfg.validate()
         ref_cfg.validate_connection()
-        print("[OK] Reflection LM conectado")
+        log_ok(f"Reflection LM conectado: {ref_cfg.describe()}")
 
     def load_data(self):
         """Load dataset using universal data loader."""
@@ -223,7 +233,7 @@ class UniversalOptimizer:
         input_column = self.config["data"].get("input_column", "text")
         output_columns = self.config["data"].get("output_columns")
 
-        print(f"\n[INFO] Loading data from: {csv_filename}")
+        log_info(f"Loading data from: {csv_filename}")
 
         # If output_columns not specified, infer from CSV
         if not output_columns:
@@ -240,8 +250,8 @@ class UniversalOptimizer:
             csv_filename=csv_filename, input_column=input_column, output_columns=output_columns
         )
 
-        print(
-            f"[INFO] Loaded: {len(self.train_data)} train, "
+        log_ok(
+            f"Loaded: {len(self.train_data)} train, "
             f"{len(self.val_data)} val, {len(self.test_data)} test"
         )
 
@@ -256,8 +266,8 @@ class UniversalOptimizer:
         task_cfg.temperature = self.active_temperature
         if models_cfg.get("max_tokens"):
             task_cfg.max_tokens = models_cfg["max_tokens"]
-        print(f"[INFO] Task LM:       {task_cfg.describe()}")
-        print(f"[INFO] Initializing {adapter_type} adapter...")
+        print_kv("Task LM", task_cfg.describe())
+        log_info(f"Initializing {adapter_type} adapter...")
 
         if adapter_type == "classifier":
             valid_classes = self.config["adapter"]["valid_classes"]
@@ -289,7 +299,7 @@ class UniversalOptimizer:
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
-        print(f"[INFO] Adapter initialized: {adapter_type}")
+        log_ok(f"Adapter initialized: {adapter_type}")
 
     def _has_positive_reflection(self) -> bool:
         """Determine if this run uses positive reflection."""
@@ -309,7 +319,7 @@ class UniversalOptimizer:
         prompt_filename = self.config["prompt"]["filename"]
         prompt_path = get_paths().prompt(prompt_filename)
 
-        print(f"[INFO] Loading prompt from: {prompt_filename}")
+        log_info(f"Loading prompt from: {prompt_filename}")
 
         with open(prompt_path, encoding="utf-8") as f:
             prompt = json.load(f)
@@ -326,27 +336,26 @@ class UniversalOptimizer:
         """
         case_title = self.config["case"].get("title", self.config["case"]["name"])
 
-        # Header
-        print_header(f"GEPA Optimization: {case_title}")
+        print_header(f"[{ENGINE}] {case_title}")
+        log_info(f"Command: {' '.join(sys.argv)}")
 
-        # Dataset info
         from gepa_standalone.data.data_loader import print_dataset_info
 
         print_dataset_info(self.config["data"]["csv_filename"])
 
         print(f"\nPROMPT INICIAL:\n{initial_prompt['system_prompt']}")
 
-        # 1. BASELINE
-        print_section("BASELINE PERFORMANCE")
-        print(">> Evaluando prompt inicial en conjunto de validacion...")
+        # STEP 5: Baseline
+        print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
+        log_info("Evaluando prompt inicial en conjunto de validacion...")
         eval_baseline = self.adapter.evaluate(self.val_data, initial_prompt)
         baseline_avg = (
             sum(eval_baseline.scores) / len(eval_baseline.scores) if eval_baseline.scores else 0.0
         )
-        print(f"Precision Baseline: {baseline_avg * 100:.1f}%")
+        print_kv("Baseline accuracy", f"{baseline_avg * 100:.1f}%")
 
-        # 2. OPTIMIZATION
-        print_section("GEPA OPTIMIZATION")
+        # STEP 6: Optimization
+        print_step(6, TOTAL_STEPS, "GEPA OPTIMIZATION")
         models_config = self.config.get("models", {})
 
         ref_cfg = get_reflection_config()
@@ -356,7 +365,7 @@ class UniversalOptimizer:
             ref_cfg.max_tokens = models_config["max_tokens"]
         else:
             ref_cfg.max_tokens = 2000  # default usado por create_reflection_lm_function
-        print(f"[INFO] Reflection LM: {ref_cfg.describe()}")
+        print_kv("Reflection LM", ref_cfg.describe())
 
         reflection_lm = create_reflection_lm_function(
             verbose=verbose,
@@ -383,28 +392,31 @@ class UniversalOptimizer:
 
         optimized_prompt = result.best_candidate
 
-        # 3. OPTIMIZED PERFORMANCE
-        print_section("OPTIMIZED PERFORMANCE")
-        print(">> Midiendo desempeno del mejor prompt encontrado...")
+        # STEP 7: Test + Summary
+        print_step(7, TOTAL_STEPS, "TEST + SUMMARY")
+        log_info("Midiendo desempeno del mejor prompt en val...")
         eval_opt = self.adapter.evaluate(self.val_data, optimized_prompt)
         opt_avg = sum(eval_opt.scores) / len(eval_opt.scores) if eval_opt.scores else 0.0
+        print_kv("Optimized (val)", f"{opt_avg * 100:.1f}%")
 
-        # 4. ROBUSTNESS TEST
-        print_section("ROBUSTNESS TEST")
-        print(">> Verificando generalizacion en conjunto de prueba...")
+        log_info("Verificando generalizacion en conjunto de prueba...")
         eval_test = self.adapter.evaluate(self.test_data, optimized_prompt)
         test_avg = sum(eval_test.scores) / len(eval_test.scores) if eval_test.scores else 0.0
+        print_kv("Test accuracy", f"{test_avg * 100:.1f}%")
 
         print_detailed_results(eval_test)
 
-        # 5. SUMMARY
         print_summary(
-            baseline_avg=baseline_avg,
-            optimized_avg=opt_avg,
-            test_avg=test_avg,
-            task_model=self.adapter.model,
-            reflection_model=get_reflection_config().model,
-            budget_used=result.total_metric_calls,
+            metrics={
+                "Baseline": baseline_avg,
+                "Optimized": opt_avg,
+                "Test": test_avg,
+            },
+            config={
+                "Task LM": self.adapter.model,
+                "Reflection LM": get_reflection_config().model,
+                "Budget used": f"{result.total_metric_calls} metric calls",
+            },
         )
 
         print(f"\nPROMPT ORIGINAL:\n{initial_prompt['system_prompt']}")
@@ -530,7 +542,7 @@ For more info, see: gepa_standalone/experiments/configs/
         print("\n\nOptimizacion cancelada por el usuario.")
         sys.exit(130)
     except Exception as e:
-        print(f"\n[ERROR] Optimization failed: {e}")
+        log_error(f"Optimization failed: {e}")
         traceback.print_exc()
         sys.exit(1)
 

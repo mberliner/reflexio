@@ -41,7 +41,9 @@ class SimpleSQLAdapter(BaseAdapter):
                 )
 
                 # Limpieza
-                predicted_sql = re.sub(r"```sql\s*|```", "", predicted_sql, flags=re.IGNORECASE).strip()
+                predicted_sql = re.sub(
+                    r"```sql\s*|```", "", predicted_sql, flags=re.IGNORECASE
+                ).strip()
 
                 is_correct = self._compare_sql(predicted_sql, expected_sql)
                 score = 1.0 if is_correct else 0.0

@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import dspy
 
-from shared.display import print_section
+from shared.display import log_info, log_warn, print_kv, print_section
 
 from .config import GEPAConfig
 
@@ -38,7 +38,7 @@ class GEPAOptimizer:
 
         # Priority: Manual budget > Auto budget
         if self.config.max_metric_calls is not None:
-            print(f"Using manual budget: {self.config.max_metric_calls} metric calls")
+            log_info(f"Using manual budget: {self.config.max_metric_calls} metric calls")
             gepa_params["max_metric_calls"] = self.config.max_metric_calls
         else:
             gepa_params["auto"] = self.config.auto_budget
@@ -57,9 +57,8 @@ class GEPAOptimizer:
                 max_positive_examples=self.config.max_positive_examples,
             )
         except TypeError:
-            # Fallback to basic parameters if some are not supported
-            print(
-                "Note: Using basic GEPA configuration "
+            log_warn(
+                "Using basic GEPA configuration "
                 "(some parameters not supported in this version)"
             )
             self.optimizer = dspy.GEPA(**gepa_params)
@@ -81,10 +80,10 @@ class GEPAOptimizer:
         Returns:
             Optimized DSPy module
         """
-        print(f"Starting GEPA optimization with budget: {self.config.auto_budget}")
-        print(f"Training set size: {len(trainset)}")
+        log_info(f"Starting GEPA optimization with budget: {self.config.auto_budget}")
+        print_kv("Training set size", len(trainset))
         if valset:
-            print(f"Validation set size: {len(valset)}")
+            print_kv("Validation set size", len(valset))
 
         # Run GEPA optimization
         optimized_program = self.optimizer.compile(
@@ -102,9 +101,9 @@ class GEPAOptimizer:
         """Print optimization statistics."""
         if hasattr(self.optimizer, "detailed_results"):
             results = self.optimizer.detailed_results
-            print(f"Detailed results available: {results}")
+            log_info(f"Detailed results available: {results}")
         else:
-            print("No detailed statistics available.")
+            log_info("No detailed statistics available.")
 
     def get_best_outputs(self):
         """
