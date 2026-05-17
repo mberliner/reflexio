@@ -382,7 +382,9 @@ class InteractiveWizard:
             f.write(yaml_content)
 
         print(f"\nConfig guardado en: {output_path}")
-        print("\nPara ejecutar esta optimizacion en el futuro, usa:")
+        print("\nPara ejecutar esta optimizacion en el futuro, desde la raiz del repo:")
+        repo_root = get_paths().root.parent
         print(
-            f"  python universal_optimizer.py --config {output_path.relative_to(get_paths().root)}"
+            f"  python -m gepa_standalone.universal_optimizer "
+            f"--config {output_path.relative_to(repo_root)}"
         )

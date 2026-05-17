@@ -8,17 +8,19 @@ Interfaz universal para optimizar prompts con GEPA en cualquier caso de uso (cla
 
 ## Uso Rápido
 
+> Todas las invocaciones se hacen **desde la raíz del repo** con `python -m`. Esto es necesario para que `import shared` resuelva: si se ejecuta el script directo, Python pone el dir del script (no la raíz) en `sys.path` y los imports fallan.
+
 ### Primera Vez (Wizard Interactivo)
 ```bash
-cd gepa_standalone
-python universal_optimizer.py
+python -m gepa_standalone.universal_optimizer
 ```
 
-El wizard te guía paso a paso y genera un YAML en `experiments/configs/{caso}.yaml`
+El wizard te guía paso a paso y genera un YAML en `gepa_standalone/experiments/configs/{caso}.yaml`
 
 ### Ejecuciones Subsecuentes
 ```bash
-python universal_optimizer.py --config experiments/configs/mi_caso.yaml
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/mi_caso.yaml
 ```
 
 ---
@@ -309,9 +311,10 @@ adapter:
 ## Troubleshooting
 
 ### Error: "Config file not found"
-**Solución:** Verifica la ruta relativa o usa ruta absoluta.
+**Solución:** Verifica la ruta relativa (debe ser desde la raíz del repo) o usa ruta absoluta.
 ```bash
-python universal_optimizer.py --config gepa_standalone/experiments/configs/email_urgency.yaml
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/email_urgency.yaml
 ```
 
 ### Error: "CSV file not found"

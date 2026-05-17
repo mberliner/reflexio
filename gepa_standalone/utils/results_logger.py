@@ -8,18 +8,12 @@ Thin wrappers over shared.logging utilities:
 - ``log_experiment_result`` mirrors the legacy positional API.
 """
 
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# Add project root to path for shared module access
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from shared.logging import ExperimentLogger, save_run_artifacts  # noqa: E402
-from shared.paths import get_gepa_paths  # noqa: E402
+from shared.logging import ExperimentLogger, save_run_artifacts
+from shared.paths import get_gepa_paths
 
 
 def save_run_details(

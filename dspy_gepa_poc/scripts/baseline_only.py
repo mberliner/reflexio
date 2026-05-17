@@ -1,7 +1,7 @@
 """Evalua el prompt baseline (sin optimizar con GEPA) sobre val y test.
 
-Uso:
-    python dspy_gepa_poc/scripts/baseline_only.py --config <ruta_yaml>
+Uso (desde la raiz del repo):
+    python -m dspy_gepa_poc.scripts.baseline_only --config <ruta_yaml>
 
 Util para medir el punto de partida antes de invertir tokens en GEPA.
 Reutiliza ReflexioDeclarativa.setup_models / load_data / create_module_and_metric
@@ -12,13 +12,10 @@ import argparse
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
+from dspy.evaluate import Evaluate
 
-from dspy.evaluate import Evaluate  # noqa: E402
-
-from dspy_gepa_poc.reflexio_declarativa import ReflexioDeclarativa  # noqa: E402
-from shared.display import print_header, print_section  # noqa: E402
+from dspy_gepa_poc.reflexio_declarativa import ReflexioDeclarativa
+from shared.display import print_header, print_section
 
 
 def run_baseline(config_path: Path) -> int:

@@ -138,9 +138,10 @@ Contenido:
 
 1.  **Preparar Datos:** Subir archivo `.csv` a `dspy_gepa_poc/datasets/`.
 2.  **Configurar:** Crear un archivo `.yaml` en `dspy_gepa_poc/configs/`.
-3.  **Ejecutar:**
+3.  **Ejecutar** (desde la raíz del repo; `-m` evita errores de `import shared`):
     ```bash
-    python dspy_gepa_poc/reflexio_declarativa.py --config dspy_gepa_poc/configs/mi_experimento.yaml
+    python -m dspy_gepa_poc.reflexio_declarativa \
+        --config dspy_gepa_poc/configs/mi_experimento.yaml
     ```
 4.  **Analizar:** Revisar `metricas_optimizacion.csv` o los logs de consola.
 5.  **Desplegar:** Tomar `optimized_program.json` para uso en producción.
@@ -157,7 +158,8 @@ Ubicación: `dspy_gepa_poc/run_inference.py`
 Este script es **completamente agnóstico a la tarea** y reconstruye el entorno de ejecución basándose en los artefactos de la carpeta de ejecución (`run`).
 
 ```bash
-python dspy_gepa_poc/run_inference.py dspy_gepa_poc/results/runs/<NOMBRE_DEL_RUN>/
+# Desde la raíz del repo
+python -m dspy_gepa_poc.run_inference dspy_gepa_poc/results/runs/<NOMBRE_DEL_RUN>/
 ```
 
 ### Características del Motor de Inferencia

@@ -585,9 +585,9 @@ def create_module_and_metric(self):
 ### Fase 3: Validacion Local (Testing, ~1 hora)
 
 **Tareas:**
-1. Ejecutar experimento y usar la medicion baseline que el script imprime antes de optimizar:
+1. Ejecutar experimento y usar la medicion baseline que el script imprime antes de optimizar (desde la raiz del repo):
    ```bash
-   python dspy_gepa_poc/reflexio_declarativa.py \
+   python -m dspy_gepa_poc.reflexio_declarativa \
        --config dspy_gepa_poc/configs/requirements_extraction_mvp.yaml
    ```
 
@@ -608,9 +608,9 @@ def create_module_and_metric(self):
 ### Fase 4: Optimizacion con GEPA (~30-60 minutos de ejecucion)
 
 **Tareas:**
-1. Ejecutar optimizacion completa:
+1. Ejecutar optimizacion completa (desde la raiz del repo):
    ```bash
-   python dspy_gepa_poc/reflexio_declarativa.py \
+   python -m dspy_gepa_poc.reflexio_declarativa \
        --config dspy_gepa_poc/configs/requirements_extraction_mvp.yaml
    ```
 

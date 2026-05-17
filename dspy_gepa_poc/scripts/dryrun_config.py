@@ -1,10 +1,10 @@
 """Dry-run para validar un YAML de DSPy: config + dataset + signature + metric, sin LLM.
 
-Uso:
-    python dspy_gepa_poc/scripts/dryrun_config.py --config <ruta_yaml>
+Uso (desde la raiz del repo):
+    python -m dspy_gepa_poc.scripts.dryrun_config --config <ruta_yaml>
 
 Ejemplo:
-    python dspy_gepa_poc/scripts/dryrun_config.py \\
+    python -m dspy_gepa_poc.scripts.dryrun_config \\
         --config dspy_gepa_poc/configs/dynamic_cv_profile.yaml
 """
 
@@ -12,12 +12,9 @@ import argparse
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from dspy_gepa_poc import AppConfig, CSVDataLoader  # noqa: E402
-from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory  # noqa: E402
-from dspy_gepa_poc.metrics import create_dynamic_metric  # noqa: E402
+from dspy_gepa_poc import AppConfig, CSVDataLoader
+from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+from dspy_gepa_poc.metrics import create_dynamic_metric
 
 
 def dryrun(config_path: Path) -> int:

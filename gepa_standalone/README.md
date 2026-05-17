@@ -76,21 +76,23 @@ Para comparación detallada RAG vs Prompt, ver `docs/DEMO4_RAG_GUIDE.md`.
 
 El **Universal Optimizer** permite ejecutar cualquiera de estos casos simplemente apuntando al archivo de configuración correspondiente en `experiments/configs/`:
 
+> **Nota de invocación:** todos los comandos se ejecutan **desde la raíz del repo** con `python -m`. Invocar el script directo (`python gepa_standalone/universal_optimizer.py`) NO funciona porque Python pondría el directorio del script en `sys.path` y `import shared` fallaría. Ver `CLAUDE.md` para detalle.
+
 ### 1. Clasificación de Urgencia
 Clasifica la urgencia de correos electrónicos (`urgent`, `normal`, `low`).
-*   **Comando:** `python universal_optimizer.py --config experiments/configs/email_urgency.yaml`
+*   **Comando:** `python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/email_urgency.yaml`
 
 ### 2. Extracción de Datos (CV Parsing)
 Extrae campos estructurados (JSON) de currículums.
-*   **Comando:** `python universal_optimizer.py --config experiments/configs/cv_extraction.yaml`
+*   **Comando:** `python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/cv_extraction.yaml`
 
 ### 3. Text-to-SQL
 Traduce lenguaje natural a consultas SQL.
-*   **Comando:** `python universal_optimizer.py --config experiments/configs/text_to_sql.yaml`
+*   **Comando:** `python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/text_to_sql.yaml`
 
 ### 4. Optimización RAG (QA Políticas)
 Mejora respuestas basadas en contexto usando evaluación "LLM-as-a-Judge".
-*   **Comando:** `python universal_optimizer.py --config experiments/configs/rag_optimization.yaml`
+*   **Comando:** `python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/rag_optimization.yaml`
 *   **Guía específica:** `gepa_standalone/docs/DEMO4_RAG_GUIDE.md`
 
 ---
@@ -102,11 +104,12 @@ Interfaz universal que elimina duplicación de código. **Reduce cada caso de ~1
 ### Uso Rápido
 
 ```bash
-# Primera vez: Wizard interactivo
-python gepa_standalone/universal_optimizer.py
+# Desde la raíz del repo. Primera vez: Wizard interactivo
+python -m gepa_standalone.universal_optimizer
 
 # Subsecuentes: Usar config YAML
-python gepa_standalone/universal_optimizer.py --config experiments/configs/mi_caso.yaml
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/mi_caso.yaml
 ```
 
 ### Ventajas

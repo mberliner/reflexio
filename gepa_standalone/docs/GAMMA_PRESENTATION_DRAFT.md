@@ -189,7 +189,7 @@ Título: "Qué Veremos en la Demo"
 Lista numerada:
 
 1. Ejecutar optimización de Email Urgency
-   - Comando: `python universal_optimizer.py --config experiments/configs/email_urgency.yaml --verbose`
+   - Comando (desde la raíz del repo): `python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/email_urgency.yaml --verbose`
    - **Modo Verbose**: Veremos en tiempo real cómo el "Profesor" analiza los errores.
    - Tiempo: ~3-5 minutos
 

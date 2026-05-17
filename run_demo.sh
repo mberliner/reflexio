@@ -146,7 +146,7 @@ run_gepa() {
     info "Ejecutando optimizacion GEPA..."
     echo ""
 
-    (cd "$SCRIPT_DIR" && "$py_cmd" gepa_standalone/universal_optimizer.py \
+    (cd "$SCRIPT_DIR" && "$py_cmd" -m gepa_standalone.universal_optimizer \
         --config gepa_standalone/experiments/configs/email_urgency.yaml)
 
     echo ""
@@ -166,7 +166,7 @@ run_dspy() {
     info "Ejecutando optimizacion DSPy + GEPA..."
     echo ""
 
-    (cd "$SCRIPT_DIR" && "$py_cmd" dspy_gepa_poc/reflexio_declarativa.py \
+    (cd "$SCRIPT_DIR" && "$py_cmd" -m dspy_gepa_poc.reflexio_declarativa \
         --config dspy_gepa_poc/configs/dynamic_email_urgency.yaml)
 
     echo ""

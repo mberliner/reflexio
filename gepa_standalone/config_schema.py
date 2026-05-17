@@ -4,17 +4,10 @@ Config Schema Validator for Universal GEPA Optimizer.
 Uses shared validation utilities for consistent validation across projects.
 """
 
-import sys
-from pathlib import Path
 from typing import Any
 
-# Add project root to path for shared module access
-_PROJECT_ROOT = Path(__file__).parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from shared.paths import get_paths  # noqa: E402
-from shared.validation import (  # noqa: E402
+from shared.paths import get_paths
+from shared.validation import (
     BaseConfigValidator,
     CSVValidator,
     format_validation_errors,

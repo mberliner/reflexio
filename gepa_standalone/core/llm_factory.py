@@ -5,16 +5,9 @@ Fabrica para crear funciones LLM para GEPA.
 Usa el modulo compartido shared.llm con LiteLLM.
 """
 
-import sys
 from collections.abc import Callable
-from pathlib import Path
 
-# Add project root to path for shared module access
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from shared.llm import LLMConfig  # noqa: E402
+from shared.llm import LLMConfig
 
 
 def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:

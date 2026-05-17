@@ -92,8 +92,9 @@ Este modo utiliza GEPA directamente para optimizar prompts sin depender de frame
   4. El profesor mejora el prompt para que lo use el LLM mas simple o "estudiante" con un resultado medible y similar al del LLM profesor, incrementando el ROI luego al usarlo en producción diariamente.
   
 ```bash
-  # Ejemplo: Clasificación de urgencia de correos
-  python gepa_standalone/universal_optimizer.py --config gepa_standalone/experiments/configs/email_urgency.yaml
+  # Ejemplo: Clasificación de urgencia de correos (desde la raíz del repo)
+  python -m gepa_standalone.universal_optimizer \
+      --config gepa_standalone/experiments/configs/email_urgency.yaml
 ```
 
 ### 2. DSPy + GEPA Integration
@@ -107,8 +108,9 @@ Este modo integra GEPA como un *Teleprompter* (optimizador) dentro del ecosistem
   4. Una vez maximizado el resultado puede ser usando de forma continua en producción sin necesidad de nuevas iteraciones de reflexión y mejora, lo que permite usar un modelo mas simple y con mayor ROI.
   
 ```bash
-  #Ejemplo: Análisis de sentimientos dinámico.
-  python dspy_gepa_poc/reflexio_declarativa.py --config dspy_gepa_poc/configs/dynamic_sentiment_hard_es.yaml
+  # Ejemplo: Análisis de sentimientos dinámico (desde la raíz del repo)
+  python -m dspy_gepa_poc.reflexio_declarativa \
+      --config dspy_gepa_poc/configs/dynamic_sentiment_hard_es.yaml
 ```
 
 ## Conceptos Core

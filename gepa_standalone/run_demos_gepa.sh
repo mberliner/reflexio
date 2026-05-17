@@ -3,8 +3,8 @@
 # --- CONFIGURACIÓN ---
 # Define cuántas veces quieres que se ejecuten los demos
 NUM_RUNS=10
-OPTIMIZER=./universal_optimizer.py
-CONFIG_DIR=./experiments/configs
+CONFIG_DIR=gepa_standalone/experiments/configs
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Configuraciones a ejecutar
 CONFIGS=(
@@ -37,7 +37,7 @@ do
         TITLE="${TITLES[$idx]}"
 
         echo ">>> Ejecutando iteracion $i - ${TITLE}..."
-        python $OPTIMIZER --config $CONFIG_DIR/$CONFIG
+        (cd "$SCRIPT_DIR" && python -m gepa_standalone.universal_optimizer --config "$CONFIG_DIR/$CONFIG")
 
         if [ $? -ne 0 ]; then
             echo "ERROR: Falló la ejecución de ${CONFIG}"

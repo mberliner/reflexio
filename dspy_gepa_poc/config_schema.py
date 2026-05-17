@@ -4,16 +4,10 @@ Config Schema Validator for DSPy + GEPA Integration.
 Uses shared validation utilities for consistent validation across projects.
 """
 
-import sys
 from pathlib import Path
 from typing import Any
 
-# Add project root to path for shared module access
-_PROJECT_ROOT = Path(__file__).parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from shared.validation import BaseConfigValidator, CSVValidator  # noqa: E402
+from shared.validation import BaseConfigValidator, CSVValidator
 
 # Documentation for optional optimization fields
 OPTIONAL_OPTIMIZATION_FIELDS = {

@@ -4,16 +4,6 @@ from datetime import datetime
 from pathlib import Path
 
 import dspy
-
-# Allow running the script directly by adding project root to sys.path
-# This makes 'python dspy_gepa_poc/reflexio_declarativa.py' work
-if __name__ == "__main__" and __package__ is None:
-    # Calculate project root (one level up from the folder containing this script)
-    project_root = Path(__file__).resolve().parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-
-# Importar componentes internos
 from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc import AppConfig, CSVDataLoader, GEPAOptimizer, LLMConfig, LLMConnectionError

@@ -60,10 +60,10 @@ ejecutar_prueba() {
 
     # Paso 2: Ejecutar prueba
     echo ">>> PASO 2: Ejecutando prueba"
-    echo "    Comando: python reflexio_declarativa.py --config $config_file"
+    echo "    Comando: python -m dspy_gepa_poc.reflexio_declarativa --config $config_file"
     echo ""
     echo "--- INICIO OUTPUT PRUEBA ---"
-    python "$(dirname "$0")/reflexio_declarativa.py" --config "$config_file"
+    (cd "$(dirname "$0")/.." && python -m dspy_gepa_poc.reflexio_declarativa --config "$config_file")
     echo "--- FIN OUTPUT PRUEBA ---"
     echo ""
 }

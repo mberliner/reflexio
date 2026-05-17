@@ -39,7 +39,7 @@ for config in "${CONFIGS[@]}"; do
 
         (
             echo "[config:$config][run:$i] inicio"
-            python dspy_gepa_poc/reflexio_declarativa.py --config "$config"
+            python -m dspy_gepa_poc.reflexio_declarativa --config "$config"
             echo "[config:$config][run:$i] fin"
         ) &
 

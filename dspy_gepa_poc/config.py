@@ -3,7 +3,6 @@ Configuration module for DSPy + GEPA POC.
 """
 
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,15 +10,10 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
+from shared.llm import LLMConfig, LLMConnectionError  # noqa: F401
+from shared.paths import get_dspy_paths
+
 from .config_schema import ConfigValidator
-
-# Add project root to path for shared module access
-_PROJECT_ROOT = Path(__file__).parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from shared.llm import LLMConfig, LLMConnectionError  # noqa: F401, E402
-from shared.paths import get_dspy_paths  # noqa: E402
 
 # Load environment variables from project .env
 _PROJECT_DIR = Path(__file__).parent

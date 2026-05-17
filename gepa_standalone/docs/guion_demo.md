@@ -124,7 +124,9 @@ LLM_MODEL_REFLECTION=azure/gpt-4o
 ## 3 — La Operacion (optimizer — corre por separado)
 
 ```bash
-python universal_optimizer.py --config experiments/configs/email_urgency.yaml
+# Desde la raiz del repo
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/email_urgency.yaml
 ```
 
 Salida esperada:
@@ -291,10 +293,11 @@ ROI a 10,000 llamadas/mes:   4,647% - 17,053%
 ## Comandos del Dia
 
 ```bash
-# Desde gepa_standalone/
-python universal_optimizer.py --config experiments/configs/email_urgency.yaml
+# Desde la raiz del repo (necesario para que 'import shared' resuelva)
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/email_urgency.yaml
 
-# Desde reflexio/ (raiz del proyecto)
+# Tambien desde la raiz del repo
 python analyze leaderboard
 python analyze stats --case "Email Urgency"
 ```

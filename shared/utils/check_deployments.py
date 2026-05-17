@@ -2,17 +2,13 @@
 """
 Script para verificar deployments activos en Azure OpenAI
 
-Uso:
-    python check_deployments.py
-    python check_deployments.py --quick  # Solo verifica config actual
+Uso (desde la raiz del repo):
+    python -m shared.utils.check_deployments
+    python -m shared.utils.check_deployments --quick  # Solo verifica config actual
 """
 
 import argparse
-import os
 import sys
-
-# Añadir el directorio raíz al path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 try:
     import litellm

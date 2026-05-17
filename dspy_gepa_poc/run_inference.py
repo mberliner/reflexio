@@ -1,16 +1,9 @@
 import argparse
-import sys
 from pathlib import Path
 
 import dspy
 import yaml
 from dotenv import load_dotenv
-
-# Agregar raíz al path si se ejecuta directamente
-if __name__ == "__main__" and __package__ is None:
-    project_root = Path(__file__).resolve().parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
 
 from dspy_gepa_poc import DynamicModuleFactory, LLMConfig
 from shared.display import print_header

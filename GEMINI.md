@@ -85,8 +85,9 @@ CI: `.github/workflows/ci.yml` ejecuta pytest + ruff en cada push/PR.
 - Inputs versionados: configs YAML, datasets CSV y prompts JSON se trackean en git.
 - Outputs no versionados: todo bajo `**/results/` esta gitignoreado (runs, leaderboards, metricas). Son regenerables.
 - Datasets CSV requieren columna `split` con valores `train`/`dev`/`test`.
-- Punto de entrada GEPA: `gepa_standalone/universal_optimizer.py --config <yaml>`.
-- Punto de entrada DSPy: `dspy_gepa_poc/reflexio_declarativa.py --config <yaml>` (--config es obligatorio).
+- Punto de entrada GEPA: `python -m gepa_standalone.universal_optimizer --config <yaml>` (desde la raiz del repo).
+- Punto de entrada DSPy: `python -m dspy_gepa_poc.reflexio_declarativa --config <yaml>` (desde la raiz del repo; `--config` es obligatorio).
+- Invocacion siempre con `-m` desde la raiz del repo: si se ejecuta el script directo, Python pone el dir del script en `sys.path` y `import shared` falla.
 
 ## Convenciones del Proyecto
 

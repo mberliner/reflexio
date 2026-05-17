@@ -4,26 +4,23 @@ Universal GEPA Optimizer
 Interfaz universal para optimizar prompts con GEPA en cualquier caso de uso.
 Soporta configuración mediante archivo YAML o wizard interactivo.
 
-Usage:
+Usage (desde la raiz del repo):
     # Con config YAML existente
-    python universal_optimizer.py --config experiments/configs/mi_caso.yaml
+    python -m gepa_standalone.universal_optimizer \\
+        --config gepa_standalone/experiments/configs/mi_caso.yaml
 
     # Sin config (activa wizard interactivo)
-    python universal_optimizer.py
+    python -m gepa_standalone.universal_optimizer
 """
 
 import argparse
 import json
-import os
 import sys
 import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-# Ensure parent directory is in path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import yaml
 from gepa import optimize
@@ -460,12 +457,13 @@ def main():
         description="Universal GEPA Optimizer - Interfaz unica para todos los casos",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
+Examples (run from repo root; -m is required so 'import shared' resolves):
   # Run with existing config
-  python universal_optimizer.py --config experiments/configs/email_urgency.yaml
+  python -m gepa_standalone.universal_optimizer \\
+      --config gepa_standalone/experiments/configs/email_urgency.yaml
 
   # Run without config (activates wizard)
-  python universal_optimizer.py
+  python -m gepa_standalone.universal_optimizer
 
 For more info, see: gepa_standalone/experiments/configs/
         """,

@@ -90,13 +90,13 @@ goto :end
 :run_gepa_sub
 echo.
 echo === GEPA Standalone: email_urgency ===
-%PY_CMD% gepa_standalone/universal_optimizer.py --config %GEPA_CONFIG%
+%PY_CMD% -m gepa_standalone.universal_optimizer --config %GEPA_CONFIG%
 exit /b 0
 
 :run_dspy_sub
 echo.
 echo === DSPy + GEPA: email_urgency ===
-%PY_CMD% dspy_gepa_poc/reflexio_declarativa.py --config %DSPY_CONFIG%
+%PY_CMD% -m dspy_gepa_poc.reflexio_declarativa --config %DSPY_CONFIG%
 exit /b 0
 
 :end
