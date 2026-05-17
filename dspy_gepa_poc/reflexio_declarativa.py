@@ -75,9 +75,6 @@ class ReflexioDeclarativa:
             self.task_config.cache = models_config["cache"]
             self.reflection_config.cache = models_config["cache"]
 
-        task_model_name = self.task_config.model
-        reflection_model_name = self.reflection_config.model
-
         self.seed = generate_seed()
 
         # Validate configuration
@@ -85,7 +82,7 @@ class ReflexioDeclarativa:
         self.reflection_config.validate()
 
         # Configure Main Task LM
-        print(f"  Configurando Task LM: {task_model_name}")
+        print(f"  Task LM:       {self.task_config.describe()}")
         lm = self.task_config.get_dspy_lm()
 
         # Validate Task LM connection
@@ -96,7 +93,7 @@ class ReflexioDeclarativa:
         dspy.configure(lm=lm)
 
         # Configure Reflection LM (for GEPA)
-        print(f"  Configurando Reflection LM: {reflection_model_name}")
+        print(f"  Reflection LM: {self.reflection_config.describe()}")
         self.reflection_lm = self.reflection_config.get_dspy_lm()
 
         # Validate Reflection LM connection

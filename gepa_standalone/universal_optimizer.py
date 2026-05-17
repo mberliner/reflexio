@@ -216,9 +216,15 @@ class UniversalOptimizer:
     def initialize_adapter(self):
         """Initialize adapter based on config type."""
         adapter_type = self.config["adapter"]["type"]
+        models_cfg = self.config.get("models", {})
         # Capture actual temperature used for reporting consistency
-        self.active_temperature = self.config.get("models", {}).get("temperature", 0.0)
+        self.active_temperature = models_cfg.get("temperature", 0.0)
 
+        task_cfg = get_task_config()
+        task_cfg.temperature = self.active_temperature
+        if models_cfg.get("max_tokens"):
+            task_cfg.max_tokens = models_cfg["max_tokens"]
+        print(f"[INFO] Task LM:       {task_cfg.describe()}")
         print(f"[INFO] Initializing {adapter_type} adapter...")
 
         if adapter_type == "classifier":
@@ -310,6 +316,16 @@ class UniversalOptimizer:
         # 2. OPTIMIZATION
         print_section("GEPA OPTIMIZATION")
         models_config = self.config.get("models", {})
+
+        ref_cfg = get_reflection_config()
+        if models_config.get("temperature") is not None:
+            ref_cfg.temperature = models_config["temperature"]
+        if models_config.get("max_tokens") is not None:
+            ref_cfg.max_tokens = models_config["max_tokens"]
+        else:
+            ref_cfg.max_tokens = 2000  # default usado por create_reflection_lm_function
+        print(f"[INFO] Reflection LM: {ref_cfg.describe()}")
+
         reflection_lm = create_reflection_lm_function(
             verbose=verbose,
             temperature=models_config.get("temperature"),
