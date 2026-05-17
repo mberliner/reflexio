@@ -1,98 +1,44 @@
 """
-Results logger for DSPy + GEPA experiments.
+DSPy + GEPA results logger.
 
-Uses shared logging utilities for consistent formatting across projects.
+Thin wrapper around shared.logging.ExperimentLogger that wires in DSPy paths.
+The class is kept for callers that import ``ResultsLogger`` by name.
 """
 
-import logging
 import sys
 from pathlib import Path
-from typing import Any
 
 # Add project root to path for shared module access
 _PROJECT_ROOT = Path(__file__).parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from shared.logging import (  # noqa: E402
-    STANDARD_COLUMN_MAPPING,
-    BaseCSVLogger,
-    generate_run_id,
-    get_timestamp,
-    make_path_relative,
-)
+from shared.logging import STANDARD_COLUMN_MAPPING, ExperimentLogger  # noqa: E402
 from shared.paths import get_dspy_paths  # noqa: E402
-
-logger = logging.getLogger(__name__)
 
 # Re-export for backwards compatibility
 COLUMN_MAPPING = STANDARD_COLUMN_MAPPING
 
 
-class ResultsLogger(BaseCSVLogger):
-    """
-    Manages a centralized log of all DSPy + GEPA optimization experiments.
+class ResultsLogger(ExperimentLogger):
+    """ExperimentLogger pre-bound to ``DSPyPaths``."""
 
-    Extends BaseCSVLogger with DSPy-specific path resolution.
-    Uses European CSV format (semicolon delimiter, comma decimal).
-    """
-
-    def __init__(self, experiments_dir: str = None):
-        """
-        Initialize the logger.
-
-        Args:
-            experiments_dir: Path for experiment logs.
-                             Defaults to DSPyPaths.experiments_log via shared paths.
-        """
+    def __init__(self, experiments_dir: str | None = None):
+        paths = get_dspy_paths()
         if experiments_dir:
-            exp_dir = Path(experiments_dir)
-        else:
-            exp_dir = get_dspy_paths().experiments_log
+            # Caller overrode the experiments directory: keep the CSV there but
+            # otherwise behave like the standard DSPy logger.
+            from shared.logging import BaseCSVLogger  # noqa: PLC0415
 
-        csv_path = exp_dir / "metricas_optimizacion.csv"
-        super().__init__(csv_path=csv_path, column_mapping=STANDARD_COLUMN_MAPPING)
+            BaseCSVLogger.__init__(
+                self,
+                csv_path=Path(experiments_dir) / "metricas_optimizacion.csv",
+                column_mapping=STANDARD_COLUMN_MAPPING,
+            )
+            self._paths = paths
+            self._positive_reflection_default = "No"
+            self.experiments_dir = Path(experiments_dir)
+            return
 
-        # Store for path resolution
-        self.experiments_dir = exp_dir
-
-    def log_run(self, run_data: dict[str, Any]) -> None:
-        """
-        Append a new run result to the master log.
-
-        Handles DSPy-specific path resolution for run directories.
-
-        Args:
-            run_data: Dictionary containing run data with keys matching COLUMN_MAPPING
-        """
-        data = run_data.copy()
-
-        # Auto-generate run_id and timestamp
-        data["run_id"] = generate_run_id()
-        data["date"] = get_timestamp()
-
-        # Set budget from max_calls if not explicitly provided
-        if "budget" not in data and "max_calls" in data:
-            data["budget"] = data["max_calls"]
-
-        # Notes is now free-form text (budget has its own column)
-        if not data.get("notes"):
-            data["notes"] = ""
-
-        # Convert run_dir to relative path
-        run_dir_raw = data.get("run_dir", "N/A")
-        if run_dir_raw != "N/A" and not Path(run_dir_raw).exists():
-            logger.warning("run_dir no existe: %s", run_dir_raw)
-        try:
-            results_base = get_dspy_paths().results
-            data["run_dir"] = make_path_relative(run_dir_raw, str(results_base))
-        except Exception:
-            data["run_dir"] = run_dir_raw
-
-        # Set default for positive_reflection
-        if "positive_reflection" not in data:
-            data["positive_reflection"] = "No"
-
-        # Use parent's append_row (handles formatting automatically)
-        self.append_row(data)
-        logger.info(f"Run logged to master list: {self.csv_path}")
+        super().__init__(paths=paths, positive_reflection_default="No")
+        self.experiments_dir = paths.experiments_log
