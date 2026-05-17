@@ -82,19 +82,20 @@ class SimpleRAGAdapter(BaseAdapter):
         Returns:
             Contenido de la respuesta o None si fallo
         """
-        target_model = model or self.model
         config = self._judge_config if model == self.judge_model else self._config
+
+        litellm.drop_params = True
+        call_kwargs = config.to_kwargs()
+        call_kwargs["max_tokens"] = max_tokens
+        call_kwargs = config.apply_reasoning_constraints(call_kwargs)
+        model_key = call_kwargs.pop("model")
 
         for attempt in range(max_retries):
             try:
                 response = litellm.completion(
-                    model=target_model,
+                    model=model_key,
                     messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=max_tokens,
-                    api_key=config.api_key,
-                    api_base=config.api_base,
-                    api_version=config.api_version,
+                    **call_kwargs,
                 )
                 return response.choices[0].message.content
             except Exception as e:
