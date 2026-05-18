@@ -12,6 +12,10 @@ Run './analyze --help' for more information.
 """
 
 import sys
+
+if sys.version_info < (3, 10):
+    sys.exit(f"Error: Python 3.10+ requerido (version actual: {sys.version.split()[0]})")
+
 from pathlib import Path
 
 # Add project root to path for imports
