@@ -45,9 +45,30 @@ adapter:
   max_positive_examples: 2
 
 optimization:
-  max_metric_calls: 50
-  auto_budget: "medium"
+  # Budget alto: el delta antes era ~0 con 50 metric calls; con feedback granular
+  # GEPA ahora aprovecha mas iteraciones para mutar la instruccion.
+  max_metric_calls: 200
+  auto_budget: "heavy"
   use_few_shot: true
-  few_shot_count: 3
+  # Bajado de 3 a 2: con 3 demos muy buenas, las mutaciones de instruccion
+  # quedan dominadas por los demos y no se diferencian. 2 deja mas margen
+  # para que la instruccion optimizada aporte.
+  few_shot_count: 2
   ignore_in_metric: []
-  match_mode: "exact"
+  # Default cuando un campo no aparece en field_configs.
+  match_mode: "normalized"
+  fuzzy_threshold: 0.88
+  # Habilita feedback textual a GEPA (diagnostico campo a campo).
+  metric_feedback: true
+  # Scoring por campo: listas con Jaccard, strings libres con fuzzy/normalized.
+  field_configs:
+    nombre: { mode: "normalized" }
+    email: { mode: "normalized" }
+    años_experiencia: { mode: "exact" }
+    skills: { mode: "set", separators: ",;" }
+    educacion_principal: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    seniority_declarado: { mode: "exact" }
+    stack_principal: { mode: "set", separators: ";," }
+    idiomas: { mode: "set", separators: ";," }
+    ubicacion: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    industria_previa: { mode: "fuzzy", fuzzy_threshold: 0.85 }

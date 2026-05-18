@@ -8,7 +8,7 @@ from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc import AppConfig, CSVDataLoader, GEPAOptimizer, LLMConfig, LLMConnectionError
 from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
-from dspy_gepa_poc.metrics import create_dynamic_metric
+from dspy_gepa_poc.metrics import create_dynamic_metric, create_dynamic_metric_with_feedback
 from dspy_gepa_poc.results_logger import ResultsLogger
 from shared.display import (
     log_error,
@@ -152,14 +152,25 @@ class ReflexioDeclarativa:
             # Match mode configuration
             match_mode = opt_config.get("match_mode", "exact")
             fuzzy_threshold = opt_config.get("fuzzy_threshold", 0.85)
+            field_configs = opt_config.get("field_configs")
+            use_feedback = opt_config.get("metric_feedback", bool(field_configs))
 
             log_info(
-                f"Evaluating fields: {eval_fields} (Ignored: {ignore_fields}, Match: {match_mode})"
+                f"Evaluating fields: {eval_fields} (Ignored: {ignore_fields}, "
+                f"Match: {match_mode}, Feedback: {use_feedback})"
             )
 
-            self.metric = create_dynamic_metric(
-                eval_fields, match_mode=match_mode, fuzzy_threshold=fuzzy_threshold
-            )
+            if use_feedback:
+                self.metric = create_dynamic_metric_with_feedback(
+                    eval_fields,
+                    field_configs=field_configs,
+                    default_mode=match_mode if match_mode != "exact" else "normalized",
+                    fuzzy_threshold=fuzzy_threshold,
+                )
+            else:
+                self.metric = create_dynamic_metric(
+                    eval_fields, match_mode=match_mode, fuzzy_threshold=fuzzy_threshold
+                )
 
             # 2.5 Validate metric fields against module outputs
             self._validate_metric_fields(eval_fields, output_fields)

@@ -18,6 +18,11 @@ OPTIONAL_OPTIMIZATION_FIELDS = {
     "auto_budget": "str - 'light', 'medium', 'heavy'",
     "match_mode": "str - 'exact', 'normalized', 'fuzzy' (default: 'exact')",
     "fuzzy_threshold": "float - Umbral de similitud para modo fuzzy (0.0-1.0, default: 0.85)",
+    "metric_feedback": "bool - Si True, la metrica emite diagnostico textual a GEPA",
+    "field_configs": (
+        "dict - Overrides por campo: {nombre: {mode: exact|normalized|fuzzy|set, "
+        "fuzzy_threshold?: float, separators?: str}}. Implica metric_feedback=True."
+    ),
 }
 
 
