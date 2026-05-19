@@ -61,8 +61,9 @@ def _tokenize_list(text: str, separators: str = ",;") -> set[str]:
         norm = _normalize_text(tok)
         if not norm:
             continue
-        # Conservar solo la 'clave' antes del primer ':' para Python:5 -> python
-        key = norm.split(" ")[0] if ":" not in tok else _normalize_text(tok.split(":", 1)[0])
+        # Conservar solo la 'clave' antes del primer ':' para Python:5 -> python.
+        # Sin ':', conservar el texto normalizado completo (Vue.js -> vue js, Ruby on Rails -> ruby on rails).
+        key = norm if ":" not in tok else _normalize_text(tok.split(":", 1)[0])
         out.add(key or norm)
     return out
 

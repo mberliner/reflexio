@@ -27,6 +27,12 @@ class TestHelpers:
         tokens = _tokenize_list("Python:5; Django:3")
         assert tokens == {"python", "django"}
 
+    def test_tokenize_list_multiword_tech_matches_with_or_without_years(self):
+        # Vue.js:5 y Vue.js deben producir el mismo token (bug fix: no truncar a primera palabra)
+        assert _tokenize_list("Vue.js:5") == _tokenize_list("Vue.js")
+        assert _tokenize_list("Ruby on Rails:6") == _tokenize_list("Ruby on Rails")
+        assert _tokenize_list("Next.js; TypeScript") == {"next js", "typescript"}
+
     def test_tokenize_list_empty(self):
         assert _tokenize_list("") == set()
         assert _tokenize_list("   ;  , ") == set()
