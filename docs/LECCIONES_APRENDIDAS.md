@@ -207,62 +207,129 @@ La optimizacion reflexiva (GEPA) es el factor dominante en la mejora, no la infr
 - Script batch: `dspy_gepa_poc/run_email_urgency_comparison.sh`
 - Dataset: `dspy_gepa_poc/datasets/email_urgency.csv`
 
-## 8. Cuando GEPA NO aporta vs cuando SI: extracción vs triage de CVs
+## 8. CV Profile Extraction: historia completa de diagnóstico y techo
 
-**Hallazgo:** El valor real de GEPA depende fuertemente de la combinación tarea + modelo + métrica. La misma infraestructura puede no producir mejora alguna en una tarea (extracción) y +25pp en otra (clasificación con razonamiento), usando el mismo modelo y dataset base.
+Caso de estudio longitudinal sobre `cv_profile` (45 CVs, 10 campos, español). Documentado en tres fases sucesivas; cada fase reveló una capa distinta de problemas.
 
-### Experimento: extracción ampliada de perfil (cv_profile)
+**Modelo:** `gpt-4.1-mini` (task) + `gpt-4o` (reflection). Budget: 50 llamadas, `auto_budget: heavy`.
 
-Se construyó un extractor de 10 campos (`nombre`, `email`, `años_experiencia`, `skills`, `educacion_principal`, `seniority_declarado`, `stack_principal`, `idiomas`, `ubicacion`, `industria_previa`) sobre 45 CVs (16 originales + 17 sintéticos claros + 12 ambiguos diseñados para estresar al baseline).
+### Fase 1 — Métrica ciega: GEPA sin diagnóstico por campo
 
-**Modelo:** `gpt-4.1-mini` (task) + `gpt-4o` (reflection).
+**Síntoma:** Delta ≈ 0 en 15+ corridas consecutivas con baseline ~80-82%.
 
-| Variante | Baseline val | Optimizado val | Δ |
+**Causa:** `create_dynamic_metric` devolvía solo un float. GEPA recibía un número sin saber qué campos fallaban — las mutaciones de instrucción eran ciegas.
+
+**Fix (commit `48492b3`, 2026-05-17):** Reemplazar por `create_dynamic_metric_with_feedback`, que devuelve `{"score": float, "feedback": "diagnóstico campo a campo"}` cuando GEPA lo solicita. Baseline subió a ~91%, pero el delta siguió siendo marginal — indicando que había un segundo problema.
+
+### Fase 2 — Descripciones de campos ambiguas
+
+**Síntoma:** Con métrica granular, GEPA recibía buen feedback pero las mutaciones de instrucción no mejoraban campos específicos. `per_field_accuracy.py` reveló:
+
+| Campo | Val avg | Tipo de error |
+|---|---|---|
+| `industria_previa` | 41.7% | Inconsistencia de anotación val vs test (41% vs 87%) |
+| `stack_principal` | 82.8% | Modelo filtraba solo tech, ignoraba habilidades funcionales |
+| `ubicacion` | 100% val / 75% test | Modelo infería desde dominio de email u origen histórico |
+| `nombre` | 100% val / 87% test | Modelo incluía honoríficos ("La Dra. Elena Petrov") |
+
+**Causa raíz:** GEPA optimiza la instrucción general pero **no reescribe las descripciones de los campos individuales**. El modelo interpretaba razonablemente las descripciones vigentes — pero de forma distinta al ground truth.
+
+**Fixes aplicados al YAML (2026-05-18):** Reescritura de las descripciones de `nombre`, `stack_principal` y `ubicacion`; `industria_previa` → `ignore_in_metric` (inconsistencia > 20pp entre splits); `educacion_principal` threshold 0.85 → 0.80.
+
+**Resultado:** Baseline subió de ~90.5% a ~93.5% y el test pasó de 86-90% a **95-97%** (+7pp) solo con las descripciones corregidas.
+
+**Señales de que el problema es la descripción (no el modelo ni el budget):**
+- El error del campo es consistente y predecible (siempre el mismo tipo de fallo)
+- Aumentar budget no mejora ese campo específico
+- El modelo "tiene razón" según una lectura literal de la descripción actual
+
+### Fase 3 — Re-habilitación de campos y techo estructural
+
+**Contexto (2026-05-19):** Se re-habilitaron todos los campos en la métrica y se completaron los valores de `industria_previa` en el dataset. El baseline regresó a ~88% y 3+ corridas con GEPA no mejoraron la robustez (test). Nuevo ciclo de diagnóstico.
+
+**Fuentes de variabilidad identificadas y resueltas:**
+
+| Problema | Fix |
+|---|---|
+| Bug en `_tokenize_list`: tokens multi-palabra sin `:` truncados (`Vue.js` → `vue`, `Ruby on Rails` → `ruby`) | `metrics.py`: usar `norm` completo en lugar de `norm.split(" ")[0]` |
+| 4 filas de train con `industria_previa` vacía vs val/test 100% completos | Completados los 4 valores en train |
+| `seniority_declarado`: 48% completo en train vs 25% en val/test | Agregado a `ignore_in_metric` |
+| GT incorrecto: `'Biotech'` (CV dice "Bioinformática"), `'Cloud Computing'` (CV dice "Arquitecto Cloud") | Corregidos en CSV |
+| GT de `educacion_principal` incluía bootcamp que el modelo correctamente omitía | Eliminado bootcamp del GT |
+| Thresholds fuzzy demasiado estrictos (0.85) para variantes semánticas | `industria_previa` → 0.70, `educacion_principal` → 0.75 |
+
+**Impacto acumulado (baseline sin optimización):**
+
+| Estado | Val | Test |
+|---|---|---|
+| Pre fase 2 | ~81% | ~80% |
+| Post fase 2 (descripciones) | ~93.5% | ~95-97% |
+| Post re-habilitación (regresión) | ~88% | ~93% |
+| Post fase 3 (datos + métrica) | **~91%** | **~93%** |
+
+**Resultado final:** GEPA con baseline ~91% produce delta ≈ 0 en 3+ corridas. Los errores residuales son ambigüedad genuina de ground truth:
+
+| Campo | Esperado | Obtenido | Naturaleza |
 |---|---|---|---|
-| 33 filas, `match_mode: normalized` | 82.22% | 82.22% | 0 |
-| 45 filas, `match_mode: normalized` | ~81% | 80.83% | -0.17 |
-| 45 filas, `match_mode: exact` | 80.00% | (no se corrió, sin margen) | — |
+| `industria_previa` | `'Ventas B2B'` | `'Software B2B'` | Interpretación del CV genuinamente ambigua |
+| `industria_previa` | `'Gestión de Proyectos'` | `'Project Management'` | CV mixto EN/ES → modelo responde en inglés |
+| `ubicacion` | `''` | `'Berlín, Alemania'` | "Originally from Berlin" — inferencia plausible |
+| `años_experiencia` | `'7'` | `''` | CV con años por periodos ("4a + 3a") — modelo no suma |
 
-**Diagnóstico del techo:**
-- `gpt-4.1-mini` produce strings literal-perfect en la mayoría de los campos (cambiar `normalized` por `exact` solo bajó 1pp).
-- El few-shot de 3 ejemplos ya captura la mayor parte de la señal extractiva.
-- Agregar 12 CVs ambiguos (fechas implícitas, abreviaturas, skills enterrados en prosa, distractores) solo bajó el baseline ~1pp: los modelos frontera ya manejan estos casos.
+### Contraste: triage de candidatos (cv_triage)
 
-**Lección:** Para extracción de campos estructurados con modelos frontera modernos, **GEPA no aporta valor medible**. El gradiente "instrucción mínima + few-shot" → "instrucción optimizada" ya está saturado.
-
-### Experimento: triage de candidatos (cv_triage)
-
-Mismo dataset de CVs, pero la tarea cambió a clasificación: dado un CV + una descripción de puesto fija (Backend Senior Python LATAM), asignar `fit_alto` / `fit_medio` / `no_fit` + justificación.
+Mismo dataset, tarea distinta: clasificar fit de candidato (`fit_alto` / `fit_medio` / `no_fit`) contra una JD fija de Backend Senior Python LATAM.
 
 | Métrica | Baseline | Optimizado | Δ |
 |---|---|---|---|
-| Val (12 ejemplos) | 58.33% | **83.33%** | **+25.00 pp** |
+| Val (12 ejemplos) | 58.33% | **83.33%** | **+25 pp** |
 | Test (8 ejemplos) | 87.50% | 87.50% | 0 |
 
-**Por qué funcionó acá:**
-- Tarea estructuralmente harder: requiere **razonamiento sobre múltiples requisitos** (stack, seniority, idiomas, ubicación, industria) y trade-offs entre ellos, no solo extracción literal.
-- Baseline modesto (58% val) → margen real para mejorar sin chocar techo.
-- `match_mode: exact` sobre una clase enumerada → métrica honesta, sin enmascarar errores.
+GEPA convirtió una instrucción de ~600 chars en un prompt de ~3000 chars con criterios por categoría, factores de contexto y reglas operativas. Internalizó la JD completa dentro de la instrucción.
 
-**Qué hizo GEPA (prompt optimizado):** convirtió una instrucción narrativa de ~600 chars en un prompt operativo de ~3000 chars con 5 secciones: criterios por categoría con sub-bullets, factores de contexto memorizados, 4 reglas operativas, formato de respuesta explícito y un ejemplo resuelto in-context. **Internalizó la JD dentro de la instrucción** (especialización por puesto fijo).
+**Por qué funcionó aquí y no en extracción:**
+- La tarea requiere razonamiento multi-criterio con trade-offs, no extracción literal
+- El baseline modesto (58%) dejaba margen real
+- La métrica exact sobre clases enumeradas era una señal honesta y sin ruido
 
-### Conclusión operativa: dónde invertir esfuerzo de optimización
+**Trade-off:** El prompt optimizado memorizó los detalles de una JD espec��fica. Para multi-JD hay que re-optimizar o parametrizar la JD.
+
+### Cuándo GEPA aporta vs cuándo no
 
 | Tipo de tarea | GEPA aporta | Por qué |
 |---|---|---|
-| Extracción de campos canónicos con modelos frontera | No, en general | El baseline ya satura |
-| Extracción con campos ambiguos + modelos viejos/baratos | Sí | Hay margen estructural |
+| Extracción de campos canónicos con modelos frontera | No | El baseline ya satura; no hay gradiente |
+| Extracción con campos ambiguos o modelos más débiles | Sí | Hay margen estructural |
 | Clasificación multi-criterio con razonamiento | **Sí** | El prompt debe articular criterios tácitos |
-| Pipelines compuestos (extracción → razonamiento) | Sí en la etapa de razonamiento, no en la de extracción | Cada etapa decide por separado |
+| Pipelines compuestos (extracción → razonamiento) | Solo en la etapa de razonamiento | Cada etapa tiene su propio techo |
 
-**Regla práctica:** Antes de invertir tokens en GEPA, medir el baseline. Si está >75-80% en una tarea de extracción simple, probablemente no haya espacio. Si está <70% o la tarea requiere razonamiento, vale la pena.
+**Regla práctica:** Si el baseline en extracción está > 80%, probablemente no haya espacio para GEPA. Si la tarea requiere razonamiento o el baseline está < 70%, vale la pena.
 
-### Trade-off observado: especialización vs generalización
+### Cómo subir la robustez cuando GEPA ya no aporta
 
-El prompt optimizado por GEPA en triage memorizó los detalles de **una JD específica** (stack, países LATAM enumerados, niveles de inglés). Para una empresa con una vacante recurrente esto es óptimo; para multi-JD no sirve directamente y obliga a re-optimizar o a una variante con la JD parametrizada.
+Las palancas restantes son data-centric o de instrucción específica — no de optimización:
+
+1. **Ontología cerrada para campos de texto libre** (`industria_previa` tiene 27 valores únicos para 45 ejemplos). Definir 10-12 categorías canónicas en la descripción del campo y re-etiquetar. Impacto esperado: +5-8pp en ese campo.
+2. **Few-shot fijos** que cubran edge cases conocidos: CV con años divididos en periodos, CVs en inglés con output esperado en español, CVs con "Originally from X" y ubicación vacía.
+3. **Ampliar el test set** de 8 a 15-20 ejemplos. Con 8 ejemplos, 1 error = 1.25pp de varianza inevitable.
+4. **Descripción de `años_experiencia`** con instrucción explícita de sumar periodos.
+
+### Proceso diagnóstico ante delta plano en extracción multi-campo
+
+```
+1. Correr per_field_accuracy.py sobre el run más reciente
+2. Para cada campo con avg < 85%: clasificar el tipo de error
+   a. Error sistemático y predecible → reescribir la descripción del campo en el YAML
+   b. Val y test difieren > 20pp en un campo → ignore_in_metric (inconsistencia de GT)
+   c. GT incorrecto vs lo que el modelo extrae correctamente → corregir el GT
+   d. Threshold rechaza variantes semánticamente equivalentes → bajar threshold
+3. Relanzar con budget moderado (50) para verificar
+4. Si el error está distribuido uniformemente y el baseline > 85% → techo estructural;
+   GEPA no puede ayudar más; invertir en datos, no en optimización
+```
 
 ### Archivos relacionados
 
 - Configs: `dspy_gepa_poc/configs/dynamic_cv_profile.yaml`, `dynamic_cv_triage.yaml`
-- Datasets: `dspy_gepa_poc/datasets/cv_profile.csv` (45 filas), `cv_triage.csv` (mismas filas + fit_label)
-- Scripts: `dspy_gepa_poc/scripts/build_cv_profile.py`, `build_cv_triage.py`, `dryrun_config.py`, `baseline_only.py`
+- Datasets: `dspy_gepa_poc/datasets/cv_profile.csv` (45 filas), `cv_triage.csv`
+- Scripts: `dspy_gepa_poc/scripts/per_field_accuracy.py`, `baseline_only.py`, `build_cv_profile.py`
