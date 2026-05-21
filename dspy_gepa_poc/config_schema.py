@@ -50,6 +50,10 @@ class ConfigValidator(BaseConfigValidator):
             "required": [],
             "optional": [],
         },
+        "pipeline": {
+            "required": [],
+            "optional": [],
+        },
         "sentiment": {
             "required": [],
             "optional": [],
@@ -88,6 +92,11 @@ class ConfigValidator(BaseConfigValidator):
         if "signature" in config:
             signature_errors = cls._validate_signature(config["signature"])
             errors.extend(signature_errors)
+
+        # Pipeline-specific validation
+        module_type = config.get("module", {}).get("type")
+        if module_type == "pipeline":
+            errors.extend(cls._validate_pipeline(config))
 
         # Validate optimization requirements: max_metric_calls or auto_budget
         opt = config.get("optimization", {})
@@ -146,6 +155,88 @@ class ConfigValidator(BaseConfigValidator):
         return errors
 
     @classmethod
+    def _validate_pipeline(cls, config: dict[str, Any]) -> list[str]:
+        """
+        Validate pipeline module structure: stages + routing.
+
+        Args:
+            config: Full config dictionary.
+
+        Returns:
+            List of error messages.
+        """
+        errors: list[str] = []
+        stages = config.get("stages")
+        routing = config.get("routing")
+
+        if not isinstance(stages, list) or len(stages) < 2:
+            errors.append("Pipeline requires 'stages' as a list with at least 2 entries.")
+            return errors
+
+        stage_names: list[str] = []
+        for idx, stage in enumerate(stages):
+            if "name" not in stage:
+                errors.append(f"Pipeline stage #{idx + 1} missing 'name'.")
+                continue
+            if stage["name"] in stage_names:
+                errors.append(f"Pipeline stage name '{stage['name']}' duplicated.")
+            stage_names.append(stage["name"])
+            if "signature" not in stage:
+                errors.append(f"Pipeline stage '{stage['name']}' missing 'signature' section.")
+                continue
+            errors.extend(cls._validate_signature(stage["signature"]))
+
+        if not isinstance(routing, dict):
+            errors.append("Pipeline requires 'routing' section (dict).")
+            return errors
+
+        for key in ("gate_stage", "gate_field", "gate_value"):
+            if key not in routing:
+                errors.append(f"Pipeline routing missing required key: '{key}'.")
+
+        gate_stage = routing.get("gate_stage")
+        if gate_stage and gate_stage not in stage_names:
+            errors.append(
+                f"routing.gate_stage='{gate_stage}' not in stages: {stage_names}."
+            )
+
+        gate_field = routing.get("gate_field")
+        if gate_stage and gate_field:
+            gate_stage_cfg = next(
+                (s for s in stages if s.get("name") == gate_stage), None
+            )
+            if gate_stage_cfg:
+                gate_outputs = [
+                    o.get("name")
+                    for o in gate_stage_cfg.get("signature", {}).get("outputs", [])
+                ]
+                if gate_field not in gate_outputs:
+                    errors.append(
+                        f"routing.gate_field='{gate_field}' not in outputs of "
+                        f"gate_stage '{gate_stage}': {gate_outputs}."
+                    )
+
+        # skip_outputs_when_gated keys must exist in some post-gate stage output
+        skip = routing.get("skip_outputs_when_gated", {})
+        if skip:
+            if gate_stage and gate_stage in stage_names:
+                gate_idx = stage_names.index(gate_stage)
+                post_outputs: list[str] = []
+                for stage in stages[gate_idx + 1 :]:
+                    post_outputs.extend(
+                        o.get("name")
+                        for o in stage.get("signature", {}).get("outputs", [])
+                    )
+                for k in skip.keys():
+                    if k not in post_outputs:
+                        errors.append(
+                            f"routing.skip_outputs_when_gated['{k}'] does not match any "
+                            f"output of post-gate stages: {post_outputs}."
+                        )
+
+        return errors
+
+    @classmethod
     def _validate_csv_file(cls, config: dict[str, Any], datasets_dir: str) -> list[str]:
         """
         Validate CSV file with DSPy-specific column handling.
@@ -192,6 +283,23 @@ class ConfigValidator(BaseConfigValidator):
             ]
             if sig_outputs:
                 output_columns = sig_outputs
+
+        # For pipeline modules, collect outputs from all stages
+        if module_type == "pipeline":
+            stage_outputs: list[str] = []
+            for stage in config.get("stages", []):
+                stage_outputs.extend(
+                    o.get("name")
+                    for o in stage.get("signature", {}).get("outputs", [])
+                    if isinstance(o, dict)
+                )
+            # Auxiliares (con razonamiento_*) NO necesariamente estan en el CSV.
+            # Filtramos los que se ignoran en la metrica para evitar falsos
+            # negativos durante la validacion.
+            ignore = config.get("optimization", {}).get("ignore_in_metric", []) or []
+            stage_outputs = [o for o in stage_outputs if o not in ignore]
+            if stage_outputs:
+                output_columns = stage_outputs
 
         csv_errors = CSVValidator.validate(
             csv_path=csv_path,

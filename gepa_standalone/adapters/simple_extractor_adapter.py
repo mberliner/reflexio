@@ -26,9 +26,11 @@ class SimpleExtractorAdapter(BaseAdapter):
         temperature: float = 0.0,
         max_positive_examples: int | None = None,
         max_response_tokens: int | None = None,
+        ignore_fields: list[str] | None = None,
     ):
         super().__init__(temperature=temperature)
         self.required_fields = required_fields
+        self.ignore_fields = set(ignore_fields or [])
 
         # Configuración de ejemplos positivos en dataset reflexivo
         # Prioridad: parámetro explícito > Config > default (2)
@@ -67,12 +69,17 @@ class SimpleExtractorAdapter(BaseAdapter):
                 except json.JSONDecodeError:
                     extracted_fields = self._extract_json_from_text(extracted_text)
 
+                # Filtrar campos ignorados para no contar en el scoring
+                eval_fields = {
+                    k: v for k, v in expected_fields.items() if k not in self.ignore_fields
+                }
+
                 # Comparar campos
                 correct_fields = 0
-                total_fields = len(expected_fields)
+                total_fields = len(eval_fields)
                 field_comparisons = {}
 
-                for field_name, expected_value in expected_fields.items():
+                for field_name, expected_value in eval_fields.items():
                     extracted_val = str(extracted_fields.get(field_name, "")).strip().lower()
                     expected_val = str(expected_value).strip().lower()
 

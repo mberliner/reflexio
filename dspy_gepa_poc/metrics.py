@@ -251,6 +251,126 @@ def create_dynamic_metric_with_feedback(
     return dynamic_metric_fb
 
 
+def create_pipeline_metric_with_feedback(
+    gate_field: str,
+    gate_value: str,
+    triage_fields: list[str],
+    fastgate_fields: list[str],
+    field_configs: dict[str, dict[str, Any]] | None = None,
+    default_mode: str = "normalized",
+    fuzzy_threshold: float = 0.85,
+    list_separators: str = ",;",
+    triage_weight: float = 0.3,
+) -> Callable[..., float | dict[str, float | str]]:
+    """
+    Metrica condicional jerarquica para pipelines triage+clasificacion.
+
+    Logica:
+      - Siempre evalua triage_fields (decision + etapa).
+      - Si example.<gate_field> == gate_value (caso que avanza), evalua
+        tambien fastgate_fields y combina con peso triage_weight para triage
+        y (1-triage_weight) para fast_gate.
+      - Si example.<gate_field> != gate_value (rechazo/devolucion), solo
+        cuenta triage; fastgate_fields se omiten (el modulo ya inyecta
+        valores fijos como 'no_aplica').
+
+    Devuelve dict {score, feedback} cuando GEPA lo pide (pred_name not None),
+    diferenciando los errores por etapa.
+
+    Args:
+        gate_field: nombre del campo que dispara la condicion (ej 'triage_decision').
+        gate_value: valor esperado para invocar la segunda etapa (ej 'avanza_fast_gate').
+        triage_fields: campos a evaluar siempre.
+        fastgate_fields: campos a evaluar solo cuando aplica.
+        field_configs: overrides por campo (mode, fuzzy_threshold, separators).
+        default_mode: modo de comparacion default (exact/normalized/fuzzy/set).
+        fuzzy_threshold: threshold default para modo fuzzy.
+        list_separators: separadores para modo set.
+        triage_weight: peso de la etapa triage cuando aplican ambas.
+    """
+    if default_mode not in _VALID_FIELD_MODES:
+        raise ValueError(
+            f"default_mode invalido: '{default_mode}'. Validos: {sorted(_VALID_FIELD_MODES)}"
+        )
+    field_configs = field_configs or {}
+    for fname, cfg in field_configs.items():
+        mode = cfg.get("mode", default_mode)
+        if mode not in _VALID_FIELD_MODES:
+            raise ValueError(
+                f"Modo invalido para campo '{fname}': '{mode}'. "
+                f"Validos: {sorted(_VALID_FIELD_MODES)}"
+            )
+
+    def _evaluate_group(
+        example: Any, pred: Any, fields: list[str]
+    ) -> tuple[float, int, list[str]]:
+        """Devuelve (score_promedio, perfectos, diagnosticos)."""
+        if not fields:
+            return 1.0, 0, []
+        total_score = 0.0
+        perfect = 0
+        diagnostics: list[str] = []
+        for field in fields:
+            cfg = field_configs.get(field, {})
+            mode = cfg.get("mode", default_mode)
+            threshold = cfg.get("fuzzy_threshold", fuzzy_threshold)
+            seps = cfg.get("separators", list_separators)
+            expected_raw = getattr(example, field, "")
+            actual_raw = getattr(pred, field, "")
+            score, diag = _score_field(expected_raw, actual_raw, mode, threshold, seps)
+            total_score += score
+            if score == 1.0:
+                perfect += 1
+            if diag:
+                diagnostics.append(f"  - {field} [{mode}]: {diag}")
+        return total_score / len(fields), perfect, diagnostics
+
+    def pipeline_metric_fb(example, pred, trace=None, pred_name=None, pred_trace=None):
+        triage_avg, triage_ok, triage_diag = _evaluate_group(example, pred, triage_fields)
+
+        expected_gate = str(getattr(example, gate_field, "")).strip()
+        is_avanza = expected_gate == gate_value
+
+        if is_avanza and fastgate_fields:
+            fg_avg, fg_ok, fg_diag = _evaluate_group(example, pred, fastgate_fields)
+            avg = triage_weight * triage_avg + (1.0 - triage_weight) * fg_avg
+        else:
+            fg_avg, fg_ok, fg_diag = 1.0, 0, []
+            avg = triage_avg
+
+        if pred_name is not None or pred_trace is not None:
+            parts: list[str] = []
+            t_total = len(triage_fields)
+            parts.append(
+                f"Triage: {triage_ok}/{t_total} campos perfectos "
+                f"(score {triage_avg:.2f})."
+            )
+            if triage_diag:
+                parts.append("Errores triage:")
+                parts.extend(triage_diag)
+            if is_avanza and fastgate_fields:
+                fg_total = len(fastgate_fields)
+                parts.append(
+                    f"Fast Gate: {fg_ok}/{fg_total} campos perfectos "
+                    f"(score {fg_avg:.2f})."
+                )
+                if fg_diag:
+                    parts.append("Errores fast_gate:")
+                    parts.extend(fg_diag)
+            elif not is_avanza:
+                parts.append(
+                    f"Fast Gate: omitido (caso de triage='{expected_gate}', "
+                    f"no avanza)."
+                )
+            header = f"Score total {avg:.2f}."
+            feedback = header + "\n" + "\n".join(parts)
+            return {"score": avg, "feedback": feedback}
+
+        return avg
+
+    return pipeline_metric_fb
+
+
 def sentiment_accuracy_metric(gold: dspy.Example, pred: dspy.Prediction, trace=None) -> float:
     """
     Simple accuracy metric for sentiment classification.

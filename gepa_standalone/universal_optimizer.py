@@ -279,12 +279,14 @@ class UniversalOptimizer:
             required_fields = self.config["adapter"]["required_fields"]
             max_pos = self.config["adapter"].get("extractor_max_positive_examples")
             max_resp = self.config.get("models", {}).get("max_tokens")
+            ignore_fields = self.config.get("optimization", {}).get("ignore_in_metric", [])
 
             self.adapter = SimpleExtractorAdapter(
                 required_fields=required_fields,
                 temperature=self.active_temperature,
                 max_positive_examples=max_pos,
                 max_response_tokens=max_resp,
+                ignore_fields=ignore_fields,
             )
 
         elif adapter_type == "sql":
@@ -300,6 +302,27 @@ class UniversalOptimizer:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
         log_ok(f"Adapter initialized: {adapter_type}")
+
+    def _eval_repeated(self, data, prompt) -> tuple[float, float]:
+        """
+        Evalua un prompt sobre un conjunto k=self.eval_repeats veces y
+        devuelve (media, rango). Si k=1 devuelve (score, 0.0).
+
+        El rango es una proxy simple de la dispersion del LLM no-determinista.
+        Si el rango es mayor que la diferencia entre dos prompts, la
+        "mejora" entre ellos es indistinguible del ruido.
+        """
+        k = max(1, int(getattr(self, "eval_repeats", 1)))
+        scores: list[float] = []
+        for _ in range(k):
+            eval_result = self.adapter.evaluate(data, prompt)
+            if eval_result.scores:
+                scores.append(sum(eval_result.scores) / len(eval_result.scores))
+            else:
+                scores.append(0.0)
+        mean = sum(scores) / len(scores)
+        rng = max(scores) - min(scores) if len(scores) > 1 else 0.0
+        return mean, rng
 
     def _has_positive_reflection(self) -> bool:
         """Determine if this run uses positive reflection."""
@@ -345,14 +368,20 @@ class UniversalOptimizer:
 
         print(f"\nPROMPT INICIAL:\n{initial_prompt['system_prompt']}")
 
+        # Cuantas veces repetir evaluacion final (mitigacion de ruido LLM no
+        # determinista). Default 1 = comportamiento legacy.
+        self.eval_repeats = int(self.config["optimization"].get("eval_repeats", 1))
+
         # STEP 5: Baseline
         print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
-        log_info("Evaluando prompt inicial en conjunto de validacion...")
-        eval_baseline = self.adapter.evaluate(self.val_data, initial_prompt)
-        baseline_avg = (
-            sum(eval_baseline.scores) / len(eval_baseline.scores) if eval_baseline.scores else 0.0
+        log_info(
+            f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)..."
         )
-        print_kv("Baseline accuracy", f"{baseline_avg * 100:.1f}%")
+        baseline_avg, baseline_range = self._eval_repeated(self.val_data, initial_prompt)
+        print_kv(
+            "Baseline accuracy",
+            f"{baseline_avg * 100:.1f}% (rango {baseline_range * 100:.1f} pp)",
+        )
 
         # STEP 6: Optimization
         print_step(6, TOTAL_STEPS, "GEPA OPTIMIZATION")
@@ -394,16 +423,25 @@ class UniversalOptimizer:
 
         # STEP 7: Test + Summary
         print_step(7, TOTAL_STEPS, "TEST + SUMMARY")
-        log_info("Midiendo desempeno del mejor prompt en val...")
-        eval_opt = self.adapter.evaluate(self.val_data, optimized_prompt)
-        opt_avg = sum(eval_opt.scores) / len(eval_opt.scores) if eval_opt.scores else 0.0
-        print_kv("Optimized (val)", f"{opt_avg * 100:.1f}%")
+        prompt_changed = (
+            optimized_prompt["system_prompt"] != initial_prompt["system_prompt"]
+        )
+        if not prompt_changed:
+            log_warn(
+                "GEPA no modifico el prompt: la diferencia baseline/optimized se "
+                "interpretara como ruido de muestreo del LLM."
+            )
 
-        log_info("Verificando generalizacion en conjunto de prueba...")
+        log_info(f"Midiendo desempeno del mejor prompt en val (k={self.eval_repeats})...")
+        opt_avg, opt_range = self._eval_repeated(self.val_data, optimized_prompt)
+        print_kv("Optimized (val)", f"{opt_avg * 100:.1f}% (rango {opt_range * 100:.1f} pp)")
+
+        log_info(f"Verificando generalizacion en test (k={self.eval_repeats})...")
+        test_avg, test_range = self._eval_repeated(self.test_data, optimized_prompt)
+        print_kv("Test accuracy", f"{test_avg * 100:.1f}% (rango {test_range * 100:.1f} pp)")
+
+        # Detalle del ultimo test eval (para inspeccion humana)
         eval_test = self.adapter.evaluate(self.test_data, optimized_prompt)
-        test_avg = sum(eval_test.scores) / len(eval_test.scores) if eval_test.scores else 0.0
-        print_kv("Test accuracy", f"{test_avg * 100:.1f}%")
-
         print_detailed_results(eval_test)
 
         print_summary(
@@ -416,6 +454,8 @@ class UniversalOptimizer:
                 "Task LM": self.adapter.model,
                 "Reflection LM": get_reflection_config().model,
                 "Budget used": f"{result.total_metric_calls} metric calls",
+                "Eval repeats": str(self.eval_repeats),
+                "Prompt changed": "Si" if prompt_changed else "No (delta=ruido)",
             },
         )
 
@@ -423,12 +463,19 @@ class UniversalOptimizer:
         print(f"\nPROMPT OPTIMIZADO:\n{optimized_prompt['system_prompt']}")
 
         # Store results for logging
+        effective_delta = (opt_avg - baseline_avg) if prompt_changed else 0.0
         self.results = {
             "initial_prompt": initial_prompt["system_prompt"],
             "final_prompt": optimized_prompt["system_prompt"],
             "baseline_score": baseline_avg,
+            "baseline_range": baseline_range,
             "optimized_score": opt_avg,
+            "optimized_range": opt_range,
             "test_score": test_avg,
+            "test_range": test_range,
+            "prompt_changed": prompt_changed,
+            "effective_delta": effective_delta,
+            "eval_repeats": self.eval_repeats,
             "total_metric_calls": result.total_metric_calls,
         }
 

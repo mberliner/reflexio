@@ -8,7 +8,11 @@ from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc import AppConfig, CSVDataLoader, GEPAOptimizer, LLMConfig, LLMConnectionError
 from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
-from dspy_gepa_poc.metrics import create_dynamic_metric, create_dynamic_metric_with_feedback
+from dspy_gepa_poc.metrics import (
+    create_dynamic_metric,
+    create_dynamic_metric_with_feedback,
+    create_pipeline_metric_with_feedback,
+)
 from dspy_gepa_poc.results_logger import ResultsLogger
 from shared.display import (
     log_error,
@@ -188,10 +192,66 @@ class ReflexioDeclarativa:
                 teleprompter = LabeledFewShot(k=k)
                 self.student = teleprompter.compile(self.student, trainset=self.trainset)
 
+        elif module_type == "pipeline":
+            stages = self.config.raw_config.get("stages")
+            routing = self.config.raw_config.get("routing")
+            if not stages or not routing:
+                raise ConfigurationError(
+                    "Module type 'pipeline' requires 'stages' and 'routing' sections in config."
+                )
+
+            self.student = DynamicModuleFactory.create_pipeline_module(stages, routing)
+
+            # Outputs por etapa
+            triage_outputs = [o["name"] for o in stages[0]["signature"]["outputs"]]
+            fastgate_outputs = [o["name"] for o in stages[1]["signature"]["outputs"]]
+            all_outputs = triage_outputs + fastgate_outputs
+
+            opt_config = self.config.raw_config.get("optimization", {})
+            ignore_fields = opt_config.get("ignore_in_metric", [])
+            eval_fields = [f for f in all_outputs if f not in ignore_fields]
+
+            triage_eval = [f for f in triage_outputs if f in eval_fields]
+            fastgate_eval = [f for f in fastgate_outputs if f in eval_fields]
+
+            match_mode = opt_config.get("match_mode", "normalized")
+            fuzzy_threshold = opt_config.get("fuzzy_threshold", 0.85)
+            field_configs = opt_config.get("field_configs", {})
+
+            log_info(
+                f"Pipeline metric: triage={triage_eval}, fast_gate={fastgate_eval}, "
+                f"ignored={ignore_fields}, default_mode={match_mode}"
+            )
+
+            self.metric = create_pipeline_metric_with_feedback(
+                gate_field=routing["gate_field"],
+                gate_value=routing["gate_value"],
+                triage_fields=triage_eval,
+                fastgate_fields=fastgate_eval,
+                field_configs=field_configs,
+                default_mode=match_mode if match_mode != "exact" else "normalized",
+                fuzzy_threshold=fuzzy_threshold,
+            )
+
+            self._validate_metric_fields(eval_fields, all_outputs)
+            log_ok(
+                f"Pipeline module created: {len(stages)} stages, "
+                f"outputs={all_outputs}"
+            )
+
+            # Few-shot opcional (consistente con rama dinamica)
+            if opt_config.get("use_few_shot", False):
+                k = opt_config.get("few_shot_count", 3)
+                log_info(f"Injecting {k} few-shot examples from trainset into the pipeline.")
+                from dspy.teleprompt import LabeledFewShot
+
+                teleprompter = LabeledFewShot(k=k)
+                self.student = teleprompter.compile(self.student, trainset=self.trainset)
+
         else:
             raise ValueError(
                 f"Unsupported module type: {module_type}. "
-                f"Only 'dynamic' is supported in this version."
+                f"Supported: 'dynamic', 'pipeline'."
             )
 
     def _validate_metric_fields(self, eval_fields: list, output_fields: list) -> None:
@@ -247,15 +307,27 @@ class ReflexioDeclarativa:
         self.create_module_and_metric()
 
         num_threads = self.config.raw_config.get("optimization", {}).get("num_threads", 1)
+        self.eval_repeats = int(
+            self.config.raw_config.get("optimization", {}).get("eval_repeats", 1)
+        )
+
+        # Snapshot de instructions iniciales (por predictor) para detectar si
+        # GEPA realmente modifico el prompt al final.
+        self._initial_instructions = self._snapshot_instructions(self.student)
 
         # STEP 5: Baseline
         print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
-        log_info("Evaluando prompt inicial en conjunto de validacion...")
+        log_info(
+            f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)..."
+        )
         evaluator_val = Evaluate(
             devset=self.valset, metric=self.metric, num_threads=num_threads, display_progress=True
         )
-        baseline_score = self._to_float_score(evaluator_val(self.student))
-        print_kv("Baseline accuracy", self._format_score(baseline_score))
+        baseline_score, baseline_range = self._eval_repeated(evaluator_val, self.student)
+        print_kv(
+            "Baseline accuracy",
+            f"{self._format_score(baseline_score)} (rango {baseline_range:.1f} pp)",
+        )
 
         # STEP 6: Optimization
         print_step(6, TOTAL_STEPS, "GEPA OPTIMIZATION")
@@ -269,24 +341,49 @@ class ReflexioDeclarativa:
 
         # STEP 7: Test + Summary
         print_step(7, TOTAL_STEPS, "TEST + SUMMARY")
-        log_info("Midiendo desempeno del mejor prompt en val...")
-        optimized_score = self._to_float_score(evaluator_val(self.optimized_student))
-        print_kv("Optimized (val)", self._format_score(optimized_score))
+        final_instructions = self._snapshot_instructions(self.optimized_student)
+        prompt_changed = final_instructions != self._initial_instructions
+        if not prompt_changed:
+            log_warn(
+                "GEPA no modifico las instructions del modulo: el delta "
+                "baseline/optimized se interpretara como ruido del LLM."
+            )
+
+        log_info(f"Midiendo desempeno del mejor prompt en val (k={self.eval_repeats})...")
+        optimized_score, optimized_range = self._eval_repeated(
+            evaluator_val, self.optimized_student
+        )
+        print_kv(
+            "Optimized (val)",
+            f"{self._format_score(optimized_score)} (rango {optimized_range:.1f} pp)",
+        )
 
         if len(self.testset) > 0:
-            log_info("Verificando generalizacion en conjunto de prueba...")
+            log_info(
+                f"Verificando generalizacion en test (k={self.eval_repeats})..."
+            )
             evaluator_test = Evaluate(
                 devset=self.testset,
                 metric=self.metric,
                 num_threads=num_threads,
                 display_progress=True,
             )
-            test_score = self._to_float_score(evaluator_test(self.optimized_student))
-            print_kv("Test accuracy", self._format_score(test_score))
+            test_score, test_range = self._eval_repeated(
+                evaluator_test, self.optimized_student
+            )
+            print_kv(
+                "Test accuracy",
+                f"{self._format_score(test_score)} (rango {test_range:.1f} pp)",
+            )
         else:
             log_warn("No test set available. Skipping robustness test.")
             test_score = 0.0
+            test_range = 0.0
 
+        self.prompt_changed = prompt_changed
+        self.effective_delta = (
+            (optimized_score - baseline_score) if prompt_changed else 0.0
+        )
         self.save_results(baseline_score, optimized_score, test_score)
 
         # Resumen final unificado (mismo formato que gepa_standalone).
@@ -300,6 +397,8 @@ class ReflexioDeclarativa:
                 "Task LM": self.task_config.model,
                 "Reflection LM": self.reflection_config.model,
                 "Budget": f"{self.config.gepa.max_metric_calls} metric calls",
+                "Eval repeats": str(self.eval_repeats),
+                "Prompt changed": "Si" if prompt_changed else "No (delta=ruido)",
             },
         )
 
@@ -355,11 +454,45 @@ class ReflexioDeclarativa:
                 "optimized_score": optimized_score,  # Best Validation Score
                 "test_score": test_score,  # Held-out Test Score
                 "run_dir": str(self.results_dir),
-                "notes": f"Strategy: {self.config.gepa.auto_budget}, {few_shot_info}",
+                "notes": (
+                    f"Strategy: {self.config.gepa.auto_budget}, {few_shot_info}, "
+                    f"prompt_changed={'yes' if getattr(self, 'prompt_changed', False) else 'no'}, "
+                    f"k={getattr(self, 'eval_repeats', 1)}"
+                ),
             }
         )
 
         log_ok("Run logged successfully.")
+
+    @staticmethod
+    def _snapshot_instructions(module) -> dict[str, str]:
+        """
+        Captura el campo .signature.instructions de cada predictor del modulo.
+        Permite detectar despues si GEPA modifico el prompt.
+        """
+        snapshot: dict[str, str] = {}
+        try:
+            for name, predictor in module.named_predictors():
+                sig = getattr(predictor, "signature", None)
+                instr = getattr(sig, "instructions", "") if sig is not None else ""
+                snapshot[name] = instr or ""
+        except Exception:
+            # Si el modulo no expone predictors estandar, snapshot vacio
+            return {}
+        return snapshot
+
+    def _eval_repeated(self, evaluator, student) -> tuple[float, float]:
+        """
+        Ejecuta evaluator(student) k veces y devuelve (media, rango). Si k=1,
+        comportamiento equivalente al legacy con rango=0.
+        """
+        k = max(1, int(getattr(self, "eval_repeats", 1)))
+        scores: list[float] = []
+        for _ in range(k):
+            scores.append(self._to_float_score(evaluator(student)))
+        mean = sum(scores) / len(scores)
+        rng = max(scores) - min(scores) if len(scores) > 1 else 0.0
+        return mean, rng
 
     @staticmethod
     def _to_float_score(score_value) -> float:
