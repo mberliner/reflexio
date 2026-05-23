@@ -374,9 +374,7 @@ class UniversalOptimizer:
 
         # STEP 5: Baseline
         print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
-        log_info(
-            f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)..."
-        )
+        log_info(f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)...")
         baseline_avg, baseline_range = self._eval_repeated(self.val_data, initial_prompt)
         print_kv(
             "Baseline accuracy",
@@ -423,9 +421,7 @@ class UniversalOptimizer:
 
         # STEP 7: Test + Summary
         print_step(7, TOTAL_STEPS, "TEST + SUMMARY")
-        prompt_changed = (
-            optimized_prompt["system_prompt"] != initial_prompt["system_prompt"]
-        )
+        prompt_changed = optimized_prompt["system_prompt"] != initial_prompt["system_prompt"]
         if not prompt_changed:
             log_warn(
                 "GEPA no modifico el prompt: la diferencia baseline/optimized se "

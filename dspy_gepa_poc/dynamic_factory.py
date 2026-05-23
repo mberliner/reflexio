@@ -113,9 +113,7 @@ class DynamicModuleFactory:
         # Validar que gate_stage existe
         stage_names = [s["name"] for s in stages_config]
         if gate_stage_name not in stage_names:
-            raise ValueError(
-                f"routing.gate_stage='{gate_stage_name}' not in stages: {stage_names}"
-            )
+            raise ValueError(f"routing.gate_stage='{gate_stage_name}' not in stages: {stage_names}")
         gate_idx = stage_names.index(gate_stage_name)
 
         # Pre-armar todas las signatures

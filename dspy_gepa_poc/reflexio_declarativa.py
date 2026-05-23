@@ -234,10 +234,7 @@ class ReflexioDeclarativa:
             )
 
             self._validate_metric_fields(eval_fields, all_outputs)
-            log_ok(
-                f"Pipeline module created: {len(stages)} stages, "
-                f"outputs={all_outputs}"
-            )
+            log_ok(f"Pipeline module created: {len(stages)} stages, outputs={all_outputs}")
 
             # Few-shot opcional (consistente con rama dinamica)
             if opt_config.get("use_few_shot", False):
@@ -250,8 +247,7 @@ class ReflexioDeclarativa:
 
         else:
             raise ValueError(
-                f"Unsupported module type: {module_type}. "
-                f"Supported: 'dynamic', 'pipeline'."
+                f"Unsupported module type: {module_type}. Supported: 'dynamic', 'pipeline'."
             )
 
     def _validate_metric_fields(self, eval_fields: list, output_fields: list) -> None:
@@ -317,9 +313,7 @@ class ReflexioDeclarativa:
 
         # STEP 5: Baseline
         print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
-        log_info(
-            f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)..."
-        )
+        log_info(f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)...")
         evaluator_val = Evaluate(
             devset=self.valset, metric=self.metric, num_threads=num_threads, display_progress=True
         )
@@ -359,18 +353,14 @@ class ReflexioDeclarativa:
         )
 
         if len(self.testset) > 0:
-            log_info(
-                f"Verificando generalizacion en test (k={self.eval_repeats})..."
-            )
+            log_info(f"Verificando generalizacion en test (k={self.eval_repeats})...")
             evaluator_test = Evaluate(
                 devset=self.testset,
                 metric=self.metric,
                 num_threads=num_threads,
                 display_progress=True,
             )
-            test_score, test_range = self._eval_repeated(
-                evaluator_test, self.optimized_student
-            )
+            test_score, test_range = self._eval_repeated(evaluator_test, self.optimized_student)
             print_kv(
                 "Test accuracy",
                 f"{self._format_score(test_score)} (rango {test_range:.1f} pp)",
@@ -381,9 +371,7 @@ class ReflexioDeclarativa:
             test_range = 0.0
 
         self.prompt_changed = prompt_changed
-        self.effective_delta = (
-            (optimized_score - baseline_score) if prompt_changed else 0.0
-        )
+        self.effective_delta = (optimized_score - baseline_score) if prompt_changed else 0.0
         self.save_results(baseline_score, optimized_score, test_score)
 
         # Resumen final unificado (mismo formato que gepa_standalone).

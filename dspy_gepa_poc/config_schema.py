@@ -196,19 +196,14 @@ class ConfigValidator(BaseConfigValidator):
 
         gate_stage = routing.get("gate_stage")
         if gate_stage and gate_stage not in stage_names:
-            errors.append(
-                f"routing.gate_stage='{gate_stage}' not in stages: {stage_names}."
-            )
+            errors.append(f"routing.gate_stage='{gate_stage}' not in stages: {stage_names}.")
 
         gate_field = routing.get("gate_field")
         if gate_stage and gate_field:
-            gate_stage_cfg = next(
-                (s for s in stages if s.get("name") == gate_stage), None
-            )
+            gate_stage_cfg = next((s for s in stages if s.get("name") == gate_stage), None)
             if gate_stage_cfg:
                 gate_outputs = [
-                    o.get("name")
-                    for o in gate_stage_cfg.get("signature", {}).get("outputs", [])
+                    o.get("name") for o in gate_stage_cfg.get("signature", {}).get("outputs", [])
                 ]
                 if gate_field not in gate_outputs:
                     errors.append(
@@ -224,8 +219,7 @@ class ConfigValidator(BaseConfigValidator):
                 post_outputs: list[str] = []
                 for stage in stages[gate_idx + 1 :]:
                     post_outputs.extend(
-                        o.get("name")
-                        for o in stage.get("signature", {}).get("outputs", [])
+                        o.get("name") for o in stage.get("signature", {}).get("outputs", [])
                     )
                 for k in skip.keys():
                     if k not in post_outputs:

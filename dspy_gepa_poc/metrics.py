@@ -301,9 +301,7 @@ def create_pipeline_metric_with_feedback(
                 f"Validos: {sorted(_VALID_FIELD_MODES)}"
             )
 
-    def _evaluate_group(
-        example: Any, pred: Any, fields: list[str]
-    ) -> tuple[float, int, list[str]]:
+    def _evaluate_group(example: Any, pred: Any, fields: list[str]) -> tuple[float, int, list[str]]:
         """Devuelve (score_promedio, perfectos, diagnosticos)."""
         if not fields:
             return 1.0, 0, []
@@ -342,8 +340,7 @@ def create_pipeline_metric_with_feedback(
             parts: list[str] = []
             t_total = len(triage_fields)
             parts.append(
-                f"Triage: {triage_ok}/{t_total} campos perfectos "
-                f"(score {triage_avg:.2f})."
+                f"Triage: {triage_ok}/{t_total} campos perfectos (score {triage_avg:.2f})."
             )
             if triage_diag:
                 parts.append("Errores triage:")
@@ -351,17 +348,13 @@ def create_pipeline_metric_with_feedback(
             if is_avanza and fastgate_fields:
                 fg_total = len(fastgate_fields)
                 parts.append(
-                    f"Fast Gate: {fg_ok}/{fg_total} campos perfectos "
-                    f"(score {fg_avg:.2f})."
+                    f"Fast Gate: {fg_ok}/{fg_total} campos perfectos (score {fg_avg:.2f})."
                 )
                 if fg_diag:
                     parts.append("Errores fast_gate:")
                     parts.extend(fg_diag)
             elif not is_avanza:
-                parts.append(
-                    f"Fast Gate: omitido (caso de triage='{expected_gate}', "
-                    f"no avanza)."
-                )
+                parts.append(f"Fast Gate: omitido (caso de triage='{expected_gate}', no avanza).")
             header = f"Score total {avg:.2f}."
             feedback = header + "\n" + "\n".join(parts)
             return {"score": avg, "feedback": feedback}
