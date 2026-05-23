@@ -200,6 +200,7 @@ La optimizacion reflexiva (GEPA) es el factor dominante en la mejora, no la infr
 2.  **Propagación de Errores:** En un flujo multietapa, un error en la Capa 1 (ej: mala clasificación) se amplifica en la Capa 2. Por ello, la Capa 1 debe ser la más robusta (usar `ChainOfThought`).
 3.  **Análisis de ROI Crítico:** Los flujos multietapa consumen significativamente más tokens. El Leaderboard debe usarse para verificar si el incremento en Accuracy justifica el múltiplo de costo (ej: ¿vale la pena pagar 3x tokens por un +5% de precisión?).
 4.  **Lógica Condicional como Optimizador:** Implementar lógica condicional no solo mejora la calidad, sino que es una herramienta de ahorro de costos. Permite derivar casos simples a modelos baratos y reservar los flujos complejos para casos críticos.
+5.  **Segmentar para optimizar honestamente:** Optimizar dos funciones con una sola métrica unificada hace que GEPA proponga prompts de compromiso y que el gate estructural contamine el baseline (los casos que no avanzan rellenan campos "gratis"). El caso unificado de intake se discontinuó por esto y se segmentó en `triage_v1` + `fast_gate_v1`. Ver `FAST_GATE_SEGMENTACION.md`.
 
 ### Archivos relacionados
 

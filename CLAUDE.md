@@ -15,6 +15,7 @@ A continuación se lista la documentación disponible en `docs/`. Cada archivo a
 - **`docs/METADATA_REPRODUCIBILIDAD.md`**: SSOT para metadata de reproducibilidad en 3 niveles (environment, experiment, run). Seeds, hashes de dataset, versiones de frameworks.
 - **`docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md`**: SSOT para la arquitectura de integracion y metodologia de 3 conjuntos. Analisis detallado de diferencias entre GEPA standalone y DSPy.
 - **`docs/LECCIONES_APRENDIDAS.md`**: Recopilacion de hallazgos criticos, errores comunes (metrica exacta, efecto techo) y comparativas de rendimiento (ingles vs espanol) obtenidos durante la experimentacion.
+- **`docs/FAST_GATE_SEGMENTACION.md`**: SSOT de la decision de segmentar el caso unificado de intake en `triage_v1` + `fast_gate_v1`. Razones, cifras del historico y orquestacion en cascada.
 
 ### DSPy (Framework)
 - **`docs/DSPY_DOCUMENTACION.md`**: Visión general de DSPy, arquitectura, conceptos core y flujo de trabajo.

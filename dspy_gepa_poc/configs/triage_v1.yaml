@@ -1,0 +1,62 @@
+case:
+  name: "Triage v1"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Analiza la ficha de intent y decide su triage segun el Marco de Gobierno
+    de IA. Examina solidez (Paso 1), factibilidad (Paso 2) y chequeos
+    especiales (§7.4, §9.2).
+
+    Guia de decisiones:
+    - avanza_fast_gate: solidez y factibilidad suficientes; pasa al Fast Gate.
+    - devolucion_reformulacion: falla solidez en Paso 1 (campo ausente, intent
+      describe tecnologia en vez de resultado, sin sponsor, metricas no
+      medibles).
+    - devolucion_no_ia: el intent no requiere IA (mejora de proceso/BPM).
+    - no_avanza: factibilidad insuficiente en Paso 2 (proveedor fuera de
+      jurisdiccion, restricciones no negociables).
+    - avanza_con_redisenio: factibilidad alcanzable con rediseno (Paso 2).
+    - rechazo_formal: uso prohibido §9.2 (variables discriminatorias,
+      atributos protegidos en decision de acceso).
+    - derivar_preclasificado: caso identico a uno pre-clasificado en catalogo
+      N2 §7.4.
+
+    triage_etapa indica la fase donde se determino la decision.
+  inputs:
+    - name: "text"
+      desc: "Ficha completa de intent (todos los campos declarados)."
+  outputs:
+    - name: "triage_decision"
+      desc: "Una de: avanza_fast_gate, devolucion_reformulacion, devolucion_no_ia, no_avanza, avanza_con_redisenio, rechazo_formal, derivar_preclasificado."
+    - name: "triage_etapa"
+      desc: "Una de: paso_1, paso_2, fast_gate, seccion_9_2."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de la decision de triage."
+
+data:
+  csv_filename: "triage_v1.csv"
+  input_columns:
+    - "text"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 90
+  predictor_type: "cot"
+  match_mode: "normalized"
+  metric_feedback: true
+  eval_repeats: 1
+  ignore_in_metric:
+    - "razonamiento"
+  field_configs:
+    triage_decision: { mode: "exact" }
+    triage_etapa: { mode: "exact" }

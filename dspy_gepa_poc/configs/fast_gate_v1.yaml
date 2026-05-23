@@ -1,0 +1,72 @@
+case:
+  name: "Fast Gate v1"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    La ficha ya paso el triage (avanza_fast_gate). Evalua los 5 criterios
+    P1-P5 sobre la ficha y deriva el color segun la matriz del Marco.
+
+    P1: hay impacto sobre personas (clientes o empleados como sujetos)?
+    P2: afecta tipos de persona definidos (cliente, empleado, corporativo)?
+    P3: usa modelo/LLM externo sin homologar al momento del analisis?
+    P4: procesa datos personales o confidenciales?
+    P5: actua sin revision humana previa por caso (revision ex-post o ninguna)?
+
+    Cada Pi toma valor 'si' o 'No' (P3 ya fue desambiguado en los datos; no
+    usar 'Ambiguo').
+
+    Matriz simplificada:
+    - P1=No -> Verde.
+    - P1=si, criterios moderados -> Amarillo.
+    - P1=si + (P3=si o P4=si con criticidad alta) -> Rojo.
+    - P1=si + P5=si (sin revision humana previa) -> Negro (escalada §7.3).
+  inputs:
+    - name: "text"
+      desc: "Ficha completa de intent."
+  outputs:
+    - name: "p1"
+      desc: "'si' o 'No'."
+    - name: "p2"
+      desc: "'si' o 'No'."
+    - name: "p3"
+      desc: "'si' o 'No'."
+    - name: "p4"
+      desc: "'si' o 'No'."
+    - name: "p5"
+      desc: "'si' o 'No'."
+    - name: "clasificacion"
+      desc: "Una de: Verde, Amarillo, Rojo, Negro."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de la clasificacion."
+
+data:
+  csv_filename: "fast_gate_v1.csv"
+  input_columns:
+    - "text"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 90
+  predictor_type: "cot"
+  match_mode: "normalized"
+  metric_feedback: true
+  eval_repeats: 1
+  ignore_in_metric:
+    - "razonamiento"
+  field_configs:
+    p1: { mode: "exact" }
+    p2: { mode: "exact" }
+    p3: { mode: "exact" }
+    p4: { mode: "exact" }
+    p5: { mode: "exact" }
+    clasificacion: { mode: "exact" }

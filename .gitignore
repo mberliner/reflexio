@@ -162,5 +162,8 @@ cython_debug/
 **/results/
 shared/analysis/output/
 
+# Archivo local de runs historicos (copias de results/ preservadas fuera de git)
+docs/historico/
+
 # Presentation
 *.pptx
