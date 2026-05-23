@@ -124,7 +124,31 @@ class SimpleExtractorAdapter(BaseAdapter):
                 # Connection-level failure: abort optimization
                 raise
             except Exception as e:
-                print(f"[WARNING] Error técnico en ejemplo {idx}, descartando: {e}")
+                # NO descartar: GEPA assertea len(outputs)==len(val_ids).
+                # Score 0 + outputs sentinela preservan el alineamiento.
+                print(f"[WARNING] Error técnico en ejemplo {idx}, score=0: {e}")
+                outputs.append(
+                    {
+                        "extracted": {},
+                        "expected": example.get("extracted", {}),
+                        "field_comparisons": {},
+                        "text": example.get("text", ""),
+                        "error": str(e),
+                    }
+                )
+                scores.append(0.0)
+                if capture_traces:
+                    trajectories.append(
+                        {
+                            "input": example.get("text", ""),
+                            "expected_fields": example.get("extracted", {}),
+                            "extracted_fields": {},
+                            "field_comparisons": {},
+                            "system_prompt": system_prompt,
+                            "score": 0.0,
+                            "error": str(e),
+                        }
+                    )
 
         if not scores:
             raise RuntimeError(

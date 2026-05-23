@@ -8,6 +8,10 @@
 #   bash scripts/run_fast_gate_benchmark.sh
 
 set -u
+# pipefail: el exit code de "python | sed | tee" toma el de tee (siempre 0)
+# si no se activa; con pipefail, propaga el primer fallo de la pipeline →
+# wait $pid captura el rc real del python, no del tee.
+set -o pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_DIR="$REPO_ROOT/scripts/benchmark_logs"
