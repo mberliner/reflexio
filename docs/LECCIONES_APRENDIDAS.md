@@ -334,3 +334,74 @@ Las palancas restantes son data-centric o de instrucción específica — no de 
 - Configs: `dspy_gepa_poc/configs/dynamic_cv_profile.yaml`, `dynamic_cv_triage.yaml`
 - Datasets: `dspy_gepa_poc/datasets/cv_profile.csv` (45 filas), `cv_triage.csv`
 - Scripts: `dspy_gepa_poc/scripts/per_field_accuracy.py`, `baseline_only.py`, `build_cv_profile.py`
+
+## 9. Protocolo de N seeds sobre los casos CV v2 (señal vs ruido)
+
+Validación del protocolo de N seeds (ver `PROTOCOLO_N_SEEDS.md`) sobre los tres
+casos CV con configs `_v2`: baseline congelado + `eval_repeats: 3` + una sola
+intervención por caso. Cada caso se corrió con **5 seeds**. Objetivo: medir
+varianza real y separar mejora de suerte, no maximizar el score de una corrida.
+
+**Modelos:** task `gpt-5-mini`, reflection `gpt-5` (los tres casos).
+
+### Resultados (2026-05-30, N=5 por caso)
+
+| Caso | Baseline | Optimizado (val) | Robustez (test) | Gap val-test |
+|---|---|---|---|---|
+| `cv_extraction_v2` (GEPA, test=20) | 52.7 ±1.3 (σ0.42) | 79.5 ±6.0 (σ2.0) | **81.5 ±2.0 (σ0.86)** | −2.0 |
+| `cv_profile_v2` (DSPy, test=8) | ~91.2 | 93.3 ±1.7 (σ0.57) | **91.2 ±4.5 (σ1.58)** | +2.0 |
+| `cv_triage_v2` (DSPy, test=21) | 100 | 100 ±0 (σ0) | **97.8 ±4.8 (σ1.62)** | +2.2 |
+
+(media ± rango, σ = desvío poblacional. Gap = media Opt − media Rob.)
+
+### Hallazgos
+
+**Extraction: el test ampliado vuelve fiable la medición.** Sobre test=20 la
+robustez tiene rango 2 pts (σ0.86), contra los ~40 pts de rango que daba el
+histórico sobre test=3. Recorrido real (52.7 → 81.5) y sin sobreajuste (gap −2,
+el test rinde mejor que val). Confirma la lección del techo invertida: cuando hay
+margen y la métrica es fiable, GEPA aporta de forma reproducible.
+
+**Profile: el sobreajuste se domó, el techo persiste.** El gap val-test bajó a
++2 pts (en el histórico v1 llegaba a ~9) y las 5 corridas tienen Opt > Baseline
+(en v1 varias tenían Opt < Baseline). Pero la robustez (91.2) ≈ baseline (91.2):
+la ganancia de ~2 pts en val no se traslada a test. Subir umbrales fuzzy
+(`industria_previa`/`educacion_principal` → 0.85) + `eval_repeats` mejoró la
+**consistencia**, no el techo. El caso sigue resuelto al ~91% (ver sección 8).
+
+**Triage: el modelo más potente sube la tarea al techo en el baseline.** Con
+`gpt-5-mini` el baseline da 100% en val y GEPA no tiene nada que optimizar
+(delta cero, WARN "no modificó las instructions"). La robustez 97.8% equivale a
+fallar ~1 de 21 en test. Contraste directo con el histórico v1 (task
+`gpt-4.1-mini`): allí el baseline era 50-75% y el optimizado oscilaba 66-100%.
+El dataset v2, aunque tiene ruido de la vida real, no es lo bastante difícil para
+`gpt-5-mini`: separa `fit_alto`/`fit_medio`/`no_fit` trivialmente.
+
+### Lecciones
+
+- **El techo se mueve con el modelo, no solo con los datos.** La misma tarea de
+  triage que con `gpt-4.1-mini` tenía margen (+25 pp via GEPA, sección 8) pasa a
+  saturar el baseline con `gpt-5-mini`. Antes de diseñar un experimento de
+  optimización, fijar el par tarea/modelo: un dataset "difícil" para un modelo
+  puede ser trivial para otro.
+- **Para que triage sea un caso de optimización útil con `gpt-5-mini`** hace falta
+  o casos frontera más ambiguos (alto/medio), o bajar el task model a
+  `gpt-4.1-mini` para recrear headroom comparable al v1.
+- **El protocolo cumple su función:** con N=5 distingue "GEPA aporta y generaliza"
+  (extraction) de "no hay nada que optimizar" (triage, profile), algo que una
+  corrida única no podía mostrar.
+
+### Caveat de datos
+
+Los datasets `cv_triage_v2.csv` (test 7/7/7) y `cv_extraction_v2.csv` (test=20)
+fueron redactados por un modelo distinto a los bajo prueba (Claude) con ruido de
+la vida real, y llevan la columna `gold_verificado="no"`: el gold es BORRADOR
+pendiente de revisión humana. El hallazgo "triage está en techo" es robusto, pero
+con baseline 100 un gold mal etiquetado podría enmascarar errores; revisar el gold
+antes de cerrar conclusiones cuantitativas finas.
+
+### Archivos relacionados
+
+- Protocolo: `shared/utils/seed_protocol.py`, `docs/PROTOCOLO_N_SEEDS.md`
+- Configs: `dynamic_cv_profile_v2.yaml`, `dynamic_cv_triage_v2.yaml`, `cv_extraction_v2.yaml`
+- Datasets: `cv_triage_v2.csv`, `cv_extraction_v2.csv` (generados por `shared/utils/build_cv_v2_datasets.py`)
