@@ -1,0 +1,691 @@
+split,cv_text,job_description,fit_label,justificacion,gold_verificado
+train,"MARTIN GOMEZ
+martin.gomez@gmail.com | Buenos Aires, Argentina
+
+Backend Senior. 7 años con Python.
+Django, FastAPI, PostgreSQL, Docker, AWS.
+Ingles C1 (trabaje 2 años con equipo en USA).
+Referencias a pedido.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"Python senior en LATAM, Django/FastAPI+PostgreSQL e ingles C1: cumple todo.",no
+train,"Lucia Fernandez
+Senior Software Engineer (Backend)
+CDMX, Mexico - lucia.fernandez@outlook.com
+6 anios desarrollando APIs REST con FastAPI y Django.
+PostgreSQL, Celery, Docker.
+Ingles B2 certificado (EF SET).","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"6 años Python, FastAPI/Django, PostgreSQL, ingles B2, residente en Mexico (LATAM).",no
+train,"CARLOS RUIZ
+bogota, colombia
+carlosruiz dev @ proton.me
+
+8 years backend python. django rest framework, postgres, microservicios.
+advanced english. aws (eks, lambda).","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"8 años Python/Django, PostgreSQL, microservicios, ingles avanzado, en Colombia.",no
+train,"Ana Paula Souza
+Montevideo, Uruguay
+ap.souza@empresa.com.uy
+Ingeniera de Software | 9 anos | Python
+Django, FastAPI, PostgreSQL, AWS, Celery
+Ingles fluido (vivi 3 anos en Canada)","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"9 años Python, stack completo, ingles fluido, Uruguay: cumple todos los requisitos.",no
+val,"Diego Torres - diego.torres@mail.com
+Santiago de Chile
+5 años Python backend. FastAPI + PostgreSQL. Docker.
+Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"5 años Python, FastAPI+PostgreSQL, ingles B2, Chile: cumple el minimo de todo.",no
+val,"RODRIGO MENDES
+Lima, Peru
+rodrigo_mendes@gmail.com
+Backend dev senior, 6 yrs. Django y FastAPI. Postgres. REST APIs.
+English B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"6 años Python con Django/FastAPI, PostgreSQL, ingles B2, residente en Peru.",no
+test,"Sofia Ramirez
+remoto desde Cordoba, Argentina
+sofia.ramirez88@gmail.com
+7 anios Python. Django REST, PostgreSQL, Celery, Docker.
+Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"7 años Python/Django, PostgreSQL, ingles C1, Argentina (LATAM): cumple todo.",no
+test,"GABRIEL SILVA
+Florianopolis, Brasil | gabriel.silva@dev.br
+Senior Backend Engineer - 8 anos - Python
+FastAPI, Django, PostgreSQL, AWS, Docker
+Ingles avanzado (B2/C1).","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"8 años Python, FastAPI/Django+PostgreSQL, ingles avanzado, Brasil (LATAM).",no
+test,"valentina lopez
+quito, ecuador
+valentina.lopez@correo.ec
+6 anos backend python, django, fastapi, postgresql, redis, docker
+ingles b2","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"6 años Python con Django/FastAPI, PostgreSQL, ingles B2, Ecuador: cumple.",no
+train,"PEDRO ALVAREZ
+Buenos Aires, Argentina
+pedro.alvarez@gmail.com
+6 años Python. Django, PostgreSQL, Docker.
+Ingles basico (A2), en mejora.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Cumple nucleo tecnico (Python senior, Django, PG, LATAM) pero ingles A2 < B2.",no
+train,"Marta Gil
+Madrid, España - marta.gil@empresa.es
+Backend Python, 7 anios. Django, FastAPI, PostgreSQL. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Stack e ingles perfectos pero reside en España, fuera de LATAM (GMT+1).",no
+train,"JUAN DAVID MORENO
+Medellin, Colombia
+juandavid@mail.com
+3 años de experiencia. Python con FastAPI. PostgreSQL. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,Cumple stack/idioma/ubicacion pero 3 años no alcanza el seniority de 5+.,no
+val,"Bruno Costa - bruno.costa@webmail.com
+Sao Paulo, Brasil
+Senior backend, 7 anos. Stack: Flask, PostgreSQL, Docker. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Senior Python en LATAM con ingles B2 pero usa Flask (stack adyacente, no Django/FastAPI).",no
+val,"CAMILA HERRERA
+Lima, Peru | camila.herrera@gmail.com
+Python backend 6 años. Django, PostgreSQL.
+(no se menciona nivel de ingles)","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,Nucleo tecnico y ubicacion OK pero no acredita ingles B2 (requisito excluyente).,no
+test,"Nicolas Pereyra
+Montevideo, Uruguay
+nico.pereyra@mail.uy
+4 anios Python. Django REST, PostgreSQL, Docker. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Stack, idioma y ubicacion OK pero 4 años queda por debajo del minimo de 5+.",no
+test,"ANDREA NUNEZ
+barcelona, españa
+andrea.nunez@correo.es
+Python senior 8 anos. FastAPI, Django, PostgreSQL. English C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,Perfil tecnico ideal pero residencia en España (fuera de LATAM).,no
+test,"Felipe Vargas
+Valparaiso, Chile - felipe.vargas@gmail.com
+6 años Python. Django, PostgreSQL. Ingles A2 (lectura tecnica solamente).","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Senior Python/Django/PG en LATAM pero ingles A2, debajo del B2 requerido.",no
+train,"ESTEBAN DIAZ
+Buenos Aires, Argentina
+esteban.diaz@gmail.com
+Backend Java/Spring Boot, 8 años. PostgreSQL, microservicios. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Perfil backend solido pero en Java/Spring, no Python: lenguaje desalineado.",no
+train,"Paula Castro - paula.castro@mail.com
+CDMX, Mexico
+Frontend Developer. 6 anios. React, Angular, TypeScript, CSS. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Disciplina frontend, no backend Python; el aviso excluye frontend.",no
+train,"RICARDO GOMEZ
+bogota
+ricardo.gomez@webmail.com
+7 años PHP / Laravel. MySQL. APIs REST. Ingles B1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Backend pero en PHP/Laravel, no Python: lenguaje desalineado.",no
+val,"Mariana Lopez
+Santiago, Chile
+mariana.lopez@datos.cl
+Data Scientist. 5 anos Python (pandas, scikit-learn, TensorFlow). SQL. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,Usa Python pero en data science (excluido en el aviso); no es backend web.,no
+val,"JORGE RAMOS - jorge.ramos@mail.com
+Lima, Peru
+Desarrollador .NET / C#, 9 años. SQL Server. Azure. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Backend en .NET/C#, no Python: lenguaje desalineado.",no
+test,"Tomas Aguirre
+Buenos Aires
+tomas.aguirre@gmail.com
+QA Automation Engineer, 6 anios. Selenium, algo de Python para scripts. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Perfil QA (excluido) y Python solo para scripting, no desarrollo backend.",no
+test,"LAURA MENDEZ
+mexico city
+laura.mendez@correo.mx
+DevOps / SRE, 7 anos. Terraform, Kubernetes, Bash, Go. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Disciplina DevOps/SRE, no desarrollo backend con Python.",no
+test,"Sebastian Rios - sebastian.rios@mail.com
+Madrid, España
+Mobile dev (Android/Kotlin), 5 años. Ingles A2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Disciplina mobile (excluida), fuera de LATAM e ingles A2: multiples fallos criticos.",no
+test,"CAROLINA FUENTES
+bogota, colombia
+carolina.fuentes@gmail.com
+Backend Ruby on Rails, 6 anios. PostgreSQL, REST. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Backend solido pero en Ruby on Rails, no Python: lenguaje desalineado.",no
+test,"Hernan Vega
+rosario, argentina
+hernan.vega@webmail.com
+Analista funcional / PM tecnico, 10 anos. SQL, Excel, Jira. Ingles B1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Rol funcional/PM, no desarrollo backend Python: disciplina desalineada.",no
+test,"Mariano Castro
+Asuncion, Paraguay
+mariano.castro@mail.com.py
+6 anios Python backend. Django, FastAPI, PostgreSQL. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"6 años Python con Django/FastAPI, PostgreSQL, ingles B2, Paraguay (LATAM).",no
+test,"DANIELA ORTIZ
+La Paz, Bolivia | daniela.ortiz@correo.bo
+7 years senior backend. FastAPI, PostgreSQL, Docker, Celery. English C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"7 años Python/FastAPI, PostgreSQL, ingles C1, Bolivia: cumple todo.",no
+test,"ignacio funes
+remoto desde mendoza, argentina
+ignacio.funes@gmail.com
+5 anos python. django rest framework, postgresql, aws. ingles b2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"5 años Python/Django, PostgreSQL, AWS, ingles B2, Argentina: cumple el minimo.",no
+test,"Renata Lima - renata.lima@dev.br
+Recife, Brasil
+9 anos Python. Django, PostgreSQL, microservicios, Docker. Ingles avanzado.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"9 años Python/Django, PostgreSQL, microservicios, ingles avanzado, Brasil.",no
+test,"Oscar Mendez
+ciudad de guatemala, guatemala
+oscar.mendez@mail.gt
+4 años Python. Django, PostgreSQL, Docker. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Stack, idioma y ubicacion OK pero 4 años no alcanza el seniority de 5+.",no
+test,"PATRICIA ROJAS
+San Jose, Costa Rica
+patricia.rojas@correo.cr
+6 anios Python senior. Django, PostgreSQL. Ingles A2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Senior Python/Django/PG en LATAM pero ingles A2, debajo del B2 requerido.",no
+test,"Joao Almeida
+Lisboa, Portugal - joao.almeida@mail.pt
+7 anos Python. FastAPI, PostgreSQL. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Perfil tecnico ideal pero reside en Portugal, fuera de LATAM.",no
+test,"MONICA SALAS
+Lima, Peru
+monica.salas@gmail.com
+8 años Python senior. Flask + SQLAlchemy, PostgreSQL, Docker. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Senior Python en LATAM con ingles B2 pero usa Flask (stack adyacente, no Django/FastAPI).",no
+test,"Bruno Tavares
+bogota, colombia
+bruno.tavares@webmail.com
+7 anios backend en Go (Golang). gRPC, PostgreSQL, Kubernetes. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Backend solido pero en Go, no Python: lenguaje desalineado.",no
+test,"Veronica Luna - veronica.luna@mail.com
+Santiago, Chile
+6 años como desarrolladora Salesforce / low-code. Apex, flujos. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Disciplina Salesforce/low-code, no backend Python: perfil desalineado.",no
+val,"Emilia Rojas
+Tegucigalpa, Honduras | emilia.rojas@correo.hn
+6 anios Python backend. Django, FastAPI, PostgreSQL, Docker. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"6 años Python con Django/FastAPI, PostgreSQL, ingles B2, Honduras (LATAM).",no
+val,"JAVIER MOLINA
+Caracas, Venezuela
+javier.molina@mail.com.ve
+8 years senior Python. Django, PostgreSQL, microservicios. English C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_alto,"8 años Python/Django, PostgreSQL, microservicios, ingles C1, Venezuela (LATAM).",no
+val,"Lucas Benitez
+Ciudad de Panama, Panama
+lucas.benitez@correo.pa
+4 años Python. Django, PostgreSQL, Docker. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Stack, idioma y ubicacion OK pero 4 años no alcanza el seniority de 5+.",no
+val,"ROMINA CACERES
+Rosario, Argentina - romina.caceres@gmail.com
+7 anios Python senior. FastAPI, PostgreSQL, Celery. Ingles A2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",fit_medio,"Senior Python/FastAPI/PG en LATAM pero ingles A2, debajo del B2 requerido.",no
+val,"Damian Ferreyra
+Lima, Peru
+damian.ferreyra@webmail.com
+5 años como desarrollador frontend. Vue, React, JavaScript, CSS. Ingles B2.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Disciplina frontend, no backend Python; el aviso excluye frontend.",no
+val,"NORA SANTILLAN
+bogota, colombia
+nora.santillan@correo.co
+9 anios en sistemas embebidos. C, C++, microcontroladores, RTOS. Ingles C1.","Backend Senior (Python) - Equipo distribuido LATAM
+
+Buscamos backend senior con foco en Python para un equipo distribuido en LATAM.
+
+Requisitos excluyentes:
+- 5+ años de experiencia en backend con Python.
+- Solidez en Django y/o FastAPI.
+- PostgreSQL y diseño de APIs REST.
+- Ingles tecnico B2 o superior (equipo internacional, docs en ingles).
+- Residencia en LATAM (zona horaria GMT-3 a GMT-6).
+
+Deseable: Docker, AWS, Celery, microservicios.
+No aplica para perfiles de frontend, mobile, data science ni QA.",no_fit,"Disciplina embebidos en C/C++, no backend Python: perfil desalineado.",no

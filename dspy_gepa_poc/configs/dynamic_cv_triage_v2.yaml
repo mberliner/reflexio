@@ -1,0 +1,63 @@
+# Config v2 para protocolo de N seeds. Ver shared/utils/seed_protocol.py
+#
+# Diagnostico: robustez "100%" enganosa por dataset diminuto (test=8) y
+# desbalanceado (no_fit:6, fit_alto:1, fit_medio:1 en test) + GEPA "ciego"
+# (match exact sin feedback) -> seleccion volatil del optimizado (66->100).
+#
+# Intervenciones respecto del baseline:
+#   1. csv_filename: cv_triage_v2.csv  -> PREREQUISITO: dataset ampliado y
+#      balanceado por clase (objetivo test>=20, ~parejo entre fit_alto/fit_medio/no_fit).
+#      Curar ejemplos REALES; no fabricar para no invalidar la medicion de robustez.
+#   2. eval_repeats: 3                 -> baja ruido de muestreo del LLM.
+#   3. metric_feedback: true           -> emite "fit_label esperado X / predijo Y"
+#      para que el reflection_lm construya una rubrica de decision estable.
+# Criterio de exito: macro-F1 (no accuracy global) ↑ y rango entre seeds ↓.
+case:
+  name: "CV Triage v2 (Backend Senior Python LATAM)"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: "Dada una descripcion de puesto (job_description) y el texto de un CV (cv_text), clasifica el grado de fit del candidato como uno de tres valores exactos: 'fit_alto', 'fit_medio', 'no_fit'. Tambien produce una justificacion corta (1-2 oraciones) citando evidencia concreta del CV.\n\nCriterios:\n- fit_alto: cumple stack tecnico, seniority, idiomas y ubicacion sin observaciones.\n- fit_medio: cumple el nucleo tecnico pero falla en al menos un requisito (idioma, seniority, ubicacion, o stack adyacente).\n- no_fit: perfil tecnico desalineado (otro lenguaje, otra disciplina) o falla en multiples requisitos criticos.\n\nNo inventes informacion que el CV no menciona."
+  inputs:
+    - name: "cv_text"
+      desc: "Texto completo del CV del candidato."
+    - name: "job_description"
+      desc: "Descripcion del puesto a cubrir, con requisitos de stack, seniority, idiomas, ubicacion e industria."
+  outputs:
+    - name: "fit_label"
+      desc: "Clasificacion exacta. Valores permitidos: 'fit_alto', 'fit_medio', 'no_fit'."
+    - name: "justificacion"
+      desc: "Justificacion corta (1-2 oraciones) citando evidencia del CV que respalda la clasificacion."
+
+data:
+  # PREREQUISITO: crear dataset balanceado/ampliado (test>=20, clases parejas).
+  csv_filename: "cv_triage_v2.csv"
+  input_columns:
+    - "cv_text"
+    - "job_description"
+
+adapter:
+  max_text_length: 2500
+  max_positive_examples: 3
+
+optimization:
+  max_metric_calls: 60
+  auto_budget: "medium"
+  use_few_shot: true
+  few_shot_count: 3
+  # Promedia val/test sobre 3 evaluaciones para reducir ruido de muestreo.
+  eval_repeats: 3
+  ignore_in_metric:
+    - "justificacion"
+  match_mode: "exact"
+  # Habilita feedback textual: GEPA deja de estar ciego en la clasificacion.
+  metric_feedback: true
+  field_configs:
+    fit_label: { mode: "exact" }

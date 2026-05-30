@@ -1,0 +1,81 @@
+# Config v2 para protocolo de N seeds. Ver shared/utils/seed_protocol.py
+#
+# Hipotesis (efecto techo + sobreajuste): con baseline ~92% la ganancia de GEPA
+# cae dentro del ruido y a veces el optimizado generaliza peor que el baseline
+# (val sube / test baja). Intervencion UNICA respecto del baseline:
+#   1. eval_repeats: 3   -> promedia val/test, baja ruido de muestreo del LLM.
+#   2. umbrales fuzzy mas estrictos en los campos sospechosos de dar credito
+#      parcial que no generaliza (industria_previa 0.70->0.85, educacion 0.75->0.85).
+# Criterio de exito: gap val-test <= 3 pts consistente y sin opt < baseline.
+# NOTA: si per_field_accuracy.py senala otros campos como culpables, mover el
+# ajuste de umbral a esos campos. Todo lo demas queda CONGELADO igual al baseline.
+case:
+  name: "CV Profile Extraction v2 (Espanol)"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: "Extrae un perfil estructurado del candidato a partir del texto del CV. Identifica los datos personales, experiencia profesional, stack tecnico, idiomas, ubicacion e industria previa. Si un campo no esta explicitamente mencionado en el CV, devolvelo como cadena vacia. No inventes informacion."
+  inputs:
+    - name: "text"
+      desc: "El texto completo del CV del cual extraer el perfil del candidato."
+  outputs:
+    - name: "nombre"
+      desc: "El nombre completo del candidato, sin honorificos ni titulos academicos (Dr., Lic., Ing., La Dra., etc.)."
+    - name: "email"
+      desc: "La direccion de email de contacto."
+    - name: "años_experiencia"
+      desc: "Total de años de experiencia profesional (como numero entero, sin texto adicional)."
+    - name: "skills"
+      desc: "Lista de habilidades y tecnologias mencionadas, separadas por coma."
+    - name: "educacion_principal"
+      desc: "Titulo academico mas alto e institucion (formato: 'Titulo, Institucion')."
+    - name: "seniority_declarado"
+      desc: "Nivel de seniority si esta declarado explicitamente en el CV. Valores posibles: junior, semi_senior, senior, lead. Cadena vacia si no esta declarado."
+    - name: "stack_principal"
+      desc: "Competencias y tecnologias principales separadas por punto y coma. Incluir tanto herramientas tecnicas como habilidades funcionales clave del candidato (ej: 'Modelado Financiero', 'Negociacion de Contratos', 'Generacion de Leads', 'Planificacion de Roadmap'). Si el CV indica años de experiencia por tecnologia, usar formato 'Tecnologia:años' (ej: 'Python:5; Django:3'). Si no, solo el nombre."
+    - name: "idiomas"
+      desc: "Idiomas con su nivel, separados por punto y coma. Formato: 'idioma:nivel' (ej: 'español:nativo; inglés:b2'). Cadena vacia si no se mencionan."
+    - name: "ubicacion"
+      desc: "Ciudad y pais de residencia actual del candidato (ej: 'Buenos Aires, Argentina'), solo si lo declara explicitamente. No inferir desde el dominio del email ni desde menciones de origen historico. Cadena vacia si no esta declarado explicitamente."
+    - name: "industria_previa"
+      desc: "Sector economico o disciplina tecnica principal del candidato, claramente inferible del texto del CV (rol, empresa, descripcion). Puede ser un sector (ej: 'Fintech', 'E-commerce', 'Retail') o una disciplina (ej: 'Full Stack', 'Data Engineering', 'Diseño UX'). Si el candidato es estudiante sin experiencia sectorial clara, usar 'Estudiante'. Cadena vacia solo si no hay informacion suficiente para inferirlo."
+
+data:
+  csv_filename: "cv_profile.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 2000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 50
+  auto_budget: "heavy"
+  use_few_shot: true
+  few_shot_count: 2
+  # Promedia val/test sobre 3 evaluaciones para reducir ruido de muestreo.
+  eval_repeats: 3
+  ignore_in_metric: [seniority_declarado]
+  match_mode: "normalized"
+  fuzzy_threshold: 0.88
+  metric_feedback: true
+  field_configs:
+    nombre: { mode: "normalized" }
+    email: { mode: "normalized" }
+    años_experiencia: { mode: "exact" }
+    skills: { mode: "set", separators: ",;" }
+    # Subido de 0.75 a 0.85: menos credito parcial que no generaliza a test.
+    educacion_principal: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    seniority_declarado: { mode: "exact" }
+    stack_principal: { mode: "set", separators: ";," }
+    idiomas: { mode: "set", separators: ";," }
+    ubicacion: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    # Subido de 0.70 a 0.85: campo sospechoso de inflar val y caer en test.
+    industria_previa: { mode: "fuzzy", fuzzy_threshold: 0.85 }

@@ -1,0 +1,178 @@
+split,text,nombre,email,años_experiencia,skills,educacion_principal,gold_verificado
+train,"Dr. Roberto Salinas
+roberto.salinas@uni.edu
+EXPERIENCIA: 12 años en investigacion y desarrollo de software.
+Competente en Python, C++ y CUDA.
+Doctorado en Ciencias de la Computacion, MIT.",Roberto Salinas,roberto.salinas@uni.edu,12,"Python, C++, CUDA","Doctorado Ciencias Computacion, MIT",no
+train,"MARIA JOSE RIVERO
+Contacto: mjrivero (arroba) gmail.com
+8+ años de experiencia como Product Manager.
+Habilidades: Roadmap, Scrum, Jira, Analisis de Datos.
+Licenciatura en Administracion, UBA.",Maria Jose Rivero,mjrivero@gmail.com,8,"Roadmap, Scrum, Jira, Analisis de Datos","Licenciatura Administracion, UBA",no
+train,"ing. Pablo Nunez
+p.nunez@empresa.com.ar
+Desarrollador desde 2017.
+Tecnologias: Java, Spring, MySQL, Docker.
+Ingenieria en Sistemas, UTN.",Pablo Nunez,p.nunez@empresa.com.ar,8,"Java, Spring, MySQL, Docker","Ingenieria Sistemas, UTN",no
+train,"Lucia Ferraro
+lucia.ferraro@mail.com
+Disenadora UX/UI con 5 anios de experiencia.
+Figma, Sketch, Investigacion de usuarios, Prototipado.
+Grado en Diseno Grafico, RISD.",Lucia Ferraro,lucia.ferraro@mail.com,5,"Figma, Sketch, Investigacion de usuarios, Prototipado","Grado Diseno Grafico, RISD",no
+train,"JUAN PEREZ
+juan.perez@email.com
+EXPERIENCIA: 5 anos en desarrollo de software
+HABILIDADES: Python, Machine Learning, Docker
+Maestria en Ciencia de Datos, Universidad de Stanford",Juan Perez,juan.perez@email.com,5,"Python, Machine Learning, Docker","Maestria Ciencia Datos, Stanford",no
+train,"Sandra Gil | sandra.gil@corp.io | +54 11 5555-1234
+Mas de 10 años en marketing digital.
+Competente en SEO, SEM, Google Analytics y Content Strategy.
+Lic. en Comunicacion, Universidad Austral.",Sandra Gil,sandra.gil@corp.io,10,"SEO, SEM, Google Analytics, Content Strategy","Licenciatura Comunicacion, Universidad Austral",no
+val,"Lic. Andrea Bianchi
+andrea.bianchi@consultora.com
+Experiencia: 7 años en finanzas corporativas.
+Modelado Financiero, Excel avanzado, Valuacion, SQL.
+MBA, IAE Business School.",Andrea Bianchi,andrea.bianchi@consultora.com,7,"Modelado Financiero, Excel, Valuacion, SQL","MBA, IAE Business School",no
+val,"FERNANDO CASTRO
+fernando.castro@dev.io
+Trabajo en backend desde 2015 a la fecha.
+Skills: Python, Django, PostgreSQL, AWS.
+Ingenieria Informatica, Universidad de Chile.",Fernando Castro,fernando.castro@dev.io,9,"Python, Django, PostgreSQL, AWS","Ingenieria Informatica, Universidad Chile",no
+val,"natalia romero
+natalia.romero @ outlook.com
+3 años como analista de datos.
+python, sql, power bi, tableau, estadistica
+licenciatura en estadistica, universidad nacional de cordoba",Natalia Romero,natalia.romero@outlook.com,3,"Python, SQL, Power BI, Tableau, Estadistica","Licenciatura Estadistica, Universidad Nacional Cordoba",no
+val,"DIEGO MORALES
+email: diego.morales@empresa.mx
+(aprox. 6 años de experiencia)
+Tecnologias: React, Node.js, MongoDB, TypeScript
+Ing. en Tecnologias de la Informacion, Tec de Monterrey",Diego Morales,diego.morales@empresa.mx,6,"React, Node.js, MongoDB, TypeScript","Ingenieria Tecnologias Informacion, Tec de Monterrey",no
+test,"Dra. Carmen Ortiz
+carmen.ortiz@hospital.org
+15 años de trayectoria en investigacion biomedica.
+Competente en bioestadistica, R, Python y redaccion cientifica.
+Doctorado en Medicina, Universidad de Buenos Aires.",Carmen Ortiz,carmen.ortiz@hospital.org,15,"Bioestadistica, R, Python, Redaccion Cientifica","Doctorado Medicina, Universidad Buenos Aires",no
+test,"GASTON ROMERO
+gaston.romero@gmail.com
+Experiencia 2012-2020 como desarrollador web.
+PHP, Laravel, MySQL, JavaScript, Vue.
+Tecnicatura en Programacion, UTN.",Gaston Romero,gaston.romero@gmail.com,8,"PHP, Laravel, MySQL, JavaScript, Vue","Tecnicatura Programacion, UTN",no
+test,"valeria sosa
+valeria.sosa@correo.com.uy
+7+ anios liderando equipos de ventas.
+Negociacion de Contratos, Generacion de Leads, CRM, Salesforce.
+Licenciatura en Marketing, Universidad ORT.",Valeria Sosa,valeria.sosa@correo.com.uy,7,"Negociacion de Contratos, Generacion de Leads, CRM, Salesforce","Licenciatura Marketing, Universidad ORT",no
+test,"Sr. Tomas Iglesias
+tomas.iglesias@startup.io
+Cinco anos de experiencia en DevOps.
+Docker, Kubernetes, Terraform, AWS, Bash.
+Ingenieria en Sistemas, Universidad Tecnologica Nacional.",Tomas Iglesias,tomas.iglesias@startup.io,5,"Docker, Kubernetes, Terraform, AWS, Bash","Ingenieria Sistemas, Universidad Tecnologica Nacional",no
+test,"PAULA MENDEZ
+paula.mendez@mail.com
+Desde 2019 trabajando en QA.
+Selenium, Python, Postman, JIRA, pruebas automatizadas.
+Tecnicatura en Testing de Software, UNLP.",Paula Mendez,paula.mendez@mail.com,6,"Selenium, Python, Postman, JIRA, Pruebas Automatizadas","Tecnicatura Testing Software, UNLP",no
+test,"ricardo blanco
+ricardo.blanco@empresa.cl
+mas de 9 años en arquitectura de software
+java, kotlin, spring, kafka, microservicios
+magister en ingenieria de software, pontificia universidad catolica",Ricardo Blanco,ricardo.blanco@empresa.cl,9,"Java, Kotlin, Spring, Kafka, Microservicios","Magister Ingenieria Software, Pontificia Universidad Catolica",no
+test,"Ing. Florencia Diaz
+florencia.diaz@consultora.com.ar
+4 años de experiencia en ciencia de datos.
+Competente en Python, pandas, scikit-learn, SQL y visualizacion.
+Licenciatura en Matematica, Universidad de Buenos Aires.",Florencia Diaz,florencia.diaz@consultora.com.ar,4,"Python, pandas, scikit-learn, SQL, Visualizacion","Licenciatura Matematica, Universidad Buenos Aires",no
+test,"MARCOS LEON
+marcos.leon@webmail.com | LinkedIn: /in/marcosleon
+Experiencia profesional: 11 anios en desarrollo backend.
+Python, FastAPI, PostgreSQL, Redis, Docker, CI/CD.
+Ingenieria en Computacion, Universidad Nacional de La Plata.",Marcos Leon,marcos.leon@webmail.com,11,"Python, FastAPI, PostgreSQL, Redis, Docker, CI/CD","Ingenieria Computacion, Universidad Nacional La Plata",no
+test,"lorena vega
+lorena.vega@correo.pe
+8 anos en gestion de proyectos.
+PMP, Scrum, Kanban, MS Project, liderazgo de equipos.
+MBA, Universidad del Pacifico.",Lorena Vega,lorena.vega@correo.pe,8,"PMP, Scrum, Kanban, MS Project, Liderazgo","MBA, Universidad Pacifico",no
+test,"Sebastian Rey - sebastian.rey@gmail.com
+(7 anos) Ingeniero de datos.
+Spark, Python, Airflow, SQL, Snowflake, dbt.
+Ingenieria Industrial, ITBA.",Sebastian Rey,sebastian.rey@gmail.com,7,"Spark, Python, Airflow, SQL, Snowflake, dbt","Ingenieria Industrial, ITBA",no
+test,"CECILIA PAZ
+cecilia.paz@empresa.com
+Mas de 6 años en recursos humanos.
+Reclutamiento, Onboarding, Workday, Comunicacion Interna.
+Licenciatura en Psicologia, Universidad de Palermo.",Cecilia Paz,cecilia.paz@empresa.com,6,"Reclutamiento, Onboarding, Workday, Comunicacion Interna","Licenciatura Psicologia, Universidad Palermo",no
+test,"martin aceves
+martin.aceves@correo.mx
+desde 2014 en desarrollo movil
+Swift, Objective-C, Kotlin, Firebase
+Ingenieria en Software, Universidad de Guadalajara",Martin Aceves,martin.aceves@correo.mx,12,"Swift, Objective-C, Kotlin, Firebase","Ingenieria Software, Universidad Guadalajara",no
+test,"Dr. Alejandro Vidal
+alejandro.vidal@lab.edu
+20 años de experiencia academica e industrial.
+Competente en C, C++, Rust, sistemas embebidos y RTOS.
+PhD en Ingenieria Electronica, Caltech.",Alejandro Vidal,alejandro.vidal@lab.edu,20,"C, C++, Rust, Sistemas Embebidos, RTOS","PhD Ingenieria Electronica, Caltech",no
+test,"Lic. Mateo Fuentes
+mateo.fuentes@empresa.com.ar
+Experiencia: 9 anos en desarrollo full stack.
+Angular, TypeScript, Node.js, Express, MongoDB, Docker.
+Licenciatura en Sistemas de Informacion, Universidad de Belgrano.",Mateo Fuentes,mateo.fuentes@empresa.com.ar,9,"Angular, TypeScript, Node.js, Express, MongoDB, Docker","Licenciatura Sistemas Informacion, Universidad Belgrano",no
+test,"JULIETA NAVARRO
+julieta.navarro@correo.com
+Mas de 4 años en disenio grafico y branding.
+Adobe Illustrator, Photoshop, InDesign, Branding, Tipografia.
+Grado en Disenio, Universidad de Palermo.",Julieta Navarro,julieta.navarro@correo.com,4,"Adobe Illustrator, Photoshop, InDesign, Branding, Tipografia","Grado Disenio, Universidad Palermo",no
+test,"ramiro guzman
+ramiro.guzman @ gmail.com
+13 anos en bases de datos y administracion de sistemas.
+Oracle, PostgreSQL, MySQL, Linux, Bash, Ansible.
+Ingenieria en Informatica, Universidad Tecnologica Nacional.",Ramiro Guzman,ramiro.guzman@gmail.com,13,"Oracle, PostgreSQL, MySQL, Linux, Bash, Ansible","Ingenieria Informatica, Universidad Tecnologica Nacional",no
+test,"Sra. Beatriz Campos
+beatriz.campos@consultora.cl
+Experiencia 2006-2021 en auditoria y finanzas.
+Auditoria, IFRS, SAP, Excel avanzado, Control de Gestion.
+Contadora Publica, Universidad de Chile.",Beatriz Campos,beatriz.campos@consultora.cl,15,"Auditoria, IFRS, SAP, Excel, Control de Gestion","Contadora Publica, Universidad Chile",no
+test,"EMILIANO PRADO
+emiliano.prado@startup.io | tel 351-555-9090
+8+ anios en machine learning e inteligencia artificial.
+Python, PyTorch, TensorFlow, MLOps, Kubernetes.
+Maestria en Inteligencia Artificial, Universidad Politecnica de Madrid.",Emiliano Prado,emiliano.prado@startup.io,8,"Python, PyTorch, TensorFlow, MLOps, Kubernetes","Maestria Inteligencia Artificial, Universidad Politecnica Madrid",no
+test,"carla espinoza
+carla.espinoza@correo.pe
+desde 2018 en desarrollo backend
+python, fastapi, postgresql, redis, rabbitmq
+ingenieria de sistemas, universidad nacional de ingenieria",Carla Espinoza,carla.espinoza@correo.pe,8,"Python, FastAPI, PostgreSQL, Redis, RabbitMQ","Ingenieria Sistemas, Universidad Nacional Ingenieria",no
+test,"Ing. Gonzalo Ledesma
+gonzalo.ledesma@empresa.com.mx
+Aproximadamente 6 años en ciberseguridad.
+Pentesting, SIEM, Python, Redes, Análisis de Malware.
+Maestria en Seguridad Informatica, ITESM.",Gonzalo Ledesma,gonzalo.ledesma@empresa.com.mx,6,"Pentesting, SIEM, Python, Redes, Analisis de Malware","Maestria Seguridad Informatica, ITESM",no
+val,"Prof. Adriana Molina
+adriana.molina@colegio.edu.ar
+Experiencia: 14 años en docencia secundaria y universitaria.
+Didactica, Evaluacion, Moodle, Planificacion, Oratoria.
+Profesorado en Matematica, Universidad Nacional de Cuyo.",Adriana Molina,adriana.molina@colegio.edu.ar,14,"Didactica, Evaluacion, Moodle, Planificacion, Oratoria","Profesorado Matematica, Universidad Nacional Cuyo",no
+val,"BRUNO IGLESIAS
+bruno.iglesias@dev.com
+Trabajando en backend desde 2016.
+Python, Django, FastAPI, PostgreSQL, Redis, Docker.
+Ingenieria en Sistemas, Universidad Tecnologica Nacional.",Bruno Iglesias,bruno.iglesias@dev.com,9,"Python, Django, FastAPI, PostgreSQL, Redis, Docker","Ingenieria Sistemas, Universidad Tecnologica Nacional",no
+val,"Cra. Veronica Sosa
+veronica.sosa@estudio.com.ar | 011-4444-2020
+Mas de 11 años en contabilidad y tributacion.
+Impuestos, Balances, SAP, Excel, Conciliaciones.
+Contadora Publica, Universidad de Buenos Aires.",Veronica Sosa,veronica.sosa@estudio.com.ar,11,"Impuestos, Balances, SAP, Excel, Conciliaciones","Contadora Publica, Universidad Buenos Aires",no
+val,"ing. matias paredes
+matias.paredes @ constructora.cl
+experiencia 2009-2023 en ingenieria civil
+autocad, revit, gestion de obra, presupuestos, ms project
+ingenieria civil, pontificia universidad catolica de chile",Matias Paredes,matias.paredes@constructora.cl,14,"AutoCAD, Revit, Gestion de Obra, Presupuestos, MS Project","Ingenieria Civil, Pontificia Universidad Catolica Chile",no
+val,"Daniela Cruz - daniela.cruz@traducciones.com
+(aprox. 8 años) Traductora e interprete.
+Ingles, Portugues, Frances, Trados, Subtitulado.
+Licenciatura en Traductorado, Universidad del Salvador.",Daniela Cruz,daniela.cruz@traducciones.com,8,"Ingles, Portugues, Frances, Trados, Subtitulado","Licenciatura Traductorado, Universidad Salvador",no
+val,"Dr. Federico Lara
+federico.lara@investigacion.org
+18 años en investigacion en fisica de particulas.
+Competente en Python, ROOT, C++, analisis de datos y LaTeX.
+Doctorado en Fisica, Instituto Balseiro.",Federico Lara,federico.lara@investigacion.org,18,"Python, ROOT, C++, Analisis de Datos, LaTeX","Doctorado Fisica, Instituto Balseiro",no
