@@ -182,7 +182,7 @@ def report(info: ConfigInfo, before: list[dict], after: list[dict]) -> None:
     new_rows = [r for r in after if r[COL_RUN_ID] not in before_ids]
 
     # Escala: GEPA guarda 0-1; DSPy guarda 0-100. Normalizamos a 0-100 al mostrar.
-    sample = (new_rows or after or before)
+    sample = new_rows or after or before
     scale = 100.0
     if sample:
         opt_vals = [parse_float(r.get(COL_OPT)) for r in sample]
@@ -228,7 +228,10 @@ def main() -> int:
         description="Protocolo de N seeds: corre y agrega media +/- rango por caso."
     )
     parser.add_argument(
-        "--config", action="append", required=True, dest="configs",
+        "--config",
+        action="append",
+        required=True,
+        dest="configs",
         help="Ruta a config YAML (repetible).",
     )
     parser.add_argument(
@@ -238,7 +241,8 @@ def main() -> int:
         "-j", "--jobs", type=int, default=1, help="Corridas en paralelo (default 1)."
     )
     parser.add_argument(
-        "--report-only", action="store_true",
+        "--report-only",
+        action="store_true",
         help="No ejecuta; solo agrega las filas ya presentes en el CSV.",
     )
     args = parser.parse_args()
