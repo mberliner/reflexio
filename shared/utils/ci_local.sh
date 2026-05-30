@@ -25,14 +25,24 @@ for arg in "$@"; do
     [[ "$arg" == "--skip-security" ]] && SKIP_SECURITY=true
 done
 
-# --- Detectar Python/venv ---
+# --- Detectar Python: venv (Unix o Windows) o python del SO ---
 if [[ -f ".venv/bin/python" ]]; then
-    PYTHON=".venv/bin/python"
-    VENV_BIN=".venv/bin"
+    PYTHON=".venv/bin/python"          # venv Unix/macOS
+elif [[ -f ".venv/Scripts/python.exe" ]]; then
+    PYTHON=".venv/Scripts/python.exe"  # venv Windows
+elif command -v python &>/dev/null; then
+    PYTHON="python"                    # fallback: python del SO
+    warn "No se encontro .venv; usando python del sistema ($(command -v python))"
+elif command -v python3 &>/dev/null; then
+    PYTHON="python3"
+    warn "No se encontro .venv; usando python3 del sistema ($(command -v python3))"
 else
-    error "No se encontro .venv. Ejecuta: python -m venv .venv && pip install -r requirements.txt"
+    error "No se encontro .venv ni python en el SO. Instala Python o crea el venv: python -m venv .venv && pip install -r requirements.txt"
     exit 1
 fi
+
+# Todas las herramientas se invocan como "python -m <tool>" para funcionar
+# tanto con venv como con el interprete del SO.
 
 ERRORS=0
 
@@ -42,7 +52,7 @@ step_header() { echo -e "\n${BLUE}==== $* ====${NC}"; }
 step_header "LINT"
 
 info "ruff check ..."
-if "$VENV_BIN/ruff" check .; then
+if "$PYTHON" -m ruff check .; then
     ok "ruff check OK"
 else
     error "ruff check FALLO"
@@ -50,7 +60,7 @@ else
 fi
 
 info "ruff format --check ..."
-if "$VENV_BIN/ruff" format --check .; then
+if "$PYTHON" -m ruff format --check .; then
     ok "ruff format OK"
 else
     error "ruff format FALLO  (ejecuta: ruff format .)"
@@ -61,7 +71,7 @@ fi
 if [[ "$SKIP_SECURITY" == false ]]; then
     step_header "SECURITY"
 
-    if ! command -v "$VENV_BIN/bandit" &>/dev/null; then
+    if ! "$PYTHON" -m bandit --version &>/dev/null; then
         warn "bandit no instalado. Ejecuta: pip install bandit pip-audit"
         SKIP_SECURITY=true
     fi
@@ -69,7 +79,7 @@ fi
 
 if [[ "$SKIP_SECURITY" == false ]]; then
     info "bandit ..."
-    if "$VENV_BIN/bandit" -r . \
+    if "$PYTHON" -m bandit -r . \
         --exclude ./.venv,./tests,./docs \
         --severity-level medium \
         --confidence-level medium \
@@ -81,7 +91,7 @@ if [[ "$SKIP_SECURITY" == false ]]; then
     fi
 
     info "pip-audit ..."
-    if "$VENV_BIN/pip-audit" -r requirements.txt --ignore-vuln CVE-2025-69872; then
+    if "$PYTHON" -m pip_audit -r requirements.txt --ignore-vuln CVE-2025-69872; then
         ok "pip-audit OK"
     else
         error "pip-audit FALLO"
