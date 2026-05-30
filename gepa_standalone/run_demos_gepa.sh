@@ -19,6 +19,9 @@ DEFAULT_NUM_RUNS=10
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Helper multiplataforma para evitar suspension/hibernacion durante el batch.
+source "$REPO_ROOT/shared/utils/keep_awake.sh"
+
 # Directorio de configuraciones
 CONFIGS_DIR="$SCRIPT_DIR/experiments/configs"
 
@@ -147,6 +150,10 @@ echo ""
 echo "=============================================="
 echo "  Iniciando ejecucion..."
 echo "=============================================="
+
+# Evitar que la PC entre en suspension/hibernacion durante las pruebas.
+keep_awake_start
+trap keep_awake_stop EXIT INT TERM
 
 # Loop principal
 for ((run=1; run<=NUM_RUNS; run++)); do
