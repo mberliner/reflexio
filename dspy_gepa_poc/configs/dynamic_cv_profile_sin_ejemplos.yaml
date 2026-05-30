@@ -1,0 +1,66 @@
+case:
+  name: "CV Profile Extraction (Espanol) - sin ejemplos"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: "Extrae un perfil estructurado del candidato a partir del texto del CV. Identifica los datos personales, experiencia profesional, stack tecnico, idiomas, ubicacion e industria previa. Si un campo no esta explicitamente mencionado en el CV, devolvelo como cadena vacia. No inventes informacion."
+  inputs:
+    - name: "text"
+      desc: "El texto completo del CV del cual extraer el perfil del candidato."
+  outputs:
+    - name: "nombre"
+      desc: "El nombre completo del candidato, sin honorificos ni titulos academicos."
+    - name: "email"
+      desc: "La direccion de email de contacto."
+    - name: "años_experiencia"
+      desc: "Total de años de experiencia profesional (como numero entero, sin texto adicional)."
+    - name: "skills"
+      desc: "Lista de habilidades y tecnologias mencionadas, separadas por coma."
+    - name: "educacion_principal"
+      desc: "Titulo academico mas alto e institucion (formato: 'Titulo, Institucion')."
+    - name: "seniority_declarado"
+      desc: "Nivel de seniority si esta declarado explicitamente en el CV. Valores posibles: junior, semi_senior, senior, lead. Cadena vacia si no esta declarado."
+    - name: "stack_principal"
+      desc: "Competencias y tecnologias principales separadas por punto y coma. Incluir tanto herramientas tecnicas como habilidades funcionales clave del candidato. Si el CV indica años de experiencia por tecnologia, usar formato 'Tecnologia:años'. Si no, solo el nombre."
+    - name: "idiomas"
+      desc: "Idiomas con su nivel, separados por punto y coma. Formato: 'idioma:nivel'. Cadena vacia si no se mencionan."
+    - name: "ubicacion"
+      desc: "Ciudad y pais de residencia actual del candidato, solo si lo declara explicitamente. No inferir desde el dominio del email ni desde menciones de origen historico. Cadena vacia si no esta declarado explicitamente."
+    - name: "industria_previa"
+      desc: "Sector economico o disciplina tecnica principal del candidato, claramente inferible del texto del CV (rol, empresa, descripcion). Puede ser un sector o una disciplina. Si el candidato es estudiante sin experiencia sectorial clara, usar 'Estudiante'. Cadena vacia solo si no hay informacion suficiente para inferirlo."
+
+data:
+  csv_filename: "cv_profile.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 2000
+  max_positive_examples: 2
+
+optimization:
+  max_metric_calls: 50
+  auto_budget: "heavy"
+  use_few_shot: true
+  few_shot_count: 2
+  ignore_in_metric: [seniority_declarado]
+  match_mode: "normalized"
+  fuzzy_threshold: 0.88
+  metric_feedback: true
+  field_configs:
+    nombre: { mode: "normalized" }
+    email: { mode: "normalized" }
+    años_experiencia: { mode: "exact" }
+    skills: { mode: "set", separators: ",;" }
+    educacion_principal: { mode: "fuzzy", fuzzy_threshold: 0.75 }
+    seniority_declarado: { mode: "exact" }
+    stack_principal: { mode: "set", separators: ";," }
+    idiomas: { mode: "set", separators: ";," }
+    ubicacion: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    industria_previa: { mode: "fuzzy", fuzzy_threshold: 0.70 }

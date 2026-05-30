@@ -6,8 +6,8 @@ module:
 
 models:
   cache: false
-  temperature: 1.0
-  max_tokens: 16000
+  temperature: 0.1
+  max_tokens: 4000
 
 signature:
   instruction: "Dada una descripcion de puesto (job_description) y el texto de un CV (cv_text), clasifica el grado de fit del candidato como uno de tres valores exactos: 'fit_alto', 'fit_medio', 'no_fit'. Tambien produce una justificacion corta (1-2 oraciones) citando evidencia concreta del CV.\n\nCriterios:\n- fit_alto: cumple stack tecnico, seniority, idiomas y ubicacion sin observaciones.\n- fit_medio: cumple el nucleo tecnico pero falla en al menos un requisito (idioma, seniority, ubicacion, o stack adyacente).\n- no_fit: perfil tecnico desalineado (otro lenguaje, otra disciplina) o falla en multiples requisitos criticos.\n\nNo inventes informacion que el CV no menciona."

@@ -12,9 +12,9 @@
 | Seccion | Campo | Tipo | Descripcion |
 |---------|-------|------|-------------|
 | `case` | `name` | string | Nombre del experimento |
-| `module` | `type` | string | Tipo de modulo: `dynamic`, `sentiment`, `extractor`, `qa` |
+| `module` | `type` | string | Tipo de modulo: `dynamic`, `pipeline`, `sentiment`, `extractor`, `qa` |
 | `data` | `csv_filename` | string | Archivo CSV en `datasets/` |
-| `data` | `input_column` | string | Columna de entrada del CSV |
+| `data` | `input_column` o `input_columns` | string / list | Columna(s) de entrada del CSV. `input_column` (string, single) o `input_columns` (lista, multi-input); al menos uno requerido |
 | `optimization` | `max_metric_calls` o `auto_budget` | int / string | Al menos uno requerido |
 
 ### Signature (requerida si `module.type: "dynamic"`)
@@ -37,6 +37,9 @@
 | `optimization.ignore_in_metric` | list | [] | Campos de output a ignorar en evaluacion |
 | `optimization.match_mode` | string | `exact` | `exact`, `normalized`, `fuzzy` (ver `docs/DSPY_GUIA_DISENO.md` seccion 5) |
 | `optimization.fuzzy_threshold` | float | 0.85 | Umbral de similitud para modo fuzzy (0.0-1.0) |
+| `optimization.metric_feedback` | bool | false | Si `true`, la metrica emite diagnostico textual para el reflection_lm de GEPA |
+| `optimization.field_configs` | dict | {} | Overrides por campo: `{nombre: {mode: exact\|normalized\|fuzzy\|set, fuzzy_threshold?: float, separators?: str}}`. Implica `metric_feedback=true` |
+| `optimization.eval_repeats` | int | 1 | Repeticiones de evaluacion por prompt (k) para reducir varianza del LLM |
 | `optimization.num_threads` | int | 1 | Threads para evaluacion paralela |
 
 ### Models (opcionales)
@@ -60,9 +63,22 @@
 | Tipo | Campos Adicionales Requeridos |
 |------|-------------------------------|
 | `dynamic` | Seccion `signature` completa |
+| `pipeline` | Secciones `stages` (lista, >=2 etapas con `name` + `signature`) y `routing` |
 | `sentiment` | Ninguno |
 | `extractor` | `output_columns` (en `module` o `data`) |
 | `qa` | `input_column_context`, `input_column_question` |
+
+### Pipeline (requerida si `module.type: "pipeline"`)
+
+Compone N etapas en serie con routing condicional: la etapa-gate decide si las posteriores se ejecutan. Ver `DynamicModuleFactory.create_pipeline_module` (`dynamic_factory.py`).
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `stages` | list | Lista de >=2 etapas; cada una con `name` (unico) y `signature` (estructura completa) |
+| `routing.gate_stage` | string | Nombre de la etapa cuyo output dispara el gate |
+| `routing.gate_field` | string | Campo de output de `gate_stage` a evaluar (debe existir en sus outputs) |
+| `routing.gate_value` | string | Valor que abre las etapas posteriores |
+| `routing.skip_outputs_when_gated` | dict | Opcional: `{campo: valor}` asignado a outputs de etapas posteriores cuando el gate no abre |
 
 ---
 
@@ -112,6 +128,8 @@
 |-------|------|---------|-------------|
 | `optimization.skip_perfect_score` | bool | true | Omitir ejemplos con score perfecto en reflexion |
 | `optimization.display_progress_bar` | bool | false | Mostrar barra de progreso |
+| `optimization.ignore_in_metric` | list | [] | Campos de output a ignorar en la evaluacion de la metrica |
+| `optimization.eval_repeats` | int | 1 | Repeticiones de evaluacion por prompt (k) en val/test para reducir varianza del LLM |
 
 ### Models (opcionales)
 

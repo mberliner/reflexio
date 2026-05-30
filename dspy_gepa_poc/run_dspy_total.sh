@@ -11,11 +11,16 @@ set -e
 # CONFIGURACION
 # ==============================================================================
 
-# Numero de veces que se ejecutara cada configuracion YAML
-NUM_RUNS=5
+# Numero de veces que se ejecutara cada configuracion YAML (valor por defecto;
+# se puede sobrescribir interactivamente al inicio)
+DEFAULT_NUM_RUNS=5
+
+# Rutas absolutas (independientes del directorio desde el que se invoque)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Directorio de configuraciones
-CONFIGS_DIR="$(dirname "$0")/configs"
+CONFIGS_DIR="$SCRIPT_DIR/configs"
 
 # Cache de DSPy
 DSPY_CACHE_DIR="$HOME/.dspy_cache"
@@ -63,9 +68,11 @@ ejecutar_prueba() {
     echo "    Comando: python -m dspy_gepa_poc.reflexio_declarativa --config $config_file"
     echo ""
     echo "--- INICIO OUTPUT PRUEBA ---"
-    (cd "$(dirname "$0")/.." && python -m dspy_gepa_poc.reflexio_declarativa --config "$config_file")
+    local exit_code=0
+    (cd "$REPO_ROOT" && python -m dspy_gepa_poc.reflexio_declarativa --config "$config_file") || exit_code=$?
     echo "--- FIN OUTPUT PRUEBA ---"
     echo ""
+    return $exit_code
 }
 
 # ==============================================================================
@@ -78,7 +85,6 @@ echo "        DSPy POC Test Runner"
 echo "=============================================="
 echo ""
 echo "  Configuracion:"
-echo "    - Runs por config:  $NUM_RUNS"
 echo "    - Dir configs:      $CONFIGS_DIR"
 echo "    - Cache DSPy:       $DSPY_CACHE_DIR"
 echo ""
@@ -106,8 +112,52 @@ for f in "${yaml_files[@]}"; do
 done
 echo ""
 
+# Seleccion interactiva de configuraciones a ejecutar
+echo "  Seleccione las configuraciones a ejecutar."
+echo "  Indique los numeros separados por espacio o coma (ej: 1 3 4),"
+echo "  o deje vacio / escriba 'all' para ejecutar todas."
+read -r -p "  Seleccion [all]: " seleccion
+
+selected_files=()
+if [ -z "$seleccion" ] || [ "$seleccion" = "all" ] || [ "$seleccion" = "todos" ]; then
+    selected_files=("${yaml_files[@]}")
+else
+    # Normalizar comas a espacios y recorrer cada token
+    for token in ${seleccion//,/ }; do
+        if ! [[ "$token" =~ ^[0-9]+$ ]] || [ "$token" -lt 1 ] || [ "$token" -gt ${#yaml_files[@]} ]; then
+            echo "ERROR: Seleccion invalida: '$token' (rango valido: 1-${#yaml_files[@]})"
+            exit 1
+        fi
+        selected_files+=("${yaml_files[$((token - 1))]}")
+    done
+fi
+
+if [ ${#selected_files[@]} -eq 0 ]; then
+    echo "ERROR: No se selecciono ninguna configuracion"
+    exit 1
+fi
+echo ""
+
+# Numero de runs por configuracion
+read -r -p "  Numero de runs por config [$DEFAULT_NUM_RUNS]: " num_runs_input
+NUM_RUNS="${num_runs_input:-$DEFAULT_NUM_RUNS}"
+if ! [[ "$NUM_RUNS" =~ ^[0-9]+$ ]] || [ "$NUM_RUNS" -lt 1 ]; then
+    echo "ERROR: El numero de runs debe ser un entero positivo (recibido: '$NUM_RUNS')"
+    exit 1
+fi
+echo ""
+
+# Resumen de la seleccion
+echo "  Seleccion confirmada:"
+echo "    - Configs a ejecutar: ${#selected_files[@]}"
+for f in "${selected_files[@]}"; do
+    echo "        - $(basename "$f")"
+done
+echo "    - Runs por config:    $NUM_RUNS"
+echo ""
+
 # Contadores
-total_tests=$((${#yaml_files[@]} * NUM_RUNS))
+total_tests=$((${#selected_files[@]} * NUM_RUNS))
 current_test=0
 failed_tests=0
 failed_list=()
@@ -120,7 +170,7 @@ echo "=============================================="
 
 # Loop principal
 for ((run=1; run<=NUM_RUNS; run++)); do
-    for config_file in "${yaml_files[@]}"; do
+    for config_file in "${selected_files[@]}"; do
         current_test=$((current_test + 1))
         config_name=$(basename "$config_file" .yaml)
 
