@@ -1,0 +1,65 @@
+# Config v3: CVs EXTENSOS y realistas (estilo modelos_cv) generados por
+# shared/cv_synth/. A diferencia de v2 (CVs tersos de 3-6 lineas), aqui cada CV
+# tiene 25-40 lineas con secciones completas (Objetivo, Educacion, Habilidades,
+# Experiencia multi-puesto, Proyectos, Certificaciones, Idiomas) + ruido de
+# distraccion (hobbies, lineas basura, typos, casing inconsistente).
+#
+# Hipotesis: la dificultad real no esta en la ambiguedad del label (v2 opcion B
+# fallo: gpt-5-mini resolvia los casos frontera sin error en val), sino en
+# EXTRAER la señal decisiva de texto largo y ruidoso. Un QA que menciona "Python
+# para scripts", un skills-dump con un lenguaje no central, varios trabajos en
+# sectores distintos: el modelo tiene que razonar, no matchear keywords.
+#
+# Gold por construccion: el label lo deriva shared/cv_synth/rubric.py del spec
+# estructurado, no se anota a mano. gold_verificado="derivado" (correcto por
+# diseño, sin necesidad de revision humana posterior como en v2).
+#
+# Regenerar dataset: python -m shared.cv_synth.build_datasets
+# Criterio de exito: baseline < 100 (hay headroom por la dificultad de extraccion),
+# macro-F1 ↑ via GEPA, rango entre seeds ↓.
+case:
+  name: "CV Triage v3 (Backend Senior Python LATAM, CVs extensos)"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: "Dada una descripcion de puesto (job_description) y el texto de un CV (cv_text), clasifica el grado de fit del candidato como uno de tres valores exactos: 'fit_alto', 'fit_medio', 'no_fit'. Tambien produce una justificacion corta (1-2 oraciones) citando evidencia concreta del CV.\n\nCriterios:\n- fit_alto: cumple stack tecnico, seniority, idiomas y ubicacion sin observaciones.\n- fit_medio: cumple el nucleo tecnico pero falla en al menos un requisito (idioma, seniority, ubicacion, o stack adyacente).\n- no_fit: perfil tecnico desalineado (otro lenguaje, otra disciplina) o falla en multiples requisitos criticos.\n\nLee TODO el CV: el texto es extenso y puede tener ruido. No te dejes engañar por menciones superficiales (ej: un perfil QA o data science que menciona Python no es backend Python). No inventes informacion que el CV no menciona."
+  inputs:
+    - name: "cv_text"
+      desc: "Texto completo y extenso del CV del candidato (con secciones, experiencia y posible ruido)."
+    - name: "job_description"
+      desc: "Descripcion del puesto a cubrir, con requisitos de stack, seniority, idiomas, ubicacion e industria."
+  outputs:
+    - name: "fit_label"
+      desc: "Clasificacion exacta. Valores permitidos: 'fit_alto', 'fit_medio', 'no_fit'."
+    - name: "justificacion"
+      desc: "Justificacion corta (1-2 oraciones) citando evidencia del CV que respalda la clasificacion."
+
+data:
+  csv_filename: "cv_triage_v3.csv"
+  input_columns:
+    - "cv_text"
+    - "job_description"
+
+adapter:
+  max_text_length: 4000
+  max_positive_examples: 3
+
+optimization:
+  max_metric_calls: 60
+  auto_budget: "medium"
+  use_few_shot: true
+  few_shot_count: 3
+  eval_repeats: 1
+  ignore_in_metric:
+    - "justificacion"
+  match_mode: "exact"
+  metric_feedback: true
+  field_configs:
+    fit_label: { mode: "exact" }
