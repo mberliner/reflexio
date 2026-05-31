@@ -279,7 +279,8 @@ class UniversalOptimizer:
             required_fields = self.config["adapter"]["required_fields"]
             max_pos = self.config["adapter"].get("extractor_max_positive_examples")
             max_resp = self.config.get("models", {}).get("max_tokens")
-            ignore_fields = self.config.get("optimization", {}).get("ignore_in_metric", [])
+            opt_cfg = self.config.get("optimization", {})
+            ignore_fields = opt_cfg.get("ignore_in_metric", [])
 
             self.adapter = SimpleExtractorAdapter(
                 required_fields=required_fields,
@@ -287,6 +288,10 @@ class UniversalOptimizer:
                 max_positive_examples=max_pos,
                 max_response_tokens=max_resp,
                 ignore_fields=ignore_fields,
+                field_configs=opt_cfg.get("field_configs"),
+                default_mode=opt_cfg.get("match_mode", "exact"),
+                fuzzy_threshold=opt_cfg.get("fuzzy_threshold", 0.85),
+                list_separators=opt_cfg.get("list_separators", ",;"),
             )
 
         elif adapter_type == "sql":

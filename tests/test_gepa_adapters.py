@@ -992,3 +992,71 @@ class TestSimpleRAGAdapter:
         result = adapter.evaluate(batch, candidate)
         assert len(result.scores) == 1
         assert result.scores[0] == 0.0
+
+
+# ============ SimpleExtractorAdapter: scoring por campo (field_configs) ============
+
+
+class TestExtractorFieldConfigs:
+    """Verifica que el extractor aplica score_field por campo (set/fuzzy/normalized),
+    igualando el contrato de las metricas DSPy."""
+
+    def _adapter_returning(self, monkeypatch, payload, **kwargs):
+        def mock_completion(*_a, **_k):
+            response = MagicMock()
+            response.choices = [MagicMock()]
+            response.choices[0].message.content = json.dumps(payload)
+            return response
+
+        monkeypatch.setattr("litellm.completion", mock_completion)
+        return SimpleExtractorAdapter(required_fields=list(payload.keys()), **kwargs)
+
+    def test_default_mode_exact_is_strict(self, mock_env, monkeypatch):
+        """Sin field_configs el default es exact: variante de acentos no matchea."""
+        adapter = self._adapter_returning(monkeypatch, {"educacion": "Ingenieria"})
+        batch = [{"text": "x", "extracted": {"educacion": "Ingeniería"}}]
+        result = adapter.evaluate(batch, {"system_prompt": "..."})
+        assert result.scores[0] == 0.0
+
+    def test_set_mode_order_insensitive(self, mock_env, monkeypatch):
+        """mode=set: skills en distinto orden puntua 1.0."""
+        adapter = self._adapter_returning(
+            monkeypatch,
+            {"skills": "django, python, aws"},
+            field_configs={"skills": {"mode": "set", "separators": ",;"}},
+        )
+        batch = [{"text": "x", "extracted": {"skills": "python, aws, django"}}]
+        result = adapter.evaluate(batch, {"system_prompt": "..."})
+        assert result.scores[0] == pytest.approx(1.0)
+
+    def test_set_mode_partial_coverage(self, mock_env, monkeypatch):
+        """mode=set: cobertura parcial puntua fraccion del esperado."""
+        adapter = self._adapter_returning(
+            monkeypatch,
+            {"skills": "python"},
+            field_configs={"skills": {"mode": "set"}},
+        )
+        batch = [{"text": "x", "extracted": {"skills": "python, aws, django"}}]
+        result = adapter.evaluate(batch, {"system_prompt": "..."})
+        assert result.scores[0] == pytest.approx(1 / 3, rel=0.01)
+
+    def test_fuzzy_mode_tolerates_variants(self, mock_env, monkeypatch):
+        """mode=fuzzy: variante cercana sobre el umbral puntua 1.0."""
+        adapter = self._adapter_returning(
+            monkeypatch,
+            {"educacion": "Ingenieria en Sistemas, UBA"},
+            field_configs={"educacion": {"mode": "fuzzy", "fuzzy_threshold": 0.85}},
+        )
+        batch = [{"text": "x", "extracted": {"educacion": "Ingeniería en Sistemas, UBA"}}]
+        result = adapter.evaluate(batch, {"system_prompt": "..."})
+        assert result.scores[0] == pytest.approx(1.0)
+
+    def test_invalid_default_mode_raises(self, mock_env):
+        with pytest.raises(ValueError, match="default_mode invalido"):
+            SimpleExtractorAdapter(required_fields=["a"], default_mode="bogus")
+
+    def test_invalid_field_mode_raises(self, mock_env):
+        with pytest.raises(ValueError, match="Modo invalido"):
+            SimpleExtractorAdapter(
+                required_fields=["a"], field_configs={"a": {"mode": "bogus"}}
+            )

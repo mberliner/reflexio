@@ -13,11 +13,18 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from shared.llm import LLMConnectionError
+from shared.scoring import VALID_FIELD_MODES, score_field
 
 
 class SimpleExtractorAdapter(BaseAdapter):
     """
     Adaptador GEPA para extracción estructurada.
+
+    Scoring por campo: usa `shared.scoring.score_field`, la misma logica que las
+    metricas DSPy. Por defecto (`default_mode="exact"`, sin `field_configs`) el
+    comportamiento es strip().lower() + igualdad, equivalente a una metrica
+    exacta. Con `field_configs` se puede tolerar listas (set) o variantes (fuzzy)
+    por campo, permitiendo igualar las condiciones de los casos DSPy.
     """
 
     def __init__(
@@ -27,10 +34,31 @@ class SimpleExtractorAdapter(BaseAdapter):
         max_positive_examples: int | None = None,
         max_response_tokens: int | None = None,
         ignore_fields: list[str] | None = None,
+        field_configs: dict[str, dict[str, Any]] | None = None,
+        default_mode: str = "exact",
+        fuzzy_threshold: float = 0.85,
+        list_separators: str = ",;",
     ):
         super().__init__(temperature=temperature)
         self.required_fields = required_fields
         self.ignore_fields = set(ignore_fields or [])
+
+        # Configuracion de scoring por campo (mismo contrato que metricas DSPy).
+        if default_mode not in VALID_FIELD_MODES:
+            raise ValueError(
+                f"default_mode invalido: '{default_mode}'. Validos: {sorted(VALID_FIELD_MODES)}"
+            )
+        self.field_configs = field_configs or {}
+        for fname, cfg in self.field_configs.items():
+            mode = cfg.get("mode", default_mode)
+            if mode not in VALID_FIELD_MODES:
+                raise ValueError(
+                    f"Modo invalido para campo '{fname}': '{mode}'. "
+                    f"Validos: {sorted(VALID_FIELD_MODES)}"
+                )
+        self.default_mode = default_mode
+        self.fuzzy_threshold = fuzzy_threshold
+        self.list_separators = list_separators
 
         # Configuración de ejemplos positivos en dataset reflexivo
         # Prioridad: parámetro explícito > Config > default (2)
@@ -74,29 +102,37 @@ class SimpleExtractorAdapter(BaseAdapter):
                     k: v for k, v in expected_fields.items() if k not in self.ignore_fields
                 }
 
-                # Comparar campos
-                correct_fields = 0
+                # Comparar campos con scoring por campo (mismo contrato que DSPy).
+                # Score parcial: promedio de score_field sobre los campos evaluados.
+                total_score = 0.0
                 total_fields = len(eval_fields)
                 field_comparisons = {}
 
                 for field_name, expected_value in eval_fields.items():
-                    extracted_val = str(extracted_fields.get(field_name, "")).strip().lower()
-                    expected_val = str(expected_value).strip().lower()
+                    cfg = self.field_configs.get(field_name, {})
+                    mode = cfg.get("mode", self.default_mode)
+                    threshold = cfg.get("fuzzy_threshold", self.fuzzy_threshold)
+                    seps = cfg.get("separators", self.list_separators)
 
-                    is_correct = (extracted_val == expected_val) and (
-                        field_name in extracted_fields
+                    field_score, diag = score_field(
+                        expected_value,
+                        extracted_fields.get(field_name, ""),
+                        mode,
+                        threshold,
+                        seps,
                     )
-
-                    if is_correct:
-                        correct_fields += 1
+                    total_score += field_score
 
                     field_comparisons[field_name] = {
                         "expected": expected_value,
                         "extracted": extracted_fields.get(field_name),
-                        "correct": is_correct,
+                        "correct": field_score == 1.0,
+                        "score": field_score,
+                        "mode": mode,
+                        "diag": diag,
                     }
 
-                score = correct_fields / total_fields if total_fields > 0 else 0.0
+                score = total_score / total_fields if total_fields > 0 else 0.0
 
                 outputs.append(
                     {
@@ -178,7 +214,11 @@ class SimpleExtractorAdapter(BaseAdapter):
                     if not comp.get("correct"):
                         got = comp.get("extracted", "MISSING")
                         exp = comp.get("expected")
-                        errors.append(f"'{fname}': exp='{exp}', got='{got}'")
+                        mode = comp.get("mode", "exact")
+                        partial = comp.get("score", 0.0)
+                        errors.append(
+                            f"'{fname}' [{mode}, score={partial:.2f}]: exp='{exp}', got='{got}'"
+                        )
 
                 # Truncar texto según configuración
                 cv_text = data.get("input", data.get("text", ""))
