@@ -45,5 +45,4 @@ optimization:
   max_metric_calls: 40
   skip_perfect_score: true
   display_progress_bar: true
-  # Promedia val/test sobre 3 evaluaciones para reducir ruido de muestreo.
-  eval_repeats: 3
+  eval_repeats: 1

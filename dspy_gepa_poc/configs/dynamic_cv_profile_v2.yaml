@@ -74,8 +74,7 @@ optimization:
   auto_budget: "heavy"
   use_few_shot: true
   few_shot_count: 2
-  # Promedia val/test sobre 3 evaluaciones para reducir ruido de muestreo.
-  eval_repeats: 3
+  eval_repeats: 1
   ignore_in_metric: [seniority_declarado]
   match_mode: "normalized"
   fuzzy_threshold: 0.88

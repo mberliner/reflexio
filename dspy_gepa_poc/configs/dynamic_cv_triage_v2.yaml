@@ -62,8 +62,7 @@ optimization:
   auto_budget: "medium"
   use_few_shot: true
   few_shot_count: 3
-  # Promedia val/test sobre 3 evaluaciones para reducir ruido de muestreo.
-  eval_repeats: 3
+  eval_repeats: 1
   ignore_in_metric:
     - "justificacion"
   match_mode: "exact"
