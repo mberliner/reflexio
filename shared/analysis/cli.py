@@ -17,7 +17,10 @@ def add_common_args(parser: argparse.ArgumentParser):
     """Add common arguments to a parser."""
     parser.add_argument("--csv", type=Path, help="Ruta explicita al archivo CSV de metricas")
     parser.add_argument(
-        "--project", type=str, help="Filtrar por nombre de proyecto (match parcial)"
+        "--project",
+        type=str,
+        help="Filtrar a un solo proyecto (match parcial): 'dspy' -> dspy_gepa_poc, "
+        "'gepa' -> gepa_standalone",
     )
     parser.add_argument("--case", type=str, help="Filtrar por nombre de caso (match parcial)")
     parser.add_argument(
@@ -78,12 +81,19 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos:
-  ./analyze leaderboard                    # Analisis completo
+  ./analyze leaderboard                    # Analisis completo (ambos proyectos)
   ./analyze leaderboard --graphs           # Con graficos PNG
-  ./analyze leaderboard --project dspy     # Solo proyecto dspy_*
+  ./analyze leaderboard --project dspy     # Solo proyecto dspy_gepa_poc
+  ./analyze leaderboard --project gepa     # Solo proyecto gepa_standalone
   ./analyze roi --volume 5000              # ROI para 5000 llamadas
   ./analyze stats --batches 4              # Evolucion en 4 lotes
   ./analyze budget --sort cost             # Presupuesto ordenado por costo
+
+Filtros comunes a todos los subcomandos:
+  --project {dspy,gepa}   Aislar un solo proyecto (match parcial)
+  --case <texto>          Filtrar por nombre de caso (match parcial)
+  --csv <ruta>            CSV de metricas explicito
+  --no-merge              No combinar multiples CSVs
         """,
     )
 
