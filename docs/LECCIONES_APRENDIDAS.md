@@ -400,8 +400,90 @@ pendiente de revisión humana. El hallazgo "triage está en techo" es robusto, p
 con baseline 100 un gold mal etiquetado podría enmascarar errores; revisar el gold
 antes de cerrar conclusiones cuantitativas finas.
 
+### Seguimiento (2026-05-31): intervenciones v2.1 sobre triage y profile
+
+Tras la corrida N=5, se atacaron los dos casos en techo. **Cambios de setup, pendientes de re-correr el protocolo N=5 para medir efecto.**
+
+**Triage (opcion B: recrear headroom sin bajar el modelo).** Se añadieron 15
+casos FRONTERA `fit_alto`<->`fit_medio` al generador (`build_cv_v2_datasets.py`),
+con ambiguedad deliberada en un solo eje: ingles B1 vs B2, 5 años exactos vs
+casi-5, huso GMT-5/-6 compartido vs residencia fuera de LATAM (Miami/Houston),
+Flask/Tornado/aiohttp vs Django/FastAPI, PostgreSQL ausente en perfil por lo
+demas perfecto. `test` 21 -> 27 (10/10/7). El gold es defendible pero discutible
+(es justo donde un humano podria diferir): su revision es PRIORITARIA antes de
+confiar en la medicion. Hipotesis: bajan baseline < 100 y devuelven a GEPA algo
+que optimizar. Si aun satura, queda la opcion A (task=`gpt-4.1-mini`).
+
+**Profile (per_field + ampliar test).** `per_field_accuracy.py` sobre el run
+`20260530_161740` localizo el techo: `industria_previa` 75% en val Y test
+(consistente), seguido de `stack_principal` (85.5% val) y `educacion_principal`
+(~88-92%). Los fallos son de DEFINICION de gold, no de modelo: `'Diseño'` vs
+`'Diseño UX'` (granularidad), `'Backend'` vs `''` (disciplina mal etiquetada como
+industria), `'Lic. CS'` vs `'Licenciatura CS'` (abreviatura). Confirma que el
+~9% residual no es optimizable por GEPA. Ademas se amplio `test` 8 -> 18
+(rebalance en `build_cv_profile.py`, `PROMOTE_TO_TEST`, sin fabricar filas) para
+volver fiable la robustez, replicando la leccion de extraction (test 3->20 bajo
+el rango de 40 a 2 pts). `train` 25 -> 15, `val` 12 sin cambios.
+
 ### Archivos relacionados
 
 - Protocolo: `shared/utils/seed_protocol.py`, `docs/PROTOCOLO_N_SEEDS.md`
 - Configs: `dynamic_cv_profile_v2.yaml`, `dynamic_cv_triage_v2.yaml`, `cv_extraction_v2.yaml`
-- Datasets: `cv_triage_v2.csv`, `cv_extraction_v2.csv` (generados por `shared/utils/build_cv_v2_datasets.py`)
+- Datasets: `cv_triage_v2.csv`, `cv_extraction_v2.csv` (generados por `shared/utils/build_cv_v2_datasets.py`); `cv_profile.csv` (generado por `dspy_gepa_poc/scripts/build_cv_profile.py`)
+
+## 10. Comparar DSPy vs GEPA de forma justa (baseline confound y scoring SSOT)
+
+### El confound: baselines absolutos no son comparables entre frameworks
+
+El caso DSPy `cv_profile_v3` mostraba un baseline mucho mas alto que el caso GEPA
+`cv_extraction_v3`. Eso NO era senal de que un framework extraiga mejor: era un
+artefacto de medicion. El profile DSPy parte con tres ventajas que GEPA no tenia:
+
+1. **Descripcion por campo** en la signature (formato, valores permitidos, reglas
+   anti-error como "sin honorificos", "no inferir ubicacion del email"). El seed
+   GEPA (`cv_extraction_v1.json`) solo listaba nombres de campo.
+2. **Metrica tolerante por campo** (`field_configs`): `set` para skills/idiomas
+   (orden y duplicados no penalizan), `fuzzy` para educacion/ubicacion/industria.
+   GEPA puntuaba todo con igualdad exacta (`strip().lower()` + `==`).
+3. **`ignore_in_metric`** (no cuenta `seniority_declarado`) y **few-shot**.
+
+Leccion: **comparar baselines crudos entre frameworks es invalido salvo que
+prompt + metrica + datos esten igualados.** O se igualan las condiciones, o se
+compara el **delta** (baseline -> optimizado), no el valor absoluto.
+
+### Dos formas de igualar, ambas materializadas (2026-05-31)
+
+- **Bajar DSPy a las condiciones de GEPA** (austero): `dynamic_cv_extraction_v3.yaml`
+  — 5 campos, prompt pobre sin desc, `match_mode: exact`, sin `ignore_in_metric`,
+  sin few-shot, 40 metric_calls. Mismo CSV que GEPA (`cv_extraction_v3.csv`, copiado).
+- **Subir GEPA a las condiciones de DSPy** (enriquecido): `cv_profile_v3.yaml` del
+  lado GEPA — 10 campos, seed con descripcion por campo (`cv_profile_v3.json`),
+  `field_configs` set/fuzzy/normalized, `ignore_in_metric: [seniority]`, few-shot=2.
+  Mismo CSV que DSPy (`cv_profile_v3.csv`, copiado).
+
+### El scoring pasó a ser SSOT en shared/ (requisito de la igualación)
+
+Igualar GEPA hacia arriba exigia que el extractor puntuara como DSPy. La logica
+vivia solo en `dspy_gepa_poc/metrics.py`, y GEPA **no puede importar de
+`dspy_gepa_poc`** (invariante de paquetes hermanos). Solucion: extraer los
+primitivos (`score_field`, `score_set`, `compare_*`, `normalize_text`,
+`tokenize_list`) a `shared/scoring/field_match.py`. Ahora DSPy y el
+`SimpleExtractorAdapter` puntuan con el **mismo objeto**, sin duplicacion ni
+riesgo de divergencia. El refactor fue comportamiento-identico (tests previos sin
+tocar) y se hizo en dos fases con verificacion verde intermedia.
+
+### Cambio de comportamiento deliberado en el extractor GEPA
+
+Se quito el guard `field_name in extracted_fields` del extractor: GEPA antes
+penalizaba un campo ausente aunque el gold fuera vacio; DSPy nunca lo hace
+(`getattr(pred, field, "")`). Alinearlos **desplaza levemente los numeros del
+`cv_extraction_v3` GEPA ya corrido** (mas leniente solo cuando gold vacio + campo
+ausente). Es el precio de la equivalencia y queda registrado para no confundirlo
+con un cambio de modelo.
+
+### Archivos relacionados
+
+- Scoring SSOT: `shared/scoring/field_match.py`, `tests/test_scoring_shared.py`
+- DSPy austero: `dspy_gepa_poc/configs/dynamic_cv_extraction_v3.yaml`, `dspy_gepa_poc/datasets/cv_extraction_v3.csv`
+- GEPA enriquecido: `gepa_standalone/experiments/configs/cv_profile_v3.yaml`, `gepa_standalone/experiments/prompts/cv_profile_v3.json`, `gepa_standalone/experiments/datasets/cv_profile_v3.csv`
+- Extractor con `field_configs`: `gepa_standalone/adapters/simple_extractor_adapter.py`, `tests/test_gepa_adapters.py` (clase `TestExtractorFieldConfigs`)
