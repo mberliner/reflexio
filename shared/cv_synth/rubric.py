@@ -67,10 +67,7 @@ def _check_failures(spec: CandidateSpec) -> list[tuple[str, str]]:
 def triage_label(spec: CandidateSpec) -> tuple[str, str]:
     """Devuelve (label, justificacion) para una fila de cv_triage_v3."""
     # Alineacion critica de disciplina / lenguaje.
-    misaligned = (
-        spec.discipline not in ALIGNED_DISCIPLINES
-        or spec.primary_language != "Python"
-    )
+    misaligned = spec.discipline not in ALIGNED_DISCIPLINES or spec.primary_language != "Python"
     if misaligned:
         if spec.discipline in EXCLUDED_DISCIPLINES:
             motivo = f"disciplina {spec.discipline} excluida por el aviso"

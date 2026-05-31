@@ -25,17 +25,37 @@ from .render import render
 from .rubric import JOB_DESCRIPTION, triage_label
 
 TRIAGE_HEADER = [
-    "split", "cv_text", "job_description", "fit_label", "justificacion", "gold_verificado",
+    "split",
+    "cv_text",
+    "job_description",
+    "fit_label",
+    "justificacion",
+    "gold_verificado",
 ]
 PROFILE_HEADER = [
-    "split", "text", "nombre", "email", "años_experiencia", "skills",
-    "educacion_principal", "seniority_declarado", "stack_principal", "idiomas",
-    "ubicacion", "industria_previa",
+    "split",
+    "text",
+    "nombre",
+    "email",
+    "años_experiencia",
+    "skills",
+    "educacion_principal",
+    "seniority_declarado",
+    "stack_principal",
+    "idiomas",
+    "ubicacion",
+    "industria_previa",
 ]
 # Subset de 5 campos para el caso GEPA standalone (paridad con cv_extraction_v2).
 EXTRACTION_HEADER = [
-    "split", "text", "nombre", "email", "años_experiencia", "skills",
-    "educacion_principal", "gold_verificado",
+    "split",
+    "text",
+    "nombre",
+    "email",
+    "años_experiencia",
+    "skills",
+    "educacion_principal",
+    "gold_verificado",
 ]
 
 
@@ -58,9 +78,7 @@ def main() -> int:
     for spec in CANDIDATES:
         cv_text = render(spec)
         label, justificacion = triage_label(spec)
-        triage_rows.append(
-            [spec.split, cv_text, JOB_DESCRIPTION, label, justificacion, "derivado"]
-        )
+        triage_rows.append([spec.split, cv_text, JOB_DESCRIPTION, label, justificacion, "derivado"])
         g = extraction_gold(spec)
         profile_rows.append([spec.split, cv_text] + [g[k] for k in PROFILE_HEADER[2:]])
         extraction_rows.append(

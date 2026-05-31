@@ -1057,6 +1057,4 @@ class TestExtractorFieldConfigs:
 
     def test_invalid_field_mode_raises(self, mock_env):
         with pytest.raises(ValueError, match="Modo invalido"):
-            SimpleExtractorAdapter(
-                required_fields=["a"], field_configs={"a": {"mode": "bogus"}}
-            )
+            SimpleExtractorAdapter(required_fields=["a"], field_configs={"a": {"mode": "bogus"}})

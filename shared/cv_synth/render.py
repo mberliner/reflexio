@@ -21,9 +21,20 @@ def _slug(name: str) -> str:
     norm = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     return norm.lower().replace(" ", "")
 
+
 _MONTHS = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
 ]
 
 

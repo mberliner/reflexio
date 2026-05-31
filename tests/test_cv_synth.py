@@ -22,10 +22,19 @@ VALID_LABELS = {"fit_alto", "fit_medio", "no_fit"}
 
 def _sample_spec():
     return make_candidate(
-        idx=0, split="train", discipline="backend", primary_language="Python",
-        years_total=7, years_relevant=7, frameworks=("Django", "FastAPI"),
-        databases=("PostgreSQL", "Redis"), english="c1", city="Buenos Aires",
-        seniority="senior", industria="Fintech", extra_skills=("Docker", "AWS"),
+        idx=0,
+        split="train",
+        discipline="backend",
+        primary_language="Python",
+        years_total=7,
+        years_relevant=7,
+        frameworks=("Django", "FastAPI"),
+        databases=("PostgreSQL", "Redis"),
+        english="c1",
+        city="Buenos Aires",
+        seniority="senior",
+        industria="Fintech",
+        extra_skills=("Docker", "AWS"),
     )
 
 
@@ -84,20 +93,36 @@ def test_rubric_fit_alto():
 def test_rubric_single_fail_is_medio():
     # Mismo perfil pero ingles A2 -> falla un solo eje -> fit_medio.
     spec = make_candidate(
-        idx=1, split="val", discipline="backend", primary_language="Python",
-        years_total=7, years_relevant=7, frameworks=("Django",),
-        databases=("PostgreSQL",), english="a2", city="Lima",
-        seniority="senior", industria="Fintech",
+        idx=1,
+        split="val",
+        discipline="backend",
+        primary_language="Python",
+        years_total=7,
+        years_relevant=7,
+        frameworks=("Django",),
+        databases=("PostgreSQL",),
+        english="a2",
+        city="Lima",
+        seniority="senior",
+        industria="Fintech",
     )
     assert triage_label(spec)[0] == "fit_medio"
 
 
 def test_rubric_misaligned_language_is_no_fit():
     spec = make_candidate(
-        idx=2, split="test", discipline="backend", primary_language="Java",
-        years_total=8, years_relevant=8, frameworks=("Spring Boot",),
-        databases=("PostgreSQL",), english="c1", city="Bogota",
-        seniority="senior", industria="Backend",
+        idx=2,
+        split="test",
+        discipline="backend",
+        primary_language="Java",
+        years_total=8,
+        years_relevant=8,
+        frameworks=("Spring Boot",),
+        databases=("PostgreSQL",),
+        english="c1",
+        city="Bogota",
+        seniority="senior",
+        industria="Backend",
     )
     assert triage_label(spec)[0] == "no_fit"
 
@@ -105,9 +130,18 @@ def test_rubric_misaligned_language_is_no_fit():
 def test_qa_with_python_is_no_fit():
     # Trampa: QA que usa Python para scripting NO es backend Python.
     spec = make_candidate(
-        idx=3, split="test", discipline="qa", primary_language="Python",
-        years_total=6, years_relevant=6, frameworks=("Selenium",),
-        databases=("PostgreSQL",), english="c1", city="Santiago",
-        seniority="senior", industria="QA", extra_skills=("Python", "Jira"),
+        idx=3,
+        split="test",
+        discipline="qa",
+        primary_language="Python",
+        years_total=6,
+        years_relevant=6,
+        frameworks=("Selenium",),
+        databases=("PostgreSQL",),
+        english="c1",
+        city="Santiago",
+        seniority="senior",
+        industria="QA",
+        extra_skills=("Python", "Jira"),
     )
     assert triage_label(spec)[0] == "no_fit"

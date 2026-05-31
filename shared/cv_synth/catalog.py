@@ -26,17 +26,29 @@ SPLIT_PLAN = {"train": 6, "val": 5, "test": 8}
 # --- Pools de variedad para extraccion (NO afectan los ejes del rubric) ---
 # Sectores rotados para industria_previa (antes fijo en Fintech/E-commerce).
 _SECTORS = [
-    "Fintech", "E-commerce", "SaaS B2B", "Retail", "Logistica",
-    "Salud", "EdTech", "Gaming", "AdTech",
+    "Fintech",
+    "E-commerce",
+    "SaaS B2B",
+    "Retail",
+    "Logistica",
+    "Salud",
+    "EdTech",
+    "Gaming",
+    "AdTech",
 ]
 # Combos de frameworks: todos incluyen Django o FastAPI (el rubric exige uno).
 _FW_COMBOS = [
-    ("Django", "FastAPI"), ("Django",), ("FastAPI",),
-    ("Django", "DRF"), ("FastAPI", "Celery"),
+    ("Django", "FastAPI"),
+    ("Django",),
+    ("FastAPI",),
+    ("Django", "DRF"),
+    ("FastAPI", "Celery"),
 ]
 # Bases: PostgreSQL SIEMPRE presente (excluyente); varia la secundaria.
 _DB_COMBOS = [
-    ("PostgreSQL", "Redis"), ("PostgreSQL",), ("PostgreSQL", "MongoDB"),
+    ("PostgreSQL", "Redis"),
+    ("PostgreSQL",),
+    ("PostgreSQL", "MongoDB"),
     ("PostgreSQL", "Redis", "Elasticsearch"),
 ]
 # Ingles dentro de la banda que APRUEBA (>= B2): variedad sin romper el rubric.
@@ -63,14 +75,21 @@ def _alto(idx: int, split: str, i: int) -> CandidateSpec:
     city = _LATAM[i % len(_LATAM)]
     years = 5 + (i % 5)
     return make_candidate(
-        idx=idx, split=split, discipline="backend", primary_language="Python",
-        years_total=years, years_relevant=years,
+        idx=idx,
+        split=split,
+        discipline="backend",
+        primary_language="Python",
+        years_total=years,
+        years_relevant=years,
         frameworks=_FW_COMBOS[i % len(_FW_COMBOS)],
         databases=_DB_COMBOS[i % len(_DB_COMBOS)],
-        english=_ENG_PASS[i % len(_ENG_PASS)], city=city,
-        seniority="senior", industria=_SECTORS[i % len(_SECTORS)],
+        english=_ENG_PASS[i % len(_ENG_PASS)],
+        city=city,
+        seniority="senior",
+        industria=_SECTORS[i % len(_SECTORS)],
         extra_skills=_EXTRA_VARIANTS[i % len(_EXTRA_VARIANTS)],
-        other_languages=_other_langs(city, i), honorific=_honorific(i),
+        other_languages=_other_langs(city, i),
+        honorific=_honorific(i),
     )
 
 
@@ -81,14 +100,21 @@ def _medio(idx: int, split: str, i: int) -> CandidateSpec:
     fail = _MEDIO_FAILS[i % len(_MEDIO_FAILS)]
     city = _LATAM[i % len(_LATAM)]
     kw: dict = {
-        "idx": idx, "split": split, "discipline": "backend", "primary_language": "Python",
-        "years_total": 6, "years_relevant": 6,
+        "idx": idx,
+        "split": split,
+        "discipline": "backend",
+        "primary_language": "Python",
+        "years_total": 6,
+        "years_relevant": 6,
         "frameworks": _FW_COMBOS[i % len(_FW_COMBOS)],
         "databases": _DB_COMBOS[i % len(_DB_COMBOS)],
-        "english": _ENG_PASS[i % len(_ENG_PASS)], "city": city,
-        "seniority": "senior", "industria": _SECTORS[(i + 3) % len(_SECTORS)],
+        "english": _ENG_PASS[i % len(_ENG_PASS)],
+        "city": city,
+        "seniority": "senior",
+        "industria": _SECTORS[(i + 3) % len(_SECTORS)],
         "extra_skills": _EXTRA_VARIANTS[i % len(_EXTRA_VARIANTS)],
-        "other_languages": _other_langs(city, i), "honorific": _honorific(i),
+        "other_languages": _other_langs(city, i),
+        "honorific": _honorific(i),
     }
     # Inyecta EXACTAMENTE un fallo (el resto de los ejes queda aprobando).
     if fail == "seniority":
@@ -123,11 +149,21 @@ def _nofit(idx: int, split: str, i: int) -> CandidateSpec:
     city = _LATAM[i % len(_LATAM)]
     years = 6 + (i % 4)
     return make_candidate(
-        idx=idx, split=split, discipline=disc, primary_language=lang,
-        years_total=years, years_relevant=years, frameworks=fw,
-        databases=("PostgreSQL",), english=_ENG_PASS[i % len(_ENG_PASS)], city=city,
-        seniority="senior", industria=industria, extra_skills=extras,
-        other_languages=_other_langs(city, i), honorific=_honorific(i),
+        idx=idx,
+        split=split,
+        discipline=disc,
+        primary_language=lang,
+        years_total=years,
+        years_relevant=years,
+        frameworks=fw,
+        databases=("PostgreSQL",),
+        english=_ENG_PASS[i % len(_ENG_PASS)],
+        city=city,
+        seniority="senior",
+        industria=industria,
+        extra_skills=extras,
+        other_languages=_other_langs(city, i),
+        honorific=_honorific(i),
     )
 
 
