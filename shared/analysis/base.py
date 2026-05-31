@@ -20,6 +20,18 @@ def get_shared_root() -> Path:
     return Path(__file__).parent.parent.parent
 
 
+def project_matches(project_name: str, project_filter: str) -> bool:
+    """
+    Check whether a project directory name matches a --project filter.
+
+    Uses prefix matching (not substring) to avoid ambiguity: the literal
+    'gepa' is a substring of 'dspy_gepa_poc', so a substring match would make
+    --project gepa select both projects. Prefix matching disambiguates:
+    'gepa' -> gepa_standalone, 'dspy' -> dspy_gepa_poc.
+    """
+    return project_name.lower().startswith(project_filter.lower())
+
+
 def find_all_metrics_csv(search_root: Path = None) -> list[Path]:
     """
     Find all metrics CSV files in sibling projects of shared/.
@@ -64,7 +76,7 @@ def get_output_dir(project_filter: str = None) -> Path:
     if project_filter:
         search_root = get_shared_root()
         for project_dir in search_root.iterdir():
-            if project_dir.is_dir() and project_filter.lower() in project_dir.name.lower():
+            if project_dir.is_dir() and project_matches(project_dir.name, project_filter):
                 output_dir = project_dir / "results"
                 output_dir.mkdir(parents=True, exist_ok=True)
                 return output_dir
@@ -104,7 +116,7 @@ def load_metrics(
 
     # Filter by project name if specified
     if project:
-        found = [p for p in found if project.lower() in p.parent.parent.parent.name.lower()]
+        found = [p for p in found if project_matches(p.parent.parent.parent.name, project)]
 
     if not found:
         raise FileNotFoundError(

@@ -105,6 +105,42 @@ def test_load_metrics_merge_multiple(tmp_path, monkeypatch):
     assert "run2" in run_ids
 
 
+def test_project_matches_prefix_disambiguates():
+    """'gepa' must match only gepa_standalone, not dspy_gepa_poc (substring trap)."""
+    assert base.project_matches("gepa_standalone", "gepa")
+    assert not base.project_matches("dspy_gepa_poc", "gepa")
+    assert base.project_matches("dspy_gepa_poc", "dspy")
+    assert not base.project_matches("gepa_standalone", "dspy")
+
+
+def test_load_metrics_project_filter_gepa_excludes_dspy(tmp_path, monkeypatch):
+    """--project gepa must load only gepa_standalone even though 'gepa' is a
+    substring of dspy_gepa_poc (regression for prefix-match fix)."""
+    dspy = tmp_path / "dspy_gepa_poc" / "results" / "experiments"
+    gepa = tmp_path / "gepa_standalone" / "results" / "experiments"
+    dspy.mkdir(parents=True)
+    gepa.mkdir(parents=True)
+
+    content_template = (
+        "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;"
+        "Baseline Score;Optimizado Score;Robustez Score;Budget;Notas\n"
+        "{run_id};2026-02-01 10:00:00;Test;gpt-4o-mini;gpt-4o;0,50;0,60;0,55;20;Test\n"
+    )
+    (dspy / "metricas_optimizacion.csv").write_text(
+        content_template.format(run_id="dspy_run"), encoding="utf-8"
+    )
+    (gepa / "metricas_optimizacion.csv").write_text(
+        content_template.format(run_id="gepa_run"), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(base, "get_shared_root", lambda: tmp_path)
+
+    data = base.load_metrics(csv_path=None, project="gepa", merge=True)
+
+    run_ids = {d["Run ID"] for d in data}
+    assert run_ids == {"gepa_run"}
+
+
 def test_parse_float_european():
     """Convert European decimal format to float."""
     assert base.parse_float("0,85") == 0.85
