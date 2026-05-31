@@ -1,0 +1,58 @@
+# Config v3: extraccion DSPy en CONDICIONES IGUALES a GEPA cv_extraction_v3.
+#
+# Proposito: comparacion 1:1 DSPy vs GEPA sobre los MISMOS 5 campos, el MISMO
+# dataset (cv_extraction_v3.csv, copiado de gepa_standalone/experiments/datasets)
+# y un baseline NO inflado. A diferencia de dynamic_cv_profile_v3.yaml (10 campos,
+# descripciones ricas por campo, metrica tolerante set/fuzzy, ignore_in_metric,
+# few-shot), este config replica la austeridad del extractor GEPA para que el
+# baseline crudo sea comparable y el delta (baseline->optimizado) mida lo mismo.
+#
+# Igualdades deliberadas con GEPA (gepa_standalone/.../cv_extraction_v3.yaml):
+#   - 5 campos: nombre, email, años_experiencia, skills, educacion_principal.
+#   - Prompt pobre: instruction minima estilo seed cv_extraction_v1.json, SIN
+#     descripcion por campo (desc cae al fallback generico de DynamicModuleFactory).
+#   - Metrica estricta: match_mode "exact" (= strip().lower() + ==, identico al
+#     SimpleExtractorAdapter de GEPA). Sin field_configs set/fuzzy.
+#   - Sin ignore_in_metric: se miden los 5 campos (GEPA no ignora ninguno).
+#   - Sin few-shot: use_few_shot=false y max_positive_examples=0 (= GEPA
+#     extractor_max_positive_examples: 0).
+#   - max_metric_calls=40, eval_repeats=1 (mismo presupuesto que GEPA).
+#
+# Regenerar dataset: python -m shared.cv_synth.build_datasets (luego re-copiar a
+# dspy_gepa_poc/datasets/ si cambia el catalogo).
+case:
+  name: "CV Extraction v3 (DSPy, condiciones iguales a GEPA)"
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: "Extrae los siguientes campos del CV: nombre, email, años_experiencia, skills, educacion_principal. Retorna cada campo. Si un campo no aparece, devolvelo vacio."
+  inputs:
+    - name: "text"
+  outputs:
+    - name: "nombre"
+    - name: "email"
+    - name: "años_experiencia"
+    - name: "skills"
+    - name: "educacion_principal"
+
+data:
+  csv_filename: "cv_extraction_v3.csv"
+  input_column: "text"
+
+adapter:
+  max_text_length: 4000
+  max_positive_examples: 0
+
+optimization:
+  max_metric_calls: 40
+  use_few_shot: false
+  eval_repeats: 1
+  match_mode: "exact"
+  metric_feedback: true

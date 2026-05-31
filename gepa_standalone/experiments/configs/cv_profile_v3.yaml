@@ -1,0 +1,84 @@
+# GEPA Universal Optimizer Configuration
+# Config v3: extraccion de 10 campos (PERFIL) sobre CVs extensos estilo
+# modelos_cv, en CONDICIONES IGUALES a dspy_gepa_poc cv_profile_v3.
+#
+# Proposito: comparacion 1:1 GEPA vs DSPy sobre la MISMA tarea de perfil (10
+# campos), el MISMO dataset (cv_profile_v3.csv, copiado de dspy_gepa_poc/datasets)
+# y el MISMO scoring por campo. A diferencia de cv_extraction_v3 (5 campos,
+# prompt pobre, match exacto), este caso equipa al extractor de GEPA con:
+#   - Seed prompt enriquecido (cv_profile_v3.json) con descripcion por campo.
+#   - Scoring tolerante por campo via field_configs (set/fuzzy/normalized),
+#     identico a las metricas DSPy gracias a shared.scoring.score_field.
+#   - ignore_in_metric: [seniority_declarado] (igual que DSPy).
+#   - few-shot reflexivo (extractor_max_positive_examples: 2 ~ few_shot_count: 2).
+#
+# Asi el baseline crudo y el delta baseline->optimizado son comparables con el
+# caso DSPy dynamic_cv_profile_v3.yaml, en ambas direcciones.
+#
+# Regenerar dataset: python -m shared.cv_synth.build_datasets (re-copiar a
+# gepa_standalone/experiments/datasets/ si cambia el catalogo).
+
+case:
+  name: "cv_profile_v3"
+  title: "CV Profile v3 (GEPA, condiciones iguales a DSPy)"
+  description: "Extraccion de perfil (10 campos) sobre CVs extensos, scoring tolerante por campo"
+
+adapter:
+  type: "extractor"
+  required_fields:
+    - "nombre"
+    - "email"
+    - "años_experiencia"
+    - "skills"
+    - "educacion_principal"
+    - "seniority_declarado"
+    - "stack_principal"
+    - "idiomas"
+    - "ubicacion"
+    - "industria_previa"
+  max_text_length: 4000
+  extractor_max_positive_examples: 2
+
+data:
+  csv_filename: "cv_profile_v3.csv"
+  input_column: "text"
+  output_columns:
+    - "nombre"
+    - "email"
+    - "años_experiencia"
+    - "skills"
+    - "educacion_principal"
+    - "seniority_declarado"
+    - "stack_principal"
+    - "idiomas"
+    - "ubicacion"
+    - "industria_previa"
+
+prompt:
+  filename: "cv_profile_v3.json"
+
+models:
+  temperature: 0.1
+  max_tokens: 4000
+
+optimization:
+  max_metric_calls: 50
+  skip_perfect_score: true
+  display_progress_bar: true
+  eval_repeats: 1
+  # Scoring por campo identico a dspy_gepa_poc cv_profile_v3.
+  match_mode: "normalized"
+  fuzzy_threshold: 0.88
+  ignore_in_metric:
+    - "seniority_declarado"
+  field_configs:
+    nombre: { mode: "normalized" }
+    email: { mode: "normalized" }
+    años_experiencia: { mode: "exact" }
+    skills: { mode: "set", separators: ",;" }
+    educacion_principal: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    seniority_declarado: { mode: "exact" }
+    stack_principal: { mode: "set", separators: ";," }
+    idiomas: { mode: "set", separators: ";," }
+    ubicacion: { mode: "fuzzy", fuzzy_threshold: 0.85 }
+    industria_previa: { mode: "fuzzy", fuzzy_threshold: 0.85 }
