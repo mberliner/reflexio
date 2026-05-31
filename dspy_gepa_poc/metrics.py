@@ -1,88 +1,47 @@
 """
 Evaluation metrics for DSPy + GEPA optimization.
+
+Los primitivos de comparacion (exact/normalized/fuzzy/set) viven en
+`shared.scoring.field_match` para que DSPy y el extractor de GEPA compartan la
+misma logica. Aqui se re-exportan con los nombres historicos (prefijo '_') que
+usan tests y scripts; las factories de metricas DSPy siguen viviendo en este
+modulo porque dependen de tipos `dspy`.
 """
 
-import re
-import unicodedata
 from collections.abc import Callable
-from difflib import SequenceMatcher
 from typing import Any
 
 import dspy
 
+from shared.scoring.field_match import VALID_FIELD_MODES as _VALID_FIELD_MODES
+from shared.scoring.field_match import compare_exact as _compare_exact
+from shared.scoring.field_match import compare_fuzzy as _compare_fuzzy
+from shared.scoring.field_match import compare_normalized as _compare_normalized
+from shared.scoring.field_match import normalize_text as _normalize_text
+from shared.scoring.field_match import score_field as _score_field
+from shared.scoring.field_match import score_set as _score_set
+from shared.scoring.field_match import strip_accents as _strip_accents
+from shared.scoring.field_match import tokenize_list as _tokenize_list
 
-def _compare_exact(expected: str, actual: str) -> bool:
-    """Comparacion exacta tras strip/lower."""
-    return expected == actual
-
-
-def _strip_accents(text: str) -> str:
-    """Elimina diacriticos (tildes) preservando caracteres base."""
-    nfkd = unicodedata.normalize("NFKD", text)
-    return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
-
-
-def _normalize_text(text: str) -> str:
-    """Elimina puntuacion, tildes y normaliza espacios + case."""
-    text = _strip_accents(text).lower()
-    text = re.sub(r"[^\w\s]", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-
-def _compare_normalized(expected: str, actual: str) -> bool:
-    """Comparacion tras normalizar puntuacion y espacios."""
-    return _normalize_text(expected) == _normalize_text(actual)
-
-
-def _compare_fuzzy(expected: str, actual: str, threshold: float) -> bool:
-    """Comparacion por similitud con umbral. Intenta normalized primero."""
-    if _compare_normalized(expected, actual):
-        return True
-    ratio = SequenceMatcher(None, _normalize_text(expected), _normalize_text(actual)).ratio()
-    return ratio >= threshold
-
-
-def _tokenize_list(text: str, separators: str = ",;") -> set[str]:
-    """
-    Tokeniza una cadena tipo lista en un set normalizado.
-
-    Acepta varios separadores (default coma o punto y coma) y normaliza cada
-    elemento (lower, sin tildes, sin puntuacion interna). Items vacios se
-    descartan. Para items con sufijo ':valor' (p.ej. 'Python:5', 'ingles:b2')
-    se conserva solo la clave para tolerar diferencias en el valor.
-    """
-    if not text:
-        return set()
-    pattern = f"[{re.escape(separators)}]"
-    tokens = re.split(pattern, text)
-    out: set[str] = set()
-    for tok in tokens:
-        norm = _normalize_text(tok)
-        if not norm:
-            continue
-        # Conservar solo la 'clave' antes del primer ':' para Python:5 -> python.
-        # Sin ':', conservar el texto normalizado completo (ej. Vue.js -> vue js).
-        key = norm if ":" not in tok else _normalize_text(tok.split(":", 1)[0])
-        out.add(key or norm)
-    return out
-
-
-def _score_set(
-    expected: str, actual: str, separators: str = ",;"
-) -> tuple[float, set[str], set[str]]:
-    """
-    Score de Jaccard-like: |intersect| / |expected|. Retorna (score, missing, extra).
-    Si expected esta vacio, se considera match perfecto solo si actual tambien lo esta.
-    """
-    exp = _tokenize_list(expected, separators)
-    act = _tokenize_list(actual, separators)
-    if not exp:
-        return (1.0 if not act else 0.0, set(), act)
-    inter = exp & act
-    missing = exp - act
-    extra = act - exp
-    return (len(inter) / len(exp), missing, extra)
+__all__ = [
+    "_VALID_FIELD_MODES",
+    "_compare_exact",
+    "_compare_fuzzy",
+    "_compare_normalized",
+    "_normalize_text",
+    "_score_field",
+    "_score_set",
+    "_strip_accents",
+    "_tokenize_list",
+    "create_dynamic_metric",
+    "create_dynamic_metric_with_feedback",
+    "create_pipeline_metric_with_feedback",
+    "sentiment_accuracy_metric",
+    "sentiment_with_feedback_metric",
+    "extraction_accuracy_metric",
+    "extraction_with_feedback_metric",
+    "combined_metric",
+]
 
 
 def create_dynamic_metric(
@@ -127,49 +86,6 @@ def create_dynamic_metric(
         return matches / total if (normalize and total > 0) else False
 
     return dynamic_metric
-
-
-# Modos de comparacion soportados por field_configs
-_VALID_FIELD_MODES = {"exact", "normalized", "fuzzy", "set"}
-
-
-def _score_field(
-    expected_raw: str,
-    actual_raw: str,
-    mode: str,
-    fuzzy_threshold: float,
-    separators: str,
-) -> tuple[float, str]:
-    """
-    Calcula score [0,1] y mensaje de diagnostico para un campo.
-
-    Returns:
-        (score, diag): diag es '' si match perfecto.
-    """
-    expected = str(expected_raw or "").strip().lower()
-    actual = str(actual_raw or "").strip().lower()
-
-    if mode == "set":
-        score, missing, extra = _score_set(expected, actual, separators)
-        if score == 1.0 and not extra:
-            return 1.0, ""
-        parts = []
-        if missing:
-            parts.append(f"faltan: {sorted(missing)}")
-        if extra:
-            parts.append(f"sobran: {sorted(extra)}")
-        return score, f"esperado '{expected_raw}' vs obtenido '{actual_raw}' ({'; '.join(parts)})"
-
-    if mode == "normalized":
-        ok = _compare_normalized(expected, actual)
-    elif mode == "fuzzy":
-        ok = _compare_fuzzy(expected, actual, fuzzy_threshold)
-    else:  # exact
-        ok = _compare_exact(expected, actual)
-
-    if ok:
-        return 1.0, ""
-    return 0.0, f"esperado '{expected_raw}' vs obtenido '{actual_raw}'"
 
 
 def create_dynamic_metric_with_feedback(
