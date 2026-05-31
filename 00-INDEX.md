@@ -27,7 +27,7 @@ por el README (que es la puerta para humanos).
 | `shared/logging/` | Logger CSV compartido (BaseCSVLogger) y MetadataManager |
 | `shared/validation/` | Validacion de configuracion y datasets |
 | `shared/analysis/` | Utilidades de analisis compartidas |
-| `shared/utils/` | Utilidades operativas (check_deployments, seed_protocol, generadores) |
+| `shared/utils/` | Utilidades operativas: `ci_local.sh` (replica local del CI: lint, security, tests), `check_deployments.py`, `check_runs.py`, `seed_protocol.py`, `build_cv_v2_datasets.py` (generador de datasets), `keep_awake.sh`/`keep_awake.ps1` (anti-suspension), `modelos_cv/` |
 | `dspy_gepa_poc/` | Integracion DSPy + GEPA (configs, datasets, entry points) |
 | `gepa_standalone/` | GEPA puro sin DSPy (configs, datasets, prompts) |
 | `docs/` | Documentacion detallada (un archivo = un SSOT) |
