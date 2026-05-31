@@ -76,4 +76,3 @@ Cada archivo de `docs/` actua como SSOT (single source of truth) para su dominio
 | Optimizar prompts con base de conocimiento (archivo de reglas) | `docs/GUIA_CASO_USO_BASE_CONOCIMIENTO.md` |
 | Mejoras pendientes (documento efimero de implementacion) | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` |
 | Plan: extraccion de requerimientos desde transcripciones | `docs/plan_implementcion_toma_requerimientos.md` |
-| Documentacion historica (estados previos a refactors) | `docs/historico/` |

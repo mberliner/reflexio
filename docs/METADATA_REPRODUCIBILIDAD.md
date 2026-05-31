@@ -186,6 +186,34 @@ Retorna dict con claves `"task"` y `"reflection"`, cada una con subcampos `model
 
 3. **Versiones de frameworks:** Se lee via `importlib.metadata`. Si un framework no esta instalado, se marca `null`.
 
+## Conciliacion historica (artefactos previos a la persistencia de run dirs)
+
+Al conciliar `metricas_optimizacion.csv` contra los run dirs en disco
+(2026-05-30) se detectaron filas cuyo `Run Directory` no existe. No es perdida
+de datos: corresponden a corridas **anteriores a que existiera la persistencia
+de artefactos por-run**. En esa etapa el sistema solo escribia la fila de scores
+en el CSV; aun no se creaba el directorio de run con `results.json`/`run.json`.
+
+**Corte temporal:**
+
+- **GEPA:** 234 filas sin run dir, todas en el rango **2025-12-22 a 2026-01-12**
+  (fase prototipo, anterior al primer commit del repo del 2026-02-07). Casos
+  afectados: CV Extraction, Email Urgency, Text-to-SQL, RAG Optimization. Los
+  scores sobreviven en el CSV; no hay prompts ni `results.json` por-run.
+- **A partir de febrero 2026** (cuando ya existia git y, desde el `2026-05-17`
+  con `save_run_artifacts`, la persistencia consolidada) **no falta ningun
+  artefacto**: 100% de las filas tienen su run dir.
+- **DSPy:** sin filas faltantes (rango 2026-02-06 en adelante).
+
+**Implicancia:** las filas previas a ~2026-01-12 son legitimamente
+**archivables** (conciliacion de scores: OK; auditoria de prompts: no disponible),
+no candidatas a re-correr.
+
+**Nota de portabilidad:** parte del CSV restaurado desde otra maquina guarda
+`Run Directory` con separador Windows (`\`). Cualquier tooling que resuelva la
+ruta de forma literal en Linux (incl. `seed_protocol.py` si une rutas) debe
+normalizar `\`->`/` o matchear por basename. Ver `shared/utils/seed_protocol.py`.
+
 ## Casos de Uso
 
 ### Comparar dos runs del mismo experimento
