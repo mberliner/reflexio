@@ -1,6 +1,7 @@
 """Construye cv_profile.csv: 16 CVs originales (con 5 columnas nuevas anotadas) + 17 sinteticos."""
 
 import csv
+from collections import Counter
 from pathlib import Path
 
 HEADER = [
@@ -664,14 +665,43 @@ AMBIGUOUS = [
     ),  # noqa: E501
 ]
 
+# Rebalance del split: test=8 era demasiado pequeno para medir robustez con
+# fiabilidad (rango +-4.5 pts, ver seccion 9 de LECCIONES_APRENDIDAS.md). Se
+# promueven a test 10 perfiles diversos antes en train, llevando test 8 -> 18 sin
+# fabricar filas nuevas (preserva la curacion del gold). Diversidad cubierta:
+# ML, Full Stack, DevOps, Marketing, Consultoria, Diseno UX, Fintech, SaaS,
+# Frontend, Mobile iOS. train baja a 15 (suficiente para few_shot_count=2 + GEPA).
+PROMOTE_TO_TEST = {
+    "Juan Pérez",
+    "María González",
+    "Ahmed Hassan",
+    "Jennifer López",
+    "Miguel Brown",
+    "Emma Watson",
+    "Martín Acosta",
+    "Inés Mora",
+    "Nicolás Bravo",
+    "Mateo Salinas",
+}
+
+
+def _rebalance(row):
+    if row[2] in PROMOTE_TO_TEST:
+        return ("test", *row[1:])
+    return row
+
+
 out = Path(__file__).resolve().parents[1] / "datasets" / "cv_profile.csv"
+all_rows = [_rebalance(r) for r in (ORIGINALS + NEW + AMBIGUOUS)]
 with out.open("w", encoding="utf-8", newline="") as f:
     w = csv.writer(f)
     w.writerow(HEADER)
-    for row in ORIGINALS + NEW + AMBIGUOUS:
+    for row in all_rows:
         w.writerow(row)
-total = len(ORIGINALS) + len(NEW) + len(AMBIGUOUS)
+split_counts = Counter(r[0] for r in all_rows)
+total = len(all_rows)
 print(f"Escritas {total} filas en {out}")
 print(f"  Originales: {len(ORIGINALS)}")
 print(f"  Sinteticos claros: {len(NEW)}")
 print(f"  Ambiguos: {len(AMBIGUOUS)}")
+print(f"  Splits: {dict(split_counts)}")

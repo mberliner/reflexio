@@ -13,6 +13,11 @@ DISEÑO:
 - Clases balanceadas en triage (fit_alto / fit_medio / no_fit) en los tres splits.
 - Casos limite deliberados (fit_medio que falla UN requisito; no_fit con Python pero de
   data science / otra disciplina) para forzar la rubrica de decision.
+- Casos FRONTERA fit_alto<->fit_medio (seccion al final de TRIAGE_ROWS): ambiguedad en
+  un solo eje (ingles B1 vs B2, 5 años exactos vs casi-5, huso GMT vs residencia LATAM,
+  Flask/Tornado vs Django/FastAPI, PostgreSQL ausente). Recrean headroom de optimizacion
+  para modelos potentes (gpt-5-mini satura el dataset nitido). El gold es defendible pero
+  discutible: un revisor humano podria diferir, por lo que su revision es PRIORITARIA.
 
 GATE DE CALIDAD: cada fila lleva la columna `gold_verificado="no"`. Es un borrador de
 gold. Un humano DEBE revisar y poner "si" antes de confiar en estos datos como test.
@@ -358,6 +363,146 @@ TRIAGE_ROWS = [
         "9 anios en sistemas embebidos. C, C++, microcontroladores, RTOS. Ingles C1.",
         "no_fit",
         "Disciplina embebidos en C/C++, no backend Python: perfil desalineado.",
+    ),
+    # ===================================================================
+    # FRONTERA fit_alto <-> fit_medio: ambiguedad deliberada en UN solo eje.
+    # Objetivo: recrear headroom de optimizacion con gpt-5-mini (el dataset
+    # nitido lo deja en techo). El gold aqui es DEFENDIBLE pero DISCUTIBLE:
+    # son justo los casos donde un revisor humano podria diferir. Refuerza el
+    # caveat gold_verificado="no" -> requieren revision humana prioritaria.
+    # Regla aplicada: el nivel/atributo DECLARADO manda, no el aspiracional;
+    # "5+" es inclusivo en 5; residencia LATAM != solo compartir huso horario;
+    # "Django y/o FastAPI" -> uno solo basta.
+    # -------------------- frontera (train, few-shot) -------------------
+    (
+        "train",
+        "Bruno Salazar\nLima, Peru\nbruno.salazar@mail.pe\n"
+        "6 anios Python backend. Django, FastAPI, PostgreSQL, REST.\n"
+        "Ingles B1 (en camino al B2, curso intensivo este anio).",
+        "fit_medio",
+        "Nucleo tecnico y ubicacion OK pero ingles DECLARADO B1; 'en camino a B2' es "
+        "aspiracional, no acredita el B2 requerido.",
+    ),
+    (
+        "train",
+        "Cecilia Bustos - cecilia.bustos@correo.cl\nSantiago, Chile\n"
+        "5 anios exactos en backend Python. Django + DRF, PostgreSQL, APIs REST.\n"
+        "Ingles B2.",
+        "fit_alto",
+        "5 años cumple el umbral '5+' (inclusivo); Django/PG/REST, ingles B2 y residencia en "
+        "Chile: cumple todos los ejes en el minimo.",
+    ),
+    (
+        "train",
+        "Hector Pineda\nMiami, USA (trabajo en horario GMT-5)\nhector.pineda@dev.com\n"
+        "Origen colombiano. 7 anios Python. Django, PostgreSQL, microservicios. Ingles C1.",
+        "fit_medio",
+        "Comparte huso (GMT-5) y stack/idioma perfectos, pero RESIDE en USA, no en LATAM: el "
+        "requisito pide residencia, no solo zona horaria.",
+    ),
+    (
+        "train",
+        "Valeria Ocampo\nMontevideo, Uruguay\nvaleria.ocampo@mail.uy\n"
+        "7 anios Python. Solo Django (nunca use FastAPI). PostgreSQL, REST. Ingles B2.",
+        "fit_alto",
+        "El aviso pide 'Django y/o FastAPI': solo Django ya cumple. Seniority, PG, ingles B2 y "
+        "LATAM en regla.",
+    ),
+    (
+        "train",
+        "RAUL ESQUIVEL\nBuenos Aires, Argentina\nraul.esquivel@gmail.com\n"
+        "8 anios Python senior. Django, REST. Ingles C1.\n"
+        "Bases de datos: MySQL y MongoDB.",
+        "fit_medio",
+        "Perfil senior Python/Django, ingles C1, LATAM, pero NO acredita PostgreSQL (usa "
+        "MySQL/MongoDB): falla un requisito excluyente.",
+    ),
+    # ------------------------ frontera (val) ---------------------------
+    (
+        "val",
+        "Florencia Vidal\nCiudad de Mexico, Mexico - florencia.vidal@mail.mx\n"
+        "6 anios Python, FastAPI, PostgreSQL.\n"
+        "Ingles fluido: trabaje 4 anios 100% remoto para un cliente en USA (sin certificado "
+        "formal).",
+        "fit_alto",
+        "Evidencia concreta de uso profesional sostenido del ingles (4 años con cliente USA) "
+        "equivale a B2+ aunque no haya certificado; resto en regla.",
+    ),
+    (
+        "val",
+        "Ignacio Ferrer\nquito, ecuador\nignacio.ferrer@correo.ec\n"
+        "casi 5 anios (4 anios y 8 meses) en Python backend. Django, PostgreSQL. Ingles B2.",
+        "fit_medio",
+        "4 años y 8 meses queda por debajo del umbral estricto de 5+ años, aunque el resto cumpla.",
+    ),
+    (
+        "val",
+        "Tomas Bianchi\nbogota, colombia\ntomas.bianchi@webmail.com\n"
+        "6 anios Python con Tornado y aiohttp (frameworks async). PostgreSQL, REST. Ingles B2.",
+        "fit_medio",
+        "Usa Python en LATAM con PG e ingles B2 pero su stack web es Tornado/aiohttp, no Django "
+        "ni FastAPI (adyacente, no el requerido).",
+    ),
+    (
+        "val",
+        "Paula Miranda\nRemoto desde LATAM (nomada, actualmente en Mexico)\n"
+        "paula.miranda@mail.com\n"
+        "7 anios Python. Django, FastAPI, PostgreSQL. Ingles B2.",
+        "fit_alto",
+        "Actualmente reside en Mexico (LATAM, huso valido) y cumple stack, seniority e idioma: el "
+        "nomadismo no rompe el requisito mientras este en zona.",
+    ),
+    # ---------------------- frontera (test) ----------------------------
+    (
+        "test",
+        "Lorena Cabrera\nLima, Peru\nlorena.cabrera@gmail.com\n"
+        "6 anios Python. Django, PostgreSQL, REST.\n"
+        "Ingles: lectura tecnica C1, conversacion B1.",
+        "fit_medio",
+        "Lectura C1 pero conversacion B1: para un equipo internacional el nivel efectivo de "
+        "interaccion (B1) queda por debajo del B2 requerido.",
+    ),
+    (
+        "test",
+        "Emanuel Rios\nAsuncion, Paraguay\nemanuel.rios@mail.com.py\n"
+        "5 anios Python backend. Django + DRF, PostgreSQL, APIs REST. Ingles B2.",
+        "fit_alto",
+        "5 años (umbral inclusivo), Django/PG/REST, ingles B2 y residencia en Paraguay: cumple el "
+        "minimo de cada eje.",
+    ),
+    (
+        "test",
+        "GREGORIO PAZ\nHouston, Texas, USA (GMT-6)\ngregorio.paz@dev.com\n"
+        "8 anios Python. Django, PostgreSQL, microservicios. Ingles nativo.",
+        "fit_medio",
+        "Huso GMT-6 dentro del rango y stack/idioma sobrados, pero reside en USA (Houston), no en "
+        "LATAM: residencia desalineada.",
+    ),
+    (
+        "test",
+        "Renan Carvalho - renan.carvalho@dev.br\nSao Paulo, Brasil\n"
+        "9 anios Python, FastAPI, PostgreSQL, REST.\n"
+        "Portugues nativo, ingles B2.",
+        "fit_alto",
+        "9 años Python/FastAPI/PG, ingles B2 y residencia en Brasil (LATAM): el portugues nativo "
+        "no es obstaculo, cumple todo.",
+    ),
+    (
+        "test",
+        "Daniela Pizarro\nbogota, colombia\ndaniela.pizarro@correo.co\n"
+        "7 anios Python. Flask en produccion, aprendiendo FastAPI.\nPostgreSQL. Ingles C1.",
+        "fit_medio",
+        "Stack productivo en Flask (adyacente); FastAPI aun en aprendizaje, no consolidado: no "
+        "acredita Django ni FastAPI en produccion.",
+    ),
+    (
+        "test",
+        "MAURICIO LEON\nCordoba, Argentina\nmauricio.leon@gmail.com\n"
+        "10 anios en IT: 5 como backend Python con Django, 5 previos como sysadmin.\n"
+        "PostgreSQL, REST. Ingles B2.",
+        "fit_alto",
+        "Acredita 5 años de Python backend con Django (cumple el '5+' especifico); PG, REST, "
+        "ingles B2 y LATAM: los años previos de sysadmin no restan.",
     ),
 ]
 

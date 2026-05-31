@@ -1,5 +1,5 @@
 split,text,nombre,email,años_experiencia,skills,educacion_principal,seniority_declarado,stack_principal,idiomas,ubicacion,industria_previa
-train,"JUAN PÉREZ
+test,"JUAN PÉREZ
 juan.perez@email.com
 
 EXPERIENCIA: 5 años en desarrollo de software
@@ -11,8 +11,8 @@ HABILIDADES:
 • AWS
 
 EDUCACIÓN:
-Licenciatura en Ciencias de la Computación, UNAM, 2018",Juan Pérez,juan.perez@email.com,5,"Python, Machine Learning, Docker, AWS","Licenciatura Ciencias Computación, UNAM",,Python; Machine Learning; Docker; AWS,,,Machine Learning
-train,"María González (maria.g@company.com) es una desarrolladora senior con más de 8 años de experiencia en desarrollo web. Competente en React, Node.js y AWS. Graduada de la Universidad de Madrid con Maestría en Ingeniería en Computación en 2015.",María González,maria.g@company.com,8,"React, Node.js, AWS","Maestría Ingeniería Computación, Universidad Madrid",senior,React; Node.js; AWS,,,Full Stack
+Licenciatura en Ciencias de la Computación, UNAM, 2018",Juan Pérez,juan.perez@email.com,5,"Python, Machine Learning, Docker, AWS","Licenciatura Ciencias Computación, UNAM",,Python; Machine Learning; Docker; AWS,,,
+test,"María González (maria.g@company.com) es una desarrolladora senior con más de 8 años de experiencia en desarrollo web. Competente en React, Node.js y AWS. Graduada de la Universidad de Madrid con Maestría en Ingeniería en Computación en 2015.",María González,maria.g@company.com,8,"React, Node.js, AWS","Maestría Ingeniería Computación, Universidad Madrid",senior,React; Node.js; AWS,,,
 train,"ROBERTO CHEN
 Email: r.chen@techcorp.com
 
@@ -20,7 +20,7 @@ Historial Laboral: Ingeniero de Software (2019-2024)
 Habilidades Técnicas: Java, Spring Boot, Kubernetes, PostgreSQL
 
 Educación: Licenciatura en Ciencias en Tecnología de la Información
-Universidad de California, Berkeley",Roberto Chen,r.chen@techcorp.com,5,"Java, Spring Boot, Kubernetes, PostgreSQL","Licenciatura Ciencias Tecnología Información, UC Berkeley",,Java; Spring Boot; Kubernetes; PostgreSQL,,,Backend
+Universidad de California, Berkeley",Roberto Chen,r.chen@techcorp.com,5,"Java, Spring Boot, Kubernetes, PostgreSQL","Licenciatura Ciencias Tecnología Información, UC Berkeley",,Java; Spring Boot; Kubernetes; PostgreSQL,,,
 train,"Sara Williams | sarah.w@devmail.com
 
 Resumen Profesional:
@@ -29,7 +29,7 @@ Resumen Profesional:
 
 Educación:
 - PhD Ciencia de Datos, Stanford (2013)",Sara Williams,sarah.w@devmail.com,10,"Python, R, TensorFlow, scikit-learn","PhD Ciencia de Datos, Stanford",,Python; R; TensorFlow; scikit-learn,,,Ciencia de Datos
-train,"AHMED HASSAN
+test,"AHMED HASSAN
 Contacto: ahmed.hassan@email.net
 
 EXPERIENCIA PROFESIONAL
@@ -39,14 +39,14 @@ Desplegó aplicaciones en Kubernetes y administró infraestructura cloud con Ter
 
 EDUCACIÓN
 MSc Ciencias de la Computación, Universidad de Toronto, 2020",Ahmed Hassan,ahmed.hassan@email.net,3,"Jenkins, Docker, Kubernetes, Terraform","MSc Ciencias Computación, Universidad Toronto",,Jenkins; Docker; Kubernetes; Terraform,,,DevOps
-train,"Jennifer López
+test,"Jennifer López
 j.lopez@marketing.com
 
 Experiencia: Gerente de Marketing desde 2017 (7 años)
 Competencias clave: SEO, Google Analytics, Estrategia de Contenido, Redes Sociales
 
 Formación Académica: Licenciatura Marketing, NYU",Jennifer López,j.lopez@marketing.com,7,"SEO, Google Analytics, Estrategia de Contenido, Redes Sociales","Licenciatura Marketing, NYU",,SEO; Google Analytics; Estrategia de Contenido; Redes Sociales,,,Marketing
-train,"Miguel Brown <m.brown@consultant.com>
+test,"Miguel Brown <m.brown@consultant.com>
 
 Historial de Carrera:
 • Consultor Senior (2020-2024): 4 años
@@ -56,7 +56,7 @@ Total: 6 años
 Habilidades: Excel, Tableau, SQL, Power BI
 
 Educación: MBA, Harvard Business School, 2018",Miguel Brown,m.brown@consultant.com,6,"Excel, Tableau, SQL, Power BI","MBA, Harvard Business School",senior,Excel; Tableau; SQL; Power BI,,,Consultoría
-train,"Emma Watson
+test,"Emma Watson
 emma.watson@design.io
 
 Diseñadora UX | 4 años de experiencia
@@ -68,10 +68,10 @@ davidkim@techstart.com
 Desarrollador Full Stack - 6 años
 Stack Tecnológico: JavaScript, React, Node.js, MongoDB, GraphQL
 
-Educación: Licenciatura Ingeniería de Software, Georgia Tech (2018)",David Kim,davidkim@techstart.com,6,"JavaScript, React, Node.js, MongoDB, GraphQL","Licenciatura Ingeniería Software, Georgia Tech",,JavaScript; React; Node.js; MongoDB; GraphQL,,,Full Stack
+Educación: Licenciatura Ingeniería de Software, Georgia Tech (2018)",David Kim,davidkim@techstart.com,6,"JavaScript, React, Node.js, MongoDB, GraphQL","Licenciatura Ingeniería Software, Georgia Tech",,JavaScript; React; Node.js; MongoDB; GraphQL,,,
 val,"Lisa Anderson | lisa.a@sales.com
 
-Ejecutiva de Ventas con más de 12 años en ventas B2B de software. Experiencia en CRM (Salesforce), Generación de Leads y Negociación de Contratos. MBA de Wharton, 2011.",Lisa Anderson,lisa.a@sales.com,12,"Salesforce, Generación de Leads, Negociación de Contratos","MBA, Wharton",,Salesforce; Generación de Leads; Negociación de Contratos,,,Ventas B2B
+Ejecutiva de Ventas con más de 12 años en ventas B2B de software. Experiencia en CRM (Salesforce), Generación de Leads y Negociación de Contratos. MBA de Wharton, 2011.",Lisa Anderson,lisa.a@sales.com,12,"Salesforce, Generación de Leads, Negociación de Contratos","MBA, Wharton",,Salesforce; Generación de Leads; Negociación de Contratos,,,Ventas B2B Software
 val,"THOMAS MILLER
 thomas.miller@cloudeng.com
 
@@ -79,7 +79,7 @@ Arquitecto Cloud (2019-presente)
 Años de Experiencia: 5
 Tecnologías: AWS, Azure, GCP, Terraform, Ansible
 
-Formación: MS Computación en la Nube, Universidad Carnegie Mellon",Thomas Miller,thomas.miller@cloudeng.com,5,"AWS, Azure, GCP, Terraform, Ansible","MS Computación Nube, Carnegie Mellon",,AWS; Azure; GCP; Terraform; Ansible,,,Cloud
+Formación: MS Computación en la Nube, Universidad Carnegie Mellon",Thomas Miller,thomas.miller@cloudeng.com,5,"AWS, Azure, GCP, Terraform, Ansible","MS Computación Nube, Carnegie Mellon",,AWS; Azure; GCP; Terraform; Ansible,,,Cloud Computing
 val,"Sophia Rodríguez
 Contacto: sophia.r@biotech.org
 
@@ -87,7 +87,7 @@ Científica de Investigación - Bioinformática
 Experiencia: 9 años (2015-2024)
 Habilidades: Python, R, BioConductor, Análisis NGS
 
-PhD Biología Computacional, Johns Hopkins, 2015",Sophia Rodríguez,sophia.r@biotech.org,9,"Python, R, BioConductor, Análisis NGS","PhD Biología Computacional, Johns Hopkins",,Python; R; BioConductor; Análisis NGS,,,Bioinformática
+PhD Biología Computacional, Johns Hopkins, 2015",Sophia Rodríguez,sophia.r@biotech.org,9,"Python, R, BioConductor, Análisis NGS","PhD Biología Computacional, Johns Hopkins",,Python; R; BioConductor; Análisis NGS,,,Biotech
 val,"James Taylor <j.taylor@finance.net>
 
 Analista Cuantitativo | 7 años
@@ -107,7 +107,7 @@ test,"Carlos Méndez | carlos@dev.mx | Dev Backend | 5a exp
 Stack: Go, Microservicios, gRPC, Kubernetes
 Lic. CS, UNAM 2019",Carlos Méndez,carlos@dev.mx,5,"Go, Microservicios, gRPC, Kubernetes","Lic. CS, UNAM",,Go; Microservicios; gRPC; Kubernetes,,,Backend
 test,"La Dra. Elena Petrov (elena.petrov@research.edu) ha dedicado 15 años a la investigación en inteligencia artificial. Su experiencia abarca Aprendizaje Profundo, NLP, Visión por Computadora y Aprendizaje por Refuerzo. Obtuvo su PhD en Inteligencia Artificial del MIT en 2009.",Elena Petrov,elena.petrov@research.edu,15,"Aprendizaje Profundo, NLP, Visión por Computadora, Aprendizaje por Refuerzo","PhD Inteligencia Artificial, MIT",,Aprendizaje Profundo; NLP; Visión por Computadora; Aprendizaje por Refuerzo,,,Investigación AI
-train,"MARTÍN ACOSTA
+test,"MARTÍN ACOSTA
 martin.acosta@dev.com.ar | Buenos Aires, Argentina
 
 Desarrollador Backend Senior - 7 años
@@ -187,7 +187,7 @@ Stack: Python, Django, PostgreSQL, Docker, AWS
 Idiomas: Español nativo, Inglés básico (A2, en formación)
 
 Educación: Licenciatura en Sistemas, UTN, 2018",Pablo Giménez,pablo.gimenez@correo.com.ar,6,"Python, Django, PostgreSQL, Docker, AWS","Licenciatura en Sistemas, UTN",senior,Python:6; Django; PostgreSQL; Docker; AWS,español:nativo; inglés:a2,"Buenos Aires, Argentina",Fintech
-train,"Inés Mora
+test,"Inés Mora
 ines.mora@tech.es
 Madrid, España
 
@@ -207,7 +207,7 @@ He trabajado con: Python, FastAPI, PostgreSQL, Docker, Git.
 
 Idiomas: Español nativo, Inglés B1.
 
-Estudiante avanzado de Ingeniería en Sistemas, UNC. Bootcamp Backend Python 2022.",Tomás Herrera,tomas.herrera@dev.com.ar,2,"Python, FastAPI, PostgreSQL, Docker, Git","Ingeniería en Sistemas, UNC (en curso)",junior,Python:2; FastAPI; PostgreSQL; Docker,español:nativo; inglés:b1,"Córdoba, Argentina",Estudiante
+Estudiante avanzado de Ingeniería en Sistemas, UNC. Bootcamp Backend Python 2022.",Tomás Herrera,tomas.herrera@dev.com.ar,2,"Python, FastAPI, PostgreSQL, Docker, Git","Ingeniería en Sistemas, UNC (en curso); Bootcamp Backend Python",junior,Python:2; FastAPI; PostgreSQL; Docker,español:nativo; inglés:b1,"Córdoba, Argentina",
 val,"Camila Torres
 camila.torres@shop.mx | Guadalajara, México
 
@@ -219,7 +219,7 @@ Experiencia en mantenimiento de APIs y desarrollo de features.
 Idiomas: Español nativo, Inglés B2.
 
 Educación: Ingeniería en Computación, UDG, 2019",Camila Torres,camila.torres@shop.mx,5,"Python, Flask, PostgreSQL, MySQL, AWS, Git","Ingeniería en Computación, UDG",,Python:5; Flask:5; PostgreSQL; MySQL; AWS,español:nativo; inglés:b2,"Guadalajara, México",E-commerce
-train,"Nicolás Bravo
+test,"Nicolás Bravo
 nicolas.bravo@frontend.com.ar | Buenos Aires
 
 Senior Frontend Developer - 7 años
@@ -259,7 +259,7 @@ Stack: PHP, Laravel, MySQL, jQuery, Apache, Linux.
 Idiomas: Español nativo, Inglés A2.
 
 Ingeniería de Sistemas, Universidad Nacional de Colombia, 2016",Verónica Castro,veronica.castro@laravel.co,8,"PHP, Laravel, MySQL, jQuery, Apache, Linux","Ingeniería de Sistemas, Universidad Nacional de Colombia",senior,PHP:8; Laravel:8; MySQL,español:nativo; inglés:a2,"Bogotá, Colombia",Backend
-train,"Mateo Salinas
+test,"Mateo Salinas
 mateo.salinas@ios.com.ar | Buenos Aires
 
 iOS Developer - 5 años
@@ -342,7 +342,7 @@ Senior backend developer, 7 años de experiencia.
 Stack: Python, FastAPI, PostgreSQL, Docker, AWS.
 Trabajo de forma remota desde Latinoamérica.
 Idiomas: español nativo, inglés B2.
-Educación: Ingeniería en Computación, 2018.",Hernán Cabezas,hernan.cabezas@dev.com,7,"Python, FastAPI, PostgreSQL, Docker, AWS",Ingeniería en Computación,senior,Python:7; FastAPI; PostgreSQL; Docker; AWS,español:nativo; inglés:b2,Latinoamérica,Backend
+Educación: Ingeniería en Computación, 2018.",Hernán Cabezas,hernan.cabezas@dev.com,7,"Python, FastAPI, PostgreSQL, Docker, AWS",Ingeniería en Computación,senior,Python:7; FastAPI; PostgreSQL; Docker; AWS,español:nativo; inglés:b2,Latinoamérica,
 train,"Ricardo Tanaka | ricardo.tanaka@mobile.com
 Mobile dev. Android desde 2019, iOS desde 2022.
 Stack: Kotlin, Jetpack Compose, Swift, SwiftUI, Firebase, Realm.

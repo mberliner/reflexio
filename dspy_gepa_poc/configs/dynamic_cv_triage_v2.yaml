@@ -1,17 +1,27 @@
 # Config v2 para protocolo de N seeds. Ver shared/utils/seed_protocol.py
 #
-# Diagnostico: robustez "100%" enganosa por dataset diminuto (test=8) y
-# desbalanceado (no_fit:6, fit_alto:1, fit_medio:1 en test) + GEPA "ciego"
-# (match exact sin feedback) -> seleccion volatil del optimizado (66->100).
+# Diagnostico (historico v1): robustez "100%" enganosa por dataset diminuto
+# (test=8) y desbalanceado + GEPA "ciego" (match exact sin feedback) ->
+# seleccion volatil del optimizado (66->100).
 #
-# Intervenciones respecto del baseline:
-#   1. csv_filename: cv_triage_v2.csv  -> PREREQUISITO: dataset ampliado y
-#      balanceado por clase (objetivo test>=20, ~parejo entre fit_alto/fit_medio/no_fit).
-#      Curar ejemplos REALES; no fabricar para no invalidar la medicion de robustez.
-#   2. eval_repeats: 3                 -> baja ruido de muestreo del LLM.
-#   3. metric_feedback: true           -> emite "fit_label esperado X / predijo Y"
-#      para que el reflection_lm construya una rubrica de decision estable.
-# Criterio de exito: macro-F1 (no accuracy global) ↑ y rango entre seeds ↓.
+# Diagnostico (corrida N=5, 2026-05-30): con task=gpt-5-mini el dataset
+# balanceado quedo EN TECHO: baseline 100 en val, GEPA delta cero ("no modifico
+# instructions"), robustez 97.8 (ver seccion 9 de docs/LECCIONES_APRENDIDAS.md).
+# El dataset nitido separa fit_alto/fit_medio/no_fit trivialmente para el modelo.
+#
+# Intervencion v2.1 (opcion B - recrear headroom sin bajar el modelo):
+#   - cv_triage_v2.csv ahora incluye 15 casos FRONTERA fit_alto<->fit_medio con
+#     ambiguedad en un solo eje (ingles B1 vs B2, 5 años exactos vs casi-5, huso
+#     GMT vs residencia LATAM, Flask/Tornado vs Django/FastAPI, PostgreSQL
+#     ausente). Generados en shared/utils/build_cv_v2_datasets.py. test 21 -> 27.
+#     Objetivo: forzar decisiones donde gpt-5-mini puede diferir del gold y GEPA
+#     tenga algo que optimizar. Gold defendible pero discutible (gold_verificado
+#     ="no": revision humana PRIORITARIA antes de cerrar conclusiones).
+#   - eval_repeats: 3        -> baja ruido de muestreo del LLM.
+#   - metric_feedback: true  -> emite "fit_label esperado X / predijo Y" para que
+#     el reflection_lm construya una rubrica de decision estable.
+# Criterio de exito: baseline < 100 (hay headroom), macro-F1 ↑ via GEPA, rango
+# entre seeds ↓. Si el baseline sigue saturando, evaluar opcion A (task=gpt-4.1-mini).
 case:
   name: "CV Triage v2 (Backend Senior Python LATAM)"
 

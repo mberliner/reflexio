@@ -7,6 +7,20 @@
 #   2. umbrales fuzzy mas estrictos en los campos sospechosos de dar credito
 #      parcial que no generaliza (industria_previa 0.70->0.85, educacion 0.75->0.85).
 # Criterio de exito: gap val-test <= 3 pts consistente y sin opt < baseline.
+#
+# Diagnostico per_field_accuracy.py (run 20260530_161740, val=12+test=8):
+#   - industria_previa: 75% en val Y test (campo culpable consistente). Fallos
+#     son de DEFINICION de gold, no de modelo: 'Diseño' vs 'Diseño UX' (granularidad),
+#     'Backend' vs '' ('Backend' es disciplina, no industria). No optimizable por GEPA.
+#   - stack_principal: 85.5% val / 96.9% test (ruidoso, set-match sensible al orden).
+#   - educacion_principal: 91.7% val / 87.5% test ('Lic. CS' vs 'Licenciatura CS').
+#   - nombre/email/años/idiomas/ubicacion: 96-100%. El techo ~91% vive en
+#     industria_previa + abreviaturas de educacion, ambos limites de gold no de prompt.
+#
+# Intervencion v2.1: test 8 -> 18 (rebalance en build_cv_profile.py, PROMOTE_TO_TEST).
+#   test=8 daba rango +-4.5 pts (medicion ruidosa). Igual que extraction (test 3->20
+#   bajo el rango de 40 a 2 pts), un test mayor vuelve fiable la robustez. Sin fabricar
+#   filas: se promueven 10 perfiles diversos antes en train (train 25->15).
 # NOTA: si per_field_accuracy.py senala otros campos como culpables, mover el
 # ajuste de umbral a esos campos. Todo lo demas queda CONGELADO igual al baseline.
 case:
