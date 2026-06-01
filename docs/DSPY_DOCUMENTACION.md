@@ -826,7 +826,7 @@ Para profundizar en temas específicos, consultar:
 1. **DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines** (Oct 2023)
 2. **DSPy Assertions: Computational Constraints for Self-Refining Language Model Pipelines** (Dec 2023)
 3. **Demonstrate-Search-Predict: Composing Retrieval and Language Models** (Dec 2022)
-4. **GEPA: Generalized Prompt Adaptation** (Jul 2025)
+4. **GEPA: Reflective Prompt Evolution Can Outperform Reinforcement Learning** (Jul 2025, arXiv:2507.19457)
 
 ### Comunidad
 

@@ -1,6 +1,6 @@
-# GEPA Standalone Demos
+# GEPA Standalone
 
-Este directorio contiene ejemplos de uso directo de GEPA (Generative Evolutionary Prompt Adjustment), permitiendo la optimización de prompts en scripts de Python sin frameworks adicionales.
+Subproyecto de optimización de prompts con GEPA (Genetic-Pareto) sin DSPy, mediante el Universal Optimizer y configs YAML declarativas (sin escribir código por caso).
 
 ## Arquitectura Modular
 
@@ -23,7 +23,6 @@ gepa_standalone/
 │   └── llm_factory.py         # Factory LLM (usa shared/llm)
 ├── data/                      # Capa de datos (Loaders)
 │   └── data_loader.py         # Cargador universal
-├── demos/                     # Scripts de ejemplo ejecutables
 ├── experiments/               # Espacio de trabajo (Entradas)
 │   ├── configs/               # Definiciones YAML de casos de uso
 │   ├── datasets/              # Datasets CSV (columna 'split')
@@ -61,12 +60,12 @@ Para documentacion completa de configuracion LLM, ver `/docs/LLM_CONFIG.md`.
 
 ## Conceptos Clave: ¿Por qué optimizar RAG?
 
-Para entender qué es GEPA y cómo funciona, ver `/README.md` sección "GEPA en 30 Segundos".
+Para entender qué es GEPA y cómo funciona, ver `docs/GEPA_DOCUMENTACION.md` (filosofía, algoritmo reflexivo y arquitectura).
 
 Aunque GEPA siempre optimiza texto, existen diferencias fundamentales según la tarea:
 
-*   **Optimización de Prompt (Demos 1-3):** Busca mejorar la lógica, el formato o la capacidad de clasificación del modelo usando su conocimiento interno. Se mide con comparaciones exactas.
-*   **Optimización de RAG (Demo 4):** Busca **eliminar alucinaciones**. GEPA entrena al prompt para que el modelo ignore lo que sabe y responda **únicamente** basándose en el contexto adjunto. Requiere un **Juez LLM** para evaluar la fidelidad semántica.
+*   **Optimización de Prompt (clasificación, extracción, SQL):** Busca mejorar la lógica, el formato o la capacidad de clasificación del modelo usando su conocimiento interno. Se mide con comparaciones exactas.
+*   **Optimización de RAG (QA sobre políticas):** Busca **eliminar alucinaciones**. GEPA entrena al prompt para que el modelo ignore lo que sabe y responda **únicamente** basándose en el contexto adjunto. Requiere un **Juez LLM** para evaluar la fidelidad semántica.
 
 Para comparación detallada RAG vs Prompt, ver `docs/DEMO4_RAG_GUIDE.md`.
 
@@ -130,4 +129,4 @@ Pasos para nuevas optimizaciones:
 1.  **Datos:** Añadir CSV en `experiments/datasets/` con columnas `split` y datos input/output.
 2.  **Prompt:** Crear JSON en `experiments/prompts/` con la instrucción inicial.
 3.  **Adaptador:** Seleccionar un adaptador de `adapters/` o implementar uno nuevo.
-4.  **Ejecución:** Crear script en `demos/` importando `gepa.optimize` con los componentes anteriores.
+4.  **Config:** Crear un YAML en `experiments/configs/` que referencie dataset, prompt y adapter, y ejecutarlo con `python -m gepa_standalone.universal_optimizer --config <ruta>` (sin escribir código por caso).

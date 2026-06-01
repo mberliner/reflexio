@@ -5,12 +5,13 @@ entry points. Si un comando no esta aqui, no es canonico.
 
 ## Requisitos
 
-- Python 3.13 con las dependencias de `requirements.txt` instaladas.
+- Python >= 3.10 (minimo en `pyproject.toml`, `requires-python`); el CI corre en
+  3.13. Con las dependencias de `requirements.txt` instaladas.
 - Entorno virtual en `.venv/` (Unix: `.venv/bin/`, Windows: `.venv/Scripts/`).
   RECOMENDADO pero no obligatorio: el pipeline local detecta el `.venv` y, si no
   existe, cae al `python` del SO con un warning (ver `shared/utils/ci_local.sh`).
   El `.venv` se vuelve NECESARIO cuando el python del sistema no cumple los
-  requisitos (no es 3.13 o le faltan las dependencias).
+  requisitos (es < 3.10 o le faltan las dependencias).
 - Cada subproyecto (`dspy_gepa_poc/`, `gepa_standalone/`) tiene su propio `.env`
   para configuracion LLM independiente. Ver `docs/LLM_CONFIG.md`.
 
@@ -42,7 +43,7 @@ eso omite `ruff format --check`, la fase de security y el umbral de cobertura.
 ## Comandos sueltos (uso puntual)
 
 ```bash
-pytest tests/ -v                 # 139 tests, ~3s
+pytest tests/ -v                 # suite completa (segundos)
 ruff check .                     # Lint (config en pyproject.toml)
 ruff format --check .            # Formato (lo valida el CI; suele olvidarse)
 ./run_demo.sh --check            # Validar entorno sin ejecutar experimentos

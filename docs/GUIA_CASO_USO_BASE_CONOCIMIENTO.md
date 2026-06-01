@@ -73,8 +73,10 @@ case:
 
 adapter:
   type: "rag"
-  rag_context_max_length: 3000   # ajustar al tamaño del archivo de reglas
-  rag_max_positive_examples: 2
+  max_positive_examples: 2
+  # El limite de contexto rag se configura por variable de entorno
+  # RAG_CONTEXT_MAX_LENGTH en el .env del subproyecto (ver docs/LLM_CONFIG.md),
+  # no como campo del YAML.
 
 data:
   csv_filename: "<nombre>.csv"

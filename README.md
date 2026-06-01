@@ -36,22 +36,17 @@ En conjunto, el nombre define un ecosistema donde **la declaración es el objeto
 
 ```
 reflexio/
-├── shared/                  # Modulos compartidos entre proyectos
-│   ├── llm/                 # Configuracion LLM unificada (LiteLLM)
-│   ├── paths/               # Gestion centralizada de rutas (BasePaths, GEPAPaths, DSPyPaths)
-│   ├── display/             # Formateo consistente para terminal
-│   ├── logging/             # Logger CSV compartido (BaseCSVLogger)
-│   ├── validation/          # Validacion de configuracion
-│   └── analysis/            # Utilidades de analisis (leaderboard, ROI)
-├── dspy_gepa_poc/           # Integracion principal DSPy + GEPA
-│   ├── configs/             # Configuraciones YAML para experimentos
-│   ├── datasets/            # Conjuntos de datos en formato CSV
-│   └── reflexio_declarativa.py # Punto de entrada principal
-├── gepa_standalone/         # Implementacion de GEPA sin dependencia de DSPy
-├── docs/                    # Documentacion detallada (SSOT)
-├── requirements.txt         # Dependencias del proyecto unificadas
-└── README.md                # Este archivo
+├── shared/             # Modulos compartidos (llm, paths, logging, analysis, scoring, validation, utils)
+├── dspy_gepa_poc/      # Integracion DSPy + GEPA (configs, datasets, entry points)
+├── gepa_standalone/    # GEPA puro sin DSPy (configs, datasets, prompts)
+├── docs/               # Documentacion detallada (un archivo = un SSOT)
+├── specs/              # Specs de capacidad y su registro (SPECS_REGISTRY.md)
+├── historial/          # Log evolutivo SDD y deuda arrastrada (sdd.md)
+├── tests/              # Suite de tests (pytest)
+└── analyze             # CLI de analisis (leaderboard, ROI, estadisticas)
 ```
+
+El mapa completo de carpetas y de SSOTs por dominio esta en `00-INDEX.md`.
 
 ## Guia de Inicio Rapido
 
@@ -74,8 +69,6 @@ Para una guia detallada sobre como configurar los proveedores (Azure, OpenAI, An
 ### 3. Ejecucion de Experimentos
 
 El proyecto esta pensado para ejecutar las tareas definidas en archivos YAML de forma declarativa sin necesidad de modificar el codigo fuente.
-
-#### Agregar config con yaml
 
 ## Modos de Operación
 
@@ -123,15 +116,9 @@ GEPA mejora los prompts usados por DSPy mediante un ciclo de evolucion reflexiva
 
 ## Documentacion de Referencia
 
-| Dominio | Archivo |
-|---|---|
-| Configuracion LLM | `docs/LLM_CONFIG.md` |
-| Configuracion YAML | `docs/YAML_CONFIG_REFERENCE.md` |
-| Guia de DSPy | `docs/DSPY_DOCUMENTACION.md` |
-| Diseño de Sistemas | `docs/DSPY_GUIA_DISENO.md` |
-| Optimizador GEPA | `docs/GEPA_DOCUMENTACION.md` |
-| Persistencia y Estado | `docs/DSPY_ARTEFACTOS_SALIDA.md` |
-| Analisis de Integracion | `docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md` |
+El mapa completo de SSOTs por dominio (configuracion LLM y YAML, guias de DSPy y
+GEPA, analisis, metadata, etc.) esta en `00-INDEX.md`, seccion "Mapa de SSOTs".
+Es el punto de entrada para navegar la documentacion sin duplicar el indice aqui.
 
 ## Referencias
 - **Sitio oficial DSPy**: https://dspy.ai/

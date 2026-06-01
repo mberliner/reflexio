@@ -244,10 +244,16 @@ Reservado exclusivamente para parámetros que dependen del entorno de ejecución
 - `LLM_MODEL_TASK` / `LLM_MODEL_REFLECTION`: Alias de modelos para facilitar el cambio de proveedor sin tocar el código.
 
 ### 2. Archivos YAML - Lógica del Experimento
-Contiene todos los parámetros que definen el comportamiento y los resultados de la optimización:
-- **Límites de Adaptador**: `max_text_length`, `truncation_strategy`.
-- **Hiperparámetros GEPA**: `max_metric_calls`, `minibatch_size`, `max_positive_examples`.
-- **Definición de Tarea**: Nombres de columnas, rutas de datasets, clases válidas.
+Contiene los parámetros que definen el comportamiento y los resultados de la optimización:
+- **Hiperparámetros GEPA**: `max_metric_calls`, `skip_perfect_score`, `eval_repeats`.
+- **Definición de Tarea**: tipo de adapter, nombres de columnas, rutas de datasets,
+  clases válidas (`valid_classes`), campos requeridos (`required_fields`).
+- **Ejemplos positivos**: `max_positive_examples` / `extractor_max_positive_examples`.
+
+Los límites de longitud de texto/contexto NO van en el YAML: se configuran por
+variable de entorno en el `.env` del subproyecto (ver `docs/LLM_CONFIG.md`). La
+referencia completa y autoritativa de campos YAML es `docs/YAML_CONFIG_REFERENCE.md`
+(SSOT); esta seccion es solo un panorama.
 
 **Nota de Diseño:** Los parámetros lógicos en YAML tienen prioridad sobre cualquier valor por defecto en el código o variables de entorno, permitiendo que cada archivo YAML sea una "receta" completa y reproducible del experimento.
 
@@ -365,10 +371,17 @@ score = result.best_score
 - Query reformulation, context synthesis, reranking (librería GEPA completa)
 
 **Implementaciones**:
-- **Demo educativo**: `gepa_standalone/docs/DEMO4_RAG_GUIDE.md` - Optimización con evaluación LLM-as-a-Judge
+- **Caso en el repo**: adapter `rag` (LLM-as-a-Judge) via config
+  `gepa_standalone/experiments/configs/rag_optimization.yaml`. Guia paso a paso en
+  `docs/GUIA_CASO_USO_BASE_CONOCIMIENTO.md`.
 - **Producción**: Librería GEPA con soporte para ChromaDB, Weaviate, Qdrant, Milvus, LanceDB
 
-**Para comenzar**: `python gepa_standalone/demos/demo4_rag_optimization.py`
+**Para comenzar** (desde la raiz del repo, ver `docs/DEVELOPMENT.md`):
+
+```bash
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/rag_optimization.yaml
+```
 
 ### 4. Agentes con Herramientas
 

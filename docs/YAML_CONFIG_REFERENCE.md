@@ -111,10 +111,14 @@ Compone N etapas en serie con routing condicional: la etapa-gate decide si las p
 
 | Tipo | Campos Requeridos | Campos Opcionales |
 |------|-------------------|-------------------|
-| `classifier` | `valid_classes` (list) | `max_text_length`, `max_positive_examples` |
-| `extractor` | `required_fields` (list) | `extractor_max_positive_examples`, `max_text_length` |
-| `sql` | - | `max_text_length` |
-| `rag` | - | `max_positive_examples`, `max_text_length` |
+| `classifier` | `valid_classes` (list) | (ninguno) |
+| `extractor` | `required_fields` (list) | `extractor_max_positive_examples` |
+| `sql` | - | (ninguno) |
+| `rag` | - | `max_positive_examples` |
+
+Los limites de longitud de texto/contexto NO son campos del YAML: se configuran
+por variable de entorno en el `.env` del subproyecto (`CLASSIFIER_TEXT_MAX_LENGTH`,
+`EXTRACTOR_TEXT_MAX_LENGTH`, `RAG_CONTEXT_MAX_LENGTH`). Ver `docs/LLM_CONFIG.md`.
 
 ### Prompt (opcional)
 

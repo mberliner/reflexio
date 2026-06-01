@@ -199,7 +199,9 @@ with patch.object(adapter.client.chat.completions, 'create') as mock_create:
 
 ### Ejemplo Real
 
-Ejecutar `demo1_email_urgency.py` con conexión inestable mostrará:
+Ejecutar el caso `email_urgency` (`python -m gepa_standalone.universal_optimizer
+--config gepa_standalone/experiments/configs/email_urgency.yaml`) con conexión
+inestable mostrará:
 
 ```
 [WARNING] Error técnico en ejemplo 3, descartando de estadísticas: Connection timeout

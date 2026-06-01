@@ -136,8 +136,9 @@ apuntar a donde se implementa o verifica.
 
 ---
 
-## Tramos siguientes
+## Tramo 3 — Gate de integridad (diferido)
 
-Los Tramos 1-3 se documentaran aqui al activarse. No implementarlos por
-adelantado: cada uno se habilita solo cuando el anterior haya mostrado valor en
-uso real (criterio de `IMPLEMENTACION-INICIAL-CONTEXTO-ACTUAL.md`).
+El Tramo 3 (`CONSTITUTION.md` por referencia + check cableado en `ci_local.sh`)
+se documentara aqui al activarse. No implementarlo por adelantado: se habilita
+solo cuando T0-T2 hayan mostrado valor en uso real (criterio de
+`IMPLEMENTACION-INICIAL-CONTEXTO-ACTUAL.md`).

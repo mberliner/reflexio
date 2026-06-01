@@ -1,6 +1,7 @@
 # Guía Demo 4: Optimización de Sistema RAG (Corporate Policies)
 
-Este documento detalla el caso de uso implementado en `demos/demo4_rag_optimization.py`, diseñado para demostrar cómo GEPA puede optimizar sistemas de **Generación Aumentada por Recuperación (RAG)** utilizando evaluación basada en modelos (LLM-as-a-Judge).
+Este documento detalla el caso de uso `rag_optimization` (config declarativa
+`experiments/configs/rag_optimization.yaml`), diseñado para demostrar cómo GEPA puede optimizar sistemas de **Generación Aumentada por Recuperación (RAG)** utilizando evaluación basada en modelos (LLM-as-a-Judge).
 
 ## 1. El Escenario de Negocio
 
@@ -76,7 +77,7 @@ Escala de puntaje (mayor granularidad para mejor sensibilidad):
 
 | Componente | Archivo | Descripción |
 | :--- | :--- | :--- |
-| **Script** | `demos/demo4_rag_optimization.py` | Orquestador del experimento. |
+| **Config** | `experiments/configs/rag_optimization.yaml` | Definicion declarativa del caso (ejecutada por `universal_optimizer`). |
 | **Adaptador** | `adapters/simple_rag_adapter.py` | Contiene la lógica del "Juez" y el cálculo de métricas. |
 | **Dataset** | `experiments/datasets/rag_qa.csv` | 15 ejemplos desafiantes (9 train, 4 val, 2 test). Incluye 5 categorías: Inferencia Numérica, Ambigüedad, Anti-Alucinación, Multi-Hop, Detalles Críticos. |
 | **Prompt** | `experiments/prompts/rag.json` | Prompt inicial con anti-pattern que invita a usar "conocimiento general" (causará alucinaciones). |
@@ -100,9 +101,10 @@ RAG_CONTEXT_MAX_LENGTH=2000
 
 ## 4. Ejecución y Resultados Esperados
 
-Para correr el demo:
+Para correr el caso (desde la raiz del repo):
 ```bash
-python gepa_standalone/demos/demo4_rag_optimization.py
+python -m gepa_standalone.universal_optimizer \
+    --config gepa_standalone/experiments/configs/rag_optimization.yaml
 ```
 
 ### ¿Por qué el dataset de RAG es más pequeño (6 casos)?
@@ -238,13 +240,13 @@ Compara resultados con diferentes valores:
 
 ```bash
 # Run 1: Sin positivos
-RAG_MAX_POSITIVE_EXAMPLES=0 python gepa_standalone/demos/demo4_rag_optimization.py
+RAG_MAX_POSITIVE_EXAMPLES=0 python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/rag_optimization.yaml
 
 # Run 2: Default (2 positivos)
-python gepa_standalone/demos/demo4_rag_optimization.py
+python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/rag_optimization.yaml
 
 # Run 3: Más positivos
-RAG_MAX_POSITIVE_EXAMPLES=5 python gepa_standalone/demos/demo4_rag_optimization.py
+RAG_MAX_POSITIVE_EXAMPLES=5 python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/rag_optimization.yaml
 ```
 
 Analiza métricas: baseline, optimized, mejora, y si el prompt cambió.
