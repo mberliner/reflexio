@@ -262,6 +262,50 @@ def test_get_model_pricing_azure_prefix():
     assert pricing.name == "GPT-4o"
 
 
+def test_get_model_pricing_unknown_warns(caplog):
+    """Unknown model logs a warning (silent cheapest-fallback would hide cost)."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        roi_calculator.get_model_pricing("totally-unknown-model")
+    assert any("sin precio configurado" in r.message for r in caplog.records)
+
+
+def test_lookup_by_case_matches_real_names():
+    """Real case names (with suffixes) match the right family by substring."""
+    # CV Triage must win over the generic 'Triage' (longest key first).
+    assert (
+        roi_calculator.lookup_by_case(
+            "CV Triage v3 (Backend Senior Python LATAM, CVs extensos)",
+            roi_calculator.DEFAULT_TOKEN_ESTIMATES,
+            roi_calculator.DEFAULT_TOKEN_ESTIMATES["default"],
+        )
+        == roi_calculator.DEFAULT_TOKEN_ESTIMATES["CV Triage"]
+    )
+    # Suffixed extraction case maps to CV Extraction, not default.
+    assert (
+        roi_calculator.lookup_by_case(
+            "CV Extraction v3 (DSPy, condiciones iguales a GEPA)",
+            roi_calculator.DEFAULT_TOKEN_ESTIMATES,
+            roi_calculator.DEFAULT_TOKEN_ESTIMATES["default"],
+        )
+        == roi_calculator.DEFAULT_TOKEN_ESTIMATES["CV Extraction"]
+    )
+
+
+def test_lookup_by_case_falls_back_to_default():
+    """An unrecognized case name returns the table default."""
+    default = roi_calculator.DEFAULT_TOKEN_ESTIMATES["default"]
+    assert (
+        roi_calculator.lookup_by_case(
+            "Algo Totalmente Nuevo", roi_calculator.DEFAULT_TOKEN_ESTIMATES, default
+        )
+        == default
+    )
+    # Tables without a 'default' key return the provided fallback.
+    assert roi_calculator.lookup_by_case("Nada", roi_calculator.DEFAULT_VAL_SIZES, 5) == 5
+
+
 def test_model_pricing_cost_per_call():
     """Calculate cost per call correctly."""
     pricing = roi_calculator.ModelPricing("Test", 2.0, 10.0)

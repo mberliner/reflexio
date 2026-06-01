@@ -4,7 +4,8 @@ ROI Calculator for GEPA Optimizations
 Calculates return on investment for using GEPA to optimize prompts,
 considering optimization cost vs production savings with cheaper models.
 
-PRICING REFERENCE (OpenAI API - May 2026):
+PRICING REFERENCE (Azure OpenAI Global Standard, equivalente a precios de
+lista de OpenAI - May 2026):
 -------------------------------------------------
 Model             | Input (1M tokens) | Output (1M tokens)
 ------------------+-------------------+-------------------
@@ -19,6 +20,7 @@ gpt-5.4-mini      | $0.75             | $4.50
 -------------------------------------------------
 """
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +32,8 @@ from .base import (
     parse_float,
     parse_real_cost,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -49,7 +53,7 @@ class ModelPricing:
 
 
 # Default pricing (can be overridden)
-# Source: https://openai.com/api/pricing (May 2026)
+# Azure OpenAI Global Standard, equivalente a precios de lista de OpenAI (May 2026).
 DEFAULT_PRICING = {
     "gpt-4o": ModelPricing("GPT-4o", 2.50, 10.00),
     "gpt-4.1-mini": ModelPricing("GPT-4.1-mini", 0.15, 0.60),
@@ -61,12 +65,22 @@ DEFAULT_PRICING = {
     "gpt-5.4-mini": ModelPricing("GPT-5.4-mini", 0.75, 4.50),
 }
 
-# Default token estimates per use case
+# Rough token estimates per use-case family, keyed by a substring that appears
+# in the real case names ("CV Extraction v3 (...)" matches "CV Extraction").
+# Only the ESTIMATE path uses these (legacy rows without measured cost); new
+# runs report the real cost, so these are best-effort fallbacks, not precise.
+# CV families carry long inputs (full CV text), hence the higher figures.
 DEFAULT_TOKEN_ESTIMATES = {
+    "CV Profile": {"input": 3000, "output": 250},
+    "CV Triage": {"input": 3500, "output": 200},
+    "CV Extraction": {"input": 2500, "output": 250},
+    "Order Extraction": {"input": 600, "output": 200},
     "Email Urgency": {"input": 300, "output": 50},
-    "CV Extraction": {"input": 800, "output": 200},
+    "Sentiment": {"input": 300, "output": 50},
     "Text-to-SQL": {"input": 400, "output": 150},
-    "RAG Optimization": {"input": 600, "output": 300},
+    "RAG": {"input": 600, "output": 300},
+    "Fast Gate": {"input": 300, "output": 40},
+    "Triage": {"input": 400, "output": 80},
     "default": {"input": 500, "output": 150},
 }
 
@@ -76,20 +90,53 @@ FALLBACK_MAX_CALLS = 30
 # Fallback validation set size (not available in CSV)
 FALLBACK_VAL_SIZE = 5
 
-# Default validation set sizes per use case
+# Validation set sizes per use-case family (same substring matching as above).
 DEFAULT_VAL_SIZES = {
-    "Email Urgency": 10,
+    "CV Profile": 5,
+    "CV Triage": 5,
     "CV Extraction": 5,
+    "Order Extraction": 6,
+    "Email Urgency": 10,
+    "Sentiment": 8,
     "Text-to-SQL": 6,
-    "RAG Optimization": 4,
+    "RAG": 4,
+    "Fast Gate": 6,
+    "Triage": 6,
 }
 
 
+def lookup_by_case(case_name: str, table: dict, default):
+    """Match a case name to a table entry by substring (longest key first).
+
+    Real case names carry suffixes ("CV Extraction v3 (DSPy...)"), so exact
+    lookup misses. We scan keys longest-first so a specific family like
+    "CV Triage" wins over the generic "Triage". Returns the table's "default"
+    entry when present, else the provided default.
+    """
+    name = (case_name or "").lower()
+    for key in sorted((k for k in table if k != "default"), key=len, reverse=True):
+        if key.lower() in name:
+            return table[key]
+    return table.get("default", default)
+
+
 def get_model_pricing(model_name: str, pricing: dict = None) -> ModelPricing:
-    """Get pricing for a model, with fallback to defaults."""
+    """Get pricing for a model, warning (not silently guessing) when unknown.
+
+    An unknown model falls back to gpt-4o-mini only to keep the calculation
+    running, but emits a warning: that fallback is the cheapest entry, so a
+    silent miss would understate cost. Add the model to DEFAULT_PRICING to fix.
+    """
     pricing = pricing or DEFAULT_PRICING
     model_key = model_name.lower().replace("azure/", "")
-    return pricing.get(model_key, pricing.get("gpt-4o-mini", DEFAULT_PRICING["gpt-4o-mini"]))
+    if model_key in pricing:
+        return pricing[model_key]
+    logger.warning(
+        "Modelo sin precio configurado: '%s'. Usando gpt-4o-mini como fallback "
+        "(el mas barato): el costo puede quedar subestimado. Agregalo a DEFAULT_PRICING.",
+        model_name,
+    )
+    return pricing.get("gpt-4o-mini", DEFAULT_PRICING["gpt-4o-mini"])
 
 
 def cost_from_usage(
@@ -154,10 +201,10 @@ def calculate_optimization_cost(
         Dict with cost breakdown
     """
     if val_size is None:
-        val_size = DEFAULT_VAL_SIZES.get(case_name, FALLBACK_VAL_SIZE)
+        val_size = lookup_by_case(case_name, DEFAULT_VAL_SIZES, FALLBACK_VAL_SIZE)
 
-    tokens = token_estimates or DEFAULT_TOKEN_ESTIMATES.get(
-        case_name, DEFAULT_TOKEN_ESTIMATES["default"]
+    tokens = token_estimates or lookup_by_case(
+        case_name, DEFAULT_TOKEN_ESTIMATES, DEFAULT_TOKEN_ESTIMATES["default"]
     )
 
     task_pricing = get_model_pricing(task_model, pricing)
@@ -213,8 +260,8 @@ def calculate_production_roi(
     Returns:
         Dict with ROI analysis
     """
-    tokens = token_estimates or DEFAULT_TOKEN_ESTIMATES.get(
-        case_name, DEFAULT_TOKEN_ESTIMATES["default"]
+    tokens = token_estimates or lookup_by_case(
+        case_name, DEFAULT_TOKEN_ESTIMATES, DEFAULT_TOKEN_ESTIMATES["default"]
     )
 
     expensive_pricing = get_model_pricing(expensive_model, pricing)
