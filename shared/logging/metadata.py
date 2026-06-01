@@ -185,6 +185,7 @@ class MetadataManager:
         experiment_name: str,
         seed: int,
         models: dict[str, Any],
+        usage: dict[str, Any] | None = None,
     ) -> Path:
         """
         Write run-level metadata (run.json) to the run directory.
@@ -194,6 +195,9 @@ class MetadataManager:
             experiment_name: Name of the parent experiment.
             seed: Random seed used for this run.
             models: Model info from collect_model_info().
+            usage: Optional real token-usage block (task/reflection buckets,
+                total_tokens and cost_usd) from shared.llm.usage. Omitted from
+                run.json when None.
 
         Returns:
             Path to run.json.
@@ -208,6 +212,8 @@ class MetadataManager:
             "models": models,
             "created_at": datetime.now().isoformat(),
         }
+        if usage is not None:
+            data["usage"] = usage
 
         run_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         logger.info("Run metadata written: %s", run_path)

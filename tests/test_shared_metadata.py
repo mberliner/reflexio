@@ -168,3 +168,25 @@ class TestCreateRun:
         assert data["experiment_name"] == "email_urgency"
         assert data["models"]["task"]["model"] == "azure/gpt-4o"
         assert "created_at" in data
+        # usage omitted when not provided
+        assert "usage" not in data
+
+    def test_creates_run_json_with_usage(self, manager, tmp_path):
+        run_dir = tmp_path / "runs" / "demo" / "run_001"
+        usage = {
+            "task": {"calls": 10, "prompt_tokens": 1000, "completion_tokens": 200},
+            "reflection": {"calls": 3, "prompt_tokens": 900, "completion_tokens": 150},
+            "total_tokens": 2250,
+            "cost_usd": 0.01234,
+        }
+        path = manager.create_run(
+            run_dir=run_dir,
+            experiment_name="demo",
+            seed=1,
+            models={"task": {}, "reflection": {}},
+            usage=usage,
+        )
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["usage"]["total_tokens"] == 2250
+        assert data["usage"]["cost_usd"] == 0.01234
+        assert data["usage"]["task"]["prompt_tokens"] == 1000

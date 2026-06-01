@@ -37,6 +37,9 @@ STANDARD_COLUMN_MAPPING = {
     "run_dir": "Run Directory",
     "positive_reflection": "Reflexion Positiva",
     "budget": "Budget",
+    "tokens_task": "Tokens Task",
+    "tokens_reflection": "Tokens Reflection",
+    "cost_real_usd": "Costo Real USD",
     "notes": "Notas",
 }
 
@@ -73,17 +76,55 @@ class BaseCSVLogger:
         self.csv_path = Path(csv_path)
         self.column_mapping = column_mapping or STANDARD_COLUMN_MAPPING.copy()
         self.headers = list(self.column_mapping.values())
+        self._display_to_key = {display: key for key, display in self.column_mapping.items()}
+        # Internal keys to write, in order. For a fresh file this is the full
+        # mapping; for an existing file it is aligned to that file's header
+        # (see _sync_active_keys_to_file) so appends never misalign columns.
+        self._active_keys: list[str | None] = list(self.column_mapping.keys())
 
         if create_if_missing:
             self._ensure_csv_exists()
 
     def _ensure_csv_exists(self) -> None:
-        """Create the CSV file with headers if it doesn't exist."""
+        """Create the CSV with headers if missing, else align to its header."""
         # Ensure directory exists
         self.csv_path.parent.mkdir(parents=True, exist_ok=True)
 
         if not self.csv_path.exists():
             self._write_headers()
+        else:
+            self._sync_active_keys_to_file()
+
+    def _sync_active_keys_to_file(self) -> None:
+        """Align the write order to the existing file's header.
+
+        Guarantees appended rows match the columns already on disk: new
+        columns added to the mapping are simply not written to a legacy file
+        (it must be regenerated to gain them), and any column the file has
+        that the mapping no longer knows keeps an empty slot to preserve
+        alignment. An existing-but-empty file is (re)initialized with the
+        current full header.
+        """
+        try:
+            with open(self.csv_path, newline="", encoding="utf-8-sig") as f:
+                reader = csv.reader(f, **EUROPEAN_CSV_CONFIG)
+                existing = next(reader, None)
+        except OSError:
+            return
+
+        if not existing:
+            self._write_headers()
+            return
+
+        if existing == self.headers:
+            return
+
+        self._active_keys = [self._display_to_key.get(h) for h in existing]
+        logger.info(
+            "CSV header differs from current mapping; appending aligned to existing %d columns: %s",
+            len(existing),
+            self.csv_path,
+        )
 
     def _write_headers(self) -> None:
         """Write column headers to the CSV file."""
@@ -96,6 +137,7 @@ class BaseCSVLogger:
         Prepare a row for CSV output from a data dictionary.
 
         Automatically formats score fields and handles missing values.
+        Iterates ``_active_keys`` so the row aligns with the file's header.
 
         Args:
             data: Dictionary with data keyed by internal column names
@@ -104,7 +146,12 @@ class BaseCSVLogger:
             List of string values in column order
         """
         row = []
-        for key in self.column_mapping.keys():
+        for key in self._active_keys:
+            # Unknown legacy column: keep an empty slot to preserve alignment.
+            if key is None:
+                row.append("")
+                continue
+
             value = data.get(key, "N/A")
 
             # Auto-format score fields

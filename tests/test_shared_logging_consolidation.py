@@ -63,6 +63,50 @@ class TestExperimentLogger:
         col_idx = rows[0].index("Reflexion Positiva")
         assert rows[1][col_idx] == "Si"
 
+    def test_new_token_columns_written(self, gepa_paths: GEPAPaths) -> None:
+        logger = ExperimentLogger(paths=gepa_paths)
+        logger.log_run(
+            {
+                "case_name": "demo",
+                "run_dir": "N/A",
+                "tokens_task": 1234,
+                "tokens_reflection": 567,
+                "cost_real_usd": "0,012345",
+            }
+        )
+        rows = list(csv.reader(gepa_paths.summary_csv.open(encoding="utf-8"), delimiter=";"))
+        header = rows[0]
+        assert "Tokens Task" in header
+        assert "Tokens Reflection" in header
+        assert "Costo Real USD" in header
+        assert rows[1][header.index("Tokens Task")] == "1234"
+        assert rows[1][header.index("Costo Real USD")] == "0,012345"
+
+    def test_append_aligns_to_legacy_header(self, gepa_paths: GEPAPaths) -> None:
+        # Simulate a pre-existing CSV without the new token columns.
+        legacy_header = (
+            "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
+            "Optimizado Score;Robustez Score;Run Directory;Reflexion Positiva;Budget;Notas"
+        )
+        gepa_paths.summary_csv.parent.mkdir(parents=True, exist_ok=True)
+        gepa_paths.summary_csv.write_text(legacy_header + "\n", encoding="utf-8")
+
+        logger = ExperimentLogger(paths=gepa_paths)
+        logger.log_run(
+            {
+                "case_name": "demo",
+                "run_dir": "N/A",
+                "budget": 30,
+                "tokens_task": 999,  # new column absent in legacy file -> dropped
+            }
+        )
+        rows = list(csv.reader(gepa_paths.summary_csv.open(encoding="utf-8"), delimiter=";"))
+        # Header unchanged (still 12 cols); appended row has matching width.
+        assert len(rows[0]) == 12
+        assert len(rows[1]) == 12
+        assert rows[1][rows[0].index("Budget")] == "30"
+        assert "Tokens Task" not in rows[0]
+
     def test_run_dir_made_relative(self, gepa_paths: GEPAPaths) -> None:
         run_dir = gepa_paths.run_dir("demo", run_id="abc123")
         logger = ExperimentLogger(paths=gepa_paths)
