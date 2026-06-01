@@ -8,7 +8,7 @@ LLM mediante DSPy y GEPA.
 Orden de lectura para ponerse al dia. Empieza por el entry file del agente, no
 por el README (que es la puerta para humanos).
 
-1. [CLAUDE.md](CLAUDE.md) — PUNTO DE PARTIDA del agente: invocacion, patrones, invariantes y convenciones (copias equivalentes en `AGENTS.md` y `GEMINI.md`)
+1. [CLAUDE.md](CLAUDE.md) — PUNTO DE PARTIDA del agente: reglas-gatillo y protocolo de navegacion hacia los SSOTs (copias identicas en `AGENTS.md` y `GEMINI.md`)
 2. [docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md](docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md) — arquitectura de integracion y metodologia de 3 conjuntos
 3. [docs/LLM_CONFIG.md](docs/LLM_CONFIG.md) — configuracion LLM unificada antes de correr nada
 4. [docs/YAML_CONFIG_REFERENCE.md](docs/YAML_CONFIG_REFERENCE.md) — campos de configuracion YAML de ambos proyectos
@@ -32,6 +32,8 @@ por el README (que es la puerta para humanos).
 | `dspy_gepa_poc/` | Integracion DSPy + GEPA (configs, datasets, entry points) |
 | `gepa_standalone/` | GEPA puro sin DSPy (configs, datasets, prompts) |
 | `docs/` | Documentacion detallada (un archivo = un SSOT) |
+| `specs/` | Specs de capacidad (`SPEC-NNN-*.md`) y su registro central (`SPECS_REGISTRY.md`) |
+| `historial/` | Log evolutivo SDD y deuda arrastrada (`sdd.md`) |
 | `tests/` | Suite de tests (pytest) |
 | `**/results/` | Salidas de ejecuciones — gitignored, regenerables |
 
@@ -45,6 +47,9 @@ Cada archivo de `docs/` actua como SSOT (single source of truth) para su dominio
 
 | Tema | SSOT |
 |---|---|
+| Setup, comandos, pipeline local, invocacion de entry points | `docs/DEVELOPMENT.md` |
+| Patrones de arquitectura (Factory, Adapter, BasePaths...) e invariantes | `docs/ARCHITECTURE.md` |
+| Convenciones de codigo/docs y workflow (incl. resumen SDD) | `docs/CONTRIBUTING.md` |
 | Configuracion LLM unificada (variables, formatos, uso) | `docs/LLM_CONFIG.md` |
 | Campos de configuracion YAML de ambos proyectos | `docs/YAML_CONFIG_REFERENCE.md` |
 | Utilidades de analisis (CLI, leaderboard, ROI, estadisticas) | `docs/ANALISIS_UTILIDADES.md` |
@@ -53,6 +58,8 @@ Cada archivo de `docs/` actua como SSOT (single source of truth) para su dominio
 | Hallazgos criticos y errores comunes (metrica exacta, efecto techo) | `docs/LECCIONES_APRENDIDAS.md` |
 | Segmentacion del intake en `triage_v1` + `fast_gate_v1` | `docs/FAST_GATE_SEGMENTACION.md` |
 | Protocolo de N seeds, configs/datasets `_v2`, `gold_verificado` | `docs/PROTOCOLO_N_SEEDS.md` |
+| Protocolo SDD (adopcion por tramos): `[SDD-Check]`, `[NEEDS CLARIFICATION]`, lenguaje normativo | `docs/SDD_PROTOCOLO.md` |
+| Specs de capacidad (estado de cada capacidad, formato hibrido) | `specs/SPECS_REGISTRY.md` |
 
 ### DSPy (framework)
 
