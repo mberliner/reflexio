@@ -39,6 +39,7 @@ from gepa_standalone.core.llm_factory import (
 from gepa_standalone.data.data_loader import load_gepa_data
 from gepa_standalone.utils.results_logger import log_experiment_result, save_run_details
 from gepa_standalone.wizard.interactive import InteractiveWizard
+from shared.analysis.roi_calculator import cost_from_usage
 from shared.display import (
     log_error,
     log_info,
@@ -51,6 +52,7 @@ from shared.display import (
     print_summary,
 )
 from shared.llm import LLMConnectionError
+from shared.llm.usage import get_tracker
 from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_paths
 
@@ -121,6 +123,10 @@ class UniversalOptimizer:
         print_step(4, TOTAL_STEPS, "ADAPTER")
         self.initialize_adapter()
         initial_prompt = self.load_prompt()
+
+        # Reset real token tracking just before any task/reflection LLM call so
+        # the snapshot in save_results reflects only this run's optimization.
+        get_tracker().reset()
 
         # STEPS 5-7 (Baseline, Optimization, Test+Summary) ocurren dentro de
         # execute_gepa_pipeline para preservar el flujo actual.
@@ -524,15 +530,21 @@ class UniversalOptimizer:
             results=self.results,
         )
 
-        # Write run-level metadata
+        # Real token usage captured during this run -> cost with same pricing table
+        usage = get_tracker().snapshot()
+        cost = cost_from_usage(usage, task_config.model, reflect_config.model)
+        usage["cost_usd"] = cost
+
+        # Write run-level metadata (includes real usage block)
         self.metadata_mgr.create_run(
             run_dir=run_dir,
             experiment_name=self.config["case"]["name"],
             seed=self.seed,
             models=collect_model_info(task_config, reflect_config),
+            usage=usage,
         )
 
-        # Log to master CSV
+        # Log to master CSV (real tokens + cost; European comma decimal)
         log_experiment_result(
             case_title=self.config["case"]["title"],
             task_model=task_config.model,
@@ -542,6 +554,11 @@ class UniversalOptimizer:
             robustness_score=self.results["test_score"],
             run_directory=str(run_dir),
             budget=metadata["max_metric_calls"],
+            tokens_task=usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
+            tokens_reflection=(
+                usage["reflection"]["prompt_tokens"] + usage["reflection"]["completion_tokens"]
+            ),
+            cost_real_usd=f"{cost:.6f}".replace(".", ","),
         )
 
         return run_dir

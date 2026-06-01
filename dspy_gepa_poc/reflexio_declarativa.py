@@ -14,6 +14,7 @@ from dspy_gepa_poc.metrics import (
     create_pipeline_metric_with_feedback,
 )
 from dspy_gepa_poc.results_logger import ResultsLogger
+from shared.analysis.roi_calculator import cost_from_usage
 from shared.display import (
     log_error,
     log_info,
@@ -24,6 +25,7 @@ from shared.display import (
     print_step,
     print_summary,
 )
+from shared.llm.usage import get_tracker, record_dspy_history
 from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_dspy_paths
 
@@ -86,6 +88,8 @@ class ReflexioDeclarativa:
 
         print_kv("Task LM", self.task_config.describe())
         lm = self.task_config.get_dspy_lm()
+        # Keep a reference to read real token usage from its history after the run.
+        self.task_lm = lm
 
         log_info("Validando conexion con Task LM...")
         self.task_config.validate_connection()
@@ -421,11 +425,35 @@ class ReflexioDeclarativa:
                 "optimization": opt_config,
             },
         )
+        # Real token usage: DSPy calls litellm internally, so read it from each
+        # LM's history (task LM + reflection LM) into the shared tracker.
+        tracker = get_tracker()
+        tracker.reset()
+        task_history = getattr(self.task_lm, "history", None)
+        reflection_history = getattr(self.reflection_lm, "history", None)
+        record_dspy_history("task", task_history)
+        record_dspy_history("reflection", reflection_history)
+        # dspy.LM.history is capped at settings.max_history_size (default 10000):
+        # once reached, oldest entries are dropped and token/cost totals would be
+        # undercounted. Warn so an incomplete count is never read as authoritative.
+        max_hist = getattr(dspy.settings, "max_history_size", None)
+        if max_hist:
+            for label, history in (("Task", task_history), ("Reflection", reflection_history)):
+                if history is not None and len(history) >= max_hist:
+                    log_warn(
+                        f"{label} LM history alcanzo el tope de {max_hist} entradas; "
+                        "los tokens/costo reales registrados pueden estar subestimados."
+                    )
+        usage = tracker.snapshot()
+        cost = cost_from_usage(usage, self.task_config.model, self.reflection_config.model)
+        usage["cost_usd"] = cost
+
         self.metadata_mgr.create_run(
             run_dir=self.results_dir,
             experiment_name=self.config.raw_config["case"]["name"],
             seed=self.seed,
             models=collect_model_info(self.task_config, self.reflection_config),
+            usage=usage,
         )
 
         # Log to master CSV
@@ -442,6 +470,11 @@ class ReflexioDeclarativa:
                 "optimized_score": optimized_score,  # Best Validation Score
                 "test_score": test_score,  # Held-out Test Score
                 "run_dir": str(self.results_dir),
+                "tokens_task": usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
+                "tokens_reflection": (
+                    usage["reflection"]["prompt_tokens"] + usage["reflection"]["completion_tokens"]
+                ),
+                "cost_real_usd": f"{cost:.6f}".replace(".", ","),
                 "notes": (
                     f"Strategy: {self.config.gepa.auto_budget}, {few_shot_info}, "
                     f"prompt_changed={'yes' if getattr(self, 'prompt_changed', False) else 'no'}, "

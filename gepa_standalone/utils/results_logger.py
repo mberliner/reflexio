@@ -59,6 +59,9 @@ class GEPAResultsLogger(ExperimentLogger):
         has_positive_reflection: bool = False,
         budget: int | None = None,
         notes: str = "",
+        tokens_task: int | None = None,
+        tokens_reflection: int | None = None,
+        cost_real_usd: str | None = None,
     ) -> str:
         """Log an experiment row, returning the generated run_id."""
         return self.log_run(
@@ -72,6 +75,11 @@ class GEPAResultsLogger(ExperimentLogger):
                 "run_dir": run_directory,
                 "positive_reflection": "Si" if has_positive_reflection else "No",
                 "budget": budget if budget is not None else "N/A",
+                "tokens_task": tokens_task if tokens_task is not None else "N/A",
+                "tokens_reflection": (
+                    tokens_reflection if tokens_reflection is not None else "N/A"
+                ),
+                "cost_real_usd": cost_real_usd if cost_real_usd is not None else "N/A",
                 "notes": notes,
             }
         )
@@ -88,6 +96,9 @@ def log_experiment_result(
     has_positive_reflection: bool = False,
     budget: int | None = None,
     notes: str = "",
+    tokens_task: int | None = None,
+    tokens_reflection: int | None = None,
+    cost_real_usd: str | None = None,
 ) -> str:
     """Legacy positional wrapper around ``GEPAResultsLogger.log_experiment``."""
     return GEPAResultsLogger().log_experiment(
@@ -101,4 +112,7 @@ def log_experiment_result(
         has_positive_reflection=has_positive_reflection,
         budget=budget,
         notes=notes,
+        tokens_task=tokens_task,
+        tokens_reflection=tokens_reflection,
+        cost_real_usd=cost_real_usd,
     )
