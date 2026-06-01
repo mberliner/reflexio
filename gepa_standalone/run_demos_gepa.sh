@@ -7,6 +7,11 @@
 
 set -e
 
+# stdout sin buffer: asegura que las cabeceras de cada STEP salgan en orden y en
+# tiempo real, sin quedar retenidas en el buffer de bloque cuando la salida se
+# captura/redirige (de lo contrario se intercalan tarde con el log de litellm).
+export PYTHONUNBUFFERED=1
+
 # ==============================================================================
 # CONFIGURACION
 # ==============================================================================
