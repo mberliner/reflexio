@@ -270,6 +270,66 @@ def test_model_pricing_cost_per_call():
     assert cost == pytest.approx(expected, rel=1e-6)
 
 
+def test_parse_real_cost_variants():
+    """parse_real_cost: valid European decimal, else None for empty/N/A/zero/missing."""
+    assert base.parse_real_cost({"Costo Real USD": "0,012345"}) == pytest.approx(0.012345)
+    assert base.parse_real_cost({"Costo Real USD": ""}) is None
+    assert base.parse_real_cost({"Costo Real USD": "N/A"}) is None
+    assert base.parse_real_cost({"Costo Real USD": "0,000000"}) is None
+    assert base.parse_real_cost({}) is None
+
+
+def test_budget_breakdown_uses_real_cost(tmp_path, capsys):
+    """When 'Costo Real USD' is present, it is used verbatim (not the estimate)."""
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
+        "Optimizado Score;Robustez Score;Budget;Tokens Task;Tokens Reflection;"
+        "Costo Real USD;Notas\n"
+        "r1;2026-02-01 10:00:00;Real Case;gpt-4o-mini;gpt-4o;0,5;0,8;0,75;30;"
+        "1000;500;1,234567;n\n",
+        encoding="utf-8",
+    )
+    budget_breakdown.run(csv_path=csv_path)
+    output = capsys.readouterr().out
+    assert "$1.23" in output  # real cost, formatted as currency
+    assert "1 real (medido)" in output
+
+
+def test_roi_uses_real_cost(tmp_path, capsys):
+    """ROI labels the optimization cost as real and averages cost_real_usd."""
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
+        "Optimizado Score;Robustez Score;Budget;Tokens Task;Tokens Reflection;"
+        "Costo Real USD;Notas\n"
+        "r1;2026-02-01 10:00:00;Real Case;gpt-4o-mini;gpt-4o;0,5;0,9;0,85;30;"
+        "1000;500;2,000000;n\n",
+        encoding="utf-8",
+    )
+    roi_calculator.run(csv_path=csv_path)
+    output = capsys.readouterr().out
+    assert "real, medido" in output
+
+
+def test_cost_from_usage_matches_pricing():
+    """Real-usage cost = task pricing on task bucket + reflection pricing on reflection bucket."""
+    usage = {
+        "task": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+        "reflection": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+    }
+    cost = roi_calculator.cost_from_usage(
+        usage, task_model="gpt-4o-mini", reflection_model="gpt-4o"
+    )
+    # gpt-4o-mini: 0.15 in + 0.60 out = 0.75 ; gpt-4o: 2.50 in + 10.00 out = 12.50
+    assert cost == pytest.approx(0.75 + 12.50)
+
+
+def test_cost_from_usage_handles_missing_buckets():
+    """Empty/partial usage must not raise and yields zero cost."""
+    assert roi_calculator.cost_from_usage({}, "gpt-4o-mini", "gpt-4o") == 0.0
+
+
 def test_calculate_optimization_cost_basic():
     """Calculate GEPA optimization cost with default params."""
     result = roi_calculator.calculate_optimization_cost(

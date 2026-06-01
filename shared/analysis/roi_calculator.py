@@ -28,6 +28,7 @@ from .base import (
     format_percentage,
     load_metrics,
     parse_float,
+    parse_real_cost,
 )
 
 
@@ -89,6 +90,43 @@ def get_model_pricing(model_name: str, pricing: dict = None) -> ModelPricing:
     pricing = pricing or DEFAULT_PRICING
     model_key = model_name.lower().replace("azure/", "")
     return pricing.get(model_key, pricing.get("gpt-4o-mini", DEFAULT_PRICING["gpt-4o-mini"]))
+
+
+def cost_from_usage(
+    usage: dict,
+    task_model: str,
+    reflection_model: str,
+    pricing: dict = None,
+) -> float:
+    """Compute real USD cost from a measured usage snapshot.
+
+    Uses the same pricing table as the estimated path, but applied to the
+    real token counts captured by ``shared.llm.usage.UsageTracker`` instead
+    of fixed per-case estimates.
+
+    Args:
+        usage: Snapshot with ``task`` and ``reflection`` buckets, each holding
+            ``prompt_tokens`` and ``completion_tokens``.
+        task_model: Model used for the task bucket.
+        reflection_model: Model used for the reflection bucket.
+        pricing: Custom pricing dict (defaults to DEFAULT_PRICING).
+
+    Returns:
+        Total cost in USD.
+    """
+    task_pricing = get_model_pricing(task_model, pricing)
+    reflection_pricing = get_model_pricing(reflection_model, pricing)
+
+    task = usage.get("task", {})
+    reflection = usage.get("reflection", {})
+
+    task_cost = task_pricing.cost_per_call(
+        task.get("prompt_tokens", 0), task.get("completion_tokens", 0)
+    )
+    reflection_cost = reflection_pricing.cost_per_call(
+        reflection.get("prompt_tokens", 0), reflection.get("completion_tokens", 0)
+    )
+    return task_cost + reflection_cost
 
 
 def calculate_optimization_cost(
@@ -277,39 +315,43 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, vol
         rob_scores = [parse_float(r.get("Robustez Score", "0")) for r in rows]
         avg_delta = mean(rob_scores) - mean(base_scores)
 
+        # Estimated breakdown (kept for display/fallback)
         opt_cost = calculate_optimization_cost(
             case_name, task_model, reflection_model, max_calls=max_calls
         )
 
+        # Prefer the measured optimization cost: average real cost per run in
+        # the group. Fall back to the estimate for legacy rows without it.
+        real_costs = [c for c in (parse_real_cost(r) for r in rows) if c is not None]
+        if real_costs:
+            opt_total = mean(real_costs)
+            cost_source = "real"
+        else:
+            opt_total = opt_cost["total_cost"]
+            cost_source = "estimado"
+
+        common = {
+            "case_name": case_name,
+            "task_model": task_model,
+            "reflection_model": reflection_model,
+            "max_calls": max_calls,
+            "avg_delta": avg_delta,
+            "opt_cost": opt_cost,
+            "opt_total": opt_total,
+            "cost_source": cost_source,
+            "n_real": len(real_costs),
+            "n_runs": len(rows),
+        }
+
         # ROI only meaningful when optimization improved results
         if avg_delta <= 0:
-            results.append(
-                {
-                    "case_name": case_name,
-                    "task_model": task_model,
-                    "reflection_model": reflection_model,
-                    "max_calls": max_calls,
-                    "avg_delta": avg_delta,
-                    "opt_cost": opt_cost,
-                    "roi_data": None,
-                    "breakeven": None,
-                }
-            )
+            results.append({**common, "roi_data": None, "breakeven": None})
         else:
             roi_data = calculate_production_roi(
-                case_name, opt_cost["total_cost"], reflection_model, task_model, volume
+                case_name, opt_total, reflection_model, task_model, volume
             )
             results.append(
-                {
-                    "case_name": case_name,
-                    "task_model": task_model,
-                    "reflection_model": reflection_model,
-                    "max_calls": max_calls,
-                    "avg_delta": avg_delta,
-                    "opt_cost": opt_cost,
-                    "roi_data": roi_data,
-                    "breakeven": roi_data["breakeven_calls"],
-                }
+                {**common, "roi_data": roi_data, "breakeven": roi_data["breakeven_calls"]}
             )
 
     # Sort: profitable first (by breakeven ascending), then N/A
@@ -325,16 +367,24 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, vol
         print(f"Budget (max_calls): {res['max_calls']}")
         print()
 
-        opt = res["opt_cost"]
-        print("COSTO DE OPTIMIZACION:")
-        print(
-            f"  - Llamadas Task Model: {opt['task_calls']:,} = {format_currency(opt['task_cost'])}"
-        )
-        print(
-            f"  - Llamadas Reflection: {opt['reflection_calls']:,} = "
-            f"{format_currency(opt['reflection_cost'])}"
-        )
-        print(f"  - TOTAL: {format_currency(opt['total_cost'])}")
+        if res["cost_source"] == "real":
+            print(
+                f"COSTO DE OPTIMIZACION (real, medido - promedio de "
+                f"{res['n_real']}/{res['n_runs']} runs):"
+            )
+            print(f"  - TOTAL: {format_currency(res['opt_total'])}")
+        else:
+            opt = res["opt_cost"]
+            print("COSTO DE OPTIMIZACION (estimado):")
+            print(
+                f"  - Llamadas Task Model: {opt['task_calls']:,} = "
+                f"{format_currency(opt['task_cost'])}"
+            )
+            print(
+                f"  - Llamadas Reflection: {opt['reflection_calls']:,} = "
+                f"{format_currency(opt['reflection_cost'])}"
+            )
+            print(f"  - TOTAL: {format_currency(opt['total_cost'])}")
         print()
 
         if res["roi_data"] is None:

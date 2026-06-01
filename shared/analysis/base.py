@@ -175,6 +175,20 @@ def parse_float(value: str) -> float:
         return 0.0
 
 
+def parse_real_cost(row: dict[str, Any]) -> float | None:
+    """Return the measured optimization cost from a CSV row, or None.
+
+    Reads the ``Costo Real USD`` column (European decimal). Returns None when
+    the column is absent, empty, ``N/A`` or non-positive, so callers can fall
+    back to the estimated cost for legacy rows that predate token tracking.
+    """
+    raw = row.get("Costo Real USD", "")
+    if not raw or not str(raw).strip() or str(raw).strip() == "N/A":
+        return None
+    value = parse_float(raw)
+    return value if value > 0 else None
+
+
 def format_float(value: float, decimals: int = 4) -> str:
     """Format float to European decimal string (comma)."""
     return f"{value:.{decimals}f}".replace(".", ",")

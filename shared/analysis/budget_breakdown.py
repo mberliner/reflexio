@@ -14,6 +14,7 @@ from .base import (
     extract_budget_from_rows,
     format_currency,
     load_metrics,
+    parse_real_cost,
 )
 from .roi_calculator import (
     FALLBACK_MAX_CALLS,
@@ -45,6 +46,8 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, sor
         lambda: {
             "count": 0,
             "total_cost": 0.0,
+            "real_count": 0,
+            "estimated_count": 0,
             "by_model_combo": defaultdict(lambda: {"count": 0, "cost": 0.0}),
             "sources": set(),
         }
@@ -56,14 +59,18 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, sor
         reflection_model = exp.get("Modelo Profesor", "gpt-4o")
         source = exp.get("source", "unknown")
 
-        # Extract budget (dedicated column, fallback to Notas)
-        max_calls = extract_budget_from_rows([exp], FALLBACK_MAX_CALLS)
-
-        # Calculate cost using SSOT formula from roi_calculator
-        cost_data = calculate_optimization_cost(
-            case_name, task_model, reflection_model, max_calls=max_calls
-        )
-        cost = cost_data["total_cost"]
+        # Prefer the measured cost (real tokens); fall back to the SSOT estimate
+        # for legacy rows that predate token tracking.
+        real_cost = parse_real_cost(exp)
+        if real_cost is not None:
+            cost = real_cost
+            case_stats[case_name]["real_count"] += 1
+        else:
+            max_calls = extract_budget_from_rows([exp], FALLBACK_MAX_CALLS)
+            cost = calculate_optimization_cost(
+                case_name, task_model, reflection_model, max_calls=max_calls
+            )["total_cost"]
+            case_stats[case_name]["estimated_count"] += 1
 
         # Accumulate
         case_stats[case_name]["count"] += 1
@@ -101,6 +108,10 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, sor
         print(f"Total Experimentos: {stats['count']}")
         print(f"Costo Total: {format_currency(stats['total_cost'])}")
         print(f"Costo Promedio/Exp: {format_currency(stats['total_cost'] / stats['count'])}")
+        print(
+            f"Fuente de costo: {stats['real_count']} real (medido), "
+            f"{stats['estimated_count']} estimado"
+        )
         print()
 
         print("Desglose por Combinacion de Modelos:")
@@ -149,11 +160,13 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, sor
     print()
     print("=" * 100)
     print("NOTAS:")
-    print("  - Precios basados en Azure OpenAI")
-    print("  - Budget (max_calls) extraido de columna Budget del CSV")
-    print(f"  - Fallback: {FALLBACK_MAX_CALLS} cuando no hay Budget disponible")
-    print("  - Task calls = (max_calls + 1) * val_size")
-    print("  - Reflection calls = 0.5x max_calls")
+    print("  - Costo real: columna 'Costo Real USD' (tokens medidos en el run)")
+    print("  - Estimado (fallback para filas sin costo real):")
+    print("    - Precios basados en Azure OpenAI")
+    print("    - Budget (max_calls) extraido de columna Budget del CSV")
+    print(f"    - Fallback: {FALLBACK_MAX_CALLS} cuando no hay Budget disponible")
+    print("    - Task calls = (max_calls + 1) * val_size")
+    print("    - Reflection calls = 0.5x max_calls")
     print("=" * 100)
 
 
