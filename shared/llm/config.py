@@ -198,16 +198,21 @@ class LLMConfig:
         kwargs["cache"] = self.cache
         return dspy.LM(**kwargs)
 
-    def get_lm_function(self) -> Callable[[str], str]:
+    def get_lm_function(self, role: str = "task") -> Callable[[str], str]:
         """
         Get a simple LM function for GEPA.
 
         For use in gepa_standalone project. Uses LiteLLM directly without DSPy.
 
+        Args:
+            role: Usage bucket for token tracking ("task" or "reflection").
+
         Returns:
             Function that takes a prompt string and returns the response string.
         """
         import litellm
+
+        from .usage import record_usage
 
         litellm.drop_params = True
         kwargs = self.to_kwargs()
@@ -215,6 +220,7 @@ class LLMConfig:
         def lm_func(prompt: str) -> str:
             """Call LLM with prompt and return response text."""
             response = litellm.completion(messages=[{"role": "user", "content": prompt}], **kwargs)
+            record_usage(role, response)
             return response.choices[0].message.content
 
         return lm_func

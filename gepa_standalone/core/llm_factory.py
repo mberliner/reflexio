@@ -21,7 +21,7 @@ def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
         Funcion que toma un prompt y retorna la respuesta.
     """
     config = LLMConfig.from_env("task")
-    base_func = config.get_lm_function()
+    base_func = config.get_lm_function(role="task")
 
     if not verbose:
         return base_func
@@ -64,7 +64,7 @@ def create_reflection_lm_function(
         config.max_tokens = max_tokens
     if cache is not None:
         config.cache = cache
-    base_func = config.get_lm_function()
+    base_func = config.get_lm_function(role="reflection")
 
     if not verbose:
         return base_func
@@ -138,6 +138,8 @@ def call_llm(
     """
     import litellm
 
+    from shared.llm.usage import record_usage
+
     litellm.drop_params = True
     config = LLMConfig.from_env(model_name)
 
@@ -158,4 +160,5 @@ def call_llm(
     model = kwargs.pop("model")
 
     response = litellm.completion(model=model, messages=messages, **kwargs)
+    record_usage(model_name, response)
     return response.choices[0].message.content

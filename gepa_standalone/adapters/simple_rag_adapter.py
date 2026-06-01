@@ -16,6 +16,7 @@ from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
 from shared.llm import LLMConnectionError
+from shared.llm.usage import record_usage
 
 
 class SimpleRAGAdapter(BaseAdapter):
@@ -85,6 +86,11 @@ class SimpleRAGAdapter(BaseAdapter):
         """
         config = self._judge_config if model == self.judge_model else self._config
 
+        # Token bucket: judge and reflection both count as "reflection"
+        # (optimization-only cost); plain task generation counts as "task".
+        is_judge = model == self.judge_model
+        usage_role = "reflection" if (is_judge or is_reflection) else "task"
+
         litellm.drop_params = True
         call_kwargs = config.to_kwargs()
         call_kwargs["max_tokens"] = max_tokens
@@ -98,6 +104,7 @@ class SimpleRAGAdapter(BaseAdapter):
                     messages=messages,
                     **call_kwargs,
                 )
+                record_usage(usage_role, response)
                 return response.choices[0].message.content
             except Exception as e:
                 error_str = str(e)
