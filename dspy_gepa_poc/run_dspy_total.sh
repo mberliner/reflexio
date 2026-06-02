@@ -30,21 +30,9 @@ source "$REPO_ROOT/shared/utils/keep_awake.sh"
 # Directorio de configuraciones
 CONFIGS_DIR="$SCRIPT_DIR/configs"
 
-# Cache de DSPy
-DSPY_CACHE_DIR="$HOME/.dspy_cache"
-
 # ==============================================================================
 # FUNCIONES
 # ==============================================================================
-
-limpiar_cache_dspy() {
-    if [ -d "$DSPY_CACHE_DIR" ]; then
-        echo "    [CACHE] Limpiando: $DSPY_CACHE_DIR"
-        rm -rf "$DSPY_CACHE_DIR"/*
-    else
-        echo "    [CACHE] No existe, nada que limpiar"
-    fi
-}
 
 ejecutar_prueba() {
     local config_file="$1"
@@ -66,13 +54,9 @@ ejecutar_prueba() {
     echo "##############################################################################"
     echo ""
 
-    # Paso 1: Limpiar cache
-    echo ">>> PASO 1: Limpiando cache de DSPy"
-    limpiar_cache_dspy
-    echo ""
-
-    # Paso 2: Ejecutar prueba
-    echo ">>> PASO 2: Ejecutando prueba"
+    # Ejecutar prueba (cache deshabilitado via config: cache: false; no hay
+    # cache en disco que limpiar, ver get_dspy_lm en shared/llm/config.py).
+    echo ">>> Ejecutando prueba"
     echo "    Comando: python -m dspy_gepa_poc.reflexio_declarativa --config $config_file"
     echo ""
     echo "--- INICIO OUTPUT PRUEBA ---"
@@ -94,7 +78,6 @@ echo "=============================================="
 echo ""
 echo "  Configuracion:"
 echo "    - Dir configs:      $CONFIGS_DIR"
-echo "    - Cache DSPy:       $DSPY_CACHE_DIR"
 echo ""
 
 # Verificar que existe el directorio de configs
