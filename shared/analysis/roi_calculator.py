@@ -12,6 +12,7 @@ Model             | Input (1M tokens) | Output (1M tokens)
 gpt-4o            | $2.50             | $10.00
 gpt-4o-mini       | $0.15             | $0.60
 gpt-4.1-mini      | $0.15             | $0.60
+gpt-4.1-nano      | $0.10             | $0.40
 gpt-5             | $1.25             | $10.00
 gpt-5-mini        | $0.25             | $2.00
 gpt-5.5           | $5.00             | $30.00
@@ -57,6 +58,7 @@ class ModelPricing:
 DEFAULT_PRICING = {
     "gpt-4o": ModelPricing("GPT-4o", 2.50, 10.00),
     "gpt-4.1-mini": ModelPricing("GPT-4.1-mini", 0.15, 0.60),
+    "gpt-4.1-nano": ModelPricing("GPT-4.1-nano", 0.10, 0.40),
     "gpt-4o-mini": ModelPricing("GPT-4o-mini", 0.15, 0.60),
     "gpt-5": ModelPricing("GPT-5", 1.25, 10.00),
     "gpt-5-mini": ModelPricing("GPT-5-mini", 0.25, 2.00),

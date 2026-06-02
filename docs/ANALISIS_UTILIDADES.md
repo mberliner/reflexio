@@ -241,6 +241,7 @@ Configurados en `roi_calculator.py`:
 | gpt-4o | $2.50 | $10.00 |
 | gpt-4o-mini | $0.15 | $0.60 |
 | gpt-4.1-mini | $0.15 | $0.60 |
+| gpt-4.1-nano | $0.10 | $0.40 |
 
 Para actualizar precios, editar `DEFAULT_PRICING` en `shared/analysis/roi_calculator.py`.
 
