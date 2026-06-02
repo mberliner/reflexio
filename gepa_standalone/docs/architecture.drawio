@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram id="gepa-arch" name="Arquitectura GEPA">
-    <mxGraphModel dx="2606" dy="646" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+    <mxGraphModel dx="3006" dy="826" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -65,30 +65,27 @@
           <mxGeometry height="60" width="156" x="40" y="660" as="geometry" />
         </mxCell>
         <mxCell id="L4b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="results.json&#xa;baseline / opt / test scores" vertex="1">
-          <mxGeometry height="60" width="156" x="206" y="660" as="geometry" />
-        </mxCell>
-        <mxCell id="L4c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="run.json&#xa;seed + modelos + versiones" vertex="1">
           <mxGeometry height="60" width="156" x="372" y="660" as="geometry" />
         </mxCell>
-        <mxCell id="L4d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="metrics.csv&#xa;traza por iteración" vertex="1">
-          <mxGeometry height="60" width="156" x="538" y="660" as="geometry" />
+        <mxCell id="L4d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="metricas_optimizacion.csv&#xa;una fila por run" vertex="1">
+          <mxGeometry height="60" width="156" x="206" y="660" as="geometry" />
         </mxCell>
         <mxCell id="L4e" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;align=center;" value="leaderboard.csv&#xa;agregado histórico" vertex="1">
-          <mxGeometry height="60" width="156" x="704" y="660" as="geometry" />
+          <mxGeometry height="60" width="156" x="540" y="660" as="geometry" />
         </mxCell>
         <mxCell id="L5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;" value="ANÁLISIS Y VISUALIZACIÓN   (python analyze ...)" vertex="1">
           <mxGeometry height="170" width="860" x="-880" y="195" as="geometry" />
         </mxCell>
-        <mxCell id="L5a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="leaderboard&#xa;ranking + anomalías + ROI&#xa;→ tabla ASCII / MD / PNG" vertex="1">
+        <mxCell id="L5a" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="leaderboard&#xa;ranking +  ROI + anomalías&#xa; tabla / MD / PNG" vertex="1">
           <mxGeometry height="80" width="197" x="-870" y="245" as="geometry" />
         </mxCell>
-        <mxCell id="L5b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="roi&#xa;costo optim. vs ahorro prod.&#xa;→ tabla ASCII" vertex="1">
+        <mxCell id="L5b" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="roi&#xa;costo optim. vs ahorro prod.&#xa;→ tabla csv" vertex="1">
           <mxGeometry height="80" width="197" x="-663" y="245" as="geometry" />
         </mxCell>
-        <mxCell id="L5c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="stats&#xa;evolución temporal por lotes&#xa;→ tabla ASCII" vertex="1">
+        <mxCell id="L5c" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="stats&#xa;evolución temporal por lotes&#xa;→ tabla csv" vertex="1">
           <mxGeometry height="80" width="197" x="-456" y="245" as="geometry" />
         </mxCell>
-        <mxCell id="L5d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="budget&#xa;presupuesto por modelo&#xa;→ tabla ASCII" vertex="1">
+        <mxCell id="L5d" parent="1" style="rounded=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=10;align=center;" value="budget&#xa;presupuesto por modelo&#xa;→ tabla csv" vertex="1">
           <mxGeometry height="80" width="197" x="-249" y="245" as="geometry" />
         </mxCell>
         <mxCell id="FWP5QR6z3n_0Qv1nb-Sf-2" edge="1" parent="1" source="L5" style="endArrow=classic;html=1;rounded=0;entryX=-0.005;entryY=0.422;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.49;exitY=0.982;exitDx=0;exitDy=0;exitPerimeter=0;edgeStyle=orthogonalEdgeStyle;" target="L4" value="">
