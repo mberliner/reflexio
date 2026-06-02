@@ -105,6 +105,11 @@ DEFAULT_VAL_SIZES = {
 }
 
 
+def normalize_model(model_name: str) -> str:
+    """Normalize a model name for comparison (drops the ``azure/`` prefix)."""
+    return (model_name or "").lower().replace("azure/", "")
+
+
 def lookup_by_case(case_name: str, table: dict, default):
     """Match a case name to a table entry by substring (longest key first).
 
@@ -244,7 +249,7 @@ def calculate_production_roi(
     production_calls: int,
     token_estimates: dict = None,
     pricing: dict = None,
-) -> dict:
+) -> dict | None:
     """
     Calculate ROI for a given production volume.
 
@@ -258,8 +263,18 @@ def calculate_production_roi(
         pricing: Custom pricing dict
 
     Returns:
-        Dict with ROI analysis
+        Dict with ROI analysis, or ``None`` when there is no model
+        substitution (``expensive_model`` and ``cheap_model`` are the same):
+        without a cheaper production model there are no token savings to
+        measure, so the ROI by cost does not apply.
     """
+    # Sin sustitucion de modelo (Tarea == Profesor) no hay ahorro de tokens que
+    # medir: el unico "ahorro" seria el sobrecosto del prompt optimizado, un
+    # artefacto negativo sin sentido de negocio. Es el criterio compartido por
+    # el comando ROI y el leaderboard.
+    if normalize_model(expensive_model) == normalize_model(cheap_model):
+        return None
+
     tokens = token_estimates or lookup_by_case(
         case_name, DEFAULT_TOKEN_ESTIMATES, DEFAULT_TOKEN_ESTIMATES["default"]
     )
@@ -352,18 +367,14 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, vol
         )
         groups[gkey].append(exp)
 
-    def _norm_model(model: str) -> str:
-        return (model or "").lower().replace("azure/", "")
-
     results = []
     skipped_same_model = 0
     for (case_name, task_model, reflection_model), rows in groups.items():
         # El ROI mide ahorro por sustitucion de modelo (Profesor caro en
         # produccion -> Tarea barato gracias al prompt optimizado). Si Tarea y
-        # Profesor son el mismo modelo no hay sustitucion posible: el unico
-        # "ahorro" seria el sobrecosto del prompt mas largo, un artefacto
-        # negativo sin sentido de negocio. Esos grupos se omiten.
-        if _norm_model(task_model) == _norm_model(reflection_model):
+        # Profesor son el mismo modelo no hay sustitucion posible y la funcion
+        # de ROI devuelve None; aqui los omitimos del listado con un aviso.
+        if normalize_model(task_model) == normalize_model(reflection_model):
             skipped_same_model += 1
             continue
         # Extract budget from Notas (scan all rows in group)
@@ -409,9 +420,8 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, vol
             roi_data = calculate_production_roi(
                 case_name, opt_total, reflection_model, task_model, volume
             )
-            results.append(
-                {**common, "roi_data": roi_data, "breakeven": roi_data["breakeven_calls"]}
-            )
+            breakeven = roi_data["breakeven_calls"] if roi_data else None
+            results.append({**common, "roi_data": roi_data, "breakeven": breakeven})
 
     if skipped_same_model:
         print(

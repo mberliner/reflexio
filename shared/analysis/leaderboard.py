@@ -215,9 +215,16 @@ def run(
         to_pct = (100.0 / scale) if scale > 0 else 1.0
         delta_pct = (avg_rob - avg_base) * to_pct
 
-        # ROI only meaningful when optimization improved results
-        if delta_pct > 0:
-            roi = calculate_production_roi(case, opt_cost["total_cost"], reflect, task, 1000)
+        # ROI only meaningful when optimization improved results AND there is a
+        # model substitution. calculate_production_roi returns None when Tarea ==
+        # Profesor (no cheaper production model), so same-model groups show N/A
+        # instead of a misleading negative saving, consistent with the ROI command.
+        roi = (
+            calculate_production_roi(case, opt_cost["total_cost"], reflect, task, 1000)
+            if delta_pct > 0
+            else None
+        )
+        if roi is not None:
             savings_1k = roi["savings"]
             breakeven = roi["breakeven_calls"]
         else:

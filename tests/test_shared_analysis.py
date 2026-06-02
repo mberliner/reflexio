@@ -495,6 +495,18 @@ def test_calculate_production_roi_negative():
     assert roi["roi_percentage"] < 0
 
 
+def test_calculate_production_roi_same_model_returns_none():
+    """Sin sustitucion de modelo (Tarea == Profesor) la funcion devuelve None."""
+    roi = roi_calculator.calculate_production_roi(
+        case_name="CV Extraction",
+        optimization_cost=0.5,
+        expensive_model="azure/gpt-4o",
+        cheap_model="gpt-4o",  # mismo modelo, distinto prefijo
+        production_calls=10000,
+    )
+    assert roi is None
+
+
 def test_calculate_production_roi_zero_optimization_cost():
     """Handle edge case of zero optimization cost."""
     roi = roi_calculator.calculate_production_roi(
@@ -682,6 +694,26 @@ def test_run_grouping_by_models(metrics_csv_sample, capsys):
     assert "CV Extraction" in output
     assert "gpt-4o-mini" in output
     assert "gpt-4o" in output
+
+
+def test_run_same_model_shows_na(tmp_path, capsys):
+    """Leaderboard: grupo mismo-modelo con delta positivo muestra N/A, no negativo."""
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
+        "Optimizado Score;Robustez Score;Budget;Tokens Task;Tokens Reflection;"
+        "Costo Real USD;Notas\n"
+        # Mismo modelo, delta positivo: el ROI no aplica -> N/A en Ahorro/Break-even.
+        "r1;2026-02-01 10:00:00;Same Case;azure/gpt-4o;gpt-4o;0,5;0,9;0,9;30;;;;n\n",
+        encoding="utf-8",
+    )
+    leaderboard.run(csv_path=csv_path, graphs=False)
+    output = capsys.readouterr().out
+
+    assert "Same Case" in output
+    assert "N/A" in output
+    # No debe aparecer un ahorro negativo (el artefacto que se eliminó).
+    assert "$-" not in output
 
 
 def test_run_statistics_calculation(metrics_csv_sample, capsys):
