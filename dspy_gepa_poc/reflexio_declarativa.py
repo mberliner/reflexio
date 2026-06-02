@@ -62,7 +62,8 @@ class ReflexioDeclarativa:
             case_name=self.config.raw_config["case"]["name"], timestamp=run_ts
         )
         self.metadata_mgr = MetadataManager(get_dspy_paths().results)
-        log_ok(f"Config loaded: {self.config.raw_config['case']['name']}")
+        _case = self.config.raw_config["case"]
+        log_ok(f"Config loaded: {_case.get('title', _case['name'])}")
         log_info(f"Results dir: {self.results_dir}")
 
     def setup_models(self):
@@ -286,13 +287,13 @@ class ReflexioDeclarativa:
 
     def run(self):
         """Execute the optimization pipeline."""
-        case_name = self.config.raw_config["case"]["name"]
-        print_header(f"[{ENGINE}] {case_name}")
+        case = self.config.raw_config["case"]
+        print_header(f"[{ENGINE}] {case.get('title', case['name'])}")
         log_info(f"Command: {' '.join(sys.argv)}")
 
         # STEP 1: Config (ya validado en __init__, anunciamos el step)
         print_step(1, TOTAL_STEPS, "CONFIG")
-        log_ok(f"Case: {case_name}")
+        log_ok(f"Case: {case.get('title', case['name'])}")
 
         # STEP 2: LLM check
         print_step(2, TOTAL_STEPS, "LLM CONNECTION CHECK")
@@ -457,9 +458,10 @@ class ReflexioDeclarativa:
         )
 
         # Log to master CSV
+        _case = self.config.raw_config["case"]
         self.logger.log_run(
             {
-                "case_name": self.config.raw_config["case"]["name"],
+                "case_name": _case.get("title", _case["name"]),
                 "module_type": self.config.raw_config["module"]["type"],
                 "task_model": self.task_config.model,
                 "reflection_model": self.reflection_config.model,

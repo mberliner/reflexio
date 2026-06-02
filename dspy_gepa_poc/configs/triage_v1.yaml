@@ -1,5 +1,7 @@
 case:
-  name: "Triage v1"
+  name: "triage_v1"
+  title: "Triage v1 (DSPy)"
+  description: "Triage basico (v1)"
 
 module:
   type: "dynamic"

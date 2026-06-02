@@ -1,5 +1,7 @@
 case:
-  name: "CV Triage (Backend Senior Python LATAM)"
+  name: "cv_triage"
+  title: "CV Triage (Backend Senior Python LATAM)"
+  description: "Clasificacion de fit de CVs para puesto Backend Senior Python LATAM"
 
 module:
   type: "dynamic"

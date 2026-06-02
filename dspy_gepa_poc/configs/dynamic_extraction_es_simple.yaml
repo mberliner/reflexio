@@ -1,5 +1,7 @@
 case:
-  name: "Order Extraction (Hard - Spanish - Zero-Shot)"
+  name: "order_extraction_es_zeroshot"
+  title: "Order Extraction (Hard - Spanish - Zero-Shot)"
+  description: "Extraccion de pedidos en espanol, modo dificil zero-shot"
 
 module:
   type: "dynamic"

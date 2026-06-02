@@ -1,5 +1,7 @@
 case:
-  name: "Order Extraction (Hard Mode - English)"
+  name: "order_extraction_hard_en"
+  title: "Order Extraction (Hard Mode - English)"
+  description: "Extraccion de pedidos en ingles, modo dificil"
 
 module:
   type: "dynamic"

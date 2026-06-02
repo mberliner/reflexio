@@ -1,5 +1,7 @@
 case:
-  name: "Email Urgency Classification"
+  name: "email_urgency"
+  title: "Email Urgency Classification"
+  description: "Clasificacion de urgencia de emails corporativos"
 
 module:
   type: "dynamic"

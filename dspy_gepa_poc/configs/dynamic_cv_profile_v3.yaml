@@ -13,7 +13,9 @@
 # Regenerar dataset: python -m shared.cv_synth.build_datasets
 # Criterio de exito: gap val-test <= 3 pts y robustez fiable (test=24, no test=8).
 case:
-  name: "CV Profile Extraction v3 (Espanol, CVs extensos)"
+  name: "cv_profile_v3"
+  title: "CV Profile Extraction v3 (Espanol, CVs extensos)"
+  description: "Extraccion de perfil de CV en espanol sobre CVs extensos (v3)"
 
 module:
   type: "dynamic"

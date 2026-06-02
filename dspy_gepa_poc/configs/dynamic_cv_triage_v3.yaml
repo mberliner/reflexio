@@ -18,7 +18,9 @@
 # Criterio de exito: baseline < 100 (hay headroom por la dificultad de extraccion),
 # macro-F1 ↑ via GEPA, rango entre seeds ↓.
 case:
-  name: "CV Triage v3 (Backend Senior Python LATAM, CVs extensos)"
+  name: "cv_triage_v3"
+  title: "CV Triage v3 (Backend Senior Python LATAM, CVs extensos)"
+  description: "Clasificacion de fit (fit_alto/fit_medio/no_fit) sobre CVs extensos y ruidosos para Backend Senior Python LATAM"
 
 module:
   type: "dynamic"

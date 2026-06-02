@@ -24,7 +24,9 @@
 # NOTA: si per_field_accuracy.py senala otros campos como culpables, mover el
 # ajuste de umbral a esos campos. Todo lo demas queda CONGELADO igual al baseline.
 case:
-  name: "CV Profile Extraction v2 (Espanol)"
+  name: "cv_profile_v2"
+  title: "CV Profile Extraction v2 (Espanol)"
+  description: "Extraccion de perfil de CV en espanol (v2)"
 
 module:
   type: "dynamic"

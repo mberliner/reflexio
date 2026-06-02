@@ -21,7 +21,9 @@
 # Regenerar dataset: python -m shared.cv_synth.build_datasets (luego re-copiar a
 # dspy_gepa_poc/datasets/ si cambia el catalogo).
 case:
-  name: "CV Extraction v3 (DSPy, condiciones iguales a GEPA)"
+  name: "cv_extraction_v3"
+  title: "CV Extraction v3 (DSPy, condiciones iguales a GEPA)"
+  description: "Extraccion estructurada de campos sobre CVs extensos (condiciones equiparadas a GEPA)"
 
 module:
   type: "dynamic"

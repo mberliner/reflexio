@@ -55,7 +55,7 @@ def signature_config():
 def dspy_yaml_config(dspy_root):
     """Write a complete YAML config file and return its path."""
     config = {
-        "case": {"name": "test_sentiment"},
+        "case": {"name": "test_sentiment", "title": "Test Sentiment"},
         "module": {"type": "dynamic"},
         "signature": {
             "instruction": "Classify sentiment as positive or negative.",

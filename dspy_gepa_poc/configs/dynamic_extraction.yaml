@@ -1,5 +1,7 @@
 case:
-  name: "Order Extraction (English)"
+  name: "order_extraction_en"
+  title: "Order Extraction (English)"
+  description: "Extraccion estructurada de pedidos (ingles)"
 
 module:
   type: "dynamic"

@@ -1,5 +1,7 @@
 case:
-  name: "Email Urgency Classification (Few-Shot)"
+  name: "email_urgency_fewshot"
+  title: "Email Urgency Classification (Few-Shot)"
+  description: "Clasificacion de urgencia de emails corporativos con few-shot"
 
 module:
   type: "dynamic"

@@ -1,5 +1,7 @@
 case:
-  name: "CV Profile Extraction (Espanol) - sin ejemplos"
+  name: "cv_profile_sin_ejemplos"
+  title: "CV Profile Extraction (Espanol) - sin ejemplos"
+  description: "Extraccion de perfil de CV en espanol sin few-shot"
 
 module:
   type: "dynamic"

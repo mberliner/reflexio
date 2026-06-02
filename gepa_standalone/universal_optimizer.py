@@ -546,7 +546,7 @@ class UniversalOptimizer:
 
         # Log to master CSV (real tokens + cost; European comma decimal)
         log_experiment_result(
-            case_title=self.config["case"]["title"],
+            case_title=self.config["case"].get("title", self.config["case"]["name"]),
             task_model=task_config.model,
             reflection_model=reflect_config.model,
             baseline_score=self.results["baseline_score"],

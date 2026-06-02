@@ -114,6 +114,12 @@ El patrón es consistente: **gpt-5-mini escala la urgencia un nivel hacia arriba
 
 **Beneficio:** Un mismo código puede ejecutar múltiples experimentos simultáneos con parámetros lógicos distintos simplemente pasando diferentes archivos YAML, sin colisiones de variables de entorno globales.
 
+### Campo `case` unificado entre subproyectos
+
+**Hallazgo:** La columna `Caso` del CSV maestro y del leaderboard salía de campos distintos en cada engine: GEPA usaba `case.title` y DSPy usaba `case.name` (que además contenía el texto largo y ensuciaba los nombres de los run dirs). Esto rompía el SSOT y dificultaba comparar.
+
+**Criterio adoptado (SSOT en `docs/YAML_CONFIG_REFERENCE.md`):** en ambos subproyectos `case.name` es un slug corto (run dir / `experiment_name`) y `case.title` es el título semántico (columna `Caso`). Los títulos se mantienen distintos por engine para que el leaderboard combinado no mezcle ambos motores.
+
 ## 5. Cache de DSPy (Baseline = Optimized)
 
 **Problema Detectado:** Las ejecuciones mostraban `baseline_score == optimized_score` consistentemente. DSPy tiene cache activo por defecto en `~/.dspy_cache`. Si el mismo prompt+input se envia al LLM, devuelve resultado cacheado sin llamar al modelo.

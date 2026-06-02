@@ -23,7 +23,7 @@ class ConfigValidator(BaseConfigValidator):
     """
 
     REQUIRED_FIELDS = {
-        "case": ["name"],
+        "case": ["name", "title"],
         "adapter": ["type"],
         "data": ["csv_filename"],
         "optimization": ["max_metric_calls"],

@@ -5,13 +5,30 @@
 
 ---
 
+## Criterio unificado `case`
+
+Ambos subproyectos comparten la misma estructura y uso de la seccion `case:`:
+
+| Campo | Requerido | Uso |
+|-------|-----------|-----|
+| `case.name` | MUST | Slug corto. Alimenta el nombre del directorio de runs y el `experiment_name` de metadata |
+| `case.title` | MUST | Titulo semantico. Alimenta la columna `Caso` del CSV maestro y del leaderboard |
+| `case.description` | SHOULD | Descripcion del caso |
+
+Los titulos se mantienen distintos por engine (no se normalizan entre DSPy y
+GEPA) para que el leaderboard combinado no mezcle ambos motores. El consumo de
+la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
+
+---
+
 ## 1. DSPy + GEPA (`dspy_gepa_poc/configs/`)
 
 ### Secciones Requeridas
 
 | Seccion | Campo | Tipo | Descripcion |
 |---------|-------|------|-------------|
-| `case` | `name` | string | Nombre del experimento |
+| `case` | `name` | string | Slug corto del caso (ver [Criterio unificado `case`](#criterio-unificado-case)) |
+| `case` | `title` | string | Titulo semantico del caso |
 | `module` | `type` | string | Tipo de modulo: `dynamic`, `pipeline`, `sentiment`, `extractor`, `qa` |
 | `data` | `csv_filename` | string | Archivo CSV en `datasets/` |
 | `data` | `input_column` o `input_columns` | string / list | Columna(s) de entrada del CSV. `input_column` (string, single) o `input_columns` (lista, multi-input); al menos uno requerido |
@@ -88,7 +105,8 @@ Compone N etapas en serie con routing condicional: la etapa-gate decide si las p
 
 | Seccion | Campo | Tipo | Descripcion |
 |---------|-------|------|-------------|
-| `case` | `name` | string | Nombre del caso |
+| `case` | `name` | string | Slug corto del caso (ver [Criterio unificado `case`](#criterio-unificado-case)) |
+| `case` | `title` | string | Titulo semantico del caso |
 | `adapter` | `type` | string | Tipo de adaptador: `classifier`, `extractor`, `sql`, `rag` |
 | `data` | `csv_filename` | string | Archivo CSV en `experiments/datasets/` |
 | `optimization` | `max_metric_calls` | int | Budget de llamadas a metrica (10-500) |
@@ -97,7 +115,6 @@ Compone N etapas en serie con routing condicional: la etapa-gate decide si las p
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
-| `case.title` | string | Titulo legible del caso |
 | `case.description` | string | Descripcion del caso |
 
 ### Data (opcionales)

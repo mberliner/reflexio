@@ -1,5 +1,7 @@
 case:
-  name: "Dynamic Sentiment Analysis (Hard Mode - Spanish)"
+  name: "sentiment_hard_es"
+  title: "Dynamic Sentiment Analysis (Hard Mode - Spanish)"
+  description: "Analisis de sentimiento en modo dificil (espanol)"
 
 module:
   type: "dynamic"

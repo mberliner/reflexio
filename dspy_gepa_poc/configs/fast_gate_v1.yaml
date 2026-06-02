@@ -1,5 +1,7 @@
 case:
-  name: "Fast Gate v1"
+  name: "fast_gate_v1"
+  title: "Fast Gate v1 (DSPy)"
+  description: "Gate rapido de clasificacion binaria (v1)"
 
 module:
   type: "dynamic"
