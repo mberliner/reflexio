@@ -1,0 +1,56 @@
+# GEPA Universal Optimizer Configuration
+# Caso: CV Triage v3 (Backend Senior Python LATAM, CVs extensos)
+#
+# Traslado del caso DSPy dspy_gepa_poc/configs/dynamic_cv_triage_v3.yaml.
+# Diferencias por framework:
+# - GEPA standalone admite un solo input_column: el job_description (constante en
+#   las 57 filas) se incrusta en el system_prompt (prompts/cv_triage_v3.json), no
+#   en el dato. El input 'text' es el cv_text.
+# - El seed es deliberadamente neutro: las heuristicas (ej. no dejarse enganar por
+#   menciones superficiales de Python en perfiles QA/data) NO se hornean en el
+#   prompt; son lo que GEPA debe descubrir via reflexion. Asi el baseline mide el
+#   lift real.
+# - Sin few-shot DSPy: el refuerzo positivo viene del dataset reflexivo
+#   (extractor_max_positive_examples).
+#
+# Regenerar dataset: derivado de dspy_gepa_poc/datasets/cv_triage_v3.csv
+# (split,text=cv_text,fit_label,justificacion).
+
+case:
+  name: "cv_triage_v3"
+  title: "CV Triage v3"
+  description: "Clasificacion de fit (fit_alto/fit_medio/no_fit) sobre CVs extensos y ruidosos para un puesto Backend Senior Python LATAM"
+
+data:
+  csv_filename: "cv_triage_v3.csv"
+  input_column: "text"
+  output_columns:
+    - "fit_label"
+    - "justificacion"
+
+prompt:
+  filename: "cv_triage_v3.json"
+
+adapter:
+  type: "extractor"
+  required_fields:
+    - "fit_label"
+    - "justificacion"
+  max_text_length: 4000
+  extractor_max_positive_examples: 3
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+optimization:
+  max_metric_calls: 60
+  skip_perfect_score: true
+  display_progress_bar: true
+  eval_repeats: 1
+  match_mode: "exact"
+  ignore_in_metric:
+    - "justificacion"
+  field_configs:
+    fit_label: { mode: "exact" }
