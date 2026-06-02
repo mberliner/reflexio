@@ -507,6 +507,23 @@ def test_calculate_production_roi_same_model_returns_none():
     assert roi is None
 
 
+def test_calculate_production_roi_uses_family_overhead():
+    """El overhead del prompt optimizado es por familia (CV ~1120), no +500 fijo."""
+    tokens = roi_calculator.DEFAULT_TOKEN_ESTIMATES["CV Extraction"]
+    overhead = roi_calculator.DEFAULT_PROMPT_OVERHEAD["CV Extraction"]
+    cheap = roi_calculator.get_model_pricing("gpt-4o-mini")
+    roi = roi_calculator.calculate_production_roi(
+        case_name="CV Extraction",
+        optimization_cost=0.5,
+        expensive_model="gpt-4o",
+        cheap_model="gpt-4o-mini",
+        production_calls=1000,
+    )
+    expected_prod = 1000 * cheap.cost_per_call(tokens["input"] + overhead, tokens["output"])
+    assert roi["cost_with_gepa_production"] == pytest.approx(expected_prod)
+    assert overhead != 500  # ya no es la constante antigua
+
+
 def test_calculate_production_roi_zero_optimization_cost():
     """Handle edge case of zero optimization cost."""
     roi = roi_calculator.calculate_production_roi(

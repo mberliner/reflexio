@@ -84,6 +84,26 @@ DEFAULT_TOKEN_ESTIMATES = {
     "default": {"input": 500, "output": 150},
 }
 
+# Overhead de tokens que el prompt optimizado por GEPA agrega al input en
+# produccion (respecto al prompt inicial). Medido empiricamente sobre 272 pares
+# initial_prompt/final_prompt de runs reales (delta de tokens ~= chars/4):
+# las familias CV crecen ~1100, RAG ~1080, Text-to-SQL ~720, Email ~380. El
+# +500 fijo anterior subestimaba a la mitad en CV y sobreestimaba en Email.
+# Mismo matching por subcadena (longest-first) que DEFAULT_TOKEN_ESTIMATES.
+DEFAULT_PROMPT_OVERHEAD = {
+    "CV Profile": 1100,
+    "CV Triage": 1150,
+    "CV Extraction": 1120,
+    "Order Extraction": 600,
+    "Email Urgency": 380,
+    "Sentiment": 380,
+    "Text-to-SQL": 720,
+    "RAG": 1080,
+    "Fast Gate": 975,
+    "Triage": 1150,
+    "default": 780,  # mediana global del delta medido
+}
+
 # Fallback max metric calls (used when Budget column is empty)
 FALLBACK_MAX_CALLS = 30
 
@@ -279,6 +299,11 @@ def calculate_production_roi(
         case_name, DEFAULT_TOKEN_ESTIMATES, DEFAULT_TOKEN_ESTIMATES["default"]
     )
 
+    # Overhead real del prompt optimizado (por familia), no una constante fija.
+    prompt_overhead = lookup_by_case(
+        case_name, DEFAULT_PROMPT_OVERHEAD, DEFAULT_PROMPT_OVERHEAD["default"]
+    )
+
     expensive_pricing = get_model_pricing(expensive_model, pricing)
     cheap_pricing = get_model_pricing(cheap_model, pricing)
 
@@ -287,21 +312,22 @@ def calculate_production_roi(
         tokens["input"], tokens["output"]
     )
 
-    # Cost with GEPA (cheap model + optimization cost)
-    # Note: optimized prompts are typically longer (+500 tokens approx)
-    cost_with_gepa_production = production_calls * cheap_pricing.cost_per_call(
-        tokens["input"] + 500, tokens["output"]
+    # Cost with GEPA: el prompt optimizado agrega prompt_overhead tokens al input.
+    cost_per_call_with_gepa = cheap_pricing.cost_per_call(
+        tokens["input"] + prompt_overhead, tokens["output"]
     )
+    cost_with_gepa_production = production_calls * cost_per_call_with_gepa
     cost_with_gepa_total = cost_with_gepa_production + optimization_cost
 
     # Savings and ROI
     savings = cost_without_gepa - cost_with_gepa_total
     roi_percentage = (savings / optimization_cost * 100) if optimization_cost > 0 else 0
 
-    # Break-even point
-    cost_per_call_diff = expensive_pricing.cost_per_call(
-        tokens["input"], tokens["output"]
-    ) - cheap_pricing.cost_per_call(tokens["input"], tokens["output"])
+    # Break-even: usa el mismo costo por llamada con overhead que el ahorro, para
+    # que ambos sean coherentes (antes el break-even ignoraba el prompt mas largo).
+    cost_per_call_diff = (
+        expensive_pricing.cost_per_call(tokens["input"], tokens["output"]) - cost_per_call_with_gepa
+    )
     breakeven_calls = int(optimization_cost / cost_per_call_diff) if cost_per_call_diff > 0 else 0
 
     return {

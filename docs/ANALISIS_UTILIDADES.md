@@ -103,6 +103,21 @@ Disponibles en todos los comandos:
 - Ahorro neto y porcentaje ROI
 - Punto de equilibrio (break-even calls)
 
+**Supuestos del calculo (que es real y que es estimado):**
+- El ROI modela un ahorro por **sustitucion de modelo**: sin GEPA se usaria el
+  modelo Profesor (caro) en produccion; con GEPA, el modelo Tarea (barato). Si
+  Tarea == Profesor no hay sustitucion y el ROI no aplica (se muestra `N/A`,
+  mismo criterio en `roi` y en `leaderboard`).
+- **Costo de optimizacion (la inversion):** usa el costo real medido por corrida
+  (columna `Costo Real USD`) cuando esta disponible; cae a estimacion
+  (`budget x val_size x tokens_estimados`) para corridas sin ese dato.
+- **Tokens de produccion (input/output por inferencia):** estimacion fija por
+  familia (`DEFAULT_TOKEN_ESTIMATES`); las columnas `Tokens Task`/`Tokens
+  Reflection` son agregados de toda la optimizacion, no sirven por-inferencia.
+- **Overhead del prompt optimizado:** `DEFAULT_PROMPT_OVERHEAD`, medido por
+  familia sobre pares `initial_prompt`/`final_prompt` reales (~1100 en CV, ~720
+  Text-to-SQL, ~380 Email). Se aplica tanto al ahorro como al break-even.
+
 #### stats
 
 ```bash
