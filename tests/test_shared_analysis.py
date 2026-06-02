@@ -356,6 +356,41 @@ def test_roi_uses_real_cost(tmp_path, capsys):
     assert "real, medido" in output
 
 
+def test_roi_skips_same_model_groups(tmp_path, capsys):
+    """Grupos con Modelo Tarea == Profesor se omiten (sin sustitucion de modelo)."""
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
+        "Optimizado Score;Robustez Score;Budget;Tokens Task;Tokens Reflection;"
+        "Costo Real USD;Notas\n"
+        # Mismo modelo (azure/ en uno solo): debe omitirse pese al prefijo.
+        "r1;2026-02-01 10:00:00;Same Model;azure/gpt-4o;gpt-4o;0,5;0,9;0,85;30;;;;n\n"
+        # Sustitucion real (barato vs caro): debe reportarse.
+        "r2;2026-02-01 11:00:00;Subst Case;gpt-4o-mini;gpt-4o;0,5;0,9;0,85;30;;;;n\n",
+        encoding="utf-8",
+    )
+    roi_calculator.run(csv_path=csv_path)
+    output = capsys.readouterr().out
+    assert "Omitidos 1 grupo" in output
+    assert "Same Model" not in output
+    assert "Subst Case" in output
+
+
+def test_roi_all_same_model_reports_none(tmp_path, capsys):
+    """Si todos los grupos son mismo-modelo, no hay ROI que calcular."""
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
+        "Optimizado Score;Robustez Score;Budget;Tokens Task;Tokens Reflection;"
+        "Costo Real USD;Notas\n"
+        "r1;2026-02-01 10:00:00;Only Same;gpt-4o;gpt-4o;0,5;0,9;0,85;30;;;;n\n",
+        encoding="utf-8",
+    )
+    roi_calculator.run(csv_path=csv_path)
+    output = capsys.readouterr().out
+    assert "No hay grupos con sustitucion de modelo" in output
+
+
 def test_cost_from_usage_matches_pricing():
     """Real-usage cost = task pricing on task bucket + reflection pricing on reflection bucket."""
     usage = {

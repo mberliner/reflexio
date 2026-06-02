@@ -352,8 +352,20 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, vol
         )
         groups[gkey].append(exp)
 
+    def _norm_model(model: str) -> str:
+        return (model or "").lower().replace("azure/", "")
+
     results = []
+    skipped_same_model = 0
     for (case_name, task_model, reflection_model), rows in groups.items():
+        # El ROI mide ahorro por sustitucion de modelo (Profesor caro en
+        # produccion -> Tarea barato gracias al prompt optimizado). Si Tarea y
+        # Profesor son el mismo modelo no hay sustitucion posible: el unico
+        # "ahorro" seria el sobrecosto del prompt mas largo, un artefacto
+        # negativo sin sentido de negocio. Esos grupos se omiten.
+        if _norm_model(task_model) == _norm_model(reflection_model):
+            skipped_same_model += 1
+            continue
         # Extract budget from Notas (scan all rows in group)
         max_calls = extract_budget_from_rows(rows, FALLBACK_MAX_CALLS)
 
@@ -400,6 +412,21 @@ def run(csv_path: Path = None, project: str = None, case_filter: str = None, vol
             results.append(
                 {**common, "roi_data": roi_data, "breakeven": roi_data["breakeven_calls"]}
             )
+
+    if skipped_same_model:
+        print(
+            f"[NOTA] Omitidos {skipped_same_model} grupo(s) con Modelo Tarea == "
+            "Modelo Profesor: sin sustitucion de modelo no hay ahorro de tokens "
+            "que medir (el ROI por costo no aplica a ese escenario).\n"
+        )
+
+    if not results:
+        print(
+            "No hay grupos con sustitucion de modelo (Tarea distinto de Profesor) "
+            "para calcular ROI."
+        )
+        print("=" * 100)
+        return
 
     # Sort: profitable first (by breakeven ascending), then N/A
     results.sort(key=lambda x: (x["breakeven"] is None, x["breakeven"] or 0))
