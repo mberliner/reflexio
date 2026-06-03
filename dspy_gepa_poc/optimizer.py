@@ -104,6 +104,16 @@ class GEPAOptimizer:
         else:
             log_info("No detailed statistics available.")
 
+    def get_detailed_results(self):
+        """
+        Get GEPA's detailed results (DspyGEPAResult) tracked during optimization.
+
+        Available when track_stats was enabled. Exposes the explored candidates,
+        their validation scores and search metadata so the entry point can render
+        the GEPA evolution and search-stats blocks. Returns None if unavailable.
+        """
+        return getattr(self.optimizer, "detailed_results", None)
+
     def get_best_outputs(self):
         """
         Get the best outputs tracked during optimization.

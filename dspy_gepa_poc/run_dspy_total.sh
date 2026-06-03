@@ -7,10 +7,17 @@
 
 set -e
 
-# stdout sin buffer: asegura que las cabeceras de cada STEP salgan en orden y en
-# tiempo real, sin quedar retenidas en el buffer de bloque cuando la salida se
-# captura/redirige (de lo contrario se intercalan tarde con el log de litellm).
+# Salida en orden y en tiempo real cuando stdout NO es una terminal (p.ej.
+# ./run_dspy_total.sh > log 2>&1 o | tee). Conviven dos buffers distintos:
+#   1) Python bufferea su stdout -> se cubre con PYTHONUNBUFFERED.
+#   2) El propio shell bufferea por bloque los 'echo' de las cabeceras -> sin
+#      esto las cabeceras salen tarde, intercaladas con el log de litellm.
+# Re-ejecutamos bajo 'stdbuf -oL' para forzar line-buffering del shell.
 export PYTHONUNBUFFERED=1
+if [ -z "${_RUN_LINEBUF:-}" ] && command -v stdbuf >/dev/null 2>&1; then
+    export _RUN_LINEBUF=1
+    exec stdbuf -oL -eL bash "$0" "$@"
+fi
 
 # ==============================================================================
 # CONFIGURACION
@@ -33,6 +40,20 @@ CONFIGS_DIR="$SCRIPT_DIR/configs"
 # ==============================================================================
 # FUNCIONES
 # ==============================================================================
+
+# Ejecuta un programa Python nativo de Windows bajo mintty (Git Bash) a traves
+# de winpty, que le da un pty real. Sin esto, el puente pipe de Git Bash
+# reordena/retiene la salida de python.exe y la mezcla con los echo del shell:
+# las lineas se pisan (texto garabateado). Solo se aplica cuando stdout es una
+# terminal interactiva; si esta redirigido a archivo/pipe se ejecuta directo
+# (winpty romperia la redireccion y ahi la salida ya sale ordenada).
+run_py() {
+    if [ -t 1 ] && command -v winpty >/dev/null 2>&1; then
+        winpty "$@"
+    else
+        "$@"
+    fi
+}
 
 ejecutar_prueba() {
     local config_file="$1"
@@ -61,7 +82,7 @@ ejecutar_prueba() {
     echo ""
     echo "--- INICIO OUTPUT PRUEBA ---"
     local exit_code=0
-    (cd "$REPO_ROOT" && python -m dspy_gepa_poc.reflexio_declarativa --config "$config_file") || exit_code=$?
+    (cd "$REPO_ROOT" && run_py python -m dspy_gepa_poc.reflexio_declarativa --config "$config_file") || exit_code=$?
     echo "--- FIN OUTPUT PRUEBA ---"
     echo ""
     return $exit_code

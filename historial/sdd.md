@@ -31,6 +31,77 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-06-02 — Fix: salida garabateada de los entry points en Git Bash/mintty
+
+Sintoma: al correr los runners (`run_dspy_total.sh`, `run_demos_gepa.sh`) en
+mintty (Git Bash, `MSYSTEM=MINGW64`) las lineas se pisaban entre si (cabeceras
+sobreescritas por colas de otras lineas). El mismo entry point con stdout
+redirigido a archivo sale perfecto (`cat -A` sin un solo `^M`).
+
+Causa raiz: `python.exe` es un binario nativo de Windows y mintty usa un pty
+estilo Unix; Git Bash los conecta con un puente pipe que reordena/retiene la
+salida de Python y la mezcla con los `echo` del shell. No es `\r` en los datos
+ni buffering de Python: por eso `PYTHONUNBUFFERED`, `stdbuf` y `newline` no lo
+arreglan (ninguno toca el puente).
+
+Cambios:
+- `dspy_gepa_poc/run_dspy_total.sh` y `gepa_standalone/run_demos_gepa.sh`: helper
+  `run_py()` que envuelve la llamada a `python` con `winpty` (incluido en Git
+  Bash) cuando stdout es terminal (`[ -t 1 ]`) y winpty existe; si esta
+  redirigido ejecuta directo. Ademas re-exec bajo `stdbuf -oL -eL` y
+  `PYTHONUNBUFFERED=1` para ordenar el modo redirigido a archivo.
+- `shared/display/formatting.py`: helper SSOT `configure_stdio()` (exportado por
+  `shared/display`) que hace `reconfigure(encoding="utf-8", newline="\n",
+  line_buffering=True)` sobre stdout/stderr. Invocado al inicio de `main()` en
+  ambos entry points. El `encoding="utf-8"` evita el crash cp1252 al redirigir.
+
+[SDD-Check]
+- Spec leida: n/a (correccion de entorno/observabilidad; sin spec asociada).
+- Includes: `run_py`/winpty en ambos `.sh`, `configure_stdio` y su cableado.
+  Excludes: no se toca logica de optimizacion ni metricas.
+- Validaciones: `./shared/utils/ci_local.sh` PASO (lint + security + 408 tests,
+  cobertura 93%); `bash -n` OK en ambos `.sh`. El render bajo winpty se valida
+  manualmente en mintty (no automatizable en CI Linux).
+- Retrocompatible: en Linux/CI `winpty` no existe -> `run_py` ejecuta directo;
+  `newline="\n"` es no-op (default) y `stdbuf` es nativo de coreutils.
+- Deuda arrastrada: ninguna nueva.
+- Riesgos: depende de `winpty` presente en Git Bash; alternativa documentada es
+  usar Windows Terminal/conhost donde `python.exe` nativo funciona sin puente.
+
+### 2026-06-02 — Logs unificados: prompts, evolucion GEPA y caracteres ASCII
+
+Se nivela la salida de los dos motores hacia una vision unica y se eliminan los
+caracteres no estandar que rompian en consolas Windows (cp1252).
+
+Cambios:
+- `shared/display/formatting.py`: nuevos helpers SSOT `print_prompt`,
+  `format_candidate`, `print_gepa_evolution` (mejor de cada etapa, prompt
+  completo) y `print_gepa_search_stats` (candidatos, metric calls, mejor idx).
+- `dspy_gepa_poc`: el entry point ahora muestra PROMPT INICIAL/ORIGINAL/OPTIMIZADO,
+  la evolucion de GEPA y las stats de busqueda, leidas de `detailed_results`
+  (`GEPAOptimizer.get_detailed_results`). Antes DSPy no exponia nada de esto.
+- `gepa_standalone`: migra sus `print` ad-hoc de prompts a `print_prompt` y suma
+  los mismos bloques de evolucion y stats (misma fuente `GEPAResult`).
+- Limpieza de caracteres no estandar en codigo que emite logs: `shared/llm/config.py`
+  (`->` en describe) y `shared/utils/check_deployments.py` (`[OK]`/`[X]`/`-`/`->`).
+
+[SDD-Check]
+- Spec leida: n/a (mejora de observabilidad; sin spec de capacidad asociada).
+- Includes: helpers de display, cableado en ambos entry points, limpieza ASCII.
+  Excludes: no se toca la logica de optimizacion ni las metricas; el `•` en CVs
+  sinteticos (`build_cv_profile.py`) y los `→` en docstrings de tests quedan
+  (son datos/documentacion, no salida de logs).
+- Validaciones: `./shared/utils/ci_local.sh` PASO (lint + security + 408 tests,
+  cobertura 93%).
+- SSOT afectado: `shared/display/formatting.py` (SSOT de formato de terminal).
+- Derivados: ninguno; las descripciones de prompts intermedios son post-hoc desde
+  `detailed_results`, no se agrega flag `--verbose` a DSPy (decision: prompts
+  completos siempre, mejor de cada etapa).
+- Deuda arrastrada: ninguna nueva.
+- Riesgos: si una version futura de `gepa`/`dspy` renombra `candidates` o
+  `val_aggregate_scores`, los bloques se degradan a un `[WARN]` (DSPy) o no se
+  imprimen; el resto del run no se ve afectado.
+
 ### 2026-06-01 — Adelgazamiento de entry files: extraccion a SSOTs
 
 Se aplica el principio SSOT del propio repo a los entry files, siguiendo el modelo

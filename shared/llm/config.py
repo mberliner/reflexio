@@ -79,7 +79,7 @@ class LLMConfig:
         temp_eff = effective["temperature"]
         if self.is_reasoning_model and self.temperature != temp_eff:
             lines.append(
-                f"    temperature: {self.temperature} (config) → {temp_eff} (reasoning override)"
+                f"    temperature: {self.temperature} (config) -> {temp_eff} (reasoning override)"
             )
         else:
             lines.append(f"    temperature: {temp_eff}")
@@ -87,7 +87,7 @@ class LLMConfig:
         tok_eff = effective["max_tokens"]
         if self.is_reasoning_model and self.max_tokens != tok_eff:
             lines.append(
-                f"    max_tokens:  {self.max_tokens} (config) → {tok_eff} (reasoning override)"
+                f"    max_tokens:  {self.max_tokens} (config) -> {tok_eff} (reasoning override)"
             )
         else:
             lines.append(f"    max_tokens:  {tok_eff}")

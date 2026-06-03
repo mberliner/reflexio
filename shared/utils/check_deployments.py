@@ -171,9 +171,9 @@ def scan_deployments(base_config, verbose=False):
         if test_deployment(base_config, deployment, verbose=verbose):
             available.append(deployment)
             if verbose:
-                print("✓")
+                print("[OK]")
         elif verbose:
-            print("✗")
+            print("[X]")
 
     return available
 
@@ -181,7 +181,7 @@ def scan_deployments(base_config, verbose=False):
 def print_deployments_list(deployments):
     """Imprime lista de deployments en formato limpio."""
     if not deployments:
-        print("\n❌ No se encontraron deployments activos.\n")
+        print("\n[X] No se encontraron deployments activos.\n")
         return
 
     print(f"\n{'=' * 70}")
@@ -224,7 +224,7 @@ def print_deployments_list(deployments):
         if deps:
             print(f"{group_name}:")
             for dep in sorted(deps):
-                print(f"  • {dep}")
+                print(f"  - {dep}")
             print()
 
     print(f"{'=' * 70}\n")
@@ -264,12 +264,12 @@ def check_config(available_deployments, base_config):
             available_deployments.append(ref_name)
 
     print(f"\nTask Model (estudiante):      {task_raw}")
-    print(f"  → Deployment Name:        {task_name}")
-    print(f"  → Estado:                 {'✓ Activo' if task_ok else '✗ NO ENCONTRADO'}\n")
+    print(f"  -> Deployment Name:        {task_name}")
+    print(f"  -> Estado:                 {'[OK] Activo' if task_ok else '[X] NO ENCONTRADO'}\n")
 
     print(f"Reflection Model (Prof):  {ref_raw}")
-    print(f"  → Deployment Name:        {ref_name}")
-    print(f"  → Estado:                 {'✓ Activo' if ref_ok else '✗ NO ENCONTRADO'}\n")
+    print(f"  -> Deployment Name:        {ref_name}")
+    print(f"  -> Estado:                 {'[OK] Activo' if ref_ok else '[X] NO ENCONTRADO'}\n")
 
     if not task_ok or not ref_ok:
         print(f"{'=' * 70}")
@@ -284,7 +284,7 @@ def check_config(available_deployments, base_config):
             if suggestions:
                 print("Para Task Model, considera usar uno de estos deployments detectados:")
                 for s in suggestions[:3]:
-                    print(f"  • azure/{s}")
+                    print(f"  - azure/{s}")
                 print()
 
         if not ref_ok:
@@ -296,12 +296,12 @@ def check_config(available_deployments, base_config):
             if suggestions:
                 print("Para Reflection Model, considera usar uno de estos deployments detectados:")
                 for s in suggestions[:5]:
-                    print(f"  • azure/{s}")
+                    print(f"  - azure/{s}")
                 print()
 
         print("Actualiza tu archivo .env con el prefijo azure/ + el nombre del deployment.\n")
     else:
-        print("✓ Todos los deployments configurados están activos.\n")
+        print("[OK] Todos los deployments configurados estan activos.\n")
 
 
 def main():
@@ -345,10 +345,10 @@ def main():
             check_config(available, base_config)
 
     except KeyboardInterrupt:
-        print("\n\n⚠️  Verificación cancelada.\n")
+        print("\n\n[WARN] Verificacion cancelada.\n")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error: {e}\n")
+        print(f"\n[ERROR] {e}\n")
         import traceback
 
         traceback.print_exc()

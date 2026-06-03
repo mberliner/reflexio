@@ -16,12 +16,16 @@ from dspy_gepa_poc.metrics import (
 from dspy_gepa_poc.results_logger import ResultsLogger
 from shared.analysis.roi_calculator import cost_from_usage
 from shared.display import (
+    configure_stdio,
     log_error,
     log_info,
     log_ok,
     log_warn,
+    print_gepa_evolution,
+    print_gepa_search_stats,
     print_header,
     print_kv,
+    print_prompt,
     print_step,
     print_summary,
 )
@@ -315,6 +319,7 @@ class ReflexioDeclarativa:
         # Snapshot de instructions iniciales (por predictor) para detectar si
         # GEPA realmente modifico el prompt al final.
         self._initial_instructions = self._snapshot_instructions(self.student)
+        print_prompt("PROMPT INICIAL", self._initial_instructions)
 
         # STEP 5: Baseline
         print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
@@ -338,6 +343,35 @@ class ReflexioDeclarativa:
             student=self.student, trainset=self.trainset, valset=self.valset
         )
 
+        # Evolucion (mejor de cada etapa) y estadisticas de busqueda, leidas del
+        # detailed_results de GEPA. Unifica la vision con gepa_standalone.
+        detailed = optimizer.get_detailed_results()
+        if detailed is not None:
+            candidates = getattr(detailed, "candidates", None)
+            val_scores = getattr(detailed, "val_aggregate_scores", None)
+            best_idx = getattr(detailed, "best_idx", None)
+            if candidates and val_scores:
+                print_gepa_evolution(
+                    candidates,
+                    val_scores,
+                    best_idx=best_idx,
+                    discovery_eval_counts=getattr(detailed, "discovery_eval_counts", None),
+                )
+                best_val = (
+                    val_scores[best_idx]
+                    if best_idx is not None and best_idx < len(val_scores)
+                    else None
+                )
+                print_gepa_search_stats(
+                    num_candidates=len(candidates),
+                    total_metric_calls=getattr(detailed, "total_metric_calls", 0),
+                    best_idx=best_idx,
+                    best_score=best_val,
+                    num_full_val_evals=getattr(detailed, "num_full_val_evals", None),
+                )
+        else:
+            log_warn("GEPA no expuso detailed_results: se omite evolucion y stats de busqueda.")
+
         # STEP 7: Test + Summary
         print_step(7, TOTAL_STEPS, "TEST + SUMMARY")
         final_instructions = self._snapshot_instructions(self.optimized_student)
@@ -347,6 +381,9 @@ class ReflexioDeclarativa:
                 "GEPA no modifico las instructions del modulo: el delta "
                 "baseline/optimized se interpretara como ruido del LLM."
             )
+
+        print_prompt("PROMPT ORIGINAL", self._initial_instructions)
+        print_prompt("PROMPT OPTIMIZADO", final_instructions)
 
         log_info(f"Midiendo desempeno del mejor prompt en val (k={self.eval_repeats})...")
         optimized_score, optimized_range = self._eval_repeated(
@@ -535,6 +572,7 @@ class ReflexioDeclarativa:
 
 
 def main():
+    configure_stdio()
     parser = argparse.ArgumentParser(
         description="Ejecutar optimización GEPA para DSPy (Reflexio Declarativa)"
     )

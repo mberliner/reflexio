@@ -41,13 +41,17 @@ from gepa_standalone.utils.results_logger import log_experiment_result, save_run
 from gepa_standalone.wizard.interactive import InteractiveWizard
 from shared.analysis.roi_calculator import cost_from_usage
 from shared.display import (
+    configure_stdio,
     log_error,
     log_info,
     log_ok,
     log_warn,
     print_detailed_results,
+    print_gepa_evolution,
+    print_gepa_search_stats,
     print_header,
     print_kv,
+    print_prompt,
     print_step,
     print_summary,
 )
@@ -146,6 +150,9 @@ class UniversalOptimizer:
             log_info(f"Config snapshot saved: {snapshot_path}")
 
         log_ok("Optimization completed.")
+
+        # Resumen final (RUN COMPLETED) como ultima salida, igual que DSPy.
+        print_summary(metrics=self._summary_metrics, config=self._summary_config)
 
     def load_config(self) -> dict[str, Any]:
         """
@@ -377,7 +384,7 @@ class UniversalOptimizer:
 
         print_dataset_info(self.config["data"]["csv_filename"])
 
-        print(f"\nPROMPT INICIAL:\n{initial_prompt['system_prompt']}")
+        print_prompt("PROMPT INICIAL", initial_prompt["system_prompt"])
 
         # Cuantas veces repetir evaluacion final (mitigacion de ruido LLM no
         # determinista). Default 1 = comportamiento legacy.
@@ -430,6 +437,25 @@ class UniversalOptimizer:
 
         optimized_prompt = result.best_candidate
 
+        # Evolucion (mejor de cada etapa) y estadisticas de busqueda, comunes a
+        # ambos motores via shared.display.
+        print_gepa_evolution(
+            result.candidates,
+            result.val_aggregate_scores,
+            best_idx=result.best_idx,
+            discovery_eval_counts=getattr(result, "discovery_eval_counts", None),
+        )
+        best_val = None
+        if result.val_aggregate_scores and result.best_idx is not None:
+            best_val = result.val_aggregate_scores[result.best_idx]
+        print_gepa_search_stats(
+            num_candidates=len(result.candidates),
+            total_metric_calls=result.total_metric_calls,
+            best_idx=result.best_idx,
+            best_score=best_val,
+            num_full_val_evals=getattr(result, "num_full_val_evals", None),
+        )
+
         # STEP 7: Test + Summary
         print_step(7, TOTAL_STEPS, "TEST + SUMMARY")
         prompt_changed = optimized_prompt["system_prompt"] != initial_prompt["system_prompt"]
@@ -451,23 +477,23 @@ class UniversalOptimizer:
         eval_test = self.adapter.evaluate(self.test_data, optimized_prompt)
         print_detailed_results(eval_test)
 
-        print_summary(
-            metrics={
-                "Baseline": baseline_avg,
-                "Optimized": opt_avg,
-                "Test": test_avg,
-            },
-            config={
-                "Task LM": self.adapter.model,
-                "Reflection LM": get_reflection_config().model,
-                "Budget used": f"{result.total_metric_calls} metric calls",
-                "Eval repeats": str(self.eval_repeats),
-                "Prompt changed": "Si" if prompt_changed else "No (delta=ruido)",
-            },
-        )
+        print_prompt("PROMPT ORIGINAL", initial_prompt["system_prompt"])
+        print_prompt("PROMPT OPTIMIZADO", optimized_prompt["system_prompt"])
 
-        print(f"\nPROMPT ORIGINAL:\n{initial_prompt['system_prompt']}")
-        print(f"\nPROMPT OPTIMIZADO:\n{optimized_prompt['system_prompt']}")
+        # Resumen final: se difiere a run() para que el bloque RUN COMPLETED
+        # quede como ultima salida, despues de save_results (igual que DSPy).
+        self._summary_metrics = {
+            "Baseline": baseline_avg,
+            "Optimized": opt_avg,
+            "Test": test_avg,
+        }
+        self._summary_config = {
+            "Task LM": self.adapter.model,
+            "Reflection LM": get_reflection_config().model,
+            "Budget used": f"{result.total_metric_calls} metric calls",
+            "Eval repeats": str(self.eval_repeats),
+            "Prompt changed": "Si" if prompt_changed else "No (delta=ruido)",
+        }
 
         # Store results for logging
         effective_delta = (opt_avg - baseline_avg) if prompt_changed else 0.0
@@ -566,6 +592,7 @@ class UniversalOptimizer:
 
 def main():
     """Main entry point."""
+    configure_stdio()
     parser = argparse.ArgumentParser(
         description="Universal GEPA Optimizer - Interfaz unica para todos los casos",
         formatter_class=argparse.RawDescriptionHelpFormatter,
