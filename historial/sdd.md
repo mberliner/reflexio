@@ -19,8 +19,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | ID | Descripcion | Origen | Estado |
 |---|---|---|---|
 | D-001 | Datasets CV `_v2` con `gold_verificado=no` pendientes de revision humana | Protocolo N seeds (`docs/PROTOCOLO_N_SEEDS.md`) | Abierta — bloquea conclusiones definitivas sobre v2 |
-| D-002 | Primera spec de capacidad con formato hibrido (esqueleto listo, registro vacio) | `docs/SDD_PROTOCOLO.md`, `specs/SPECS_REGISTRY.md` | Abierta — esperando primera capacidad nueva donde estrenar el formato |
-| D-003 | Soporte para flujos multietapa (multi-stage) en DSPy: encadenar varios predictores/signatures en un modulo. Requiere extender `DynamicModuleFactory` y el esquema YAML. Esfuerzo alto. Candidata natural a estrenar el formato de spec (cierra D-002) | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-1, eliminado) | Abierta |
+| D-003 | Soporte para flujos multietapa (multi-stage) en DSPy: encadenar varios predictores/signatures en un modulo. Requiere extender `DynamicModuleFactory` y el esquema YAML. Esfuerzo alto. Candidata a una proxima spec de capacidad | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-1, eliminado) | Abierta |
 | D-004 | Logica condicional en modulos: ejecutar una etapa segun el resultado de la anterior (ahorro de tokens, derivar casos simples). Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-2, eliminado) | Abierta |
 | D-005 | Naming definitivo de `dspy_gepa_poc`: el sufijo "POC" ya no refleja el estado. Opciones evaluadas: `dspy_gepa`, `reflexio_dspy`. Impacto: renombrar modulo + imports en todo el repo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T2-2, eliminado) | Abierta |
 | D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
@@ -29,11 +28,142 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 | ID | Descripcion | Resuelta | Cierre |
 |---|---|---|---|
-| — | — | — | — |
+| D-002 | Primera spec de capacidad con formato hibrido | 2026-06-03 | `SPEC-100-veredicto-senal-ruido` estrena el formato (registrada en `specs/SPECS_REGISTRY.md`); Tramo 2 pasa a activo |
 
 ---
 
 ## Log de fases
+
+### 2026-06-03 — SPEC-101: triaje de casos para N seeds (+ fix matching DSPy)
+
+Nueva capacidad `SPEC-101-triaje-casos-nseeds`: un runner que, antes de gastar
+tokens, mira los resultados previos y los prerequisitos de TODOS los casos (ambos
+engines) y propone solo los que vale la pena re-correr. A diferencia de
+`run_demos_gepa.sh` (lista YAML a ciegas), clasifica cada caso en
+RESUELTO/DUDOSO/SIN DATOS usando solo la referencia comparable por modelo
+(criterio de SPEC-100 FR-008), verifica dataset/gold y delega la corrida en
+`seed_protocol`.
+
+En el camino se encontro y corrigio un bug preexistente de `seed_protocol`: para
+DSPy `ConfigInfo` filtraba el CSV solo por `case.name`, pero la columna Caso
+guarda el `title` (campo case unificado). Resultado: TODOS los casos DSPy daban
+"Sin filas" en el protocolo y en el triaje. Fix: `case_names = {title, name}`
+para ambos engines (antes solo GEPA). El protocolo N seeds ahora tambien
+encuentra el historial DSPy.
+
+Cambios:
+- `shared/utils/seed_triage.py` (nuevo): `diagnose` (pura), `_matches`,
+  `target_models`, `gold_is_unverified`, `collect_diagnoses`, `print_board`,
+  `main` interactivo. Constantes `TRIAGE_VARIANCE_RANGE_PTS=5`,
+  `TRIAGE_MIN_REFERENCE_ROWS=3`.
+- `shared/utils/run_nseeds_triage.sh` (nuevo): wrapper fino estilo run_demos.
+- `shared/utils/seed_protocol.py`: `case_names` unificado a {title, name} (fix).
+- `tests/test_seed_triage.py` (nuevo): 16 tests (status, matches, prerequisitos,
+  deteccion de gold).
+- `specs/SPEC-101-*` + registro; `docs/PROTOCOLO_N_SEEDS.md` seccion "Triaje de
+  casos".
+
+Verificado en vivo (`--list`): triage v2/v3 -> RESUELTO (techo), email_urgency ->
+DUDOSO (rango Rob 40), cv_profile -> DUDOSO (mejora sin confirmar); casos DSPy ya
+aparecen con su historial tras el fix.
+
+[SDD-Check]
+- Spec creada: `SPEC-101-triaje-casos-nseeds` (depende de SPEC-100).
+- Includes: triaje + wrapper + fix matching + tests + spec + doc. Excludes: no
+  cambia el veredicto ni la ejecucion de corridas.
+- Validaciones: `./shared/utils/ci_local.sh` PASO (lint + format + bandit +
+  pip-audit + 437 tests, cobertura 93.12%). Tablero verificado en vivo.
+- SSOT afectado: `docs/PROTOCOLO_N_SEEDS.md`, `specs/` (SPEC-101 + registro),
+  `shared/utils/seed_protocol.py` (fix).
+- Retrocompatible: el fix de matching solo AMPLIA lo que matchea (antes DSPy no
+  encontraba nada); no afecta GEPA. El triaje es lectura pura (no gasta API).
+- Deuda arrastrada: ninguna nueva. (El fix de matching DSPy reactiva el historial
+  DSPy en el protocolo; conviene re-mirar conclusiones DSPy previas que se
+  hubieran sacado creyendo "sin filas".)
+
+### 2026-06-03 — SPEC-100 iter 2: comparabilidad de modelos en el veredicto
+
+Una prueba real de N seeds (cv_extraction_v2, GEPA) destapo un confound: la
+"referencia previa" agrupaba por Caso pero NO por modelo. Las 7 filas historicas
+eran `task=gpt-5-mini` y la corrida nueva salio con `task=gpt-4.1-mini` (el modelo
+lo fija el `.env`, que habia cambiado). El veredicto comparaba robustez entre
+modelos distintos -> medía el cambio de modelo, no la intervencion (baseline
+confound, leccion 10).
+
+Fix (FR-008 en `SPEC-100`): `filter_reference_by_models` conserva de la referencia
+previa solo las filas con el mismo par (`Modelo Tarea`, `Modelo Profesor`) que el
+lote nuevo, y `report()` avisa con `[WARN]` cuantas excluyo. Si no queda ninguna
+comparable -> `SIN REFERENCIA`. Verificado ademas en vivo: al re-correr con
+`LLM_MODEL_TASK=azure/gpt-5-mini` (override de env, gana sobre `.env`), las 2 filas
+gpt-4.1-mini de la corrida previa se auto-excluyen y la comparacion queda entre
+gpt-5-mini homogeneo.
+
+Cambios:
+- `shared/utils/seed_protocol.py`: columnas `Modelo Tarea`/`Modelo Profesor`,
+  helper `_models`, funcion pura `filter_reference_by_models`, filtrado + `[WARN]`
+  en `report()` (incluye aviso de mezcla en `--report-only`).
+- `tests/test_seed_protocol.py`: clase `TestComparabilidadModelos` (3 tests).
+- `specs/SPEC-100-veredicto-senal-ruido.md`: FR-008, SC-005, escenario y coverage
+  mapping; iteracion 1 -> 2. `specs/SPECS_REGISTRY.md`: Iter 2.
+- `docs/PROTOCOLO_N_SEEDS.md`: paso de comparabilidad en el flujo y subseccion
+  "Comparabilidad de modelos (prerequisito)".
+
+[SDD-Check]
+- Spec leida/editada: `SPEC-100-veredicto-senal-ruido` (iter 2; FR-008/SC-005).
+- Includes: filtrado por modelo + WARN + tests + spec + doc. Excludes: no se toca
+  `verdict` (sigue siendo pura sobre agregados ya filtrados) ni la ejecucion.
+- Validaciones: `./shared/utils/ci_local.sh` PASO (lint + format + bandit +
+  pip-audit + tests). Verificacion en vivo con corrida real gpt-5-mini.
+- SSOT afectado: `shared/utils/seed_protocol.py`, `docs/PROTOCOLO_N_SEEDS.md`,
+  `specs/SPEC-100-*` y `specs/SPECS_REGISTRY.md`.
+- Retrocompatible: si el CSV no trae columnas de modelo, `_models` devuelve
+  ('', '') y el filtro es no-op (no excluye nada). Salida adicional solamente.
+- Deuda arrastrada: ninguna nueva.
+
+### 2026-06-03 — Veredicto senal-vs-ruido automatico en seed_protocol
+
+El protocolo de N seeds reportaba media/rango/desvio y gap val-test, pero la
+lectura "mejoro o es ruido?" la hacia la persona a mano (criterio en prosa en
+`docs/PROTOCOLO_N_SEEDS.md`). Se codifica ese criterio en una funcion pura
+`verdict()` que emite un veredicto primario (MEJORA/REGRESION/RUIDO/SIN
+REFERENCIA, por solapamiento de rangos de Robustez contra la referencia previa)
+mas flags independientes (SOBREAJUSTE si gap>3, TECHO si baseline>=85 y delta
+plano, ESTABILIZA si cae la varianza). Umbrales como constantes nombradas
+(`GAP_OVERFIT_PTS=3`, `CEILING_BASELINE_PTS=85`, `NOISE_EPS_PTS=0.5`).
+
+Ademas se renombra el concepto "vara" -> "referencia previa" en todo el codigo y
+docs (decision del usuario): mas explicito y menos jerga.
+
+Cambios:
+- `shared/utils/seed_protocol.py`: constantes de umbral, `Verdict` (dataclass),
+  `verdict()` (pura) y `_scaled()`; render del veredicto en `report()`; el `3`
+  hardcodeado pasa a `GAP_OVERFIT_PTS`; rename "vara" -> "referencia previa".
+- `tests/test_seed_protocol.py` (nuevo): 11 tests de `verdict()` cubriendo cada
+  primario, cada flag, coexistencia, escala 0-1->0-100 y render.
+- `docs/PROTOCOLO_N_SEEDS.md`: seccion "Veredicto automatico" con tabla de
+  etiquetas y umbrales; rename; matiz en "Que NO hace" (es heuristico por
+  rangos, no test de significancia formal).
+
+La capacidad se formaliza ademas como `SPEC-100-veredicto-senal-ruido` (estado
+active), que estrena el formato hibrido de spec y cierra D-002.
+
+[SDD-Check]
+- Spec leida/creada: `SPEC-100-veredicto-senal-ruido` (nueva; primera spec de
+  capacidad del proyecto, registrada en `specs/SPECS_REGISTRY.md`).
+- Includes: funcion `verdict` + flags + tests + doc + SPEC-100. Excludes: no se
+  toca la ejecucion de corridas (`run_seeds`), el scoring ni el formato del CSV.
+- Validaciones: `./shared/utils/ci_local.sh` PASO (lint + format + bandit +
+  pip-audit + 419 tests, cobertura 93.12%). +11 tests nuevos. Coverage mapping
+  de SPEC-100 verificado contra `tests/test_seed_protocol.py`.
+- SSOT afectado: `docs/PROTOCOLO_N_SEEDS.md`, `shared/utils/seed_protocol.py`,
+  `specs/SPECS_REGISTRY.md` y `docs/SDD_PROTOCOLO.md` (Tramo 2 -> activo).
+- Retrocompatible: solo agrega salida (la seccion "Veredicto"); no cambia los
+  numeros ni la ejecucion. `--report-only` y el flujo de corridas intactos.
+- Limite registrado: el veredicto es heuristico (solapamiento de rangos +
+  umbrales fijos), NO un test de significancia formal; es el criterio
+  conservador del proyecto para N chico. El umbral TECHO=85 es una eleccion (la
+  leccion 8 dice ">80"); se mitiga exigiendo baseline alto Y delta plano juntos.
+- Deuda arrastrada: ninguna nueva; cierra D-002.
 
 ### 2026-06-03 — Poda del doc efimero de mejoras pendientes
 

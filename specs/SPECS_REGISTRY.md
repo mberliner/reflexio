@@ -18,6 +18,11 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 
 - Estado: `draft` | `active` | `superseded` | `archived`.
 - Cada spec tiene un ID estable (`SPEC-NNN-slug`) y un archivo en este directorio.
+- Numeracion: las nuevas capacidades se numeran desde `SPEC-100` en adelante. El
+  rango `SPEC-001`..`SPEC-099` queda RESERVADO para formalizar retrospectivamente
+  capacidades preexistentes (las que ya viven en el codigo sin spec). Asi el
+  numero bajo no implica "primera en el tiempo" y hay espacio para documentar lo
+  anterior sin renumerar.
 - Una spec MAY declarar `Depende de:` y `Relacionada con:` (links `[[id]]`).
 - Cierre de iteracion -> bloque `[SDD-Check]` citando specs leidas, includes/excludes verificados y SSOTs afectados.
 - Formato de spec: anatomia hibrida (User Story con prioridad P1/P2/P3 + `FR-NNN MUST` + `SC-NNN` medibles + Given/When/Then + coverage mapping). Plantilla en `docs/SDD_PROTOCOLO.md` (Tramo 2).
@@ -27,7 +32,8 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 
 | ID | Titulo | Estado | Iter | Archivo |
 |---|---|---|---|---|
-| _(ninguna aun — el registro arranca vacio; se crea la primera spec cuando aparezca una capacidad nueva donde estrenar el formato)_ | | | | |
+| SPEC-100-veredicto-senal-ruido | Veredicto senal-vs-ruido del protocolo de N seeds | active | 2 | `SPEC-100-veredicto-senal-ruido.md` |
+| SPEC-101-triaje-casos-nseeds | Triaje de casos para el protocolo de N seeds | active | 1 | `SPEC-101-triaje-casos-nseeds.md` |
 
 ## Roadmap de iteraciones
 
