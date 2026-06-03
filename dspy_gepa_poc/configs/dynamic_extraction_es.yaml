@@ -1,6 +1,6 @@
 case:
   name: "order_extraction_es"
-  title: "Order Extraction (Spanish)"
+  title: "Order Extraction (Spanish) (DSPy)"
   description: "Extraccion estructurada de pedidos (espanol)"
 
 module:

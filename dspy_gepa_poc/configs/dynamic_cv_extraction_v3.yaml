@@ -22,7 +22,7 @@
 # dspy_gepa_poc/datasets/ si cambia el catalogo).
 case:
   name: "cv_extraction_v3"
-  title: "CV Extraction v3 (DSPy, condiciones iguales a GEPA)"
+  title: "CV Extraction v3 (condiciones iguales a GEPA) (DSPy)"
   description: "Extraccion estructurada de campos sobre CVs extensos (condiciones equiparadas a GEPA)"
 
 module:

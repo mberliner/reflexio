@@ -1,6 +1,6 @@
 case:
   name: "sentiment_hard_es"
-  title: "Dynamic Sentiment Analysis (Hard Mode - Spanish)"
+  title: "Dynamic Sentiment Analysis (Hard Mode - Spanish) (DSPy)"
   description: "Analisis de sentimiento en modo dificil (espanol)"
 
 module:

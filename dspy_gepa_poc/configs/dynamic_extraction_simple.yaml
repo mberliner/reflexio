@@ -1,6 +1,6 @@
 case:
   name: "order_extraction_en_zeroshot"
-  title: "Order Extraction (Hard - English - Zero-Shot)"
+  title: "Order Extraction (Hard - English - Zero-Shot) (DSPy)"
   description: "Extraccion de pedidos en ingles, modo dificil zero-shot"
 
 module:

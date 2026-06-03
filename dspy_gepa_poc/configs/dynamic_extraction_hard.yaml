@@ -1,6 +1,6 @@
 case:
   name: "order_extraction_hard_en"
-  title: "Order Extraction (Hard Mode - English)"
+  title: "Order Extraction (Hard Mode - English) (DSPy)"
   description: "Extraccion de pedidos en ingles, modo dificil"
 
 module:

@@ -1,6 +1,6 @@
 case:
   name: "email_urgency_fewshot"
-  title: "Email Urgency Classification (Few-Shot)"
+  title: "Email Urgency Classification (Few-Shot) (DSPy)"
   description: "Clasificacion de urgencia de emails corporativos con few-shot"
 
 module:

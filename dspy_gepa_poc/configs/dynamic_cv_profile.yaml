@@ -1,6 +1,6 @@
 case:
   name: "cv_profile"
-  title: "CV Profile Extraction (Espanol)"
+  title: "CV Profile Extraction (Espanol) (DSPy)"
   description: "Extraccion de perfil de CV en espanol"
 
 module:

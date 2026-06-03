@@ -1,6 +1,6 @@
 case:
   name: "email_urgency"
-  title: "Email Urgency Classification"
+  title: "Email Urgency Classification (DSPy)"
   description: "Clasificacion de urgencia de emails corporativos"
 
 module:

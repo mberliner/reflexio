@@ -25,7 +25,7 @@
 # ajuste de umbral a esos campos. Todo lo demas queda CONGELADO igual al baseline.
 case:
   name: "cv_profile_v2"
-  title: "CV Profile Extraction v2 (Espanol)"
+  title: "CV Profile Extraction v2 (Espanol) (DSPy)"
   description: "Extraccion de perfil de CV en espanol (v2)"
 
 module:

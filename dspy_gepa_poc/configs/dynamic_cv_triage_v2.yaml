@@ -24,7 +24,7 @@
 # entre seeds ↓. Si el baseline sigue saturando, evaluar opcion A (task=gpt-4.1-mini).
 case:
   name: "cv_triage_v2"
-  title: "CV Triage v2 (Backend Senior Python LATAM)"
+  title: "CV Triage v2 (Backend Senior Python LATAM) (DSPy)"
   description: "Clasificacion de fit de CVs para Backend Senior Python LATAM (v2)"
 
 module:
