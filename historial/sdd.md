@@ -20,6 +20,10 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 |---|---|---|---|
 | D-001 | Datasets CV `_v2` con `gold_verificado=no` pendientes de revision humana | Protocolo N seeds (`docs/PROTOCOLO_N_SEEDS.md`) | Abierta — bloquea conclusiones definitivas sobre v2 |
 | D-002 | Primera spec de capacidad con formato hibrido (esqueleto listo, registro vacio) | `docs/SDD_PROTOCOLO.md`, `specs/SPECS_REGISTRY.md` | Abierta — esperando primera capacidad nueva donde estrenar el formato |
+| D-003 | Soporte para flujos multietapa (multi-stage) en DSPy: encadenar varios predictores/signatures en un modulo. Requiere extender `DynamicModuleFactory` y el esquema YAML. Esfuerzo alto. Candidata natural a estrenar el formato de spec (cierra D-002) | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-1, eliminado) | Abierta |
+| D-004 | Logica condicional en modulos: ejecutar una etapa segun el resultado de la anterior (ahorro de tokens, derivar casos simples). Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-2, eliminado) | Abierta |
+| D-005 | Naming definitivo de `dspy_gepa_poc`: el sufijo "POC" ya no refleja el estado. Opciones evaluadas: `dspy_gepa`, `reflexio_dspy`. Impacto: renombrar modulo + imports en todo el repo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T2-2, eliminado) | Abierta |
+| D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
 
 ## Deuda resuelta
 
@@ -30,6 +34,34 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-03 — Poda del doc efimero de mejoras pendientes
+
+Se elimina `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md`. Era un documento efimero
+(fechado 2026-02-08) cuyo diagnostico ya estaba caduco: reportaba 45 tests / 19%
+de cobertura cuando el CI actual corre 408 tests / 93%, y sus Tier 1-3 sobre CI,
+tests de adapters, tests de `shared/analysis/` y creacion de SSOTs
+(`ARCHITECTURE.md`/`CONTRIBUTING.md`/`DEVELOPMENT.md`) ya estaban cumplidos. Un
+doc con la mayoria de su contenido contradiciendo el estado real es un
+anti-patron SSOT.
+
+Lo vivo se migro a deuda arrastrada antes de borrar: T4-1 -> D-003 (multietapa),
+T4-2 -> D-004 (logica condicional), T2-2 -> D-005 (naming `dspy_gepa_poc`),
+T3-4 -> D-006 (duplicacion restante). El resto del doc (resumen ejecutivo,
+estado actual, tiers cumplidos) se descarta por caduco. Las "Fortalezas
+(Mantener)" ya son invariantes en `docs/ARCHITECTURE.md`; no se duplican aqui.
+
+[SDD-Check]
+- Spec leida: n/a (mantenimiento de documentacion; sin spec de capacidad asociada).
+- Includes: 4 deudas nuevas (D-003..D-006), baja del doc efimero, limpieza de su
+  referencia en `00-INDEX.md`. Excludes: sin cambios de codigo ni de specs.
+- Validaciones: n/a (solo `.md`; el CI ignora `**.md`).
+- SSOT afectado: `historial/sdd.md` (este archivo) y `00-INDEX.md`.
+- Deuda arrastrada: 4 nuevas (D-003..D-006), trasladadas desde el doc eliminado
+  para que no se pierdan por olvido. D-003 sigue siendo la candidata a estrenar
+  el formato de spec (ligada a D-002).
+- Riesgos: ninguno; el contenido eliminado era diagnostico caduco o ya cubierto
+  en otros SSOTs.
 
 ### 2026-06-02 — Fix: salida garabateada de los entry points en Git Bash/mintty
 
