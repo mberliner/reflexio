@@ -17,7 +17,7 @@ manual no muestre limites.
 |---|---|---|
 | Tramo 0 | Convenciones de salida: bloque `[SDD-Check]`, marcador `[NEEDS CLARIFICATION]`, lenguaje normativo | Activo |
 | Tramo 1 | Circuito de aprendizaje: `historial/sdd.md` con *Deuda arrastrada* | Activo |
-| Tramo 2 | Specs de capacidad: `SPECS_REGISTRY.md` central + anatomia hibrida (FR/SC + Given/When/Then + coverage mapping) | Esqueleto listo (sin specs aun) |
+| Tramo 2 | Specs de capacidad: `SPECS_REGISTRY.md` central + anatomia hibrida (FR/SC + Given/When/Then + coverage mapping) | Activo (SPEC-100 estrena el formato) |
 | Tramo 3 | Gate de integridad: `CONSTITUTION.md` por referencia + check cableado en `ci_local.sh` | Diferido (solo si T0-T2 prueban valor) |
 
 ---
@@ -84,10 +84,11 @@ arrastrada" distinta de "ninguna", ese item MUST registrarse en la tabla de
 
 ---
 
-## Tramo 2 — Specs de capacidad (esqueleto listo)
+## Tramo 2 — Specs de capacidad (activo)
 
-Andamiaje creado, sin specs reales todavia. Artefacto: `specs/SPECS_REGISTRY.md`
-(registro central, arranca vacio). Modelo: proyecto testigo `agent-test-suite`.
+Andamiaje creado y estrenado: `SPEC-100-veredicto-senal-ruido` es la primera spec
+de capacidad (cierra D-002). Artefacto: `specs/SPECS_REGISTRY.md` (registro
+central). Modelo: proyecto testigo `agent-test-suite`.
 
 Separacion de alcance (clave para no duplicar SSOTs):
 
