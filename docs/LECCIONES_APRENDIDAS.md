@@ -59,11 +59,13 @@ La métrica define qué puede aprender GEPA. Cada adapter built-in elige una est
 
 ### Calibración de Urgencia en Modelos Reasoning (gpt-5-mini)
 
-**Hallazgo:** gpt-5-mini no mejora con GEPA en la tarea de Email Urgency, a pesar de que gpt-4.1-mini alcanza 96% de robustez en la misma tarea y dataset. La causa no es un bug de código ni de formato de respuesta.
+**Hallazgo:** gpt-5-mini no mejora con GEPA en la tarea de Email Urgency, a pesar de que gpt-4.1-mini alcanza 96-99% de robustez en la misma tarea y dataset. En el leaderboard GEPA standalone (14 runs, task `gpt-5-mini` / prof `gpt-5`) el caso da `Base 59,29 / Opt 59,29 / Rob 50,00 / Std 13,01 / delta -9,29` ("Atención"): la optimización **no aporta nada (Opt=Base) e incluso degrada la robustez**. La causa no es un bug de código ni de formato de respuesta.
 
-**Diagnóstico:** Se verificó que el flujo técnico funciona correctamente — `apply_reasoning_constraints` eleva `max_tokens` a 16000 y temperatura a 1.0, el modelo devuelve respuestas de una sola palabra en el formato correcto. El problema es una **desalineación sistemática de criterios** entre los labels del dataset y el modelo.
+**Diagnóstico:** Se verificó que el flujo técnico funciona correctamente — `apply_reasoning_constraints` eleva `max_tokens` a 16000 y temperatura a 1.0 (gpt-5 ignora la temperatura de todos modos), y el modelo devuelve respuestas de una sola palabra en el formato correcto. El problema es una **desalineación sistemática de criterios** entre los labels del dataset y el modelo: el gold etiqueta por pistas léxicas ("FYI", "recordatorio amable", "compartiendo ideas" -> `low`), mientras gpt-5-mini razona la **intención** del email (si te piden una acción, escala la urgencia).
 
-Los 4 ejemplos donde gpt-5-mini difiere consistentemente:
+El patrón es consistente en ambos splits: **gpt-5-mini escala la urgencia un nivel hacia arriba** en casos borderline (`low→normal`, `normal→urgent`).
+
+Desacuerdos en `val` (análisis inicial):
 
 | Label dataset | gpt-5-mini | Texto |
 |---|---|---|
@@ -72,13 +74,26 @@ Los 4 ejemplos donde gpt-5-mini difiere consistentemente:
 | `low` | `normal` | *Solo revisando si tuviste tiempo de ver mi email anterior* |
 | `normal` | `urgent` | *Queja de cliente escalada. Se espera respuesta en 24 horas* |
 
-El patrón es consistente: **gpt-5-mini escala la urgencia un nivel hacia arriba** en casos borderline (`low→normal`, `normal→urgent`). Con solo 10 ejemplos en val y 4 desacuerdos el baseline queda fijo en 0.6, que GEPA no logra superar independientemente del prompt generado. En contraste, el caso Fast Gate (extractor de dominio específico sin priors fuertes del modelo) sí mejora sustancialmente con GEPA y los mismos modelos.
+**Confirmación por dump de predicciones sobre `test` (2026-06-03).** Se corrió `gpt-5-mini` sobre los 5 emails de `test` con el prompt baseline y dos prompts ya optimizados (runs `120020` Opt=90 y `134143` Opt=60), 4 veces cada uno. Resultados:
+
+1. **Los 3 emails con señal clara son 100% estables** (2 urgentes inequívocos + 1 normal con plazo): aciertan siempre, en todo prompt y toda corrida. El "techo" no está ahí.
+2. **Todo el desacuerdo se concentra en 2 emails ambiguos, ambos con gold `low`:**
+
+   | Email (test) | gold | gpt-5-mini razona |
+   |---|---|---|
+   | "Compartiendo ideas... **Avísame qué piensas**" | low | pide feedback -> acción -> `normal` |
+   | "Recordatorio amable... **Confirma si asistes**" | low | pide confirmación con plazo -> `normal` |
+
+3. **Inestabilidad de muestreo:** el mismo prompt, sobre el mismo email, **flipea entre corridas idénticas** (gpt-5 muestrea distinto aunque no exponga temperatura). La accuracy del baseline osciló 60/80/80/60 y la de cada prompt optimizado saltó entre 60 y 100 según la corrida. Esto explica directamente el `Std 13` y la `Rob 50` del leaderboard.
+4. **La optimización es de suma cero:** ningún prompt acierta los 2 ambiguos a la vez de forma estable (arreglar uno tiende a romper el otro), por eso GEPA no halla mejora neta que generalice (`Opt = Base`) y el prompt sobre-especificado con reglas léxicas baja la robustez. Dato revelador: el prompt del run "Opt=60" rindió igual o mejor que el de "Opt=90" en el dump, evidenciando que esos scores históricos eran **ruido de muestreo, no calidad de prompt**.
+
+**Contraste que cierra el diagnóstico:** el mismo `gpt-5-mini` mejora **+28 a +62 pp con Std bajo** en `CV Extraction` y `Text-to-SQL` (leaderboard GEPA), donde hay **verdad objetiva verificable** y su razonamiento se alinea. También el caso Fast Gate (extractor de dominio específico sin priors fuertes) mejora con GEPA y los mismos modelos. La diferencia no es el modelo: es la naturaleza de la tarea. `email_urgency` es la única que combina criterio subjetivo + gold definido por keywords, las dos condiciones que perjudican a un reasoning model.
 
 **Lección:**
-- Para tareas de clasificación donde el modelo tiene **priors de entrenamiento fuertes** (como urgencia de email), GEPA no puede overridear la calibración interna del modelo via prompt. El optimizador ve un baseline fijo e irreducible.
-- Este patrón no aparece en tareas de dominio específico (triage médico, extracción estructurada) donde el modelo no tiene priors propios y depende del prompt para guiar su razonamiento.
-- Antes de interpretar un baseline estancado como fallo del optimizador, verificar si el modelo y el dataset comparten los mismos criterios de clasificación para los casos borderline.
-- Si hay desalineación, las opciones son: re-etiquetar los casos ambiguos según el criterio del modelo, o documentar la diferencia de calibración como resultado de la experimentación.
+- Para tareas de clasificación con criterio **subjetivo/convencional** donde el modelo tiene priors fuertes (urgencia de email), GEPA no puede overridear la calibración interna del modelo vía prompt: el optimizador ve un baseline fijo e irreducible, y si los 2 casos ambiguos exigen criterios contradictorios, la optimización es de suma cero (Opt=Base, robustez a la baja).
+- Este patrón no aparece en tareas con verdad objetiva (extracción estructurada, SQL, triage de dominio) donde el modelo depende del prompt y su razonamiento se alinea con un gold verificable.
+- Ante delta bajo/negativo con un reasoning model, **hacer dump por ejemplo y separar casos con-señal vs ambiguos antes de culpar al modelo o al optimizador.** Si los fallos se concentran en items de gold heurístico-léxico y flipean entre corridas, es desacuerdo de criterio + inestabilidad de muestreo (no optimizable vía prompt), no incapacidad del modelo.
+- Si hay desalineación, las opciones son: re-etiquetar los casos ambiguos según un criterio cerrado, preferir tareas con verdad verificable para reasoning models, o documentar la diferencia de calibración como resultado de la experimentación.
 
 ### El Efecto Techo (Ceiling Effect)
 **Síntoma:** El modelo base obtenía 100% de efectividad en la primera prueba ("Zero-Shot").
