@@ -57,6 +57,7 @@ class Diagnosis:
     config_path: str
     status: str  # RESUELTO | DUDOSO | SIN DATOS
     n_comparable: int
+    target: tuple[str, str] = ("", "")  # (modelo tarea, profesor) que usaria una corrida nueva
     reasons: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)  # impiden correr (dataset)
     warnings: list[str] = field(default_factory=list)  # gold, etc. (no bloquean)
@@ -154,6 +155,7 @@ def diagnose(
             config_path,
             "SIN DATOS",
             0,
+            target=target,
             reasons=["nunca corrido (sin filas en el CSV)"],
             blockers=blockers,
             warnings=warnings,
@@ -170,6 +172,7 @@ def diagnose(
             config_path,
             "DUDOSO",
             0,
+            target=target,
             reasons=reasons,
             blockers=blockers,
             warnings=warnings,
@@ -207,6 +210,7 @@ def diagnose(
             config_path,
             "RESUELTO",
             n_comp,
+            target=target,
             reasons=reasons,
             blockers=blockers,
             warnings=warnings,
@@ -225,6 +229,7 @@ def diagnose(
         config_path,
         status,
         n_comp,
+        target=target,
         reasons=reasons,
         blockers=blockers,
         warnings=warnings,
@@ -264,10 +269,62 @@ def collect_diagnoses() -> list[Diagnosis]:
 _STATUS_ORDER = {"DUDOSO": 0, "SIN DATOS": 1, "RESUELTO": 2}
 
 
+def print_legend() -> None:
+    """Glosario de estados y anotaciones, para leer el tablero sin abrir el doc.
+
+    Los umbrales se interpolan desde las constantes reales (TRIAGE_* y las de
+    seed_protocol) para que la leyenda nunca se desincronice del comportamiento.
+    SSOT del criterio: docs/PROTOCOLO_N_SEEDS.md (seccion "Triaje de casos").
+    """
+    print("Estados (clasificacion segun resultados previos COMPARABLES del CSV):")
+    print(
+        f"  DUDOSO    candidato a re-correr. Alguna de: mejora sin confirmar "
+        f"(Rob < {CEILING_BASELINE_PTS:.0f} y Opt-Base > {NOISE_EPS_PTS:.1f});"
+    )
+    print(
+        f"            alta varianza (rango Rob > {TRIAGE_VARIANCE_RANGE_PTS:.0f} pts); "
+        f"poca evidencia (n < {TRIAGE_MIN_REFERENCE_ROWS}); o sin referencia comparable."
+    )
+    print(
+        f"  RESUELTO  no re-correr. En techo (Rob >= {CEILING_BASELINE_PTS:.0f}) y estable "
+        f"(rango Rob <= {TRIAGE_VARIANCE_RANGE_PTS:.0f}, sin margen Opt-Base)."
+    )
+    print("  SIN DATOS nunca corrido. Curar/decidir antes de gastar tokens.")
+    print()
+    print("Anotaciones por caso (el porque puntual, citando los numeros):")
+    print("  -  razon del estado asignado")
+    print("  !  advertencia: no bloquea pero exige confirmar (p.ej. gold_verificado=no, D-001)")
+    print("  x  bloqueante: impide correr (dataset ausente -> la corrida haria [SKIP])")
+    print()
+    print("Columna N = nro de filas previas COMPARABLES (mismo par Modelo Tarea/Profesor")
+    print("que usaria una corrida nueva); las de otro modelo no cuentan como referencia.")
+    print()
+
+
+def print_targets(diags: list[Diagnosis]) -> None:
+    """Muestra el par de modelos objetivo por engine (Modelo Tarea / Profesor).
+
+    Es el contexto imprescindible para leer el tablero: cuando un caso sale
+    'sin referencia comparable', es respecto a ESTE par (de .env o env var). Sin
+    el par, 'no hay pruebas' no se sabe contra que modelo se afirma.
+    """
+    targets: dict[str, tuple[str, str]] = {}
+    for d in diags:
+        targets.setdefault(d.framework, d.target)
+    print("Modelo objetivo de una corrida nueva (de .env / env var), por engine:")
+    for eng, (task, refl) in sorted(targets.items()):
+        t = task or "(sin definir)"
+        r = refl or "(sin definir)"
+        print(f"  {eng:<5} Tarea: {t}  |  Profesor: {r}")
+    print()
+
+
 def print_board(diags: list[Diagnosis]) -> list[Diagnosis]:
     """Imprime el tablero ordenado (dudosos primero). Devuelve el orden mostrado."""
     ordered = sorted(diags, key=lambda d: (_STATUS_ORDER.get(d.status, 9), d.name))
     print("\n=== Triaje de casos (N seeds) ===\n")
+    print_targets(ordered)
+    print_legend()
     print(f"  {'#':>2}  {'ESTADO':<10} {'ENGINE':<5} {'N':>3}  CASO")
     print("  " + "-" * 60)
     for i, d in enumerate(ordered, 1):
