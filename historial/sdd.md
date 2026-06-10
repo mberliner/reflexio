@@ -19,20 +19,21 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | ID | Descripcion | Origen | Estado |
 |---|---|---|---|
 | D-001 | Datasets CV `_v2` con `gold_verificado=no` pendientes de revision humana | Protocolo N seeds (`docs/PROTOCOLO_N_SEEDS.md`) | Abierta — bloquea conclusiones definitivas sobre v2 |
-| D-003 | Soporte para flujos multietapa (multi-stage) en DSPy: encadenar varios predictores/signatures en un modulo. Requiere extender `DynamicModuleFactory` y el esquema YAML. Esfuerzo alto. Candidata a una proxima spec de capacidad | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-1, eliminado) | Abierta |
-| D-004 | Logica condicional en modulos: ejecutar una etapa segun el resultado de la anterior (ahorro de tokens, derivar casos simples). Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-2, eliminado) | Abierta |
 | D-005 | Naming definitivo de `dspy_gepa_poc`: el sufijo "POC" ya no refleja el estado. Opciones evaluadas: `dspy_gepa`, `reflexio_dspy`. Impacto: renombrar modulo + imports en todo el repo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T2-2, eliminado) | Abierta |
 | D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
-| D-007 | D-003/D-004 figuran abiertas pero `DynamicModuleFactory.create_pipeline_module` + `routing` (gate condicional) ya existen y estan documentados en `docs/YAML_CONFIG_REFERENCE.md`; verificar que cubren lo pedido y cerrarlas o re-acotarlas | Auditoria de docs 2026-06-10 | Abierta |
 | D-008 | Inconsistencias de criterio entre docs: regla de baseline (>80% en `LECCIONES_APRENDIDAS.md` seccion 8 vs >90% en `CUANDO_APLICAR_Y_CASOS_DE_USO.md`); donde viven los limites de longitud de texto (env-only segun `YAML_CONFIG_REFERENCE.md` vs YAML segun `UNIVERSAL_OPTIMIZER.md` y `LECCIONES_APRENDIDAS.md` seccion 4); campos soportados en codigo sin documentar (`models.max_tokens` GEPA, `skip_perfect_score` DSPy); `YAML_CONFIG_REFERENCE.md` lista module types `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (solo `dynamic`/`pipeline`) | Auditoria de docs 2026-06-10 | Abierta |
 | D-009 | Redundancia documental: `DSPY_DOCUMENTACION.md` y `GEPA_DOCUMENTACION.md` contienen material del framework upstream (instalacion, testing, citacion) que duplica SSOTs propios y una nota de cache contraria al default del proyecto; tabla de precios duplicada (`ANALISIS_UTILIDADES.md` vs `ROI_ANALYSIS.md` vs `DEFAULT_PRICING` en codigo); links relativos rotos en `gepa_standalone/README.md`; referencia muerta `run_email_urgency_comparison.sh` en `LECCIONES_APRENDIDAS.md` seccion 7; typo en nombre de `docs/plan_implementcion_toma_requerimientos.md`; intro duplicada ES/EN en `README.md` raiz; parrafo obsoleto "cuando crear la primera spec" en `docs/SDD_PROTOCOLO.md` Tramo 2 (SPEC-100/101 ya existen) | Auditoria de docs 2026-06-10 | Abierta |
 | D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | Auditoria de docs 2026-06-10 | Abierta |
+| D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
 
 ## Deuda resuelta
 
 | ID | Descripcion | Resuelta | Cierre |
 |---|---|---|---|
 | D-002 | Primera spec de capacidad con formato hibrido | 2026-06-03 | `SPEC-100-veredicto-senal-ruido` estrena el formato (registrada en `specs/SPECS_REGISTRY.md`); Tramo 2 pasa a activo |
+| D-003 | Soporte para flujos multietapa (multi-stage) en DSPy | 2026-06-10 | Ya estaba implementada en `73bdd1d` (2026-05-21): `DynamicModuleFactory.create_pipeline_module` compone N etapas en serie con signatures YAML (`stages`), validadas por `config_schema.py` y documentadas en `docs/YAML_CONFIG_REFERENCE.md`. La deuda se habia migrado el 2026-06-03 desde un checklist desactualizado. Resto pendiente (tests, caso activo) -> D-011 |
+| D-004 | Logica condicional en modulos (etapa segun resultado de la anterior) | 2026-06-10 | Ya estaba implementada en `73bdd1d` (2026-05-21): seccion `routing` con gate (`gate_stage`/`gate_field`/`gate_value`); las etapas no abiertas por el gate no llaman al LLM e inyectan `skip_outputs_when_gated` (ahorro de tokens). Mismo origen del desfase que D-003. Resto pendiente -> D-011 |
+| D-007 | Verificar si D-003/D-004 estaban cubiertas por el modo `pipeline` y cerrarlas o re-acotarlas | 2026-06-10 | Verificado contra codigo e historia de git: ambas cubiertas literalmente por `create_pipeline_module` (D-003 y D-004 cerradas); lo no cubierto (tests dedicados, ausencia de caso activo) quedo re-acotado en D-011 |
 
 ---
 
@@ -59,7 +60,16 @@ corrigieron las 4 contradicciones de mayor prioridad:
   real (CSV + YAML + dryrun + baseline + entry point), sin `modules.py`/`data.py`/
   `examples/`.
 
-Hallazgos restantes de la auditoria registrados como deuda D-007/D-008/D-009.
+Hallazgos restantes de la auditoria registrados como deuda D-007/D-008/D-009/D-010.
+
+Seguimiento (mismo dia): se resolvio D-007 verificando D-003/D-004 contra codigo
+e historia de git. El modo `pipeline` (`73bdd1d`, 2026-05-21) cubre literalmente
+ambas: multietapa via `stages` (D-003) y gate condicional via `routing` con
+ahorro de tokens (D-004). El desfase se origino el 2026-06-03 al migrar la deuda
+desde el checklist sin tildar de `MEJORAS_PENDIENTES_DSPY_GEPA_POC.md`, 13 dias
+despues de que el codigo ya existiera. D-003/D-004/D-007 pasan a resueltas; lo
+genuinamente pendiente (tests dedicados del pipeline y ausencia de caso activo)
+queda re-acotado en D-011.
 
 ### 2026-06-03 — SPEC-101: triaje de casos para N seeds (+ fix matching DSPy)
 
