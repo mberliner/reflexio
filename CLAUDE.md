@@ -15,9 +15,10 @@ DSPy y GEPA.
   script directo (rompe `import shared`).
 - MUST NOT usar emoticones en codigo, comentarios ni documentacion.
 - MUST: un doc, un proposito (SSOT). No duplicar informacion entre docs; enlazar.
-- SDD activo (tramos 0-1): usar lenguaje normativo `MUST`/`SHOULD`/`MAY`, dejar
-  `[NEEDS CLARIFICATION: ...]` ante ambiguedad, y cerrar entregas no triviales con
-  el bloque `[SDD-Check]`.
+- SDD activo (tramos 0-2): usar lenguaje normativo `MUST`/`SHOULD`/`MAY`, dejar
+  `[NEEDS CLARIFICATION: ...]` ante ambiguedad, cerrar entregas no triviales con
+  el bloque `[SDD-Check]`, y registrar capacidades nuevas en
+  `specs/SPECS_REGISTRY.md`.
 
 ## A donde ir a buscar (protocolo de navegacion)
 

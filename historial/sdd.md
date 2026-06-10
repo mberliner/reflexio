@@ -23,6 +23,10 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-004 | Logica condicional en modulos: ejecutar una etapa segun el resultado de la anterior (ahorro de tokens, derivar casos simples). Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T4-2, eliminado) | Abierta |
 | D-005 | Naming definitivo de `dspy_gepa_poc`: el sufijo "POC" ya no refleja el estado. Opciones evaluadas: `dspy_gepa`, `reflexio_dspy`. Impacto: renombrar modulo + imports en todo el repo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T2-2, eliminado) | Abierta |
 | D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
+| D-007 | D-003/D-004 figuran abiertas pero `DynamicModuleFactory.create_pipeline_module` + `routing` (gate condicional) ya existen y estan documentados en `docs/YAML_CONFIG_REFERENCE.md`; verificar que cubren lo pedido y cerrarlas o re-acotarlas | Auditoria de docs 2026-06-10 | Abierta |
+| D-008 | Inconsistencias de criterio entre docs: regla de baseline (>80% en `LECCIONES_APRENDIDAS.md` seccion 8 vs >90% en `CUANDO_APLICAR_Y_CASOS_DE_USO.md`); donde viven los limites de longitud de texto (env-only segun `YAML_CONFIG_REFERENCE.md` vs YAML segun `UNIVERSAL_OPTIMIZER.md` y `LECCIONES_APRENDIDAS.md` seccion 4); campos soportados en codigo sin documentar (`models.max_tokens` GEPA, `skip_perfect_score` DSPy); `YAML_CONFIG_REFERENCE.md` lista module types `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (solo `dynamic`/`pipeline`) | Auditoria de docs 2026-06-10 | Abierta |
+| D-009 | Redundancia documental: `DSPY_DOCUMENTACION.md` y `GEPA_DOCUMENTACION.md` contienen material del framework upstream (instalacion, testing, citacion) que duplica SSOTs propios y una nota de cache contraria al default del proyecto; tabla de precios duplicada (`ANALISIS_UTILIDADES.md` vs `ROI_ANALYSIS.md` vs `DEFAULT_PRICING` en codigo); links relativos rotos en `gepa_standalone/README.md`; referencia muerta `run_email_urgency_comparison.sh` en `LECCIONES_APRENDIDAS.md` seccion 7; typo en nombre de `docs/plan_implementcion_toma_requerimientos.md`; intro duplicada ES/EN en `README.md` raiz; parrafo obsoleto "cuando crear la primera spec" en `docs/SDD_PROTOCOLO.md` Tramo 2 (SPEC-100/101 ya existen) | Auditoria de docs 2026-06-10 | Abierta |
+| D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | Auditoria de docs 2026-06-10 | Abierta |
 
 ## Deuda resuelta
 
@@ -33,6 +37,29 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-10 — Auditoria de docs: correccion de contradicciones P1
+
+Auditoria de redundancia/contradicciones sobre toda la documentacion. Se
+corrigieron las 4 contradicciones de mayor prioridad:
+
+- Estado SDD unificado al SSOT (`docs/SDD_PROTOCOLO.md`, T0-T2 activos):
+  `CLAUDE.md` (+ copias `AGENTS.md`/`GEMINI.md`) decia "tramos 0-1" y
+  `docs/CONTRIBUTING.md` decia "Tramo 2 con esqueleto listo".
+- `gepa_standalone/docs/UNIVERSAL_OPTIMIZER.md`: variables legacy `AZURE_OPENAI_*`
+  reemplazadas por `LLM_*`; eliminada la seccion de override `models.task`/
+  `models.reflection` (el codigo solo soporta `temperature`/`max_tokens`);
+  corregida la semantica de `skip_perfect_score`; referencia muerta
+  `utils/leaderboard.py` -> `./analyze leaderboard` (`shared/analysis/`);
+  agregado `rag` a los tipos de adapter validos.
+- `docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md`: eliminado el "Modo V1" con
+  `modules.py`/`adapters/` (inexistentes); modos reales `dynamic`/`pipeline`;
+  estructura de `dspy_gepa_poc/` actualizada a los archivos vigentes.
+- `docs/DEVELOPMENT.md`: "Flujo de trabajo tipico" reescrito al flujo declarativo
+  real (CSV + YAML + dryrun + baseline + entry point), sin `modules.py`/`data.py`/
+  `examples/`.
+
+Hallazgos restantes de la auditoria registrados como deuda D-007/D-008/D-009.
 
 ### 2026-06-03 — SPEC-101: triaje de casos para N seeds (+ fix matching DSPy)
 

@@ -7,32 +7,33 @@ Este documento es la Fuente Única de Verdad (SSOT) para la arquitectura de inte
 
 ## 1. Visión General de la Arquitectura
 
-El sistema implementa una arquitectura híbrida que soporta dos modos de operación, ambos gestionados por un **Orquestador Universal**.
+El sistema implementa una arquitectura declarativa donde el entry point
+`reflexio_declarativa.py` orquesta todo el flujo a partir de un config YAML, sin
+código Python por caso.
 
 ### Diagrama de Alto Nivel
 
 ```mermaid
 graph TD
-    User[Usuario] -->|YAML Config| UniversalOptimizer
-    User -->|CSV Data| CSVDataLoader
-    
+    User[Usuario] -->|YAML Config| ReflexioDeclarativa[reflexio_declarativa.py]
+    User -->|CSV Data| CSVDataLoader[data_loader.py]
+
     subgraph Core Engine
-        UniversalOptimizer --> AppConfig
-        UniversalOptimizer -->|V1: Explicit| ModulesPy[modules.py]
-        UniversalOptimizer -->|V2: Dynamic| DynamicFactory[dynamic_factory.py]
-        
-        CSVDataLoader -->|Train/Val/Test| UniversalOptimizer
+        ReflexioDeclarativa --> AppConfig[config.py / config_schema.py]
+        ReflexioDeclarativa -->|dynamic / pipeline| DynamicFactory[dynamic_factory.py]
+
+        CSVDataLoader -->|Train/Val/Test| ReflexioDeclarativa
     end
-    
+
     subgraph Optimization Loop
-        UniversalOptimizer --> GEPAOptimizer
+        ReflexioDeclarativa --> GEPAOptimizer[optimizer.py]
         GEPAOptimizer -->|Reflective Mutation| ReflectionLLM[Teacher Model]
         GEPAOptimizer -->|Evaluation| TaskLLM[Student Model]
     end
-    
+
     subgraph Output Artifacts
-        UniversalOptimizer -->|Log| MasterLog[metricas_optimizacion.csv]
-        UniversalOptimizer -->|Artifacts| RunFolder[results/runs/...]
+        ReflexioDeclarativa -->|Log| MasterLog[metricas_optimizacion.csv]
+        ReflexioDeclarativa -->|Artifacts| RunFolder[results/runs/...]
     end
 ```
 
@@ -40,17 +41,20 @@ graph TD
 
 ## 2. Modos de Operación
 
-### Modo V1: Explícito (Python-Defined)
-Ideal para lógica compleja, pipelines multi-paso o validaciones personalizadas.
-- **Definición:** Las `Signatures` y `Modules` se escriben como clases Python en `dspy_gepa_poc/modules.py`.
-- **Configuración:** El YAML solo referencia el `type` del módulo (ej: `sentiment`, `extractor`).
-- **Ventaja:** Control total sobre la lógica de `forward()`.
+El entry point soporta dos tipos de módulo (`module.type`; campos completos en
+`docs/YAML_CONFIG_REFERENCE.md`):
 
-### Modo V2: Dinámico (Zero-Code / YAML-Defined)
-Ideal para prototipado rápido y tareas estándar (Clasificación, Extracción simple).
+### Modo `dynamic` (Zero-Code / YAML-Defined)
+Ideal para tareas de una sola etapa (clasificación, extracción, QA).
 - **Definición:** La `Signature` (instrucción, inputs, outputs) se define enteramente en el archivo YAML.
-- **Configuración:** `type: "dynamic"`.
+- **Implementación:** `DynamicModuleFactory.create_module` genera la clase DSPy al vuelo.
 - **Ventaja:** No requiere escribir ni una línea de código Python.
+
+### Modo `pipeline` (Multi-etapa con routing condicional)
+Ideal para flujos de N etapas en serie donde una etapa-gate decide si las posteriores se ejecutan.
+- **Definición:** Lista de `stages` (cada una con su `signature`) más una sección `routing` (`gate_stage`, `gate_field`, `gate_value`), todo en YAML.
+- **Implementación:** `DynamicModuleFactory.create_pipeline_module`.
+- **Ventaja:** Composición de etapas sin código; los casos que el gate no abre no ejecutan las etapas posteriores.
 
 ---
 
@@ -58,24 +62,20 @@ Ideal para prototipado rápido y tareas estándar (Clasificación, Extracción s
 
 ```
 dspy_gepa_poc/
-├── configs/            # Configuración Declarativa (YAML)
-│   ├── sentiment_config.yaml       # Ejemplo V1
-│   └── dynamic_sentiment.yaml      # Ejemplo V2
-├── datasets/           # Fuente de Verdad de Datos (CSV)
-│   ├── sentiment.csv
-│   └── extraction.csv
-├── results/            # Salidas Estructuradas
+├── configs/            # Configuración Declarativa (YAML), ej: dynamic_email_urgency.yaml
+├── datasets/           # Fuente de Verdad de Datos (CSV, columna split)
+├── scripts/            # Utilidades: dryrun_config, baseline_only, per_field_accuracy, ...
+├── results/            # Salidas Estructuradas (gitignored)
 │   ├── experiments/    # Log Maestro (metricas_optimizacion.csv)
 │   └── runs/           # Artefactos por ejecución
-├── adapters/           # (Reservado para lógica custom futura)
 ├── config.py           # Sistema de Configuración (AppConfig)
 ├── config_schema.py    # Validación Estricta de YAML
 ├── data_loader.py      # Carga de CSVs a DSPy Examples (Train/Val/Test)
-├── dynamic_factory.py  # Generador de Clases DSPy al vuelo (V2)
-├── metrics.py          # Métricas de Evaluación
-├── modules.py          # Definiciones Estáticas (V1)
+├── dynamic_factory.py  # Generador de Signatures/Modules al vuelo (dynamic y pipeline)
+├── metrics.py          # Métricas de Evaluación (match modes, feedback por campo)
 ├── optimizer.py        # Wrapper de GEPA
 ├── results_logger.py   # Gestión del Log Maestro
+├── run_inference.py    # Motor de inferencia sobre runs optimizados (ver sección 8)
 └── reflexio_declarativa.py # Punto de Entrada Principal
 ```
 

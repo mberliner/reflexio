@@ -77,12 +77,22 @@ Los shell scripts del repo (`run_demo.sh`, `run_cv_cases.sh`, etc.) ya invocan c
 
 ## Flujo de trabajo tipico (nueva tarea)
 
-1. Definir/modificar una `Signature` en `dspy_gepa_poc/modules.py`.
-2. Crear un `Module` en `dspy_gepa_poc/modules.py` que use la `Signature`.
-3. Crear datos de ejemplo en `dspy_gepa_poc/data.py`.
-4. Definir una metrica en `dspy_gepa_poc/metrics.py`.
-5. Crear un script en `examples/` que use los componentes para ejecutar la tarea
-   o un flujo de optimizacion.
+Todo es declarativo: una tarea nueva NO requiere escribir codigo Python, solo
+dataset + config YAML.
+
+1. Crear el dataset CSV con columna `split` (`train`/`val`/`test`) en
+   `dspy_gepa_poc/datasets/` o `gepa_standalone/experiments/datasets/`.
+2. Crear el config YAML del caso: en `dspy_gepa_poc/configs/` (modulo `dynamic` o
+   `pipeline`, con la `signature` definida en el YAML) o en
+   `gepa_standalone/experiments/configs/` (mas el prompt JSON inicial en
+   `experiments/prompts/`). Referencia de campos: `docs/YAML_CONFIG_REFERENCE.md`.
+3. Validar sin gastar tokens (lado DSPy):
+   `python -m dspy_gepa_poc.scripts.dryrun_config --config <yaml>`.
+4. Medir el baseline antes de optimizar:
+   `python -m dspy_gepa_poc.scripts.baseline_only --config <yaml>`.
+5. Correr la optimizacion con el entry point del subproyecto (ver arriba) y
+   analizar resultados con `./analyze leaderboard` (`docs/ANALISIS_UTILIDADES.md`).
+   Para validar mejoras con N seeds, ver `docs/PROTOCOLO_N_SEEDS.md`.
 
 ## CI
 

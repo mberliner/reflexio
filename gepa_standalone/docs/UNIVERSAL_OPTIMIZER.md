@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Interfaz universal para optimizar prompts con GEPA en cualquier caso de uso (classifier, extractor, SQL). Elimina duplicación de código: **387 líneas → 30 líneas YAML por caso**.
+Interfaz universal para optimizar prompts con GEPA en cualquier caso de uso (classifier, extractor, SQL, RAG). Elimina duplicación de código: cada caso se define en ~30 líneas de YAML, sin escribir Python.
 
 ---
 
@@ -43,8 +43,8 @@ Valores definidos en `.env` (o variables de sistema).
 
 ```bash
 # .env
-AZURE_OPENAI_API_KEY=tu-key-aqui
-AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini
+LLM_API_KEY=tu-key-aqui
+LLM_MODEL_TASK=azure/gpt-4.1-mini
 EXTRACTOR_MAX_POSITIVE_EXAMPLES=1
 ```
 
@@ -97,7 +97,7 @@ prompt:
 # 5. PARÁMETROS GEPA
 optimization:
   max_metric_calls: 50               # Presupuesto (rango válido: 10-500, recomendado: 40-150)
-  skip_perfect_score: true           # Detener si alcanza 1.0
+  skip_perfect_score: true           # Omitir ejemplos con score perfecto en la reflexión
   display_progress_bar: true         # Mostrar barra
 ```
 
@@ -155,7 +155,7 @@ prompt:
 
 optimization:
   max_metric_calls: 150              # SQL necesita más presupuesto
-  skip_perfect_score: true           # Detener si alcanza score perfecto
+  skip_perfect_score: true           # Omitir ejemplos con score perfecto en la reflexión
   display_progress_bar: true
 ```
 
@@ -242,7 +242,7 @@ El sistema organiza los resultados en `results/` para facilitar el análisis:
     *   `config.json`: Copia de los parámetros usados.
     *   `initial_prompt.txt` / `final_prompt.txt`: Los prompts antes y después.
     *   `results.json`: Métricas detalladas y scores de cada ejemplo.
-*   **`results/estadistica_casos_agrupados.csv`**: Generado por `utils/leaderboard.py`. Consolida los mejores promedios por modelo/caso.
+*   **Leaderboard consolidado**: se genera con el CLI de análisis desde la raíz del repo (`./analyze leaderboard`, implementado en `shared/analysis/leaderboard.py`); produce `leaderboard.csv` y `leaderboard.md`. Ver `/docs/ANALISIS_UTILIDADES.md`.
 
 ---
 
@@ -252,7 +252,7 @@ El sistema valida **antes** de ejecutar GEPA:
 
 ### 1. Estructura del Config
 - Campos requeridos: `case.name`, `adapter.type`, `data.csv_filename`, `optimization.max_metric_calls`
-- Tipo de adaptador válido: `classifier`, `extractor`, o `sql`
+- Tipo de adaptador válido: `classifier`, `extractor`, `sql` o `rag`
 - Parámetros específicos del adaptador presentes
 
 ### 2. Existencia de Archivos
@@ -273,14 +273,16 @@ El sistema valida **antes** de ejecutar GEPA:
 
 ## Ejemplos de Override
 
-### Cambiar Modelos en Runtime (sin modificar .env)
+### Ajustar Parámetros del Modelo (sin modificar .env)
 
-Agregar al YAML:
+Los modelos task/reflection se definen únicamente por `.env` (`LLM_MODEL_TASK` /
+`LLM_MODEL_REFLECTION`, ver `/docs/LLM_CONFIG.md`); el YAML no los sobreescribe.
+Lo que sí admite override en la sección `models:` del YAML:
+
 ```yaml
 models:
-  task: "gpt-4o-mini"              # Override AZURE_OPENAI_DEPLOYMENT
-  reflection: "gpt-4o"             # Override AZURE_OPENAI_REFLECTION_DEPLOYMENT
-  temperature: 0.0
+  temperature: 0.0                 # Override de temperatura
+  max_tokens: 16000                # Override de max tokens (necesario para reasoning models)
 ```
 
 ### Forzar Ejemplos Positivos

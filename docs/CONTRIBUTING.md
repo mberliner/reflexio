@@ -17,8 +17,8 @@ cierre de entregas bajo el protocolo SDD. Para setup y comandos ver
 
 ## Protocolo SDD (en adopcion por tramos)
 
-SSOT del protocolo: `docs/SDD_PROTOCOLO.md`. Tramos 0 y 1 activos; Tramo 2 con
-esqueleto listo (no invasivos):
+SSOT del protocolo: `docs/SDD_PROTOCOLO.md`. Tramos 0 a 2 activos (no
+invasivos); Tramo 3 diferido:
 
 - **Lenguaje normativo**: usar `MUST`/`SHOULD`/`MAY` al inicio de la sentencia en
   requisitos, invariantes y reglas.
