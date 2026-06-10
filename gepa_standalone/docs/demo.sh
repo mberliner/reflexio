@@ -141,7 +141,7 @@ echo -e "${BOLD}Campos clave:${RESET}"
 echo "  adapter.type        -> tipo de tarea (classifier / extractor / sql / rag)"
 echo "  prompt.filename     -> apunta al JSON versionado en git"
 echo "  max_metric_calls    -> presupuesto maximo de evaluaciones"
-echo "  skip_perfect_score  -> se detiene si alcanza 100%"
+echo "  skip_perfect_score  -> omite de la reflexion los ejemplos con score perfecto"
 pausa
 
 # ------------------------------------------------------------------
@@ -207,7 +207,7 @@ pausa
 # ------------------------------------------------------------------
 seccion "6/8 | OUTPUT: Archivos del run y prompts"
 
-LATEST_RUN=$(ls -td results/runs/email_urgency/2026-*/ 2>/dev/null | head -1)
+LATEST_RUN=$(ls -td results/runs/email_urgency/*/ 2>/dev/null | head -1)
 
 if [ -z "$LATEST_RUN" ]; then
     echo "  No hay runs previos en results/runs/email_urgency/. Ejecuta el optimizer primero."
