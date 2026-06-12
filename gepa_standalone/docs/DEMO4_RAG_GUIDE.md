@@ -154,14 +154,21 @@ graph TD
     User[Usuario] -->|Pregunta| App
     App -->|Búsqueda| VectorDB[(Base de Datos)]
     VectorDB -->|Contexto| App
-    
+
+    Prompt["SYSTEM PROMPT OPTIMIZADO POR GEPA<br/>(role: system)"] --> Build
+    App -->|"Contexto + Pregunta<br/>(role: user)"| Build
+
     subgraph "Generación de Respuesta"
-        Prompt[SYSTEM PROMPT OPTIMIZADO POR GEPA] -.->|Instruye| LLM
-        App -->|Pregunta + Contexto| LLM
+        Build["Ensamblado de mensajes<br/>messages = [system, user]"] --> LLM[LLM generador]
     end
-    
+
     LLM -->|Respuesta Final| User
 ```
+
+> El `system_prompt` optimizado no instruye al modelo por un canal aparte: es
+> **otro mensaje mas** dentro del mismo array `messages`. Ambas entradas (system y
+> user) se ensamblan en una **unica** llamada al LLM, tal como lo hace el adapter
+> en `adapters/simple_rag_adapter.py`.
 
 Tu código de producción se vería así:
 
