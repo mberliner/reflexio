@@ -92,15 +92,17 @@ optimization:
   eval_repeats: 1
   use_few_shot: true
   few_shot_count: 8
-  # Iteracion 2: la metrica evalua cada pregunta + el color derivado, para que GEPA
-  # tenga feedback por-pregunta (el cuello es alto_impacto). Solo se ignora razonamiento.
+  # La metrica evalua SOLO el objetivo (color derivado) + el cuello (alto_impacto).
+  # Evaluar las 7 salidas inflaba el baseline al techo (~93-96% en VAL) porque P1/P2/P3/P5
+  # ya estan en 90-100% y diluyen: GEPA quedaba sin margen ni presion sobre el cuello.
+  # Con color + alto_impacto el baseline baja y GEPA tiene senal sobre lo que importa.
   ignore_in_metric:
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
     - "razonamiento"
   field_configs:
-    p1: { mode: "exact" }
-    p2: { mode: "exact" }
-    p3: { mode: "exact" }
-    p4: { mode: "exact" }
-    p5: { mode: "exact" }
     alto_impacto: { mode: "exact" }
     clasificacion: { mode: "exact" }
