@@ -21,11 +21,12 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-001 | Datasets CV `_v2` con `gold_verificado=no` pendientes de revision humana | Protocolo N seeds (`docs/PROTOCOLO_N_SEEDS.md`) | Abierta — bloquea conclusiones definitivas sobre v2 |
 | D-005 | Naming definitivo de `dspy_gepa_poc`: el sufijo "POC" ya no refleja el estado. Opciones evaluadas: `dspy_gepa`, `reflexio_dspy`. Impacto: renombrar modulo + imports en todo el repo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T2-2, eliminado) | Abierta |
 | D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
-| D-012 | Optimizar cada etapa de flujo-intents con GEPA y medir accuracy en el holdout (42 originales); ampliar variaciones a mano si una etapa queda starved (train actual 4-8 casos/etapa) | `SPEC-102-flujo-intents` | Abierta — falta corrida GEPA real por etapa |
+| D-012 | Optimizar cada etapa de flujo-intents con GEPA y medir accuracy en el holdout (42 originales); ampliar variaciones a mano si una etapa queda starved (train actual 4-8 casos/etapa) | `SPEC-102-flujo-intents` | Cerrada 2026-06-16 — GEPA corrido por etapa sobre los datasets alineados (gpt-4.1-mini tarea / gpt-4o profesor). Factibilidad generaliza (TEST 79->87,5-91,7); solidez en techo (TEST 95). Fast_gate sigue overfiteando -> frente abierto en D-013 |
 | D-008 | Inconsistencias de criterio entre docs: regla de baseline (>80% en `LECCIONES_APRENDIDAS.md` seccion 8 vs >90% en `CUANDO_APLICAR_Y_CASOS_DE_USO.md`); donde viven los limites de longitud de texto (env-only segun `YAML_CONFIG_REFERENCE.md` vs YAML segun `UNIVERSAL_OPTIMIZER.md` y `LECCIONES_APRENDIDAS.md` seccion 4); campos soportados en codigo sin documentar (`models.max_tokens` GEPA, `skip_perfect_score` DSPy); `YAML_CONFIG_REFERENCE.md` lista module types `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (solo `dynamic`/`pipeline`) | Auditoria de docs 2026-06-10 | Abierta |
 | D-009 | Redundancia documental: `DSPY_DOCUMENTACION.md` y `GEPA_DOCUMENTACION.md` contienen material del framework upstream (instalacion, testing, citacion) que duplica SSOTs propios y una nota de cache contraria al default del proyecto; tabla de precios duplicada (`ANALISIS_UTILIDADES.md` vs `ROI_ANALYSIS.md` vs `DEFAULT_PRICING` en codigo); links relativos rotos en `gepa_standalone/README.md` y referencia `docs/GEPA_DOCUMENTACION.md` con base ambigua en el listado final de `gepa_standalone/docs/demo.sh`; referencia muerta `run_email_urgency_comparison.sh` en `LECCIONES_APRENDIDAS.md` seccion 7; typo en nombre de `docs/plan_implementcion_toma_requerimientos.md`; intro duplicada ES/EN en `README.md` raiz; parrafo obsoleto "cuando crear la primera spec" en `docs/SDD_PROTOCOLO.md` Tramo 2 (SPEC-100/101 ya existen) | Auditoria de docs 2026-06-10 | Abierta |
 | D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | Auditoria de docs 2026-06-10 | Abierta |
 | D-013 | La rubrica fast_gate no tiene regla explicita, graduada por impacto, para "dominio regulado de alto riesgo (credito/seguros/beneficios/empleo) + revision humana por caso (P5=No)". El dataset no ensena ese patron: los casos Rojo internos son "autonomo-acotado". Consecuencia medida: Rojo->Amarillo sistematico en casos testigo externos (gpt-4.1-mini sub-escala credito/seguros/beneficios). Definir la regla en la spec y agregar casos Rojo de ese tipo al train | Validacion externa con casos testigo (2026-06-16) | Abierta |
+| D-014 | Etapas nuevas diferidas de flujo-intents (decision del usuario, 2026-06-16): (a) **admisibilidad** que absorba §9.2 (atributos protegidos en decisiones de acceso) y §7.4 (duplicado), hoy sin etapa tras sacarlas de factibilidad — reasignar TC-REJ-09/TC-REJ-10; (b) etapa para **valor real** ("resuelve un dolor de negocio") hoy no cubierta por solidez; (c) reubicar **`devolucion_no_ia`** ("no requiere IA") fuera de solidez a esa etapa nueva. Hasta entonces `no_ia` se deja en solidez para no romper el holdout (TC-REJ-06) | Alineacion al Marco de Gobierno (Solidez/Factibilidad), 2026-06-16 | Abierta |
 | D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
 
 ## Deuda resuelta
@@ -40,6 +41,125 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-16 — factibilidad y solidez: alineacion al Marco + datasets balanceados + des-hardcode de ruta
+
+Contraste contra el Marco de Gobierno (tabla oficial Solidez/Factibilidad que aporto el
+usuario): **factibilidad estaba desalineada**. El Marco define 3 salidas (Avanza a Fast
+Gate / Avanza con rediseno / No avanza por ahora); la implementacion tenia 4 (la extra,
+`rechazo_formal`, mezclaba admisibilidad §9.2 -atributos protegidos- y dedup §7.4 dentro de
+"factibilidad tecnica"). Ademas la frontera D/N no usaba el criterio del Marco
+(aceptabilidad del riesgo): casos autonomos de alto impacto sin supervision estaban como
+`avanza_con_redisenio` cuando el Marco los manda a `no_avanza`. Esto explica parte del
+colapso de la etapa (Rob ~13-47% bajo el trivial 86,7%): criterios heterogeneos en una sola
+decision + frontera cruzada = tarea no aprendible.
+
+Decisiones del usuario y alcance:
+- **Factibilidad -> 3 clases.** Se elimino `rechazo_formal`. Frontera D/N recalibrada al
+  Marco: `avanza_con_redisenio` = autonomo REVERSIBLE de impacto medio (un ajuste acotado
+  basta); `no_avanza` = (a) inviable tecnico o (b) riesgo no aceptable (autonomo
+  IRREVERSIBLE de alto impacto sobre personas, donde el ajuste no alcanza).
+- **Dataset balanceado y medible** (para macro-F1, no accuracy enganada por el holdout
+  26/1/1/2): factibilidad pasa a train 12/12/12, val 8/8/8, test 8/8/8 (3 clases). El test
+  es un holdout balanceado a mano (prefijo `TST-FAC-*`, escenarios distintos a train/val,
+  0 fugas verificadas) porque los originales solo tienen ~4 rechazos de factibilidad reales
+  y no se pueden balancear. El val sube de 15 a 24 (palanca contra el overfit de GEPA,
+  seccion 11).
+- **Admisibilidad / valor real / no_ia -> etapas futuras (diferido, D-014).** No se crean
+  ahora.
+- **Des-hardcode**: la ruta externa de los originales (`/datum1/...`) sale del codigo; se
+  resuelve por `FLUJO_INTENTS_ORIGINALS_DIR`. Si no esta, las etapas que dependen de
+  originales para el test (intake/solidez/fast_gate) NO se regeneran (se dejan intactas, no
+  se pisan con test vacio); factibilidad (test propio en variaciones) si se regenera.
+
+**Solidez (mismo criterio del Marco).** El Marco define solidez por 4 criterios con salida
+binaria (Si/No): resultado claro (no tecnologia), valor real, sponsor accountable, ficha
+completa. La implementacion tenia 3 clases; `devolucion_no_ia` ("no requiere IA") NO es
+criterio de solidez del Marco -> se RETIRO (va a etapa nueva con "valor real", D-014).
+`ficha completa` ya la cubre Intake. Resultado: solidez pasa a **2 clases**
+(`solido` / `devolucion_reformulacion`), alineada al Si/No. `devolucion_reformulacion`
+conserva los 3 disparadores que SI son del Marco (tecnologia-en-vez-de-resultado, sponsor
+colectivo, metricas no medibles). Mismo rebalanceo medible que factibilidad: train 14/14,
+val 10/10, test 10/10 (holdout balanceado a mano `TST-SOL-*`, 0 fugas). Val sube de 15 a
+20. Como ahora usa test propio, el holdout de originales deja de hacer falta: TC-REJ-06 sale
+del mapeo (diferido a la etapa de no_ia), por eso ya no es necesario "dejar no_ia para no
+romper el holdout" como se penso al abrir D-014.
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (alineacion de factibilidad y solidez al Marco; iter en curso).
+- Includes: factibilidad a 3 clases (49 casos nuevos, frontera D/N por impacto/
+  irreversibilidad) y solidez a 2 clases (38 casos nuevos, retiro de `devolucion_no_ia`) en
+  `make_variations.py`; soporte de `split=test` desde variaciones y des-hardcode de la ruta
+  de originales en `dataset.py`; instrucciones de ambos configs alineadas; ajuste de 2 tests
+  (`REJ_STAGE_MAP`=7 sin TC-REJ-06/09/10, fuga por ficha en vez de prefijo). Excludes:
+  etapas de admisibilidad/valor real/no_ia (D-014); corrida GEPA real con los datasets
+  nuevos (D-012); reasignacion de TC-REJ-06/09/10.
+- Validaciones: datasets regenerados (factibilidad 36/24/24 en 3 clases; solidez 28/20/20 en
+  2 clases; 0 fugas verificadas en ambos); `tests/test_flujo_intents.py` 28/28; ambos
+  configs cargan con AppConfig; `./shared/utils/ci_local.sh` PASO.
+- Baseline SIN GEPA medido (`baseline_only.py`, `gpt-4.1-mini`, n=1, test balanceado ->
+  accuracy ~= balanced accuracy ~= proxy de macro-F1):
+
+  | Etapa | VAL | TEST | trivial (clase mayoritaria) |
+  |---|---|---|---|
+  | Factibilidad (3 clases, test 8/8/8) | 87,5% | 79,17% | 33,3% |
+  | Solidez (2 clases, test 10/10) | 95,0% | 95,0% | 50,0% |
+
+  Lectura: el "colapso" previo de factibilidad (Rob ~47% 4.1-mini / ~13% 5-mini "bajo el
+  trivial 86,7%") era ARTEFACTO del test roto 26/1/1/2 + taxonomia cruzada (`rechazo_formal`
+  mezclaba admisibilidad con factibilidad tecnica), NO debilidad del modelo ni de GEPA: con
+  el Marco (3 clases) y test balanceado, el baseline sin GEPA ya da 79,17% sobre trivial
+  33,3% -> la etapa SI discrimina. Solidez queda en 95% sobre trivial 50%. Caveat: numeros
+  in-distribution (test de autoria propia, como train/val); el chequeo riguroso seria un set
+  testigo de marco independiente (hoy solo existe para fast_gate; encaja con D-014). Estos
+  baselines son la referencia contra la que comparar la corrida GEPA + `gpt-4o` (en curso por
+  fuera): si GEPA no supera 79,17 / 95,0 en TEST, se repite el patron seccion 11 aun con VAL
+  mayor (24 y 20).
+- SSOT afectado: `dspy_gepa_poc/flujo_intents/make_variations.py`,
+  `dspy_gepa_poc/flujo_intents/dataset.py`,
+  `dspy_gepa_poc/configs/flujo_intents_triage_factibilidad.yaml`,
+  `dspy_gepa_poc/configs/flujo_intents_triage_solidez.yaml`,
+  `dspy_gepa_poc/datasets/flujo_intents_triage_{factibilidad,solidez}.csv` (+ `variations/`),
+  `tests/test_flujo_intents.py`.
+- Deuda arrastrada: D-014 (nueva, etapas diferidas: admisibilidad §9.2/§7.4 -> TC-REJ-09/10;
+  valor real + no_ia -> TC-REJ-06). D-012 sigue (falta corrida GEPA por etapa, ahora sobre
+  los datasets alineados).
+
+### 2026-06-16 — GEPA por etapa sobre datasets alineados: cierre D-012
+
+Corrida GEPA por fuera (9 runs, 13:11-13:39) sobre los datasets alineados al Marco.
+Tarea `azure/gpt-4.1-mini`, profesor `azure/gpt-4o`, estrategia medium, n=1.
+Columnas: VAL base/opt = pre/post GEPA; TEST = `Robustez` (holdout balanceado, metrica
+no circular). Baseline = `baseline_only.py` (sin GEPA) de la entrada anterior.
+
+| Etapa | VAL base | VAL opt | TEST (rob) | baseline TEST | trivial |
+|---|---|---|---|---|---|
+| Factibilidad (3 cl., 24/24) | 79,17 | 79,17 | **91,67** | 79,17 | 33,3% |
+| Factibilidad (3 cl., 24/24) | 79,17 | 87,50 | **87,50** | 79,17 | 33,3% |
+| Solidez (2 cl., 20/20) | 90,0 | 95,0 | **95,0** | 95,0 | 50,0% |
+| Solidez (2 cl., 20/20) | 90,0 | 85,0 | 95,0 | 95,0 | 50,0% |
+| Fast Gate (few-shot rico v1) | 87,5 | 100,0 | 73,33 | n/d | -- |
+| Fast Gate (few-shot rico v1) | 93,75 | 93,75 | 76,67 | n/d | -- |
+| Fast Gate (few-shot rico v1) | 87,5 | 93,75 | 73,33 | n/d | -- |
+| Fast Gate (few-shot rico v1) | 93,75 | 93,75 | 70,0 | n/d | -- |
+| Fast Gate (few-shot rico v1) | 87,5 | 87,5 | 66,67 | n/d | -- |
+
+Lectura por etapa:
+- **Factibilidad: GEPA rescatado.** Por primera vez transfiere al holdout: TEST 87,5-91,7
+  vs baseline 79,17 y trivial 33,3%. Rompe el patron de la seccion 11 (de LECCIONES) en esta
+  etapa. Confirma que el "colapso" previo era artefacto del test roto + taxonomia cruzada, no
+  debilidad del modelo ni de GEPA: con 3 clases del Marco y test balanceado, GEPA suma valor.
+- **Solidez: en techo.** TEST clavado en 95 (= baseline) sobre trivial 50%. GEPA no aporta
+  margen pero tampoco rompe; una corrida bajo VAL a 85 manteniendo TEST 95 (ruido de VAL=20).
+- **Fast Gate: sigue overfiteando.** VAL hasta 100 con TEST 67-77. Patron seccion 11 intacto;
+  no se resuelve con budget sino con la rubrica de dominio regulado -> D-013.
+
+- Validaciones: n/a (solo `.md`; el CI ignora `**.md`). Datos: 9 filas en
+  `dspy_gepa_poc/results/experiments/metricas_optimizacion.csv` (run ids 6255d5dc, c3b702a8,
+  48f8c682, 74ceb1f4, 2563e6a5, d0374562, 4e5133ae, d391500a, 501b4221).
+- Deuda arrastrada: **D-012 cerrada** (GEPA corrido por etapa, factibilidad generaliza,
+  solidez en techo). Queda **D-013** como frente abierto de fast_gate (rubrica dominio
+  regulado) y D-014 (etapas diferidas).
 
 ### 2026-06-16 — fast_gate: auditoria de datasets y validacion externa con casos testigo
 
