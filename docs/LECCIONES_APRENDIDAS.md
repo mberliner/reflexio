@@ -518,11 +518,14 @@ tareas con este perfil concreto:
   (Verde < Amarillo < Rojo < Negro) — etapa Fast Gate de `flujo-intents`, gobierno
   de IA. No es multiclase plana: las clases tienen orden y los errores "de un nivel"
   no son equivalentes (sub-escalar el tope Negro es el error caro).
-- **Frontera tácita y subjetiva:** la distinción Rojo/Negro depende de criterios de
-  "alto impacto" (escala, irreversibilidad, naturaleza financiera/restrictiva,
-  perfilado) que NO están en el prompt por decisión de diseño — el sistema debe
-  inferirlos de los casos. Es justo el tipo de límite difuso donde un modelo puede
-  "razonar de más".
+- **Frontera y criterios (matizado 2026-06-16):** la regla del Marco es en realidad
+  **objetiva** — contar 5 preguntas Sí/No (0-1 Verde / 2-3 Amarillo / 4-5 Rojo) y
+  Negro = P5=Sí + alto impacto. Por decisión de diseño NO se puso en el prompt: se
+  **optó** por que el sistema infiera el color de los casos (few-shot), sin enunciar
+  el conteo. El único criterio subjetivo es "alto impacto" (escala, irreversibilidad,
+  naturaleza financiera/restrictiva, perfilado) para el tope Negro — el límite difuso
+  donde el modelo "razona de más". Veredicto al cierre de la sección: inferir la
+  regla de los casos no se verifica en la práctica → se adopta la regla explícita.
 - **Datos chicos y balanceados a mano:** 30 train / 16 val / 30 test, few-shot rico
   (`LabeledFewShot k=8`, demos con razonamiento). VAL = 16 ejemplos: clave, porque
   es lo que GEPA puede sobreajustar.
@@ -569,7 +572,9 @@ iguala (cuando no toca el prompt) o lo degrada (cuando lo toca).
 - **No todo error de clasificación se cierra con datos.** Negro->Rojo persistió en
   ~3/corrida en el punto estable: es un techo del modelo (`gpt-4.1-mini`) en una
   distinción que depende de matices de "alto impacto", no de volumen ni de framing.
-  El siguiente paso correcto no es más dataset, sino **probar modelos más capaces**.
+  El siguiente paso correcto (CORRECCIÓN 2026-06-16) no es "probar modelos más
+  capaces" sino **implementar la regla explícita del Marco** (conteo de 5 preguntas
+  + default de P3 + Negro), que es lo que el prompt nunca tuvo. Ver veredicto.
 - Complementa la tabla de la sección 8 ("Cuándo GEPA aporta vs cuándo no"): aun en
   clasificación con razonamiento, si el VAL es chico GEPA puede no aportar.
 
@@ -622,19 +627,41 @@ Hallazgos que NO aparecían internamente:
    **sobreestimaba** al modelo chico. En producción las entradas son novedosas → la
    métrica relevante es la externa, donde el reasoning model generaliza mejor.
 2. **Error externo dominante: Rojo->Amarillo** (gpt-4.1-mini sub-escala crédito,
-   seguros con datos de salud y beneficios esenciales aun con el criterio de
-   impacto). Es un **gap de training real**: los casos Rojo internos enseñan
-   "autónomo-acotado", no "dominio regulado sensible con revisión humana". El modelo
-   no aprende lo que el dataset no contiene.
+   seguros con datos de salud y beneficios esenciales). **Causa real (corregida
+   2026-06-16, ver veredicto):** NO es un gap de dataset por "dominio regulado". Es
+   que el prompt no implementa el conteo del Marco y, sobre todo, la **P3 tiene el
+   default invertido**: cuando la ficha no menciona proveedor, el modelo responde
+   P3=No (homologado), pierde un "sí" y el caso baja de 4 a 3 síes -> Rojo se vuelve
+   Amarillo. Reproducido a mano sobre W-06/W-08 (4 síes con P3 default Sí = Rojo).
 3. **Los 5 Negro (incl. prohibidos Art. 5) perfectos en ambos** → el Negro->Rojo del
    holdout interno es sobre casos internos sutiles, no una ceguera general al tope.
-4. **Gap de SPEC**: la rúbrica fast_gate no tiene regla explícita, graduada por
-   impacto, para "dominio de alto riesgo + revisión humana". Quedó como deuda.
+4. **Gap de SPEC (reformulado 2026-06-16):** era cierto que la regla del Marco no
+   estaba en el prompt (se optó por inferirla). Como inferirla no funciona, la deuda
+   D-013 pasa a ser **implementar la regla explícita del Marco** (conteo de las 5
+   preguntas + default de P3 + regla de Negro) vía la arquitectura determinística.
 
 Lección transversal: **el holdout in-distribution puede mentir.** Un set testigo
 etiquetado con un marco externo es barato (14 casos, una llamada LLM c/u) y expone
 gaps de generalización y de spec invisibles internamente — y puede invertir el
 ranking de modelos.
+
+**VEREDICTO (2026-06-16): la causa raíz no era la del diagnóstico inicial.** Al
+contrastar con la regla canónica del Marco (Fast Gate de 5 preguntas Sí/No; contar
+los síes: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro = P5=Sí + alto impacto):
+- El diagnóstico "gap de dataset por dominio regulado" (Hallazgo 2) era **erróneo**.
+  El witness está bien etiquetado y es consistente con el conteo.
+- La causa real es el **prompt**: (i) pide *deducir* el color en vez de **contar**
+  P1..P5 y aplicar umbrales, y (ii) la **P3** ("¿usa herramientas/proveedores fuera
+  del catálogo aprobado?") tiene el **default invertido** — sin dato de homologación
+  el modelo asume P3=No y pierde un "sí", bajando Rojo (4) a Amarillo (3). Default
+  correcto: intent nuevo -> se propondrá homologado (P3=No); sistema ya implementado
+  -> probablemente no (P3=Sí).
+- El camino "que el sistema infiera la regla de los casos" (decisión de diseño
+  registrada arriba) **no se verifica en la práctica**.
+- **Rumbo adoptado: arquitectura determinística (A).** El LLM responde solo P1..P5
+  (Sí/No) + un juicio de "alto impacto"; una función pura cuenta y deriva el color.
+  Convierte la tarea en 5 binarios + cálculo fijo (auditable, fiel al Marco). Plan en
+  `historial/sdd.md` (D-013) y `specs/SPEC-102-flujo-intents.md`.
 
 ### Archivos relacionados
 

@@ -16,6 +16,13 @@ graduada por impacto (no por categoria sola) para la frontera Rojo/Amarillo de
 restrictiva sobre datos personales, datos sensibles, escala masiva o acceso a
 servicio esencial; Amarillo si impacto acotado y reversible. Ver
 `docs/LECCIONES_APRENDIDAS.md` seccion 11.
+
+NOTA (2026-06-16): estas etiquetas COINCIDEN con el conteo canonico del Marco
+(Fast Gate de 5 preguntas Si/No; 0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro =
+P5=Si + alto impacto). Ej.: W-06/W-08 dan 4 sies con P3 ("fuera del catalogo
+aprobado") en su default Si -> Rojo. El etiquetado por impacto no contradice el
+conteo; el error Rojo->Amarillo del programa base venia del prompt (no contaba y
+tenia el default de P3 invertido), no del etiquetado. Ver D-013.
 """
 
 import csv
