@@ -64,7 +64,14 @@ STAGE_OUTPUT_COLUMNS: dict[str, list[str]] = {
     "intake": ["admision", "razonamiento"],
     "triage_solidez": ["solidez", "razonamiento"],
     "triage_factibilidad": ["factibilidad", "razonamiento"],
-    "fast_gate": ["p1", "p2", "p3", "p4", "p5", "clasificacion", "razonamiento"],
+    "fast_gate": ["p1", "p2", "p3", "p4", "p5", "alto_impacto", "clasificacion", "razonamiento"],
+}
+
+# Columnas extra (mas alla de label/razonamiento) que algunas etapas traen en sus
+# variaciones y deben copiarse tal cual al CSV final. fast_gate trae las 5 preguntas
+# Si/No + alto_impacto que el modulo rule_derived usa para derivar el color (D-013).
+STAGE_EXTRA_COLUMNS: dict[str, list[str]] = {
+    "fast_gate": ["p1", "p2", "p3", "p4", "p5", "alto_impacto"],
 }
 
 # Valor "pasa" de cada etapa-gate (lo que permite avanzar a la siguiente).
@@ -193,18 +200,20 @@ def _read_variations(stage: str, variations_dir: Path) -> list[dict[str, str]]:
     path = variations_dir / f"flujo_intents_{stage}_var.csv"
     if not path.exists():
         return []
+    extra_cols = STAGE_EXTRA_COLUMNS.get(stage, [])
     out: list[dict[str, str]] = []
     for row in _read_csv(path):
         split = (row.get("split") or "train").strip()
-        out.append(
-            {
-                "id": (row.get("id") or "").strip(),
-                "ficha": serialize_ficha(row),
-                "label": (row.get("label") or "").strip(),
-                "razonamiento": (row.get("razonamiento") or "").strip(),
-                "split": split,
-            }
-        )
+        entry = {
+            "id": (row.get("id") or "").strip(),
+            "ficha": serialize_ficha(row),
+            "label": (row.get("label") or "").strip(),
+            "razonamiento": (row.get("razonamiento") or "").strip(),
+            "split": split,
+        }
+        for col in extra_cols:
+            entry[col] = (row.get(col) or "").strip()
+        out.append(entry)
     return out
 
 
@@ -240,6 +249,11 @@ def build_stage_csv(
         # definieron; los originales (test) lo dejan vacio (ignore_in_metric igual).
         if r.get("razonamiento") and "razonamiento" in cells:
             cells["razonamiento"] = r["razonamiento"]
+        # Columnas extra (p1..p5 + alto_impacto en fast_gate): copiar si la variacion
+        # las trae (las usa el modulo rule_derived para derivar el color).
+        for col in STAGE_EXTRA_COLUMNS.get(stage, []):
+            if r.get(col) and col in cells:
+                cells[col] = r[col]
         return [split, r["id"], r["ficha"], *[cells[col] for col in output_cols]]
 
     # El harness (CSVDataLoader/CSVValidator) lee CSV con coma. La ficha contiene

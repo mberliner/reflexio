@@ -90,14 +90,17 @@ optimization:
   match_mode: "exact"
   metric_feedback: true
   eval_repeats: 1
-  use_few_shot: false
+  use_few_shot: true
+  few_shot_count: 8
+  # Iteracion 2: la metrica evalua cada pregunta + el color derivado, para que GEPA
+  # tenga feedback por-pregunta (el cuello es alto_impacto). Solo se ignora razonamiento.
   ignore_in_metric:
-    - "p1"
-    - "p2"
-    - "p3"
-    - "p4"
-    - "p5"
-    - "alto_impacto"
     - "razonamiento"
   field_configs:
+    p1: { mode: "exact" }
+    p2: { mode: "exact" }
+    p3: { mode: "exact" }
+    p4: { mode: "exact" }
+    p5: { mode: "exact" }
+    alto_impacto: { mode: "exact" }
     clasificacion: { mode: "exact" }

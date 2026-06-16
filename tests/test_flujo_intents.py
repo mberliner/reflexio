@@ -260,6 +260,46 @@ def test_derive_color_reproduce_el_lote_anotado():
         assert got == gold, f"{r['case_id']}: derive={got} != gold={gold} (p={ps})"
 
 
+def test_rule_derived_module_exige_preguntas_en_outputs():
+    from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+
+    sig = {
+        "instruction": "x",
+        "inputs": [{"name": "ficha"}],
+        "outputs": [{"name": "clasificacion"}],  # faltan p1..p5 + alto_impacto
+    }
+    with pytest.raises(ValueError, match="rule_derived requiere"):
+        DynamicModuleFactory.create_rule_derived_module(sig)
+
+
+def test_rule_derived_module_construye_con_outputs_completos():
+    from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+
+    outs = ["p1", "p2", "p3", "p4", "p5", "alto_impacto", "razonamiento", "clasificacion"]
+    sig = {
+        "instruction": "x",
+        "inputs": [{"name": "ficha"}],
+        "outputs": [{"name": n} for n in outs],
+    }
+    module = DynamicModuleFactory.create_rule_derived_module(sig)
+    assert module is not None
+    # 'clasificacion' NO es output del predictor (se deriva); el resto si.
+    assert "clasificacion" not in module._predicted
+    assert {"p1", "p5", "alto_impacto"} <= set(module._predicted)
+
+
+def test_dataset_fast_gate_color_consistente_con_preguntas():
+    # Invariante de la arquitectura rule_derived: en todo el dataset de fast_gate, el
+    # color gold se reproduce contando las P1..P5 + alto_impacto anotadas.
+    from dspy_gepa_poc.flujo_intents.fast_gate_rule import derive_color_from_row
+
+    rows = _load_stage_csv("fast_gate")
+    annotated = [r for r in rows if r["p1"].strip()]
+    assert len(annotated) == len(rows), "hay filas de fast_gate sin P1..P5 anotadas"
+    for r in rows:
+        assert derive_color_from_row(r) == r["clasificacion"].strip(), r["case_id"]
+
+
 def test_flujo_rojo_recomendacion_con_nivel(flujo_cfg):
     res = _run(
         flujo_cfg,

@@ -2582,9 +2582,66 @@ _FG_RAZONAMIENTO: dict[str, str] = {
     "VAR-FG-N07": "Negro: perfila automaticamente el comportamiento del cliente (profiling, criterio e) y ejecuta ofertas vinculantes basadas en ese perfil sin revision -- P5=Si y alto impacto.",
 }
 
+# Anotacion de las 5 preguntas Si/No del Marco + alto_impacto por VAR-FG (D-013,
+# arquitectura determinista). Cada tupla es (p1, p2, p3, p4, p5, alto_impacto) y es
+# conteo-consistente con el color: derive_color(p1..p5, alto_impacto) == label.
+# Columnas extra del fast_gate; el resto de etapas no las usa.
+_FG_COLS_EXTRA: tuple[str, ...] = ("p1", "p2", "p3", "p4", "p5", "alto_impacto")
+_FG_PREGUNTAS: dict[str, tuple[str, str, str, str, str, str]] = {
+    "VAR-FG-A01": ("si", "si", "si", "No", "No", "No"),
+    "VAR-FG-A02": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A03": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A04": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A05": ("si", "si", "si", "No", "No", "No"),
+    "VAR-FG-A06": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A07": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A08": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A09": ("si", "si", "si", "No", "No", "No"),
+    "VAR-FG-A10": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A11": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-A12": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-N01": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N02": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N03": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N04": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N05": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N06": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N07": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N08": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N09": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N10": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-N11": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-R01": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R02": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R03": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R04": ("si", "si", "No", "si", "si", "No"),
+    "VAR-FG-R05": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R06": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R07": ("si", "si", "No", "si", "si", "No"),
+    "VAR-FG-R08": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R09": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R10": ("si", "si", "si", "si", "No", "No"),
+    "VAR-FG-R11": ("si", "si", "No", "si", "si", "No"),
+    "VAR-FG-V01": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V02": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V03": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V04": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V05": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V06": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V07": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V08": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V09": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V10": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V11": ("No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V12": ("No", "No", "No", "No", "No", "No"),
+}
+
 for _c in FAST_GATE:
     if _c["id"] in _FG_RAZONAMIENTO:
         _c["razonamiento"] = _FG_RAZONAMIENTO[_c["id"]]
+    if _c["id"] in _FG_PREGUNTAS:
+        for _col, _val in zip(_FG_COLS_EXTRA, _FG_PREGUNTAS[_c["id"]], strict=True):
+            _c[_col] = _val
 
 
 STAGE_CASES: dict[str, list[dict[str, str]]] = {
@@ -2598,14 +2655,16 @@ STAGE_CASES: dict[str, list[dict[str, str]]] = {
 def write_variations(out_dir: Path) -> dict[str, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
-    header = [*_FICHA_COLS, "label", "razonamiento", "split"]
     for stage, cases in STAGE_CASES.items():
+        # fast_gate agrega las 5 preguntas + alto_impacto (arquitectura rule_derived).
+        extra = list(_FG_COLS_EXTRA) if stage == "fast_gate" else []
+        header = [*_FICHA_COLS, *extra, "label", "razonamiento", "split"]
         path = out_dir / f"flujo_intents_{stage}_var.csv"
         with open(path, "w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=header, delimiter=";")
             writer.writeheader()
             for c in cases:
-                writer.writerow({k: c.get(k, "false") for k in header})
+                writer.writerow({k: c.get(k, "" if k in extra else "false") for k in header})
         written[stage] = path
     return written
 
