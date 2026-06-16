@@ -25,8 +25,9 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-008 | Inconsistencias de criterio entre docs: regla de baseline (>80% en `LECCIONES_APRENDIDAS.md` seccion 8 vs >90% en `CUANDO_APLICAR_Y_CASOS_DE_USO.md`); donde viven los limites de longitud de texto (env-only segun `YAML_CONFIG_REFERENCE.md` vs YAML segun `UNIVERSAL_OPTIMIZER.md` y `LECCIONES_APRENDIDAS.md` seccion 4); campos soportados en codigo sin documentar (`models.max_tokens` GEPA, `skip_perfect_score` DSPy); `YAML_CONFIG_REFERENCE.md` lista module types `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (solo `dynamic`/`pipeline`) | Auditoria de docs 2026-06-10 | Abierta |
 | D-009 | Redundancia documental: `DSPY_DOCUMENTACION.md` y `GEPA_DOCUMENTACION.md` contienen material del framework upstream (instalacion, testing, citacion) que duplica SSOTs propios y una nota de cache contraria al default del proyecto; tabla de precios duplicada (`ANALISIS_UTILIDADES.md` vs `ROI_ANALYSIS.md` vs `DEFAULT_PRICING` en codigo); links relativos rotos en `gepa_standalone/README.md` y referencia `docs/GEPA_DOCUMENTACION.md` con base ambigua en el listado final de `gepa_standalone/docs/demo.sh`; referencia muerta `run_email_urgency_comparison.sh` en `LECCIONES_APRENDIDAS.md` seccion 7; typo en nombre de `docs/plan_implementcion_toma_requerimientos.md`; intro duplicada ES/EN en `README.md` raiz; parrafo obsoleto "cuando crear la primera spec" en `docs/SDD_PROTOCOLO.md` Tramo 2 (SPEC-100/101 ya existen) | Auditoria de docs 2026-06-10 | Abierta |
 | D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | Auditoria de docs 2026-06-10 | Abierta |
-| D-013 | Implementar la regla explicita del Marco en fast_gate (Fast Gate de 5 preguntas Si/No; contar sies: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro = P5=Si + alto impacto), hoy ausente del prompt. Causa raiz del error Rojo->Amarillo (corregida 2026-06-16; el diagnostico inicial "gap de dataset por dominio regulado" queda DESCARTADO): el prompt pide deducir el color en vez de contar, y la P3 ("fuera del catalogo aprobado") tiene el default invertido (sin dato de homologacion el modelo asume P3=No y pierde un si: 4->3 -> Rojo->Amarillo). Rumbo: arquitectura deterministica A (el LLM responde P1..P5 + alto impacto; una funcion pura cuenta y deriva el color). Requiere: default de P3 (intent nuevo=No / sistema ya implementado=Si), definicion de alto impacto (doc del otro proyecto), y anotar P1..P5 como gold en el dataset (hoy 0/76) | Validacion externa + regla canonica del Marco (2026-06-16) | Abierta |
+| D-013 | Implementar la regla explicita del Marco en fast_gate (Fast Gate de 5 preguntas Si/No; contar sies: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro = P5=Si + alto impacto), hoy ausente del prompt. Causa raiz del error Rojo->Amarillo (corregida 2026-06-16; el diagnostico inicial "gap de dataset por dominio regulado" queda DESCARTADO): el prompt pide deducir el color en vez de contar, y la P3 ("fuera del catalogo aprobado") tiene el default invertido (sin dato de homologacion el modelo asume P3=No y pierde un si: 4->3 -> Rojo->Amarillo). Rumbo: arquitectura deterministica A (el LLM responde P1..P5 + alto impacto; una funcion pura cuenta y deriva el color). Requiere: default de P3 (intent nuevo=No / sistema ya implementado=Si), definicion de alto impacto (doc del otro proyecto), y anotar P1..P5 como gold en el dataset (hoy 0/76) | Validacion externa + regla canonica del Marco (2026-06-16) | Resuelta 2026-06-16 (rama feat/fast-gate-deterministico) — `module.type: rule_derived`: el LLM responde P1..P5+alto_impacto y `derive_color` deriva el color. Color TEST 80% (supera el end-to-end 76,7%) y AUDITABLE; Rojo->Amarillo cerrado (P3 96,7%, P5 100%). GEPA no aporta (prompt_changed=no en 3 runs; patron seccion 11); la palanca fue afilar descripciones + few-shot k=8. Residuales en D-015 |
 | D-014 | Etapas nuevas diferidas de flujo-intents (decision del usuario, 2026-06-16): (a) **admisibilidad** que absorba §9.2 (atributos protegidos en decisiones de acceso) y §7.4 (duplicado), hoy sin etapa tras sacarlas de factibilidad — reasignar TC-REJ-09/TC-REJ-10; (b) etapa para **valor real** ("resuelve un dolor de negocio") hoy no cubierta por solidez; (c) reubicar **`devolucion_no_ia`** ("no requiere IA") fuera de solidez a esa etapa nueva. Hasta entonces `no_ia` se deja en solidez para no romper el holdout (TC-REJ-06) | Alineacion al Marco de Gobierno (Solidez/Factibilidad), 2026-06-16 | Abierta |
+| D-015 | Residuales del fast_gate determinista (post D-013): (a) **alto_impacto es el cuello** (~80% sobre el test, varianza alta 56-80% entre corridas; sobre-escala a Negro en casos acotados/reversibles) -> medir con N seeds y/o curar demos few-shot de casos limite; (b) **`run_inference.py` usa `create_module` generico**, no `rule_derived` -> en produccion no derivaria el color; (c) el **gold de `alto_impacto` del test es aproximado** (=Negro) para casos P5=No (no afecta el color, si la metrica del campo); (d) GEPA con VAL chico (16) no aporta -> evaluar VAL mayor si se busca exprimir GEPA | Cierre de D-013 (2026-06-16) | Abierta |
 | D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
 
 ## Deuda resuelta
@@ -41,6 +42,62 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-16 — fast_gate determinista (arquitectura A): cierre de D-013
+
+Se implemento la regla canonica del Marco como arquitectura `module.type: rule_derived`
+(rama `feat/fast-gate-deterministico`): el LLM ya no clasifica el color; responde las 5
+preguntas Si/No del Fast Gate + un juicio `alto_impacto`, y una funcion pura
+(`flujo_intents/fast_gate_rule.derive_color`) deriva el color (contar Si: 0-1 Verde /
+2-3 Amarillo / 4-5 Rojo; Negro = P5=Si Y alto impacto, override del conteo). Clave: el
+color pasa a ser deterministico, AUDITABLE y fiel al Marco.
+
+Progresion sobre el holdout (30 TC, gpt-4.1-mini; metrica de color):
+
+  | Hito | Color TEST | P3 | alto_impacto |
+  |---|---|---|---|
+  | end-to-end + few-shot (previo, deduce el color) | 76,7% | -- | -- |
+  | rule_derived, nucleo (sin few-shot/GEPA) | 63-70% | 80% | 60% |
+  | + descripciones afiladas (P3/P5/alto_impacto) | 76,7% | 96,7% | 63% |
+  | + few-shot k=8 (train/val anotados) | 80,0% | 96,7% | 80% |
+  | + GEPA (3 runs, prompt_changed=no) | 80,0% | 96,7% | 80% |
+
+Hallazgos:
+- **Causa raiz de D-013 confirmada y resuelta**: el Rojo->Amarillo no era gap de dataset
+  por "dominio regulado" (descartado), sino el prompt sin conteo + la P3 con default
+  invertido. Afilar P3 ("sera homologado mas adelante" => no homologado AHORA => Si) la
+  llevo a 96,7% y elimino el Rojo->Amarillo. P5 a 100% (afilar "log revisable != revision
+  por caso").
+- **La arquitectura A supera al end-to-end** (80% vs 76,7%) y, sobre todo, lo hace
+  auditable: el color sale de 6 juicios binarios trazables, no de un salto opaco.
+- **GEPA no aporta** (prompt_changed=no en los 3 runs, Reflection gpt-4o): mismo patron de
+  la seccion 11 de LECCIONES (VAL=16 chico). La palanca fue el afilado manual de
+  descripciones + few-shot, no la optimizacion.
+- **Cuello remanente: `alto_impacto`** (~80%, varianza 56-80% entre corridas): el modelo
+  sobre-escala a Negro en casos acotados a bandas/catalogo y reversibles. Es el unico
+  juicio subjetivo de la regla. Queda en D-015.
+- **Auditabilidad materializada**: el harness GEPA solo persiste prompts y scores
+  agregados; se agrego un dump por-ficha (`scripts/diagnose_fast_gate_rule.py` ->
+  `results/audits/`) con gold vs pred de las 6 respuestas + razonamiento + color.
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (Fast Gate: regla canonica del Marco + rule_derived).
+- Includes: `flujo_intents/fast_gate_rule.py` (`derive_color`); `module.type: rule_derived`
+  (`dynamic_factory.py`, `reflexio_declarativa.py`, `config_schema.py`); config
+  `flujo_intents_fast_gate_rule_v1.yaml`; anotacion P1..P5+alto_impacto de los 46 VAR-FG
+  (`make_variations._FG_PREGUNTAS`) + infra de propagacion en `dataset.py`; scripts
+  `enrich_fast_gate_questions.py` y `diagnose_fast_gate_rule.py` (dump auditable);
+  correccion de la causa raiz en LECCIONES s11 / sdd / build_witness (commits previos).
+- Validaciones: `derive_color` reproduce el color en las 76 filas (test); 3 runs GEPA +
+  auditoria del programa optimizado (color 80%); `./shared/utils/ci_local.sh` PASO (492
+  tests, cobertura 92,39%).
+- SSOT afectado: `dspy_gepa_poc/flujo_intents/fast_gate_rule.py`, `dynamic_factory.py`,
+  `reflexio_declarativa.py`, `config_schema.py`, `flujo_intents/make_variations.py`,
+  `flujo_intents/dataset.py`, `configs/flujo_intents_fast_gate_rule_v1.yaml`,
+  `datasets/flujo_intents_fast_gate.csv` (+ `variations/`), `scripts/*`,
+  `tests/test_flujo_intents.py`.
+- Deuda arrastrada: **D-013 resuelta**; nueva **D-015** (residuales: alto_impacto, N seeds,
+  run_inference rule_derived, gold aproximado de alto_impacto en test).
 
 ### 2026-06-16 — factibilidad y solidez: alineacion al Marco + datasets balanceados + des-hardcode de ruta
 
