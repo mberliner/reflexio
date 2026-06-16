@@ -42,14 +42,23 @@ signature:
     - name: "p3"
       desc: >-
         Si/No: usa herramientas o proveedores fuera del catalogo aprobado de la
-        organizacion. Default: si el intent es nuevo y no lo aclara, asumi que se
-        implementara con una herramienta homologada (No); si la ficha dice que el
-        sistema ya esta implementado, o menciona una herramienta externa / no
-        homologada / que no es de la organizacion, entonces Si.
+        organizacion. Si la ficha menciona una herramienta externa, API de proveedor
+        o LLM externo, respondé Si AUNQUE diga que sera homologada, dada de alta en el
+        catalogo o evaluada mas adelante: lo que cuenta es que al momento de la ficha
+        todavia NO esta homologada. Si el intent es nuevo y no menciona ninguna
+        herramienta, asumi que se implementara con una homologada (No). Si la ficha
+        indica un framework/plataforma ya certificado o interno homologado, No. Si dice
+        que el sistema ya esta implementado, Si.
     - name: "p4"
       desc: "Si/No: el resultado podria generar riesgo legal o danar la reputacion de la empresa si falla."
     - name: "p5"
-      desc: "Si/No: el sistema toma o ejecuta decisiones sin que ningun humano las revise por caso."
+      desc: >-
+        Si/No: el sistema toma o ejecuta decisiones sin que ningun humano las revise
+        por caso ANTES de ejecutarlas. Respondé Si si la accion se ejecuta de forma
+        automatica y la unica supervision es POSTERIOR (log revisable, reporte al dia
+        siguiente, auditoria, revision dentro de N horas, posibilidad de revertir
+        despues): eso NO es revision por caso. Respondé No solo si un humano valida o
+        aprueba cada caso individual antes de que el sistema actue.
     - name: "alto_impacto"
       desc: >-
         Si/No: se cumple al menos uno: (a) escala (afecta a >=10% de la base de
@@ -57,7 +66,11 @@ signature:
         servicio, denegacion de acceso o restriccion de derechos); (c) irreversibilidad
         (efecto no revertible sin intervencion manual posterior); (d) regulatorio
         (error con exposicion a sancion directa); (e) profiling (perfilamiento
-        automatizado de personas).
+        automatizado de personas). IMPORTANTE: una accion autonoma ACOTADA a bandas o
+        a un catalogo predefinido y REVERSIBLE (o con reversion sistematica) NO alcanza
+        alto impacto por si sola; en ese caso respondé No, salvo que cumpla claramente
+        (a)-(e) por otra via. Una accion favorable y reversible (ej. dar de alta,
+        enviar comunicaciones) tampoco es alto impacto.
     - name: "razonamiento"
       desc: "Justificacion breve (1-2 oraciones) de las respuestas."
     - name: "clasificacion"
