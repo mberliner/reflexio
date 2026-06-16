@@ -1,0 +1,64 @@
+# flujo-intents | Config maestra (el "todo")
+#
+# Configura el flujo COMPLETO que encadena las 5 etapas. La optimizacion de cada etapa
+# LLM se hace por separado con su propia config (flujo_intents_<etapa>.yaml); aqui solo
+# se declara como componerlas en inferencia.
+#
+# Por cada etapa LLM: la config de etapa (de donde se lee la signature), el programa
+# optimizado a cargar (o "baseline" para usar el prompt inicial sin optimizar), el campo
+# de salida, el valor de gate que permite continuar y el valor inyectado aguas abajo
+# cuando el flujo corta.
+#
+# El orquestador (dspy_gepa_poc.flujo_intents.orchestrator) lee SOLO este archivo.
+
+flujo:
+  name: "flujo-intents"
+
+  stages:
+    - name: "intake"
+      stage_config: "dspy_gepa_poc/configs/flujo_intents_intake.yaml"
+      program: "baseline"        # o ruta a optimized_program.json
+      output: "admision"
+      gate_value: "admitida"     # continua si output == gate_value
+
+    - name: "triage_solidez"
+      stage_config: "dspy_gepa_poc/configs/flujo_intents_triage_solidez.yaml"
+      program: "baseline"
+      output: "solidez"
+      gate_value: "solido"
+
+    - name: "triage_factibilidad"
+      stage_config: "dspy_gepa_poc/configs/flujo_intents_triage_factibilidad.yaml"
+      program: "baseline"
+      output: "factibilidad"
+      gate_value: "avanza_fast_gate"
+
+    - name: "fast_gate"
+      stage_config: "dspy_gepa_poc/configs/flujo_intents_fast_gate.yaml"
+      program: "baseline"
+      output: "clasificacion"
+      gate_value: null           # ultima etapa LLM; siempre continua a aprobacion
+
+  # Valor inyectado en los outputs de etapas que no se ejecutan por corte aguas arriba.
+  skip_value: "(no evaluada)"
+
+  # Etapa 5 (aprobacion): mapeo determinista color -> decision/nivel (§9.1). No se
+  # entrena; cambiar la regla = editar este YAML, sin tocar codigo.
+  aprobacion:
+    mapping:
+      Verde:
+        decision: "aprobado"
+        nivel_requerido: "automatico"
+        dictamen: "Aprobacion automatica; registrar en inventario y guia de uso responsable."
+      Amarillo:
+        decision: "recomendacion"
+        nivel_requerido: "N2"
+        dictamen: "Recomendacion no vinculante: uso permitido con condiciones y Human-in-the-Loop; revision N2."
+      Rojo:
+        decision: "recomendacion"
+        nivel_requerido: "N2 + Legal + Regulacion + Seguridad + N1"
+        dictamen: "Recomendacion no vinculante: aprobacion formal con evaluacion de impacto y revision conjunta; decide N1."
+      Negro:
+        decision: "recomendacion"
+        nivel_requerido: "N1 + Gobierno de Riesgos"
+        dictamen: "Recomendacion no vinculante: gobierno completo + dictamen de Gobierno de Riesgos; decide N1."

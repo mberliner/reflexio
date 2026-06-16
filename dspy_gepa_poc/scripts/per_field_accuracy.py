@@ -55,7 +55,7 @@ def _resolve_eval_fields(raw_config: dict) -> tuple[list[str], dict, dict]:
     return eval_fields, field_cfg, defaults
 
 
-def evaluate(run_dir: Path) -> int:
+def evaluate(run_dir: Path, show_all: bool = False) -> int:
     print("=" * 70)
     print(f"PER-FIELD ACCURACY: {run_dir.name}")
     print("=" * 70)
@@ -120,7 +120,7 @@ def evaluate(run_dir: Path) -> int:
                 sums[f] += score
                 if score == 1.0:
                     perfects[f] += 1
-                elif len(examples_by_field[f]) < 3:
+                elif show_all or len(examples_by_field[f]) < 3:
                     examples_by_field[f].append((str(exp)[:80], str(act)[:80]))
 
         n = len(split)
@@ -134,8 +134,9 @@ def evaluate(run_dir: Path) -> int:
         for f, mode, avg, p, total in rows:
             print(f"  {f:25s} {mode:12s} {avg:>6.1%} {p:>5d}/{total}")
 
-        # Mostrar 3 ejemplos de fallo para los 3 peores campos
-        print("\n  Top 3 fallos (campos peor evaluados):")
+        # Mostrar ejemplos de fallo para los 3 peores campos (todos si --show-all)
+        label = "todos los fallos" if show_all else "Top 3 fallos"
+        print(f"\n  {label} (campos peor evaluados):")
         for f, mode, avg, _p, _total in rows[:3]:
             if not examples_by_field[f]:
                 continue
@@ -151,13 +152,18 @@ def evaluate(run_dir: Path) -> int:
 def main():
     p = argparse.ArgumentParser(description="Accuracy por campo de un run optimizado.")
     p.add_argument("--run-dir", required=True, help="Ruta al directorio del run")
+    p.add_argument(
+        "--show-all",
+        action="store_true",
+        help="Mostrar todos los fallos por campo (no solo los primeros 3).",
+    )
     args = p.parse_args()
 
     run_dir = Path(args.run_dir).resolve()
     if not run_dir.exists():
         print(f"Error: no existe {run_dir}", file=sys.stderr)
         sys.exit(1)
-    sys.exit(evaluate(run_dir))
+    sys.exit(evaluate(run_dir, show_all=args.show_all))
 
 
 if __name__ == "__main__":

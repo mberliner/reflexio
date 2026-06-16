@@ -21,9 +21,11 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-001 | Datasets CV `_v2` con `gold_verificado=no` pendientes de revision humana | Protocolo N seeds (`docs/PROTOCOLO_N_SEEDS.md`) | Abierta — bloquea conclusiones definitivas sobre v2 |
 | D-005 | Naming definitivo de `dspy_gepa_poc`: el sufijo "POC" ya no refleja el estado. Opciones evaluadas: `dspy_gepa`, `reflexio_dspy`. Impacto: renombrar modulo + imports en todo el repo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T2-2, eliminado) | Abierta |
 | D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
+| D-012 | Optimizar cada etapa de flujo-intents con GEPA y medir accuracy en el holdout (42 originales); ampliar variaciones a mano si una etapa queda starved (train actual 4-8 casos/etapa) | `SPEC-102-flujo-intents` | Abierta — falta corrida GEPA real por etapa |
 | D-008 | Inconsistencias de criterio entre docs: regla de baseline (>80% en `LECCIONES_APRENDIDAS.md` seccion 8 vs >90% en `CUANDO_APLICAR_Y_CASOS_DE_USO.md`); donde viven los limites de longitud de texto (env-only segun `YAML_CONFIG_REFERENCE.md` vs YAML segun `UNIVERSAL_OPTIMIZER.md` y `LECCIONES_APRENDIDAS.md` seccion 4); campos soportados en codigo sin documentar (`models.max_tokens` GEPA, `skip_perfect_score` DSPy); `YAML_CONFIG_REFERENCE.md` lista module types `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (solo `dynamic`/`pipeline`) | Auditoria de docs 2026-06-10 | Abierta |
 | D-009 | Redundancia documental: `DSPY_DOCUMENTACION.md` y `GEPA_DOCUMENTACION.md` contienen material del framework upstream (instalacion, testing, citacion) que duplica SSOTs propios y una nota de cache contraria al default del proyecto; tabla de precios duplicada (`ANALISIS_UTILIDADES.md` vs `ROI_ANALYSIS.md` vs `DEFAULT_PRICING` en codigo); links relativos rotos en `gepa_standalone/README.md` y referencia `docs/GEPA_DOCUMENTACION.md` con base ambigua en el listado final de `gepa_standalone/docs/demo.sh`; referencia muerta `run_email_urgency_comparison.sh` en `LECCIONES_APRENDIDAS.md` seccion 7; typo en nombre de `docs/plan_implementcion_toma_requerimientos.md`; intro duplicada ES/EN en `README.md` raiz; parrafo obsoleto "cuando crear la primera spec" en `docs/SDD_PROTOCOLO.md` Tramo 2 (SPEC-100/101 ya existen) | Auditoria de docs 2026-06-10 | Abierta |
 | D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | Auditoria de docs 2026-06-10 | Abierta |
+| D-013 | La rubrica fast_gate no tiene regla explicita, graduada por impacto, para "dominio regulado de alto riesgo (credito/seguros/beneficios/empleo) + revision humana por caso (P5=No)". El dataset no ensena ese patron: los casos Rojo internos son "autonomo-acotado". Consecuencia medida: Rojo->Amarillo sistematico en casos testigo externos (gpt-4.1-mini sub-escala credito/seguros/beneficios). Definir la regla en la spec y agregar casos Rojo de ese tipo al train | Validacion externa con casos testigo (2026-06-16) | Abierta |
 | D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
 
 ## Deuda resuelta
@@ -38,6 +40,418 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-16 — fast_gate: auditoria de datasets y validacion externa con casos testigo
+
+Dos trabajos de calidad de datos sobre fast_gate (y las 4 etapas), motivados por la
+preocupacion de que train/val sean poco representativos.
+
+Auditoria de clones/diversidad (las 4 etapas). Deteccion lexica (Jaccard de tokens +
+union-find). Hallazgo metodologico: el Jaccard SIN remover el andamiaje de plantilla
+**sobre-detecta clones de forma severa** (las fichas comparten ~la mitad de tokens en
+campos de formulario). Con boilerplate removido (tokens en >=80% de las fichas), la
+diversidad real es alta (solidez 45/45 escenarios distintos, fast_gate 41, factibilidad
+33). Unico foco real: intake tenia un cluster de 16 fichas `incompleta` declaracion-vacia
+que colapsaban porque `case()` rellena 7 campos con defaults compartidos y la declaracion
+-el unico distintivo- estaba vacia. Fix: diversificar el contexto de 4 casos
+(`VAR-INT-I01`/`I09`/`I15`/`I18`) manteniendo `decl=""`; el cluster bajo de 16 a 5. NO
+hay fuga train/val->test en ninguna etapa (Jaccard cross-split max ~0.44) -> las
+conclusiones previas no son artefacto de leakage.
+
+Validacion externa con casos testigo. Para romper la circularidad train/val<->criterios
+(ambos de autoria propia), se creo un set de 14 casos testigo etiquetados con marco
+INDEPENDIENTE: EU AI Act (Art. 5 prohibido; Anexo III alto riesgo) anclado a reguladores
+AR (BCRA, ENACOM, AAIP/Ley 25.326, SSN). Regla de mapeo graduada por impacto para la
+frontera Rojo/Amarillo (decision del usuario: "depende del dato/impacto"). Resultado del
+programa base (sin GEPA) fuera de distribucion: gpt-4.1-mini 71,4% (10/14), gpt-5-mini
+92,9% (13/14). Hallazgos nuevos invisibles en el holdout interno: (a) **reversal
+in/out-of-distribution** -el mejor modelo interno es el peor externo; el holdout
+sobreestimaba a gpt-4.1-mini-; (b) error externo dominante **Rojo->Amarillo** por gap de
+training (los Rojo internos ensenan autonomia-acotada, no dominio regulado sensible con
+revision humana); (c) los 5 Negro (incl. prohibidos) perfectos en ambos modelos. Detalle
+en `docs/LECCIONES_APRENDIDAS.md` seccion 11.
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (calidad de datos + validacion externa fast_gate).
+- Includes: des-clonado de 4 casos intake en `make_variations.py`; nuevo set testigo
+  (`scripts/build_witness.py` -> `datasets/flujo_intents_fast_gate_witness.csv`) y su
+  evaluador (`scripts/witness_eval.py`); ampliacion de `LECCIONES_APRENDIDAS.md` seccion
+  11; este registro. Excludes: no se cambia el prompt ni la rubrica de fast_gate.
+- Validaciones: auditoria lexica reproducible; eval testigo con LLM real (2 modelos);
+  `./shared/utils/ci_local.sh` (ver abajo).
+- SSOT afectado: `dspy_gepa_poc/flujo_intents/make_variations.py`,
+  `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv` (intake regenerado),
+  `dspy_gepa_poc/datasets/flujo_intents_fast_gate_witness.csv`,
+  `dspy_gepa_poc/scripts/build_witness.py`, `dspy_gepa_poc/scripts/witness_eval.py`,
+  `docs/LECCIONES_APRENDIDAS.md`.
+- Deuda arrastrada nueva: D-013 (la rubrica fast_gate no tiene regla explicita,
+  graduada por impacto, para "dominio de alto riesgo + revision humana"; el dataset no
+  ensena ese patron -> Rojo->Amarillo sistematico fuera de distribucion).
+- Pendiente (no bloqueante): ampliar clases minoritarias del TEST en intake/solidez/
+  factibilidad (1-3 ejemplos, no medibles); medir testigo con N seeds.
+
+### 2026-06-15 — SPEC-102: optimizacion preliminar, ablacion de framing y pilot de realismo
+
+Primeras corridas GEPA de las 4 etapas LLM y tres experimentos de diagnostico. Todo
+sobre el split real (medido, no asumido): cada etapa es 30/15/30 con train/val
+balanceados por clase a mano (`VAR`) y test = originales (`TC`). Correccion: la deuda
+D-012 declaraba "train 4-8 casos/etapa"; es FALSO, son 30. La causa de los resultados
+malos no es volumen de train.
+
+Hallazgo 1 (desbalance del holdout). El `test` (originales `TC`) esta dominado por la
+clase "pasa": intake 28/2, solidez 26/3/1, factibilidad 26/1/1/2; solo fast_gate tiene
+test balanceado (8/7/7/8). El `Rob%` del leaderboard MUST leerse contra el baseline de
+clase mayoritaria (trivial), no contra `Base%`/`Delta%`. Medido asi, factibilidad
+(47,8% vs trivial 86,7%) y solidez marco (83,9% vs 86,7%) quedan POR DEBAJO del trivial.
+Registrado tambien como deuda en `SPEC-102`.
+
+Hallazgo 2 (ablacion de framing). Se crearon `flujo_intents_<etapa>_neutral_v1.yaml`:
+mismo dataset/optimization, instruccion SIN alusion al "Marco de Gobierno de IA", sin
+`§`, sin priming de riesgo/autoridad (provenance movida a `description`). Con n=3:
+intake y fast_gate empatan (framing irrelevante); factibilidad neutral (50,0%, sd 12,5)
+EMPATA con marco (47,8%) y ambos colapsan bajo el trivial; solidez neutral (95,0%)
+supera a marco (83,9%). El "neutral peor en factibilidad" de la primera lectura era
+ruido de n=1 (un unico run de 33,3%). Conclusion: el framing NO es la palanca de
+factibilidad ni fast_gate; el colapso es estructural (split/realismo), no de prompt.
+
+Hallazgo 3 (pilot de realismo, hipotesis (3); CERRADO - REFUTADA). Se midio la brecha
+`VAR` (~650 chars, sinteticos, nombre=id) vs `TC` (~1450 chars, reales), sistemica en las
+4 etapas (artefacto de `make_variations.py`). Pilot acotado a solidez: se reescribieron
+los 45 `VAR` con nombres reales, fichas mas ricas y sin nombre=id (VAR 671->843 chars,
+0/45 nombre=id, balance y no-fuga intactos). Matriz 2x2 (prompt x datos), Rob% holdout
+(trivial 86,7):
+
+  |         | datos finos | datos realistas |
+  | marco   | 83,9 (bajo) | 86,7 sd0 colapso |
+  | neutral | 95,0 (OK)   | 86,7 colapso     |
+
+El cuadrante decisivo neutral+realistas CAYO de 95,0 a 86,7: el mejor discriminador
+perdio su ventaja solo por cambiar los datos. Confusion confirmada en ambos realistas:
+predicen solido 29/30. Causa raiz (confirmada con longitud por clase de los TC: solido
+1529, reformulacion 1039, no_ia 1162 chars): las clases de rechazo son naturalmente mas
+finas y con el defecto prominente; al enriquecer las minorias se ENTERRO el defecto
+decisivo (metrica vaga / sponsor colectivo / sin-IA) en contexto plausible, haciendolas
+parecer solido. Veredicto: la hipotesis (3) [realismo cierra el gap] queda REFUTADA para
+solidez (los datos finos generalizaban mejor, 95,0). Leccion normativa: lo que importa es
+la SALIENCIA del defecto, no igualar longitud; el enriquecimiento de datos MUST mantener
+las clases de rechazo finas/defecto-prominentes. Decision: NO escalar el enriquecimiento
+realista a las otras 3 etapas. Mejor config de solidez = neutral+datos finos. Acciones de
+cierre (este mismo dia): se revirtio el `SOLIDEZ` de `make_variations.py` a los VAR finos
+y se promovio el prompt NEUTRAL a las 4 configs canonicas como base del orquestador (ver
+Hallazgo 2). Eventual hipotesis nueva de "realismo asimetrico" (enriquecer solo solido,
+minorias finas) queda fuera de alcance.
+
+Hallazgo 4 (few-shot en fast_gate; mejora CONFIRMADA). Se agrego demos del trainset
+(LabeledFewShot, k=8 -> cubre las 4 clases determinísticamente con seed 0) sobre el prompt
+neutral, en el banco ideal: fast_gate tiene test BALANCEADO (8/7/7/8), asi que la mejora es
+real y no la enmascara un colapso a clase mayoritaria. Resultado: Rob 66,7% (neutral, n=3)
+-> 72,0% (few-shot, n=5: 73/77/67/77/67), +5,3pp. Y eso CON demos flacos: en el train de
+fast_gate `razonamiento` y p1..p5 estan vacios (0/30), asi que los demos son ficha->color
+sin razonamiento (debil para `cot`). Queda como siguiente paso "few-shot rico" (poblar el
+razonamiento de los demos). Brazo en Caso aparte `flujo_intents_fast_gate_fewshot_v1.yaml`.
+
+Bug del optimizer (hallado al perseguir candidates.json). `GEPAOptimizer` construia
+`dspy.GEPA` con un try/except todo-o-nada; como esta version de dspy no acepta
+`max_text_length`, el `except` caia al fallback basico y DESCARTABA todos los opcionales
+(`track_stats`, `skip_perfect_score` -del fix 8a8aee4-, `use_merge`,
+`candidate_selection_strategy`, `reflection_minibatch_size`, `max_merge_invocations`), que
+quedaban INERTES. Fix: filtrar los opcionales por la firma real de `dspy.GEPA` y pasar solo
+los soportados (los demas se omiten con warning). Con `track_stats` activo, `candidates.json`
+y el bloque de evolucion en consola pasan a funcionar en runs futuros. Los runs hasta hoy
+(incluido el A/B few-shot) corrieron sin esos params; el +5,3pp sigue valido porque ambos
+brazos compartian el mismo defecto.
+
+Reconocimiento de tandas: el registro por-run (`metricas_optimizacion.csv`) no guarda
+hash de dataset; el leaderboard agrupa por `title`. Por eso cada cambio de contenido de
+dataset SHOULD ir con tag de version en el title (`datos realistas vN`) para no mezclar
+versiones bajo el mismo Caso.
+
+Cambios:
+- `dspy_gepa_poc/configs/flujo_intents_{intake,triage_solidez,triage_factibilidad,fast_gate}_neutral_v1.yaml`
+  (variantes neutrales, `eval_repeats: 1`).
+- `flujo_intents_triage_factibilidad.yaml`: `title` "...factibilidad y riesgo" -> "...factibilidad"
+  (riesgo lo clasifica el Fast Gate; provenance al `description`). Relabel de 2 filas
+  historicas en `metricas_optimizacion.csv` para no partir el Caso.
+- `flujo_intents_triage_solidez_datos_v1.yaml` (marco+realistas) y
+  `flujo_intents_triage_solidez_neutral_datos_v1.yaml` (neutral+realistas): brazos del pilot.
+- `flujo_intents/make_variations.py`: bloque `SOLIDEZ` reescrito (45 casos realistas);
+  datasets regenerados (`make_variations` + `dataset`).
+- `specs/SPEC-102`: correccion de la deuda falsa (split real 30/15/30) + hallazgos.
+- `reflexio_declarativa.py`: persistencia de candidatos GEPA (`build_candidates_payload`,
+  `_save_candidates` -> `candidates.json` por run) para auditar las propuestas que la
+  metrica NO adopto (antes solo en consola). `tests/test_candidates_payload.py` (5 tests).
+  Aplica solo a runs futuros.
+- Few-shot rico (siguiente paso de Hallazgo 4): plomeria para que `razonamiento` viaje de
+  `make_variations` al CSV (`case()` + `_FG_RAZONAMIENTO` con 30 justificaciones del train
+  de fast_gate; `dataset.py::_read_variations`/`_row`). Brazo A/B
+  `flujo_intents_fast_gate_fewshot_rico_v1.yaml` (demos con razonamiento) contra el flaco
+  (72,0%). Se retiro el config flaco `*_fewshot_v1` (lee el mismo CSV ya enriquecido, asi
+  que re-correrlo mentiria); sus 5 runs quedan como referencia en el leaderboard.
+- `dspy_gepa_poc/optimizer.py`: fix del armado de `dspy.GEPA` (filtrar opcionales por firma
+  en vez de try/except todo-o-nada); reactiva `track_stats` y demas params que estaban
+  inertes. Habilita `candidates.json` y la evolucion GEPA en runs futuros.
+- Decision adoptada: prompt NEUTRAL como base. Las 4 configs canonicas
+  `flujo_intents_{intake,triage_solidez,triage_factibilidad,fast_gate}.yaml` pasan a la
+  instruccion neutral (provenance §/marco movida al `description`); el orquestador lo toma
+  como `baseline`. Se retiraron las 6 variantes (`*_neutral_v1`, `*_datos_v1`,
+  `*_neutral_datos_v1`) y se revirtio el dataset de solidez a VAR finos. Caveat: las
+  canonicas conservan su `title`, asi que corridas futuras se mezclan con los runs marco
+  historicos bajo el mismo Caso (decision explicita: marco queda como referencia).
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (sigue draft, iter 1); deuda corregida y ampliada.
+- Includes: 4 configs neutrales, 2 configs de pilot de datos, rename de etapa 3,
+  reescritura de `SOLIDEZ` realista, 3 analisis (desbalance, ablacion de framing,
+  colapso por realismo). Excludes: enriquecimiento realista de las otras 3 etapas
+  (DESCARTADO: hipotesis (3) refutada en el pilot de solidez), reporte de accuracy por
+  clase en el leaderboard (hoy se calcula con script ad-hoc).
+- Validaciones: `./shared/utils/ci_local.sh` PASO (480 tests, cobertura 92,39%);
+  configs nuevas cargan con AppConfig; matriz de confusion de solidez verificada en vivo.
+- SSOT afectado: `dspy_gepa_poc/configs/`, `dspy_gepa_poc/flujo_intents/make_variations.py`,
+  `dspy_gepa_poc/datasets/`, `specs/SPEC-102`.
+- Decision de diseno: pilot de realismo acotado a una etapa antes de escalar a las 4
+  (evita reescribir 240 casos sobre una hipotesis sin validar); brazos como Caso aparte
+  para A/B limpio.
+- Deuda arrastrada: D-012 reformulada (el holdout esta desbalanceado y la metrica global
+  enmascara colapso a clase mayoritaria; reportar accuracy POR CLASE y/o rebalancear el
+  test). Pilot de realismo CERRADO (refutado); revert de datos a VAR finos y promocion del
+  prompt neutral a las 4 canonicas (base del orquestador) HECHOS. Sin pendiente operativo.
+
+### 2026-06-15 (cont.) — Few-shot rico: resultado + fix real de `candidates.json`
+
+3 corridas de `flujo_intents_fast_gate_fewshot_rico_v1` (demos con `razonamiento`).
+Resultado: Rob 73,3 / 70,0 / 76,7 -> promedio 73,33 (Delta -18,33 vs trivial 91,67).
+
+Comparativa de los 3 niveles de few-shot en fast_gate (mismo prompt neutral, test
+balanceado 4 colores):
+- Sin few-shot (neutral v1): Rob 66,67
+- Few-shot flaco (demos sin razonamiento, k=8): Rob 72,00
+- Few-shot rico (demos con razonamiento, k=8): Rob 73,33
+
+Lectura: rico repite la ganancia de "tener demos" (+6,7pp vs sin few-shot) pero el
+razonamiento en los demos NO aporta sobre el few-shot flaco mas alla del ruido
+(+1,3pp, dentro del std~3-5pp de ambos brazos). Hallazgo 4 cierra: el salto fuerte es
+"agregar demos"; enriquecerlos con cadena-de-razonamiento es marginal en este caso.
+
+Bug real de `candidates.json` (el fix de optimizer.py de esta fase NO era suficiente):
+`dspy.GEPA.compile()` setea `detailed_results` (y `best_outputs`) en el PROGRAMA
+DEVUELTO (`new_prog.detailed_results = ...`), no en `self` (la instancia de
+`dspy.GEPA`). `GEPAOptimizer.get_detailed_results()`/`_print_stats()` leian
+`self.optimizer.detailed_results`, que nunca existe -> `detailed` siempre `None` ->
+nunca se imprimio "EVOLUCION GEPA" ni se escribio `candidates.json` en NINGUN run del
+proyecto (verificado: 0 `candidates.json` en `dspy_gepa_poc/results/runs/`, incl. los
+3 runs rico recien corridos con el fix de parametros ya aplicado).
+
+Fix definitivo en `dspy_gepa_poc/optimizer.py`: `compile()` guarda
+`self._compiled_program = optimized_program`; `get_detailed_results()`,
+`get_best_outputs()` y `_print_stats()` leen de `self._compiled_program` en vez de
+`self.optimizer`. Aplica a runs futuros (no retroactivo a los runs ya corridos).
+
+Matriz de confusion en TEST (`per_field_accuracy.py --show-all`, nuevo flag, sobre los
+3 runs rico = 90 predicciones, 27 errores = 70% prom., consistente con el leaderboard):
+
+| Confusion           | Conteo | % errores |
+|----------------------|-------:|----------:|
+| Negro -> Rojo         |     13 |       48% |
+| Amarillo -> Rojo      |      6 |       22% |
+| Rojo -> Negro         |      4 |       15% |
+| Verde -> Amarillo     |      4 |       15% |
+
+Hallazgo 5: la confusion Negro<->Rojo bidireccional es el 63% de TODOS los errores
+(17/27) -- el modelo no distingue confiablemente "Negro" (sin remedio) de "Rojo"
+(alto riesgo gestionable), en ambas direcciones (no es solo sobre-escalada). El
+patron Amarillo->Rojo (sobre-escalada, hipotesis previa) es real pero secundario
+(22%). Hipotesis: el criterio Negro vs Rojo en el prompt no es operacional. Proximo
+paso propuesto (no ejecutado): afinar esa descripcion en el prompt neutral + few-shot
+rico, pilot manual sin GEPA, antes de gastar budget de optimizacion.
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (Hallazgo 4 cerrado: demos > demos+razonamiento;
+  Hallazgo 5 abierto: confusion Negro<->Rojo).
+- Includes: analisis de las 3 corridas rico (leaderboard + comparativa de 3 niveles de
+  few-shot); fix de `optimizer.py` (lectura de `detailed_results`/`best_outputs` desde
+  el programa compilado, no desde la instancia de `dspy.GEPA`); flag `--show-all` en
+  `per_field_accuracy.py` + matriz de confusion completa de fast_gate (Hallazgo 5).
+  Excludes: re-correr los 72 runs historicos para generar sus `candidates.json` (no
+  retroactivo); el pilot de prompt Negro/Rojo (propuesto, no ejecutado).
+- Validaciones: `./shared/utils/ci_local.sh` PASO (475 tests, cobertura 92,39%).
+- SSOT afectado: `dspy_gepa_poc/optimizer.py`, `dspy_gepa_poc/scripts/per_field_accuracy.py`.
+- Pendiente: (a) confirmar end-to-end en la PROXIMA corrida de cualquier config que
+  ahora aparezca el bloque "EVOLUCION GEPA" y se escriba `candidates.json`; (b) decidir
+  si se ataca Hallazgo 5 (Negro vs Rojo) con un pilot de prompt.
+
+### 2026-06-15 (cont.) — Hallazgo 5: revision de dataset fast_gate (enfoque por casos)
+
+Para atacar Hallazgo 5 (confusion Negro<->Rojo, 63% de errores), se descarta de
+entrada la opcion de afinar la definicion Negro/Rojo en el prompt: el objetivo del
+experimento es que el sistema aprenda la distincion a partir de casos, no de una
+definicion hardcoded (si el enfoque por casos falla en pruebas, el pilot de prompt
+queda como fallback, no descartado).
+
+Se diagnostico un GAP de diseno en `dspy_gepa_poc/flujo_intents/make_variations.py`
+(`FAST_GATE`): todos los casos Rojo de train/val tenian P5=No (revision humana por
+caso), mientras todos los Negro tenian P5=Si + naturaleza financiera/restrictiva. El
+dataset nunca mostro el patron "P5=Si pero moderador/excepcion -> sigue en Rojo" que
+si aparece en ~4/11 casos Rojo del test holdout (`flujo_intents_fast_gate.csv`:
+TC-R-02 ajuste de limites dentro de bandas + revision 48hs; TC-R-03 resoluciones
+acotadas a catalogo con escalada fuera de catalogo; TC-EXT-05 y TC-RECLA-01 accion
+favorable solicitada por el cliente, excepcion al criterio (b)). El modelo aprendio
+la regla espuria "autonomia -> Negro". Ademas, `VAR-FG-N01` (train, Negro: "ajusta
+limites de credito... log ex-post") colisionaba semanticamente con TC-R-02 (test,
+Rojo, escenario casi identico pero con bandas + revision documentada).
+
+Fuente de los criterios de "alto impacto" usados para redactar los casos nuevos
+(no se copian al prompt, solo informan el dataset): `Criterios Fast Gate V3.txt` y
+`RECOMENDACION_ALTO_IMPACTO_FAST_GATE.md` en
+`/datum1/Descargas/Claudio/analisis/Transformacion AI-Native Org/normativa/analisis_temporal/analisis_fast_gate/`
+(moderador de escalada ex-post acotada; excepcion criterio (b) para acciones
+favorables solicitadas por el cliente; criterio de escala >=10% base/>=100k clientes).
+
+Cambio minimo, sin crecer el dataset (se preserva 30 train / 16 val / 30 test,
+balance 8V/8A/7R/7N train, 4/4/4/4 val):
+- `VAR-FG-R07` (train, Rojo): reescrito a "ajuste automatico de limite de credito
+  dentro de bandas de politica, sin discrecionalidad fuera de ellas, con revision
+  sistematica del log dentro de 48hs" -- moderador completo, espejo de TC-R-02.
+- `VAR-FG-R04` (train, Rojo): reescrito a "agente de reclamos que aplica
+  compensaciones acotadas a un catalogo aprobado por policy; fuera de catalogo
+  escala a humano" -- moderador acotado a catalogo, espejo de TC-R-03.
+- `VAR-FG-R11` (val, Rojo): reescrito a "alta automatica de cliente en CRM/
+  facturacion, accion favorable solicitada por el propio cliente" -- excepcion
+  criterio (b), espejo de TC-EXT-05/TC-RECLA-01.
+- `VAR-FG-N01` (train, Negro): reescrito a "ajuste automatico de precios/descuentos
+  sobre mas del 10% de la base de clientes activos, sin bandas ni catalogo acotado"
+  -- alto impacto por escala (criterio a), sin colision con el nuevo R07.
+
+`_FG_RAZONAMIENTO` actualizado para R04/R07/N01 (few-shot rico). Datasets
+regenerados con `python -m dspy_gepa_poc.flujo_intents.make_variations` +
+`python -m dspy_gepa_poc.flujo_intents.dataset`.
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (Hallazgo 5: prueba de enfoque por casos
+  antes de pilot de prompt).
+- Includes: reescritura de 4 casos fast_gate (`VAR-FG-R04`, `VAR-FG-R07`,
+  `VAR-FG-R11`, `VAR-FG-N01`) + `_FG_RAZONAMIENTO` correspondiente; regeneracion de
+  `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv` y `variations/*.csv` (las 4
+  etapas, por el flujo compartido). Excludes: cambios al prompt/instruction de
+  `flujo_intents_fast_gate*.yaml`; el pilot de prompt (sigue como fallback).
+- Validaciones: `./shared/utils/ci_local.sh` PASO (475 tests, cobertura 92,39%).
+- SSOT afectado: `dspy_gepa_poc/flujo_intents/make_variations.py`,
+  `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv`.
+- Pendiente: correr GEPA sobre fast_gate con el dataset revisado y comparar la
+  matriz de confusion Negro<->Rojo contra el baseline de Hallazgo 5 (13 Negro->Rojo,
+  4 Rojo->Negro de 27 errores). Si la confusion no mejora, ejecutar el pilot de
+  prompt como fallback (condicion explicita del usuario).
+
+### 2026-06-15 (cont.) — Hallazgo 5: cierre. GEPA overfittea VAL chico; gana el prompt pilot SIN GEPA
+
+Cierre de Hallazgo 5 (confusion Negro<->Rojo). Se completaron las dos pruebas que
+quedaban pendientes del bloque anterior y el resultado invierte la hipotesis de
+trabajo: el problema no era el dataset ni la falta de un buen prompt, sino la
+**propia optimizacion GEPA**.
+
+Modelos de toda la serie (relevante porque el siguiente paso es repetir con otros):
+- Task LM: `azure/gpt-4.1-mini`, temperature 0.1, max_tokens 4000, cache off.
+- Reflection LM (GEPA): `azure/gpt-4o`, temperature 0.1, max_tokens 4000.
+
+Experimento 3 (dataset round-2). Se reescribieron 4 casos Negro de train
+(`VAR-FG-N02`/`N05`/`N06`/`N07`) para codificar explicitamente un criterio de alto
+impacto cada uno (b naturaleza / b+e financiero+profiling / c irreversibilidad / e
+profiling), en estilo y longitud similares a los casos Negro del holdout, mas
+`_FG_RAZONAMIENTO` correspondiente. Sobre `fewshot_rico_prompt_v1`, n=3 (TEST 90):
+accuracy 71,1% (64/90), Negro->Rojo 11/26 errores. Frente al experimento previo
+(75,6%, Negro->Rojo 12) la accuracy global RETROCEDIO y Negro->Rojo bajo solo 1
+caso (ruido). El enfoque por casos no resolvio Hallazgo 5.
+
+Hallazgo clave (la corrida "sospechosa"). De las 3 corridas de
+`fewshot_rico_prompt_v1`, la mejor en TEST (76,7%) fue la unica en la que GEPA
+**dejo el prompt identico al base** (`optimized_program.json` byte-identico a la
+instruction del YAML; verificado por hash). Las dos en que GEPA si expandio el
+prompt (a 6,5k y 6,9k chars) fueron las peores (66,7% y 70,0%). Las tres llevaron
+VAL a 100%/93,8%: GEPA sobreajusta los 16 ejemplos de val a costa de TEST.
+
+Experimento 4 (confirmacion N seeds del prompt base SIN GEPA). Via
+`python -m dspy_gepa_poc.scripts.baseline_only --config
+flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml` (evalua prompt base +
+few-shot rico fijo, sin compilar GEPA), N=5: TEST media 75,3%, mediana/moda 76,7%
+(23/30 en 4 de 5), rango 70,0-76,7 (6,7 pp). El 76,7% no fue suerte: es el punto
+de operacion estable. GEPA, en esta tarea, solo puede igualarlo (cuando no toca el
+prompt) o degradarlo (cuando lo toca).
+
+Conclusion (acotada al perfil del caso, no generalizable a cualquier clasificacion):
+para clasificacion ORDINAL de severidad en 4 niveles, con frontera tacita Rojo/Negro
+(criterios de alto impacto deliberadamente fuera del prompt) y VAL chico (16 ej.),
+GEPA overfittea y el prompt pilot manual + few-shot rico SIN optimizacion es la
+config mas fuerte y estable. Negro->Rojo (~3/corrida en el punto estable) queda como techo estructural
+de `gpt-4.1-mini` en esta distincion, no atacable por dataset ni por GEPA. Detalle
+metodologico en `docs/LECCIONES_APRENDIDAS.md` seccion 11.
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (Hallazgo 5: cierre).
+- Includes: reescritura de `VAR-FG-N02`/`N05`/`N06`/`N07` + `_FG_RAZONAMIENTO` en
+  `make_variations.py`; regeneracion de datasets; nueva seccion 11 en
+  `docs/LECCIONES_APRENDIDAS.md`; este registro. Excludes: no se adopta el dataset
+  round-2 como mejora (no rindio); no se cambia el prompt canonico de fast_gate.
+- Validaciones: experimentos 3 y 4 medidos con `per_field_accuracy.py` y
+  `baseline_only.py` (LLM real). `./shared/utils/ci_local.sh` PASO (476 tests,
+  cobertura 93,12%) sobre el cambio de `make_variations.py`.
+- SSOT afectado: `dspy_gepa_poc/flujo_intents/make_variations.py`,
+  `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv`,
+  `docs/LECCIONES_APRENDIDAS.md`.
+- Recomendacion registrada: config de referencia de fast_gate = prompt pilot con
+  few-shot rico, SIN GEPA-prompt-optimization, con `gpt-4.1-mini`.
+- Prueba multi-modelo (cerrada): se repitio la serie con Task LM `azure/gpt-5-mini`
+  / Reflection `azure/gpt-5`. gpt-5-mini queda ~12-13 pp por debajo en ambas
+  condiciones (sin GEPA N=5: 62,7% vs 75,3%; con GEPA n=3: 58,9% vs 71,1%) y cambia
+  el modo de fallo a sobre-escalacion sistematica (Verde->Amarillo 3->12,
+  Amarillo->Rojo 6->10), manteniendo Negro->Rojo en 12. El reasoning model no sube
+  el techo: lo baja y descalibra. La degradacion por GEPA se sostiene con modelo
+  distinto -> es del regimen (VAL=16), no del modelo. Detalle en
+  `docs/LECCIONES_APRENDIDAS.md` seccion 11.
+- Deuda arrastrada: ninguna nueva (corrida GEPA por etapa sigue en D-012).
+
+### 2026-06-14 — SPEC-102: flujo-intents (atencion multipaso de intents)
+
+Nueva capacidad `SPEC-102-flujo-intents` (draft): pipeline de 5 etapas DSPy
+agnosticas (intake, triage_solidez, triage_factibilidad, fast_gate, aprobacion)
+que atiende un intent del Marco de Gobierno IA hasta recomendacion + auto-Verde.
+Cada etapa LLM es un `module.type: dynamic` optimizable por GEPA con la interfaz
+actual (`reflexio_declarativa --config flujo_intents_<etapa>.yaml`); el Fast Gate
+clasifica `ficha -> color` directo (sin matriz en codigo, `p1..p5` diagnosticos).
+La etapa `aprobacion` es un mapeo por config (no se entrena). El orquestador lee
+SOLO `flujo_intents/flujo_intents.yaml` y encadena con gates/skip.
+
+Hygiene de datos: ratio por etapa ~40/20/40 (train 30 / val 15 / test 30). El test
+son los originales del proyecto de gobierno (`intake_clasificacion.csv` +
+`triage_rechazos.csv`) recortados a 30 estratificado; train/val son 45 variaciones a
+mano por etapa (`make_variations.py`, 180 casos en total). Sin fuga: ningun original
+en train/val ni variacion en test. El mapeo rechazo->etapa es explicito por id (la
+columna `marcadores` del CSV original esta desalineada por `;` sin comillas).
+
+Cambios:
+- `dspy_gepa_poc/flujo_intents/` (nuevo): `ficha.py` (serializacion + normalize_color),
+  `dataset.py` (builder por etapa, holdout), `make_variations.py` (casos a mano),
+  `aprobacion.py` (mapeo §9.1), `orchestrator.py` (run_flow + CLI), `flujo_intents.yaml`.
+- `dspy_gepa_poc/configs/flujo_intents_{intake,triage_solidez,triage_factibilidad,fast_gate}.yaml`.
+- `tests/test_flujo_intents.py` (20 tests, sin LLM).
+- `specs/SPEC-102-flujo-intents.md` + registro. `pyproject.toml` (per-file-ignore E501
+  para el modulo de datos `make_variations.py`).
+
+[SDD-Check]
+- Spec creada: `SPEC-102-flujo-intents` (draft, iter 1).
+- Includes: 5 etapas (4 LLM + aprobacion mapeo), dataset builder con holdout,
+  variaciones a mano, orquestador, 20 tests, spec. Excludes: optimizacion GEPA real
+  de cada etapa (pendiente), simulacion de aprobacion humana, registro en Inventario.
+- Validaciones: `./shared/utils/ci_local.sh` PASO (lint + format + bandit +
+  pip-audit + 469 tests, cobertura 93.12%). Configs cargan con AppConfig y datasets
+  con CSVDataLoader; `run_flow` verificado en vivo (Verde/Rojo/cortes); sin fuga
+  train/test verificada por test.
+- SSOT afectado: `specs/` (SPEC-102 + registro), `dspy_gepa_poc/` (subpaquete y
+  configs nuevos), `pyproject.toml`.
+- Decision de diseno: etapas agnosticas (la logica de negocio vive en prompts y
+  casos, no en codigo) para re-optimizar sin reescribir ante cambios del Marco.
+- Deuda arrastrada: D-012 (nueva) — optimizar cada etapa con GEPA y medir accuracy
+  en el holdout; ampliar variaciones a mano si una etapa queda starved (train actual
+  4-8 casos/etapa).
 
 ### 2026-06-10 — Auditoria de docs: correccion de contradicciones P1
 

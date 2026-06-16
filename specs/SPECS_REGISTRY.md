@@ -34,6 +34,7 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 |---|---|---|---|---|
 | SPEC-100-veredicto-senal-ruido | Veredicto senal-vs-ruido del protocolo de N seeds | active | 2 | `SPEC-100-veredicto-senal-ruido.md` |
 | SPEC-101-triaje-casos-nseeds | Triaje de casos para el protocolo de N seeds | active | 1 | `SPEC-101-triaje-casos-nseeds.md` |
+| SPEC-102-flujo-intents | Atencion multipaso de intents (Marco de Gobierno IA) | draft | 1 | `SPEC-102-flujo-intents.md` |
 
 ## Roadmap de iteraciones
 

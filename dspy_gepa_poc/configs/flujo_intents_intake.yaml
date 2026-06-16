@@ -1,0 +1,53 @@
+case:
+  name: "flujo_intents_intake"
+  title: "flujo-intents | Etapa 1: Intake"
+  description: "Etapa 1 (Intake): admision de la ficha por completitud y consistencia interna. Equivale al Proceso de Intake (§5.1) del Marco de Gobierno de IA. Instruccion neutral: el framing normativo vive aqui (provenance), no en el prompt. Trazabilidad en SPEC-102."
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos la primera etapa del flujo. Recibis una Ficha de Intent y decidis si es ADMITIDA
+    para continuar o si debe devolverse por estar INCOMPLETA. Evaluas solo completitud y
+    consistencia interna; la calidad o el riesgo del intent los evaluan etapas posteriores.
+
+    Devolve 'incompleta' si: falta un campo minimo obligatorio (p.ej. la declaracion del
+    intent vacia) o si hay una contradiccion interna irreconciliable entre campos (p.ej.
+    datos requeridos declarados 'ninguno' pero la declaracion describe el uso de datos
+    personales).
+
+    Devolve 'admitida' si la ficha esta completa y es internamente consistente, aunque el
+    intent todavia pueda ser debil o riesgoso.
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa (todos los campos declarados)."
+  outputs:
+    - name: "admision"
+      desc: "Una de: admitida, incompleta."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones); si es incompleta, indicar el campo o la contradiccion."
+
+data:
+  csv_filename: "flujo_intents_intake.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 60
+  predictor_type: "cot"
+  match_mode: "normalized"
+  metric_feedback: true
+  eval_repeats: 1
+  ignore_in_metric:
+    - "razonamiento"
+  field_configs:
+    admision: { mode: "exact" }

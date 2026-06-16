@@ -42,6 +42,52 @@ ENGINE = "DSPY+GEPA"
 NORMALIZED_SCORE_MAX = 1.0
 
 
+def _coerce_candidate(candidate: object) -> dict[str, str]:
+    """Normaliza un candidato GEPA a un dict JSON-serializable (componente -> texto)."""
+    if isinstance(candidate, dict):
+        return {str(k): str(v) for k, v in candidate.items()}
+    return {"_repr": str(candidate)}
+
+
+def build_candidates_payload(
+    candidates: list,
+    val_scores: list,
+    *,
+    best_idx: int | None = None,
+    total_metric_calls: int = 0,
+    discovery_eval_counts: list | None = None,
+) -> dict:
+    """Arma el payload de candidatos GEPA para persistir, incluidos los rechazados.
+
+    Marca `is_improvement` (supero el mejor score visto hasta el momento = lo que la
+    metrica adopto en su cadena de mejora) para distinguir, por contraste, las
+    propuestas que la metrica NO tomo (las que quedan en False y no son `is_best`).
+    """
+    n = min(len(candidates), len(val_scores))
+    running_max = float("-inf")
+    items: list[dict] = []
+    for i in range(n):
+        score = val_scores[i]
+        is_improvement = i == 0 or score > running_max
+        running_max = max(running_max, score)
+        item: dict = {
+            "idx": i,
+            "val_score": score,
+            "is_best": best_idx is not None and i == best_idx,
+            "is_improvement": is_improvement,
+            "instructions": _coerce_candidate(candidates[i]),
+        }
+        if discovery_eval_counts and i < len(discovery_eval_counts):
+            item["metric_calls"] = discovery_eval_counts[i]
+        items.append(item)
+    return {
+        "num_candidates": n,
+        "best_idx": best_idx,
+        "total_metric_calls": total_metric_calls,
+        "candidates": items,
+    }
+
+
 class ConfigurationError(Exception):
     """Error de configuracion con mensaje claro para el usuario."""
 
@@ -369,6 +415,17 @@ class ReflexioDeclarativa:
                     best_score=best_val,
                     num_full_val_evals=getattr(detailed, "num_full_val_evals", None),
                 )
+                # Persistir TODOS los candidatos (incl. los que la metrica no adopto),
+                # que de otro modo solo viven en la consola y se pierden al cerrar.
+                self._save_candidates(
+                    build_candidates_payload(
+                        candidates,
+                        val_scores,
+                        best_idx=best_idx,
+                        total_metric_calls=getattr(detailed, "total_metric_calls", 0),
+                        discovery_eval_counts=getattr(detailed, "discovery_eval_counts", None),
+                    )
+                )
         else:
             log_warn("GEPA no expuso detailed_results: se omite evolucion y stats de busqueda.")
 
@@ -431,6 +488,16 @@ class ReflexioDeclarativa:
                 "Prompt changed": "Si" if prompt_changed else "No (delta=ruido)",
             },
         )
+
+    def _save_candidates(self, payload: dict) -> None:
+        """Vuelca el payload de candidatos GEPA a `candidates.json` en el run dir."""
+        import json
+
+        self.results_dir.mkdir(parents=True, exist_ok=True)
+        path = self.results_dir / "candidates.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        log_ok(f"GEPA candidates saved: {path} ({payload['num_candidates']} candidatos)")
 
     def save_results(self, baseline_score: float, optimized_score: float, test_score: float):
         """Save the optimized module and config."""

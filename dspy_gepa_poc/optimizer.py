@@ -16,6 +16,8 @@ class GEPAOptimizer:
     Wrapper class for GEPA optimizer with configuration management.
     """
 
+    _compiled_program: dspy.Module | None
+
     def __init__(self, metric: Callable, reflection_lm: dspy.LM, config: GEPAConfig | None = None):
         """
         Initialize GEPA optimizer.
@@ -28,6 +30,7 @@ class GEPAOptimizer:
         self.config = config or GEPAConfig()
         self.metric = metric
         self.reflection_lm = reflection_lm
+        self._compiled_program = None
 
         # Initialize GEPA optimizer with configuration
         # Use only core parameters that are universally supported
@@ -43,19 +46,32 @@ class GEPAOptimizer:
         else:
             gepa_params["auto"] = self.config.auto_budget
 
-        # Add optional parameters only if they exist in this version of GEPA
+        # Parametros opcionales: pasar SOLO los que esta version de GEPA soporta.
+        # Antes se hacia con un try/except todo-o-nada; como esta version no acepta
+        # max_text_length, el except tiraba TODOS los opcionales al fallback basico
+        # (track_stats, skip_perfect_score, use_merge, ... quedaban inertes). Filtrar
+        # por la firma real evita ese efecto y, en particular, deja entrar track_stats
+        # (sin el cual detailed_results queda None y no hay evolucion ni candidates.json).
+        import inspect
+
+        optional_params = {
+            "track_stats": self.config.track_stats,
+            "reflection_minibatch_size": self.config.reflection_minibatch_size,
+            "skip_perfect_score": self.config.skip_perfect_score,
+            "candidate_selection_strategy": self.config.candidate_selection_strategy,
+            "use_merge": self.config.use_merge,
+            "max_merge_invocations": self.config.max_merge_invocations,
+            "max_text_length": self.config.max_text_length,
+            "max_positive_examples": self.config.max_positive_examples,
+        }
+        supported = set(inspect.signature(dspy.GEPA.__init__).parameters)
+        applied = {k: v for k, v in optional_params.items() if k in supported}
+        dropped = [k for k in optional_params if k not in supported]
+        if dropped:
+            log_warn(f"GEPA de esta version no soporta {dropped}; se omiten esos parametros.")
+
         try:
-            self.optimizer = dspy.GEPA(
-                **gepa_params,
-                reflection_minibatch_size=self.config.reflection_minibatch_size,
-                skip_perfect_score=self.config.skip_perfect_score,
-                candidate_selection_strategy=self.config.candidate_selection_strategy,
-                use_merge=self.config.use_merge,
-                max_merge_invocations=self.config.max_merge_invocations,
-                # New parameters for adapters
-                max_text_length=self.config.max_text_length,
-                max_positive_examples=self.config.max_positive_examples,
-            )
+            self.optimizer = dspy.GEPA(**gepa_params, **applied)
         except TypeError:
             log_warn(
                 "Using basic GEPA configuration (some parameters not supported in this version)"
@@ -89,8 +105,13 @@ class GEPAOptimizer:
             student=student, trainset=trainset, valset=valset
         )
 
+        # dspy.GEPA.compile() setea `detailed_results` en el programa devuelto
+        # (new_prog.detailed_results = ...), no en `self.optimizer`. Guardamos el
+        # programa compilado para que get_detailed_results() lea del lugar correcto.
+        self._compiled_program = optimized_program
+
         # Print statistics if available
-        if self.config.track_stats and hasattr(self.optimizer, "detailed_results"):
+        if self.config.track_stats and hasattr(optimized_program, "detailed_results"):
             print_section("GEPA Optimization Statistics")
             self._print_stats()
 
@@ -98,8 +119,8 @@ class GEPAOptimizer:
 
     def _print_stats(self):
         """Print optimization statistics."""
-        if hasattr(self.optimizer, "detailed_results"):
-            results = self.optimizer.detailed_results
+        if hasattr(self._compiled_program, "detailed_results"):
+            results = self._compiled_program.detailed_results
             log_info(f"Detailed results available: {results}")
         else:
             log_info("No detailed statistics available.")
@@ -108,11 +129,13 @@ class GEPAOptimizer:
         """
         Get GEPA's detailed results (DspyGEPAResult) tracked during optimization.
 
-        Available when track_stats was enabled. Exposes the explored candidates,
-        their validation scores and search metadata so the entry point can render
-        the GEPA evolution and search-stats blocks. Returns None if unavailable.
+        Available when track_stats was enabled. dspy.GEPA.compile() sets
+        `detailed_results` on the returned program, not on the optimizer instance.
+        Exposes the explored candidates, their validation scores and search metadata
+        so the entry point can render the GEPA evolution and search-stats blocks.
+        Returns None if unavailable.
         """
-        return getattr(self.optimizer, "detailed_results", None)
+        return getattr(self._compiled_program, "detailed_results", None)
 
     def get_best_outputs(self):
         """
@@ -121,9 +144,7 @@ class GEPAOptimizer:
         Returns:
             Best outputs if track_best_outputs was enabled, None otherwise
         """
-        if hasattr(self.optimizer, "best_outputs"):
-            return self.optimizer.best_outputs
-        return None
+        return getattr(self._compiled_program, "best_outputs", None)
 
 
 def optimize_with_gepa(

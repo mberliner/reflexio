@@ -508,3 +508,138 @@ con un cambio de modelo.
 - DSPy austero: `dspy_gepa_poc/configs/dynamic_cv_extraction_v3.yaml`, `dspy_gepa_poc/datasets/cv_extraction_v3.csv`
 - GEPA enriquecido: `gepa_standalone/experiments/configs/cv_profile_v3.yaml`, `gepa_standalone/experiments/prompts/cv_profile_v3.json`, `gepa_standalone/experiments/datasets/cv_profile_v3.csv`
 - Extractor con `field_configs`: `gepa_standalone/adapters/simple_extractor_adapter.py`, `tests/test_gepa_adapters.py` (clase `TestExtractorFieldConfigs`)
+
+## 11. Fast Gate (flujo-intents): GEPA overfittea VAL chico en clasificación 4-clases
+
+**Tipo y características del caso (importante para no sobre-generalizar).** Esto NO
+es un benchmark de clasificación cualquiera; las conclusiones de abajo aplican a
+tareas con este perfil concreto:
+- **Tarea:** clasificación **ordinal de severidad de riesgo en 4 niveles**
+  (Verde < Amarillo < Rojo < Negro) — etapa Fast Gate de `flujo-intents`, gobierno
+  de IA. No es multiclase plana: las clases tienen orden y los errores "de un nivel"
+  no son equivalentes (sub-escalar el tope Negro es el error caro).
+- **Frontera tácita y subjetiva:** la distinción Rojo/Negro depende de criterios de
+  "alto impacto" (escala, irreversibilidad, naturaleza financiera/restrictiva,
+  perfilado) que NO están en el prompt por decisión de diseño — el sistema debe
+  inferirlos de los casos. Es justo el tipo de límite difuso donde un modelo puede
+  "razonar de más".
+- **Datos chicos y balanceados a mano:** 30 train / 16 val / 30 test, few-shot rico
+  (`LabeledFewShot k=8`, demos con razonamiento). VAL = 16 ejemplos: clave, porque
+  es lo que GEPA puede sobreajustar.
+- **Holdout fijo** (30 originales `TC`, nunca tocados) → las comparaciones son sobre
+  el mismo set, no sobre folds variables.
+
+Bajo otro perfil (muchos datos de VAL, clases planas, frontera explícita) estas
+conclusiones podrían NO valer; ver la tabla de la sección 8.
+
+**Error dominante de partida.** Confusión Negro<->Rojo (~63% de todos los errores de
+`clasificacion` en TEST; "Hallazgo 5"). Modelos de la serie base: Task LM
+`azure/gpt-4.1-mini`, Reflection LM (GEPA) `azure/gpt-4o`, ambos temp 0.1, cache off.
+
+**Qué se probó (4 experimentos, todos sobre el mismo holdout fijo de 30).**
+
+| Intervención | TEST acc | Negro->Rojo |
+|---|---|---|
+| Baseline rico_v1 (sin revisión) | 70,0% | 13 |
+| Dataset round-1 (4 casos "moderador" Rojo + 1 Negro por escala) | 73,3% | 12 |
+| Round-1 + prompt pilot (distinción Negro/Rojo manual) | 75,6% | 12 |
+| Round-2 (4 casos Negro con criterios a-e explícitos) + prompt pilot | 71,1% | 11 |
+
+Ni el enfoque por casos (reescribir train para enseñar la distinción) ni el prompt
+manual movieron Negro->Rojo más allá del ruido (13 -> 11 en 4 iteraciones).
+
+**El hallazgo real: GEPA estaba degradando la tarea.** En las 3 corridas GEPA del
+prompt pilot, la mejor en TEST (76,7%) fue la única en la que **GEPA dejó el prompt
+idéntico al base** (`optimized_program.json` byte-idéntico al YAML; verificado por
+hash). Las dos en que GEPA expandió el prompt (a 6,5k y 6,9k chars) fueron las peores
+(66,7% y 70,0%). Las tres llevaron VAL a 100%/93,8%. Confirmado con N=5 del prompt
+base **sin GEPA** (`baseline_only.py`): TEST media 75,3%, mediana/moda 76,7% (23/30 en
+4 de 5), rango 70,0-76,7. El 76,7% es el punto de operación estable; GEPA solo lo
+iguala (cuando no toca el prompt) o lo degrada (cuando lo toca).
+
+**Lección.**
+- **Con VAL chico (~16 ejemplos) en clasificación de pocas clases, GEPA sobreajusta
+  el val set y puede degradar el holdout.** El reflection_lm encuentra reglas que
+  suben VAL a 100% y no generalizan. Verificar SIEMPRE si el `optimized_program` real
+  cambió el prompt (hash contra el YAML base): si la mejor corrida es la que NO lo
+  cambió, GEPA no está aportando — está restando.
+- **Antes de iterar dataset/prompt, medir el prompt base + few-shot SIN GEPA con N
+  seeds** (`baseline_only.py`). Si iguala o supera a las corridas GEPA, la config de
+  producción es esa, sin optimización.
+- **No todo error de clasificación se cierra con datos.** Negro->Rojo persistió en
+  ~3/corrida en el punto estable: es un techo del modelo (`gpt-4.1-mini`) en una
+  distinción que depende de matices de "alto impacto", no de volumen ni de framing.
+  El siguiente paso correcto no es más dataset, sino **probar modelos más capaces**.
+- Complementa la tabla de la sección 8 ("Cuándo GEPA aporta vs cuándo no"): aun en
+  clasificación con razonamiento, si el VAL es chico GEPA puede no aportar.
+
+**Prueba multi-modelo: el modelo "más capaz" empeora.** Se repitió toda la serie
+cambiando solo el Task LM a `azure/gpt-5-mini` (reasoning) / Reflection LM
+`azure/gpt-5`. Mismo holdout, mismo prompt pilot:
+
+| Config | TEST |
+|---|---|
+| gpt-4.1-mini, sin GEPA (N=5) | **75,3%** (mediana 76,7%) |
+| gpt-4.1-mini + GEPA (n=3) | 71,1% |
+| gpt-5-mini, sin GEPA (N=5) | 62,7% (mediana 63,3%) |
+| gpt-5-mini + GEPA (n=3) | 58,9% |
+
+`gpt-5-mini` queda ~12-13 pp por debajo en ambas condiciones, sin solapamiento de
+rangos (no es ruido). Y **cambia el modo de fallo**: con gpt-4.1-mini el error era
+casi monotemático Negro->Rojo (sub-escalar el tope); con gpt-5-mini aparece
+**sobre-escalación sistemática de abajo** (Verde->Amarillo salta de 3 a 12,
+Amarillo->Rojo de 6 a 10 sobre 90 TEST), contando 24 errores de sobre-escalar vs 13
+de sub-escalar. El reasoning model razona de más sobre los criterios de impacto y se
+vuelve risk-averse, pero sigue sub-escalando el tope (Negro->Rojo se mantiene en 12).
+
+Lecciones adicionales:
+- **Un modelo más grande/razonador no es estrictamente mejor en clasificación
+  calibrada.** Acá empeora la accuracy Y degrada la calibración (sobre-escalación).
+  Evaluar siempre en el holdout antes de "subir de modelo".
+- **El que GEPA degrade se sostiene con modelo distinto** (4.1-mini 75,3->71,1;
+  5-mini 62,7->58,9): la degradación es del régimen (VAL=16 ejemplos), no del modelo.
+- Config recomendada de producción para fast_gate: **gpt-4.1-mini + prompt pilot +
+  few-shot rico, SIN GEPA** (76,7% mediana, la mejor de toda la investigación)
+  — pero ver la validación externa de abajo, que matiza este "mejor".
+
+**Validación externa con casos testigo (rompe la circularidad train/val<->criterios).**
+El holdout interno (los 30 `TC`) es de autoría propia y comparte procedencia con la
+rúbrica de criterios → validar solo con él es circular. Se construyó un set de 14
+**casos testigo** etiquetados con un marco INDEPENDIENTE: EU AI Act (Art. 5
+prohibido; Anexo III alto riesgo) anclado a reguladores AR (BCRA, ENACOM, AAIP/Ley
+25.326, SSN). Regla de mapeo graduada por impacto para la frontera Rojo/Amarillo de
+"alto riesgo de dominio + revisión humana" (Rojo si financiero/sensible/esencial/
+masivo; Amarillo si acotado y reversible). Resultado del programa base (sin GEPA):
+
+| Modelo | Holdout interno | **Testigo externo** |
+|---|---|---|
+| gpt-4.1-mini | 76,7% (el mejor) | **71,4%** (10/14) |
+| gpt-5-mini | 62,7% | **92,9%** (13/14) |
+
+Hallazgos que NO aparecían internamente:
+1. **Reversal in/out-of-distribution.** gpt-4.1-mini, el mejor en el holdout, es el
+   **peor** en casos externos; gpt-5-mini se da vuelta. El holdout interno
+   **sobreestimaba** al modelo chico. En producción las entradas son novedosas → la
+   métrica relevante es la externa, donde el reasoning model generaliza mejor.
+2. **Error externo dominante: Rojo->Amarillo** (gpt-4.1-mini sub-escala crédito,
+   seguros con datos de salud y beneficios esenciales aun con el criterio de
+   impacto). Es un **gap de training real**: los casos Rojo internos enseñan
+   "autónomo-acotado", no "dominio regulado sensible con revisión humana". El modelo
+   no aprende lo que el dataset no contiene.
+3. **Los 5 Negro (incl. prohibidos Art. 5) perfectos en ambos** → el Negro->Rojo del
+   holdout interno es sobre casos internos sutiles, no una ceguera general al tope.
+4. **Gap de SPEC**: la rúbrica fast_gate no tiene regla explícita, graduada por
+   impacto, para "dominio de alto riesgo + revisión humana". Quedó como deuda.
+
+Lección transversal: **el holdout in-distribution puede mentir.** Un set testigo
+etiquetado con un marco externo es barato (14 casos, una llamada LLM c/u) y expone
+gaps de generalización y de spec invisibles internamente — y puede invertir el
+ranking de modelos.
+
+### Archivos relacionados
+
+- Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`
+- Dataset y generador: `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv`, `dspy_gepa_poc/flujo_intents/make_variations.py`
+- Set testigo externo (AI Act + AR) y su builder: `dspy_gepa_poc/datasets/flujo_intents_fast_gate_witness.csv`, `dspy_gepa_poc/scripts/build_witness.py`
+- Scripts: `dspy_gepa_poc/scripts/baseline_only.py` (eval sin GEPA, N seeds), `dspy_gepa_poc/scripts/per_field_accuracy.py` (matriz de confusión), `dspy_gepa_poc/scripts/witness_eval.py` (eval testigo fuera de distribución)
+- Registro de fases: `historial/sdd.md` (2026-06-15/16, Hallazgo 5 y validación externa)

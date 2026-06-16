@@ -1,0 +1,52 @@
+case:
+  name: "flujo_intents_triage_solidez"
+  title: "flujo-intents | Etapa 2: Triage de solidez"
+  description: "Etapa 2: solidez del intent. Equivale al Paso 1 del triage (§5.2) del Marco de Gobierno de IA. Instruccion neutral: el framing normativo vive aqui (provenance), no en el prompt. Trazabilidad en SPEC-102."
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos una etapa de triage. La ficha ya fue admitida (completa y consistente). Evalua si
+    el intent es solido y emiti la decision.
+
+    Decisiones posibles:
+    - solido: el resultado esperado es claro y concreto, hay valor real, sponsor
+      ejecutivo individual accountable y metricas medibles con linea base y meta.
+    - devolucion_reformulacion: el intent describe la tecnologia en vez del resultado
+      esperado, o no tiene sponsor individual, o las metricas no son cuantificables.
+    - devolucion_no_ia: la solucion descrita no requiere IA (proceso/BPM, digitalizacion
+      o reglas fijas sin inferencia, modelo predictivo ni generacion).
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "solidez"
+      desc: "Una de: solido, devolucion_reformulacion, devolucion_no_ia."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de la decision."
+
+data:
+  csv_filename: "flujo_intents_triage_solidez.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 60
+  predictor_type: "cot"
+  match_mode: "normalized"
+  metric_feedback: true
+  eval_repeats: 1
+  ignore_in_metric:
+    - "razonamiento"
+  field_configs:
+    solidez: { mode: "exact" }

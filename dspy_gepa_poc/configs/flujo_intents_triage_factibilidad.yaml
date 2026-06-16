@@ -1,0 +1,54 @@
+case:
+  name: "flujo_intents_triage_factibilidad"
+  title: "flujo-intents | Etapa 3: Triage de factibilidad"
+  description: "Etapa 3: factibilidad del intent. Equivale al Paso 2 del triage (§5.2) + admisibilidad (§9.2) del Marco de Gobierno de IA; el nivel de riesgo lo clasifica el Fast Gate (§7). Instruccion neutral: el framing normativo vive aqui (provenance), no en el prompt. Trazabilidad en SPEC-102."
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos una etapa de triage. La ficha ya es solida. Evalua si el intent puede avanzar
+    segun su factibilidad tecnica y emiti la decision.
+
+    Decisiones posibles:
+    - avanza_fast_gate: es factible y puede avanzar a la siguiente etapa tal como esta.
+    - avanza_con_redisenio: es factible pero requiere un ajuste concreto de alcance o
+      controles (p.ej. agregar revision humana previa) antes de avanzar.
+    - no_avanza: no es factible en el estado actual (p.ej. proveedor unico fuera de
+      jurisdiccion sin alternativa). No es un rechazo permanente.
+    - rechazo_formal: corresponde rechazar, p.ej. usa variables discriminatorias por
+      atributos protegidos en decisiones de acceso, o ya existe una alternativa
+      equivalente disponible (caso duplicado).
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "factibilidad"
+      desc: "Una de: avanza_fast_gate, avanza_con_redisenio, no_avanza, rechazo_formal."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de la decision."
+
+data:
+  csv_filename: "flujo_intents_triage_factibilidad.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 60
+  predictor_type: "cot"
+  match_mode: "normalized"
+  metric_feedback: true
+  eval_repeats: 1
+  ignore_in_metric:
+    - "razonamiento"
+  field_configs:
+    factibilidad: { mode: "exact" }

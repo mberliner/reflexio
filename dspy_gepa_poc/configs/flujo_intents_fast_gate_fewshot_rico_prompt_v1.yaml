@@ -1,0 +1,92 @@
+# flujo-intents | Etapa 4: Fast Gate -- FEW-SHOT RICO + PROMPT v1
+#
+# Pilot manual (sin GEPA) para Hallazgo 5: confusion Negro<->Rojo (~63% de los
+# errores de clasificacion en TEST, estable tras la revision de dataset por casos
+# de fewshot_rico_v1 -- ver historial/sdd.md 2026-06-15). El enfoque por casos no
+# alcanzo; este pilot agrega al prompt neutral UNA distincion Negro/Rojo: Negro
+# exige ademas alto impacto (escala, irreversibilidad, financiero sin acotar,
+# perfilado), y la accion autonoma acotada/reversible/con revision posterior se
+# mantiene en Rojo. Identico a fewshot_rico_v1 salvo ese parrafo. A/B contra
+# fewshot_rico_v1 (Rob ~75,6%).
+
+case:
+  name: "flujo_intents_fast_gate_fewshot_rico_prompt_v1"
+  title: "flujo-intents | Etapa 4: Fast Gate (few-shot rico + prompt v1)"
+  description: "Etapa 4 (Fast Gate): clasificacion de nivel de riesgo ficha -> color. Pilot manual de prompt (Hallazgo 5): agrega al prompt neutral una distincion Negro/Rojo basada en alto impacto y moderador de escalada. A/B contra few-shot rico v1 (75,6%). Equivale al Fast Gate (§7) del Marco de Gobierno de IA. Trazabilidad en SPEC-102."
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos la etapa de clasificacion. La ficha ya paso el triage. Clasifica el nivel de
+    riesgo de la iniciativa en un color: Verde, Amarillo, Rojo o Negro.
+
+    Dimensiones que pueden elevar el nivel (no es una formula rigida; usa el contexto
+    completo de la ficha):
+    - usa datos personales o confidenciales,
+    - influye en decisiones que afectan a clientes o empleados,
+    - usa un proveedor o modelo externo aun no homologado al momento de la ficha,
+    - puede generar riesgo legal o reputacional ante terceros,
+    - ejecuta acciones sin revision humana previa por caso.
+
+    Negro es el nivel mas alto y es excepcional: solo aplica cuando, ademas de
+    actuar sin revision humana previa por caso, el impacto es muy alto (por
+    ejemplo, afecta a una porcion grande de la base de clientes, es practicamente
+    irreversible, tiene naturaleza financiera o restrictiva sin ningun mecanismo de
+    acotamiento, o implica perfilado automatizado de personas). Si la accion
+    autonoma esta acotada por bandas o un catalogo predefinido, o tiene revision
+    sistematica posterior documentada y es reversible, el nivel correcto suele
+    seguir siendo Rojo, no Negro.
+
+    Los campos p1..p5 son diagnosticos opcionales (no se evaluan); el resultado que
+    importa es 'clasificacion'.
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "p1"
+      desc: "Diagnostico (si/No): usa datos personales o confidenciales."
+    - name: "p2"
+      desc: "Diagnostico (si/No): influye en decision sobre cliente o empleado."
+    - name: "p3"
+      desc: "Diagnostico (si/No): proveedor o modelo externo no homologado."
+    - name: "p4"
+      desc: "Diagnostico (si/No): riesgo legal o reputacional ante terceros."
+    - name: "p5"
+      desc: "Diagnostico (si/No): actua sin revision humana previa por caso."
+    - name: "clasificacion"
+      desc: "Una de: Verde, Amarillo, Rojo, Negro."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de la clasificacion."
+
+data:
+  csv_filename: "flujo_intents_fast_gate.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 90
+  predictor_type: "cot"
+  match_mode: "normalized"
+  metric_feedback: true
+  eval_repeats: 1
+  use_few_shot: true
+  few_shot_count: 8
+  ignore_in_metric:
+    - "razonamiento"
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
+  field_configs:
+    clasificacion: { mode: "exact" }
