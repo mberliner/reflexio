@@ -71,9 +71,14 @@ def test_normalize_color_invalido_levanta():
 # --- dataset: mapeo rechazo -> etapa -----------------------------------------
 
 
-def test_rej_stage_map_cubre_los_10_originales():
-    assert len(REJ_STAGE_MAP) == 10
+def test_rej_stage_map_cubre_los_rechazos_originales():
+    # 7 rechazos con etapa terminal. Salieron del mapeo (esperan etapas nuevas
+    # diferidas, ver historial/sdd.md D-014 y SPEC-102): TC-REJ-06 (no requiere IA,
+    # no es criterio de solidez del Marco) y TC-REJ-09/10 (§9.2 uso prohibido / §7.4
+    # duplicado, admisibilidad, no es factibilidad tecnica).
+    assert len(REJ_STAGE_MAP) == 7
     assert all(rid.startswith("TC-REJ-") for rid in REJ_STAGE_MAP)
+    assert {"TC-REJ-06", "TC-REJ-09", "TC-REJ-10"}.isdisjoint(REJ_STAGE_MAP)
 
 
 def test_rechazo_propaga_pasa_en_etapas_previas_y_corta_en_terminal():
@@ -191,15 +196,14 @@ def _load_stage_csv(stage: str) -> list[dict[str, str]]:
 
 
 @pytest.mark.parametrize("stage", _DATASET_STAGES)
-def test_dataset_sin_fuga_originales_solo_en_test(stage):
+def test_dataset_sin_fuga_train_val_vs_test(stage):
     rows = _load_stage_csv(stage)
-    # Los originales (TC-*) van solo a test; las variaciones (VAR-*) solo a train/val.
-    var_in_test = [r for r in rows if r["split"] == "test" and r["case_id"].startswith("VAR")]
-    tc_in_trainval = [
-        r for r in rows if r["split"] in {"train", "val"} and r["case_id"].startswith("TC")
-    ]
-    assert not var_in_test, f"{stage}: variaciones en test (fuga)"
-    assert not tc_in_trainval, f"{stage}: originales en train/val (fuga)"
+    # Invariante real (no por prefijo): ninguna ficha de train/val aparece en test.
+    # Vale tanto para el holdout de originales (intake/solidez/fast_gate) como para el
+    # holdout balanceado a mano de factibilidad (split=test en las variaciones).
+    trainval = {r["ficha"] for r in rows if r["split"] in {"train", "val"}}
+    test = {r["ficha"] for r in rows if r["split"] == "test"}
+    assert not (trainval & test), f"{stage}: fichas compartidas train/val<->test (fuga)"
 
 
 @pytest.mark.parametrize("stage", _DATASET_STAGES)

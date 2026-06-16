@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 from collections import Counter
 from collections.abc import Mapping
 from pathlib import Path
@@ -30,12 +31,22 @@ from shared.paths import get_dspy_paths
 
 from .ficha import normalize_color, serialize_ficha
 
-# Ruta a los casos originales del proyecto de gobierno (fuente del holdout de test).
-ORIGINALS_DIR = Path(
-    "/datum1/Descargas/Claudio/analisis/Transformacion AI-Native Org/normativa/test/test_intake"
-)
-INTAKE_CLASIF_CSV = ORIGINALS_DIR / "intake_clasificacion.csv"
-TRIAGE_RECHAZOS_CSV = ORIGINALS_DIR / "triage_rechazos.csv"
+# Fuente del holdout de test: los casos originales del proyecto de gobierno. Es data
+# externa al repo (no versionada), por eso su ubicacion se resuelve por entorno y NO se
+# hardcodea: variable `FLUJO_INTENTS_ORIGINALS_DIR`. Si no esta definida o el directorio
+# no existe, las etapas que dependen de originales para el test (intake, solidez,
+# fast_gate) no se regeneran (se dejan intactas); las que traen test propio en sus
+# variaciones (p.ej. factibilidad, con holdout balanceado a mano) si se regeneran.
+_ORIGINALS_ENV = "FLUJO_INTENTS_ORIGINALS_DIR"
+
+
+def _originals_dir() -> Path | None:
+    raw = os.environ.get(_ORIGINALS_ENV, "").strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    return path if path.is_dir() else None
+
 
 # Orden canonico de las etapas LLM y el nombre de su campo de salida (label).
 STAGE_LABEL_FIELD: dict[str, str] = {
@@ -71,11 +82,13 @@ REJ_STAGE_MAP: dict[str, tuple[str, str]] = {
     "TC-REJ-02": ("triage_solidez", "devolucion_reformulacion"),  # tecnologia, no resultado
     "TC-REJ-03": ("triage_solidez", "devolucion_reformulacion"),  # sin sponsor individual
     "TC-REJ-04": ("triage_solidez", "devolucion_reformulacion"),  # metricas no medibles
-    "TC-REJ-06": ("triage_solidez", "devolucion_no_ia"),  # no requiere IA
     "TC-REJ-07": ("triage_factibilidad", "no_avanza"),  # factibilidad insuficiente
     "TC-REJ-08": ("triage_factibilidad", "avanza_con_redisenio"),  # autonomia reducible
-    "TC-REJ-09": ("triage_factibilidad", "rechazo_formal"),  # §9.2 uso prohibido
-    "TC-REJ-10": ("triage_factibilidad", "rechazo_formal"),  # §7.4 duplicado
+    # Sin etapa hasta crear las etapas nuevas (diferido, D-014):
+    # - TC-REJ-06 (no requiere IA): "devolucion_no_ia" no es criterio de solidez del Marco.
+    # - TC-REJ-09 (§9.2 uso prohibido) y TC-REJ-10 (§7.4 duplicado): admisibilidad
+    #   (atributos protegidos / deduplicacion) no es factibilidad tecnica.
+    # Ver historial/sdd.md y SPEC-102.
 }
 
 
@@ -116,10 +129,19 @@ TEST_TARGET = 30
 
 
 def build_originals_rows() -> dict[str, list[dict[str, str]]]:
-    """Construye, por etapa, TODAS las filas derivadas de los 42 originales."""
+    """Construye, por etapa, TODAS las filas derivadas de los 42 originales.
+
+    Si la fuente externa no esta disponible (`FLUJO_INTENTS_ORIGINALS_DIR` sin definir
+    o inexistente), devuelve listas vacias por etapa: las etapas sin test propio en sus
+    variaciones quedaran sin test y `build_stage_csv` las omite para no pisar el CSV.
+    """
     per_stage: dict[str, list[dict[str, str]]] = {s: [] for s in STAGE_ORDER}
 
-    for row in _read_csv(INTAKE_CLASIF_CSV):
+    originals_dir = _originals_dir()
+    if originals_dir is None:
+        return per_stage
+
+    for row in _read_csv(originals_dir / "intake_clasificacion.csv"):
         case_id = row["id"].strip()
         if not case_id:
             continue
@@ -127,7 +149,7 @@ def build_originals_rows() -> dict[str, list[dict[str, str]]]:
         for stage, label in _stage_rows_for_positive(row).items():
             per_stage[stage].append({"id": case_id, "ficha": ficha, "label": label})
 
-    for row in _read_csv(TRIAGE_RECHAZOS_CSV):
+    for row in _read_csv(originals_dir / "triage_rechazos.csv"):
         case_id = row["id"].strip()
         if case_id not in REJ_STAGE_MAP:
             continue
@@ -188,17 +210,28 @@ def _read_variations(stage: str, variations_dir: Path) -> list[dict[str, str]]:
 
 def build_stage_csv(
     stage: str, variations_dir: Path, out_dir: Path, originals: dict[str, list[dict[str, str]]]
-) -> Path:
+) -> Path | None:
     """Escribe el CSV final de una etapa.
 
-    - test: originales recortados a TEST_TARGET (estratificado).
+    - test: variaciones con split=test si existen; si no, originales recortados a
+      TEST_TARGET (estratificado).
     - train/val: variaciones a mano (la columna `split` del archivo de variaciones).
     Orden de columnas alineado al resto del repo: `split` primero, luego `case_id`.
+
+    Devuelve `None` (omite la etapa, sin pisar el CSV) si no hay test disponible: ni
+    variaciones con split=test ni originales (fuente externa ausente).
     """
     label_field = STAGE_LABEL_FIELD[stage]
     output_cols = STAGE_OUTPUT_COLUMNS[stage]
-    test_rows = _stratified_cap(originals[stage], TEST_TARGET)
     var_rows = _read_variations(stage, variations_dir)
+    # Las variaciones pueden aportar su propio split=test (holdout balanceado a mano,
+    # p.ej. factibilidad para macro-F1). Si lo hacen, ese test reemplaza al recorte de
+    # originales en esa etapa; el resto de etapas sigue usando los originales.
+    var_train_val = [r for r in var_rows if r["split"] in {"train", "val"}]
+    var_test = [r for r in var_rows if r["split"] == "test"]
+    test_rows = var_test if var_test else _stratified_cap(originals[stage], TEST_TARGET)
+    if not test_rows:
+        return None
 
     def _row(r: dict[str, str], split: str) -> list[str]:
         cells = dict.fromkeys(output_cols, "")
@@ -215,9 +248,8 @@ def build_stage_csv(
     with open(out_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["split", "case_id", "ficha", *output_cols])
-        for r in var_rows:
-            split = r["split"] if r["split"] in {"train", "val"} else "train"
-            writer.writerow(_row(r, split))
+        for r in var_train_val:
+            writer.writerow(_row(r, r["split"]))
         for r in test_rows:
             writer.writerow(_row(r, "test"))
     return out_path
@@ -226,9 +258,12 @@ def build_stage_csv(
 def build_all(variations_dir: Path, out_dir: Path) -> dict[str, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     originals = build_originals_rows()
-    return {
-        stage: build_stage_csv(stage, variations_dir, out_dir, originals) for stage in STAGE_ORDER
-    }
+    built: dict[str, Path] = {}
+    for stage in STAGE_ORDER:
+        path = build_stage_csv(stage, variations_dir, out_dir, originals)
+        if path is not None:
+            built[stage] = path
+    return built
 
 
 def main() -> None:
@@ -252,6 +287,13 @@ def main() -> None:
         labels = Counter(r[STAGE_LABEL_FIELD[stage]] for r in rows)
         print(f"[{stage}] {path}")
         print(f"   splits={dict(splits)} labels={dict(labels)}")
+
+    skipped = [s for s in STAGE_ORDER if s not in paths]
+    if skipped:
+        print(
+            f"[omitidas] {', '.join(skipped)}: sin test disponible "
+            f"(definir {_ORIGINALS_ENV} para regenerarlas). CSV existentes intactos."
+        )
 
 
 if __name__ == "__main__":

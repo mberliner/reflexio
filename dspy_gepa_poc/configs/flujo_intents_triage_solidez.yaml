@@ -17,18 +17,17 @@ signature:
     el intent es solido y emiti la decision.
 
     Decisiones posibles:
-    - solido: el resultado esperado es claro y concreto, hay valor real, sponsor
-      ejecutivo individual accountable y metricas medibles con linea base y meta.
+    - solido: el resultado esperado es claro y concreto (estado deseado, no tecnologia),
+      con sponsor ejecutivo individual accountable y metricas medibles con linea base y
+      meta.
     - devolucion_reformulacion: el intent describe la tecnologia en vez del resultado
       esperado, o no tiene sponsor individual, o las metricas no son cuantificables.
-    - devolucion_no_ia: la solucion descrita no requiere IA (proceso/BPM, digitalizacion
-      o reglas fijas sin inferencia, modelo predictivo ni generacion).
   inputs:
     - name: "ficha"
       desc: "Ficha de Intent completa."
   outputs:
     - name: "solidez"
-      desc: "Una de: solido, devolucion_reformulacion, devolucion_no_ia."
+      desc: "Una de: solido, devolucion_reformulacion."
     - name: "razonamiento"
       desc: "Justificacion breve (1-2 oraciones) de la decision."
 

@@ -13,24 +13,29 @@ models:
 
 signature:
   instruction: |
-    Sos una etapa de triage. La ficha ya es solida. Evalua si el intent puede avanzar
-    segun su factibilidad tecnica y emiti la decision.
+    Sos una etapa de triage. La ficha ya es solida. Evalua la factibilidad tecnica del
+    intent y la aceptabilidad de su riesgo, y emiti la decision.
 
     Decisiones posibles:
-    - avanza_fast_gate: es factible y puede avanzar a la siguiente etapa tal como esta.
-    - avanza_con_redisenio: es factible pero requiere un ajuste concreto de alcance o
-      controles (p.ej. agregar revision humana previa) antes de avanzar.
-    - no_avanza: no es factible en el estado actual (p.ej. proveedor unico fuera de
-      jurisdiccion sin alternativa). No es un rechazo permanente.
-    - rechazo_formal: corresponde rechazar, p.ej. usa variables discriminatorias por
-      atributos protegidos en decisiones de acceso, o ya existe una alternativa
-      equivalente disponible (caso duplicado).
+    - avanza_fast_gate: es factible con la capacidad y los datos disponibles, y puede
+      avanzar tal como esta a la siguiente etapa (riesgo gestionable, controles ya
+      presentes).
+    - avanza_con_redisenio: es factible pero requiere un ajuste concreto y acotado de
+      alcance o controles antes de avanzar (p.ej. agregar revision humana a una accion
+      reversible de impacto medio, acotar el alcance o confirmar la fuente de datos). El
+      caso es aceptable una vez hecho el ajuste.
+    - no_avanza: no puede avanzar en el estado actual, por (a) factibilidad tecnica
+      insuficiente (p.ej. proveedor unico fuera de jurisdiccion sin alternativa, datos
+      o computo inexistentes en el plazo, tecnologia inmadura) o (b) riesgo no aceptable
+      (accion autonoma sobre decisiones de alto impacto e irreversibles sobre personas
+      -baja laboral, corte de servicio esencial, decision financiera vinculante- donde un
+      ajuste de control acotado no alcanza). No es un rechazo permanente.
   inputs:
     - name: "ficha"
       desc: "Ficha de Intent completa."
   outputs:
     - name: "factibilidad"
-      desc: "Una de: avanza_fast_gate, avanza_con_redisenio, no_avanza, rechazo_formal."
+      desc: "Una de: avanza_fast_gate, avanza_con_redisenio, no_avanza."
     - name: "razonamiento"
       desc: "Justificacion breve (1-2 oraciones) de la decision."
 
