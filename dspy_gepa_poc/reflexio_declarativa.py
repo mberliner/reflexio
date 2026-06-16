@@ -540,6 +540,50 @@ class ReflexioDeclarativa:
             },
         )
 
+    def _save_predictions(self) -> None:
+        """Vuelca predicciones por-ejemplo (gold vs pred de cada output) a CSV en el run dir.
+
+        Para cada split con datos (test, val) corre el programa optimizado sobre cada
+        ejemplo y guarda `predictions_<split>.csv`. Genérico para modulos con `signature`
+        (dynamic / rule_derived); el pipeline se omite (outputs por etapa). Agrega
+        llamadas LLM (una por ejemplo), por eso es opt-in (`optimization.save_predictions`).
+        """
+        import csv as _csv
+
+        sig = self.config.raw_config.get("signature", {})
+        out_fields = [o["name"] for o in sig.get("outputs", [])]
+        if not out_fields:
+            log_warn("save_predictions: sin signature.outputs (pipeline?); se omite.")
+            return
+        data_cfg = self.config.raw_config["data"]
+        input_keys = data_cfg.get("input_columns") or [data_cfg.get("input_column")]
+        if not isinstance(input_keys, list):
+            input_keys = [input_keys]
+
+        for split_name, devset in (("test", self.testset), ("val", self.valset)):
+            if not devset:
+                continue
+            cols = [
+                "case_id",
+                *[f"gold_{f}" for f in out_fields],
+                *[f"pred_{f}" for f in out_fields],
+                *input_keys,
+            ]
+            path = self.results_dir / f"predictions_{split_name}.csv"
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                writer = _csv.DictWriter(f, fieldnames=cols)
+                writer.writeheader()
+                for ex in devset:
+                    pred = self.optimized_student(**{k: getattr(ex, k) for k in input_keys})
+                    row = {"case_id": getattr(ex, "case_id", "")}
+                    for field in out_fields:
+                        row[f"gold_{field}"] = str(getattr(ex, field, "")).strip()
+                        row[f"pred_{field}"] = str(getattr(pred, field, "")).strip()
+                    for k in input_keys:
+                        row[k] = getattr(ex, k, "")
+                    writer.writerow({c: row.get(c, "") for c in cols})
+            log_ok(f"Predictions saved: {path} ({len(devset)} {split_name})")
+
     def _save_candidates(self, payload: dict) -> None:
         """Vuelca el payload de candidatos GEPA a `candidates.json` en el run dir."""
         import json
@@ -564,6 +608,12 @@ class ReflexioDeclarativa:
         with open(config_out, "w", encoding="utf-8") as f:
             yaml.safe_dump(self.config.raw_config, f, allow_unicode=True)
         log_ok(f"Config snapshot saved: {config_out}")
+
+        # Opt-in: volcar las predicciones por-ejemplo (gold vs pred de cada output) del
+        # programa optimizado. El harness solo guarda prompts y scores agregados; esto
+        # materializa las salidas por-ficha para auditoria (clave en module rule_derived).
+        if self.config.raw_config.get("optimization", {}).get("save_predictions"):
+            self._save_predictions()
 
         # Prepare notes (free-form metadata, budget goes in dedicated column)
         opt_config = self.config.raw_config.get("optimization", {})

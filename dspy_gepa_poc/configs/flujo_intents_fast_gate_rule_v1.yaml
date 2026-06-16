@@ -92,6 +92,10 @@ optimization:
   eval_repeats: 1
   use_few_shot: true
   few_shot_count: 8
+  # Vuelca predicciones por-ficha (gold vs pred de las 6 respuestas + color) a
+  # predictions_test.csv / predictions_val.csv en el run dir. Materializa la
+  # auditabilidad de rule_derived sin correr el dump aparte.
+  save_predictions: true
   # La metrica evalua SOLO el objetivo (color derivado) + el cuello (alto_impacto).
   # Evaluar las 7 salidas inflaba el baseline al techo (~93-96% en VAL) porque P1/P2/P3/P5
   # ya estan en 90-100% y diluyen: GEPA quedaba sin margen ni presion sobre el cuello.
