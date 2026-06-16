@@ -19,6 +19,7 @@ from dspy_gepa_poc.flujo_intents.dataset import (
     STAGE_ORDER,
     _stage_rows_for_rejection,
 )
+from dspy_gepa_poc.flujo_intents.fast_gate_rule import derive_color
 from dspy_gepa_poc.flujo_intents.orchestrator import load_master_config, run_flow
 from shared.paths import get_dspy_paths
 
@@ -214,6 +215,49 @@ def test_dataset_tiene_los_tres_splits(stage):
     # La etiqueta de la etapa nunca esta vacia.
     label_field = STAGE_LABEL_FIELD[stage]
     assert all(r[label_field].strip() for r in rows), f"{stage}: hay label vacio"
+
+
+# --- fast_gate: regla determinista (color derivado de P1..P5 + alto impacto) -------
+
+
+@pytest.mark.parametrize(
+    "p,ai,expected",
+    [
+        ((0, 0, 0, 0, 0), False, "Verde"),  # 0 sies
+        ((1, 0, 0, 0, 0), False, "Verde"),  # 1 si
+        ((1, 1, 0, 0, 0), False, "Amarillo"),  # 2 sies
+        ((1, 1, 1, 0, 0), False, "Amarillo"),  # 3 sies
+        ((1, 1, 1, 1, 0), False, "Rojo"),  # 4 sies
+        ((1, 1, 1, 1, 1), False, "Rojo"),  # 5 sies, P5 pero sin alto impacto
+        ((1, 1, 1, 1, 1), True, "Negro"),  # 5 sies, P5 + alto impacto
+        ((1, 1, 0, 0, 1), True, "Negro"),  # suma 3 pero P5 + alto impacto (override, TC-N-06)
+        ((0, 0, 0, 0, 1), True, "Negro"),  # P5 + alto impacto solos
+        ((1, 1, 1, 1, 0), True, "Rojo"),  # alto impacto sin P5 no escala a Negro
+    ],
+)
+def test_derive_color_tabla_de_verdad(p, ai, expected):
+    assert derive_color(*p, ai) == expected
+
+
+def test_derive_color_acepta_si_no_strings():
+    assert derive_color("si", "si", "No", "No", "No", "No") == "Amarillo"
+    assert derive_color("Si", "si", "si", "si", "si", "si") == "Negro"
+
+
+def test_derive_color_reproduce_el_lote_anotado():
+    # fast_gate_v1.csv tiene P1..P5 anotadas (fuente de las etiquetas del test).
+    # La regla debe reproducir el color de los 32 casos usando alto_impacto=(color==Negro):
+    # todos los Negro tienen P5=Si, y V/A/R salen del conteo.
+    path = get_dspy_paths().datasets / "fast_gate_v1.csv"
+    with open(path, encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert rows, "fast_gate_v1.csv vacio"
+    for r in rows:
+        gold = r["clasificacion"].strip()
+        alto_impacto = "si" if gold == "Negro" else "No"
+        ps = [r[c] for c in ("p1", "p2", "p3", "p4", "p5")]
+        got = derive_color(*ps, alto_impacto)
+        assert got == gold, f"{r['case_id']}: derive={got} != gold={gold} (p={ps})"
 
 
 def test_flujo_rojo_recomendacion_con_nivel(flujo_cfg):

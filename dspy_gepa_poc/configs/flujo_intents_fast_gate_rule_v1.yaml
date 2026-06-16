@@ -1,0 +1,90 @@
+# flujo-intents | Etapa 4: Fast Gate -- REGLA DETERMINISTA (arquitectura A, D-013)
+#
+# El LLM NO clasifica el color: responde las 5 preguntas Si/No del Marco + el juicio
+# de alto impacto. El color (clasificacion) se DERIVA con fast_gate_rule.derive_color
+# (module.type: rule_derived). Contar los Si: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo;
+# Negro = P5=Si Y alto impacto. Reemplaza el enfoque "deducir el color" (prompt v1),
+# cuya causa de fallo Rojo->Amarillo era el conteo no modelado + el default de P3.
+#
+# Iteracion 1: la metrica evalua solo `clasificacion` (color derivado) para medir el
+# holdout contra el punto estable previo (76,7%). Las P1..P5 del train/val se anotan
+# en la Iteracion 2; el test ya las tiene (de fast_gate_v1.csv).
+
+case:
+  name: "flujo_intents_fast_gate_rule_v1"
+  title: "flujo-intents | Etapa 4: Fast Gate (regla determinista)"
+  description: "Etapa 4 (Fast Gate): el LLM responde las 5 preguntas Si/No del Marco de Gobierno de IA y el juicio de alto impacto; el color se deriva con una regla fija (rule_derived). Equivale al Fast Gate (§7) del Marco. Trazabilidad en SPEC-102 (D-013)."
+
+module:
+  type: "rule_derived"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos la etapa Fast Gate del Marco de Gobierno de IA. La ficha ya paso el triage.
+    NO clasifiques el color directamente: respondé las 5 preguntas de control (Si/No)
+    y el juicio de alto impacto. El color se calcula despues con una regla fija a
+    partir de tus respuestas (contar los Si: 0-1 Verde, 2-3 Amarillo, 4-5 Rojo; Negro
+    si P5=Si y hay alto impacto). Respondé cada pregunta con 'si' o 'No' segun lo que
+    la ficha permita inferir.
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "p1"
+      desc: "Si/No: el sistema usa datos personales o datos de clientes."
+    - name: "p2"
+      desc: "Si/No: influye en una decision que afecta directamente a un cliente o empleado."
+    - name: "p3"
+      desc: >-
+        Si/No: usa herramientas o proveedores fuera del catalogo aprobado de la
+        organizacion. Default: si el intent es nuevo y no lo aclara, asumi que se
+        implementara con una herramienta homologada (No); si la ficha dice que el
+        sistema ya esta implementado, o menciona una herramienta externa / no
+        homologada / que no es de la organizacion, entonces Si.
+    - name: "p4"
+      desc: "Si/No: el resultado podria generar riesgo legal o danar la reputacion de la empresa si falla."
+    - name: "p5"
+      desc: "Si/No: el sistema toma o ejecuta decisiones sin que ningun humano las revise por caso."
+    - name: "alto_impacto"
+      desc: >-
+        Si/No: se cumple al menos uno: (a) escala (afecta a >=10% de la base de
+        clientes o >=100.000 clientes); (b) naturaleza (decision financiera, corte de
+        servicio, denegacion de acceso o restriccion de derechos); (c) irreversibilidad
+        (efecto no revertible sin intervencion manual posterior); (d) regulatorio
+        (error con exposicion a sancion directa); (e) profiling (perfilamiento
+        automatizado de personas).
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de las respuestas."
+    - name: "clasificacion"
+      desc: "Color derivado por la regla a partir de las respuestas (no lo decidis vos)."
+
+data:
+  csv_filename: "flujo_intents_fast_gate.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 90
+  predictor_type: "cot"
+  match_mode: "exact"
+  metric_feedback: true
+  eval_repeats: 1
+  use_few_shot: false
+  ignore_in_metric:
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
+    - "alto_impacto"
+    - "razonamiento"
+  field_configs:
+    clasificacion: { mode: "exact" }

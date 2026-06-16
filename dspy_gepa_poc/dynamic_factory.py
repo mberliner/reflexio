@@ -74,6 +74,72 @@ class DynamicModuleFactory:
         return DynamicWrapper()
 
     @staticmethod
+    def create_rule_derived_module(
+        signature_config: dict[str, Any],
+        predictor_type: str = "cot",
+        derived_field: str = "clasificacion",
+    ) -> dspy.Module:
+        """Crea un modulo cuyo campo `derived_field` se DERIVA por una regla pura.
+
+        El LLM solo emite las preguntas (p1..p5 + alto_impacto + razonamiento); el
+        color (`clasificacion`) lo calcula `fast_gate_rule.derive_color`, no el modelo.
+        Esto hace la clasificacion deterministica, auditable y fiel al Marco (D-013).
+
+        La signature del predictor se construye con todos los outputs del YAML MENOS
+        `derived_field`. El `forward()` agrega `derived_field` al `dspy.Prediction`
+        (mismo patron de composicion que `create_pipeline_module`).
+
+        Args:
+            signature_config: YAML de la signature (debe incluir p1..p5 y alto_impacto
+                en outputs, ademas de `derived_field`).
+            predictor_type: 'cot' o 'predict'.
+            derived_field: nombre del campo derivado (default 'clasificacion').
+        """
+        from dspy_gepa_poc.flujo_intents.fast_gate_rule import derive_color
+
+        all_outputs = [o["name"] for o in signature_config.get("outputs", [])]
+        predicted_outputs = [n for n in all_outputs if n != derived_field]
+        required = {"p1", "p2", "p3", "p4", "p5", "alto_impacto"}
+        missing = required - set(predicted_outputs)
+        if missing:
+            raise ValueError(
+                f"rule_derived requiere outputs {sorted(required)}; faltan: {sorted(missing)}"
+            )
+
+        predicted_cfg = dict(signature_config)
+        predicted_cfg["outputs"] = [
+            o for o in signature_config.get("outputs", []) if o["name"] != derived_field
+        ]
+        signature_class = DynamicModuleFactory.create_signature(predicted_cfg)
+
+        class RuleDerivedModule(dspy.Module):
+            def __init__(self):
+                super().__init__()
+                self._predicted = predicted_outputs
+                self._derived_field = derived_field
+                if predictor_type == "cot":
+                    self.predictor = dspy.ChainOfThought(signature_class)
+                else:
+                    self.predictor = dspy.Predict(signature_class)
+
+            def forward(self, **kwargs):
+                result = self.predictor(**kwargs)
+                data = {name: getattr(result, name, "") for name in self._predicted}
+                if hasattr(result, "reasoning"):
+                    data["reasoning"] = result.reasoning
+                data[self._derived_field] = derive_color(
+                    data.get("p1"),
+                    data.get("p2"),
+                    data.get("p3"),
+                    data.get("p4"),
+                    data.get("p5"),
+                    data.get("alto_impacto"),
+                )
+                return dspy.Prediction(**data)
+
+        return RuleDerivedModule()
+
+    @staticmethod
     def create_pipeline_module(
         stages_config: list[dict[str, Any]],
         routing_config: dict[str, Any],

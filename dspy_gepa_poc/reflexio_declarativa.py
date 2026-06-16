@@ -247,6 +247,56 @@ class ReflexioDeclarativa:
                 teleprompter = LabeledFewShot(k=k)
                 self.student = teleprompter.compile(self.student, trainset=self.trainset)
 
+        elif module_type == "rule_derived":
+            # El LLM emite p1..p5 + alto_impacto; el color (clasificacion) se DERIVA
+            # con fast_gate_rule.derive_color. Fiel al Marco y auditable (D-013).
+            sig_config = self.config.raw_config.get("signature")
+            if not sig_config:
+                raise ValueError("Module type is 'rule_derived' but no 'signature' section found.")
+
+            opt_config = self.config.raw_config.get("optimization", {})
+            predictor_type = opt_config.get("predictor_type", "cot")
+            self.student = DynamicModuleFactory.create_rule_derived_module(
+                sig_config, predictor_type=predictor_type
+            )
+
+            output_fields = [out["name"] for out in sig_config.get("outputs", [])]
+            ignore_fields = opt_config.get("ignore_in_metric", [])
+            eval_fields = [f for f in output_fields if f not in ignore_fields]
+
+            match_mode = opt_config.get("match_mode", "exact")
+            fuzzy_threshold = opt_config.get("fuzzy_threshold", 0.85)
+            field_configs = opt_config.get("field_configs")
+            use_feedback = opt_config.get("metric_feedback", bool(field_configs))
+
+            log_info(
+                f"rule_derived: eval={eval_fields} (Ignored: {ignore_fields}, "
+                f"Match: {match_mode}, Feedback: {use_feedback})"
+            )
+
+            if use_feedback:
+                self.metric = create_dynamic_metric_with_feedback(
+                    eval_fields,
+                    field_configs=field_configs,
+                    default_mode=match_mode if match_mode != "exact" else "normalized",
+                    fuzzy_threshold=fuzzy_threshold,
+                )
+            else:
+                self.metric = create_dynamic_metric(
+                    eval_fields, match_mode=match_mode, fuzzy_threshold=fuzzy_threshold
+                )
+
+            self._validate_metric_fields(eval_fields, output_fields)
+            log_ok(f"rule_derived module created with outputs: {output_fields}")
+
+            if opt_config.get("use_few_shot", False):
+                k = opt_config.get("few_shot_count", 3)
+                log_info(f"Injecting {k} few-shot examples from trainset into the student.")
+                from dspy.teleprompt import LabeledFewShot
+
+                teleprompter = LabeledFewShot(k=k)
+                self.student = teleprompter.compile(self.student, trainset=self.trainset)
+
         elif module_type == "pipeline":
             stages = self.config.raw_config.get("stages")
             routing = self.config.raw_config.get("routing")
@@ -302,7 +352,8 @@ class ReflexioDeclarativa:
 
         else:
             raise ValueError(
-                f"Unsupported module type: {module_type}. Supported: 'dynamic', 'pipeline'."
+                f"Unsupported module type: {module_type}. "
+                "Supported: 'dynamic', 'rule_derived', 'pipeline'."
             )
 
     def _validate_metric_fields(self, eval_fields: list, output_fields: list) -> None:

@@ -50,6 +50,10 @@ class ConfigValidator(BaseConfigValidator):
             "required": [],
             "optional": [],
         },
+        "rule_derived": {
+            "required": [],
+            "optional": [],
+        },
         "pipeline": {
             "required": [],
             "optional": [],
@@ -269,7 +273,7 @@ class ConfigValidator(BaseConfigValidator):
 
         # For dynamic modules, use signature.outputs when available
         module_type = config.get("module", {}).get("type")
-        if module_type == "dynamic":
+        if module_type in ("dynamic", "rule_derived"):
             sig_outputs = [
                 o.get("name")
                 for o in config.get("signature", {}).get("outputs", [])
