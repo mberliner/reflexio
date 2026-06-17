@@ -75,6 +75,33 @@ Los shell scripts del repo (`run_demo.sh`, `run_cv_cases.sh`, etc.) ya invocan c
 - Punto de entrada DSPy: `python -m dspy_gepa_poc.reflexio_declarativa --config <yaml>`
   (`--config` es obligatorio).
 
+## Fast Gate determinista (rule_derived): auditoria y regeneracion de datos
+
+La etapa fast_gate de flujo-intents usa `module.type: rule_derived` (ver
+`docs/ARCHITECTURE.md` y `YAML_CONFIG_REFERENCE.md`): el LLM responde 5 preguntas
+Si/No + `alto_impacto` y `derive_color` deriva el color. Scripts asociados:
+
+```bash
+# Regenerar el dataset: anotar P1..P5+alto_impacto en train/val (desde make_variations)
+# y en el test (desde fast_gate_v1.csv). Idempotente.
+python -m dspy_gepa_poc.flujo_intents.make_variations          # reescribe variations/*_var.csv
+python -m dspy_gepa_poc.scripts.enrich_fast_gate_questions     # puebla el CSV de la etapa
+
+# Diagnostico per-pregunta + DUMP AUDITABLE por-ficha (gold vs pred de las 6
+# respuestas + color) -> results/audits/. Hace llamadas LLM (una por caso).
+PYTHONUTF8=1 LLM_MODEL_TASK=azure/gpt-4.1-mini \
+  python -m dspy_gepa_poc.scripts.diagnose_fast_gate_rule [--run-dir <run>] [--split test]
+```
+
+- Sin `--run-dir` audita el programa base del YAML; con `--run-dir <results/runs/...>`
+  carga `optimized_program.json` y audita el programa optimizado por GEPA.
+- El dump RE-EJECUTA el LLM (GEPA no guarda predicciones por-ejemplo): cada corrida
+  puede variar por la varianza del LLM (temp 0.1). Para congelar las predicciones
+  dentro del run, usar `optimization.save_predictions: true` (deja
+  `predictions_{test,val}.csv` en el run dir).
+- `gold` sale del dataset (`flujo_intents_fast_gate.csv`); `pred` del LLM con el prompt
+  del run elegido. Detalle del caso en `historial/sdd.md` (D-013) y `SPEC-102`.
+
 ## Flujo de trabajo tipico (nueva tarea)
 
 Todo es declarativo: una tarea nueva NO requiere escribir codigo Python, solo

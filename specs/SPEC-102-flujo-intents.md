@@ -16,11 +16,26 @@ Prioridad: P2
 
 ## Requisitos funcionales
 
-- FR-001 Cada etapa LLM MUST ser un `module.type: dynamic` agnostico (`ficha ->
-  decision` + `razonamiento`), optimizable con la interfaz actual
-  (`python -m dspy_gepa_poc.reflexio_declarativa --config <etapa>.yaml`). El Fast Gate
-  MUST clasificar `ficha -> color` directo, sin conteo aritmetico en codigo; `p1..p5`
-  son diagnosticos en `ignore_in_metric`.
+- FR-001 Cada etapa LLM MUST ser optimizable con la interfaz actual
+  (`python -m dspy_gepa_poc.reflexio_declarativa --config <etapa>.yaml`). Intake,
+  triage_solidez y triage_factibilidad son `module.type: dynamic` (`ficha -> decision`
+  + `razonamiento`). El **Fast Gate** MUST implementar la regla canonica del Marco como
+  `module.type: rule_derived` (decision 2026-06-16, D-013): el LLM responde las 5
+  preguntas Si/No del Fast Gate + `alto_impacto`, y la funcion pura
+  `flujo_intents/fast_gate_rule.derive_color` deriva el color por conteo. Las preguntas
+  (`p1..p5`, `alto_impacto`) son gold del dataset, conteo-consistentes con el color, NO
+  diagnosticos ignorados. [Revierte la decision previa "clasificar color directo sin
+  conteo en codigo", que daba Rojo->Amarillo opaco; ver `historial/sdd.md` D-013.]
+- FR-001b Regla canonica del Fast Gate (Marco de Gobierno de IA). Contar los "Si" de:
+  P1 (datos personales o de clientes), P2 (influye en decision sobre cliente/empleado),
+  P3 (herramientas/proveedores fuera del catalogo aprobado; default: intent nuevo sin
+  dato => homologado => No; "ya implementado" o externo/no homologado => Si), P4 (riesgo
+  legal o reputacional si falla), P5 (ejecuta sin revision humana por caso). Mapeo: 0-1
+  Verde / 2-3 Amarillo / 4-5 Rojo; **Negro = P5=Si Y alto impacto** (override del conteo).
+  Alto impacto = al menos uno de: escala (>=10% de la base o >=100.000 clientes),
+  naturaleza (decision financiera / corte de servicio / denegacion de acceso /
+  restriccion de derechos), irreversibilidad sin intervencion manual, exposicion a
+  sancion regulatoria directa, o profiling automatizado de personas.
 - FR-002 Ratio por etapa ~40/20/40 (objetivo train 30 / val 15 / test 30). El `test`
   MUST derivarse de los originales (`intake_clasificacion.csv` + `triage_rechazos.csv`)
   recortados a 30 de forma estratificada (preservando clases minoritarias). El
@@ -65,7 +80,8 @@ Prioridad: P2
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | `dspy_gepa_poc/configs/flujo_intents_{intake,triage_solidez,triage_factibilidad,fast_gate}.yaml` |
+| FR-001 | `dspy_gepa_poc/configs/flujo_intents_{intake,triage_solidez,triage_factibilidad}.yaml` (dynamic) |
+| FR-001 / FR-001b | Fast Gate rule_derived: `configs/flujo_intents_fast_gate_rule_v1.yaml`, `flujo_intents/fast_gate_rule.py::derive_color`, `DynamicModuleFactory.create_rule_derived_module`; `make_variations._FG_PREGUNTAS` (gold P1..P5+alto_impacto); `test_derive_color_*`, `test_rule_derived_module_*`, `test_dataset_fast_gate_color_consistente_con_preguntas` |
 | FR-002 | `flujo_intents/dataset.py` (split test=originales) + `flujo_intents/make_variations.py`; `test_flujo_intents.py` |
 | FR-003 | `dataset.py::REJ_STAGE_MAP`, `_stage_rows_for_rejection`; `test_rechazo_propaga_*`, `test_rechazo_intake_no_aparece_*` |
 | FR-004 | `flujo_intents/aprobacion.py` + `flujo_intents/flujo_intents.yaml`; `test_aprobacion_*` |
@@ -74,7 +90,7 @@ Prioridad: P2
 | SC-001 | validacion en vivo (AppConfig + CSVDataLoader) |
 | SC-002 | `build_test_rows` (distribuciones); ids `VAR-*` vs `TC-*` |
 | SC-003 | `test_flujo_completo_verde_aprueba`, `test_flujo_rojo_recomendacion_con_nivel`, `test_flujo_corta_*` |
-| SC-004 | `tests/test_flujo_intents.py` (20 tests) |
+| SC-004 | `tests/test_flujo_intents.py` (43 tests, incl. derive_color y rule_derived) |
 
 ## Pendientes (deuda para proximas iteraciones)
 

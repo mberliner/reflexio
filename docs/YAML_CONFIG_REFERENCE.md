@@ -29,12 +29,12 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 |---------|-------|------|-------------|
 | `case` | `name` | string | Slug corto del caso (ver [Criterio unificado `case`](#criterio-unificado-case)) |
 | `case` | `title` | string | Titulo semantico del caso |
-| `module` | `type` | string | Tipo de modulo: `dynamic`, `pipeline`, `sentiment`, `extractor`, `qa` |
+| `module` | `type` | string | Tipo de modulo: `dynamic`, `rule_derived`, `pipeline`, `sentiment`, `extractor`, `qa` |
 | `data` | `csv_filename` | string | Archivo CSV en `datasets/` |
 | `data` | `input_column` o `input_columns` | string / list | Columna(s) de entrada del CSV. `input_column` (string, single) o `input_columns` (lista, multi-input); al menos uno requerido |
 | `optimization` | `max_metric_calls` o `auto_budget` | int / string | Al menos uno requerido |
 
-### Signature (requerida si `module.type: "dynamic"`)
+### Signature (requerida si `module.type: "dynamic"` o `"rule_derived"`)
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
@@ -58,6 +58,7 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 | `optimization.field_configs` | dict | {} | Overrides por campo: `{nombre: {mode: exact\|normalized\|fuzzy\|set, fuzzy_threshold?: float, separators?: str}}`. Implica `metric_feedback=true` |
 | `optimization.eval_repeats` | int | 1 | Repeticiones de evaluacion por prompt (k) para reducir varianza del LLM |
 | `optimization.num_threads` | int | 1 | Threads para evaluacion paralela |
+| `optimization.save_predictions` | bool | false | Si `true`, al cerrar el run vuelca `predictions_test.csv` y `predictions_val.csv` en el run dir: por cada ejemplo, `gold_*` vs `pred_*` de cada output (auditabilidad). Generico para modulos con `signature`. Agrega una llamada LLM por ejemplo |
 
 ### Models (opcionales)
 
@@ -80,6 +81,7 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 | Tipo | Campos Adicionales Requeridos |
 |------|-------------------------------|
 | `dynamic` | Seccion `signature` completa |
+| `rule_derived` | Seccion `signature` completa; outputs DEBEN incluir las preguntas + el campo derivado (ver abajo) |
 | `pipeline` | Secciones `stages` (lista, >=2 etapas con `name` + `signature`) y `routing` |
 | `sentiment` | Ninguno |
 | `extractor` | `output_columns` (en `module` o `data`) |
@@ -96,6 +98,20 @@ Compone N etapas en serie con routing condicional: la etapa-gate decide si las p
 | `routing.gate_field` | string | Campo de output de `gate_stage` a evaluar (debe existir en sus outputs) |
 | `routing.gate_value` | string | Valor que abre las etapas posteriores |
 | `routing.skip_outputs_when_gated` | dict | Opcional: `{campo: valor}` asignado a outputs de etapas posteriores cuando el gate no abre |
+
+### Rule_derived (requerida si `module.type: "rule_derived"`)
+
+El LLM NO produce el resultado final: emite **juicios atomicos** y una **funcion pura**
+deriva el resultado de forma deterministica. Hoy especifico de fast_gate (Marco de
+Gobierno de IA): el LLM responde 5 preguntas Si/No + `alto_impacto`, y
+`flujo_intents/fast_gate_rule.derive_color` calcula el color. Ver `ARCHITECTURE.md`
+(patron Rule-Derived) y `DynamicModuleFactory.create_rule_derived_module`.
+
+| Aspecto | Detalle |
+|---------|---------|
+| `signature.outputs` | DEBE incluir `p1..p5`, `alto_impacto` y el campo derivado `clasificacion`. El factory crea el predictor con todos los outputs MENOS `clasificacion` (el LLM no lo decide); el `forward()` lo agrega derivado |
+| Metrica | Evaluar el campo derivado (`clasificacion`) y opcionalmente el cuello (`alto_impacto`). NO evaluar las 5 preguntas si ya estan altas: infla el baseline al techo y diluye la senal (ver `historial/sdd.md`, fix de metrica 2026-06-16) |
+| Dataset | Las preguntas (`p1..p5`, `alto_impacto`) son gold y deben ser conteo-consistentes: `derive_color(p1..p5, alto_impacto) == clasificacion` en todas las filas |
 
 ---
 

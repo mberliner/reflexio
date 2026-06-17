@@ -8,7 +8,20 @@ y convenciones ver `docs/CONTRIBUTING.md`.
 
 - **Factory**: `DynamicModuleFactory` (`dspy_gepa_poc/dynamic_factory.py`) crea
   signatures y modules DSPy desde config YAML. Punto central de extension para
-  nuevas tareas.
+  nuevas tareas. Tipos: `dynamic` (predictor unico), `rule_derived` (ver abajo),
+  `pipeline` (N etapas con routing).
+- **Rule-Derived**: para tareas con **regla explicita y deterministica**
+  (conteo/umbral/formula), el LLM NO produce el resultado final: emite los
+  **juicios atomicos** (binarios) y una **funcion pura** aplica la regla. Hace el
+  resultado deterministico, AUDITABLE y fiel a la regla, y aisla el error por
+  componente. Implementacion: `create_rule_derived_module` (el `forward()` corre el
+  predictor y agrega el campo derivado al `dspy.Prediction`, mismo patron de
+  composicion que `create_pipeline_module`). Caso vigente: fast_gate de
+  `flujo-intents` (`module.type: rule_derived`), donde el LLM responde 5 preguntas
+  Si/No + `alto_impacto` y `flujo_intents/fast_gate_rule.derive_color` deriva el
+  color (0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro = P5 + alto impacto). Supera al
+  enfoque end-to-end y lo hace auditable. Lecciones y veredicto (incl. por que GEPA
+  no aporta aqui) en `historial/sdd.md` (D-013) y `docs/LECCIONES_APRENDIDAS.md` s11.
 - **Adapter**: `BaseAdapter` (`gepa_standalone/adapters/base_adapter.py`) con 4
   implementaciones concretas (classifier, extractor, sql, rag). Cada adapter
   define como evaluar una tarea contra el LLM.
@@ -34,7 +47,14 @@ y convenciones ver `docs/CONTRIBUTING.md`.
   `.env` para configuracion LLM independiente.
 - MUST: inputs versionados en git: configs YAML, datasets CSV y prompts JSON.
 - MUST NOT versionar outputs: todo bajo `**/results/` esta gitignoreado (runs,
-  leaderboards, metricas). Son regenerables.
+  leaderboards, metricas). Son regenerables. Artefactos por corrida (local):
+  `results/runs/<caso>_<ts>/` (`run.json`, `candidates.json`,
+  `optimized_program.json`, `config_snapshot.yaml`; + `predictions_{test,val}.csv` si
+  `optimization.save_predictions: true`), `results/experiments/metricas_optimizacion.csv`
+  (una fila por corrida) y `results/audits/` (dumps por-ficha generados a mano con
+  `scripts/diagnose_fast_gate_rule.py --run-dir`). El harness GEPA solo persiste
+  prompts y scores agregados; las respuestas por-ejemplo requieren `save_predictions`
+  o el dump.
 - MUST: los datasets CSV requieren columna `split` con valores `train`/`val`/`test`
   (definido en `shared/validation/csv_validator.py`, `VALID_SPLITS`).
 - MUST: invocar los entry points con `python -m` desde la raiz del repo. Si se
