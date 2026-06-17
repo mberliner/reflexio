@@ -88,13 +88,14 @@ python -m dspy_gepa_poc.flujo_intents.make_variations          # reescribe varia
 python -m dspy_gepa_poc.scripts.enrich_fast_gate_questions     # puebla el CSV de la etapa
 
 # Diagnostico per-pregunta + DUMP AUDITABLE por-ficha (gold vs pred de las 6
-# respuestas + color) -> results/audits/. Hace llamadas LLM (una por caso).
+# respuestas + color). Hace llamadas LLM (una por caso).
 PYTHONUTF8=1 LLM_MODEL_TASK=azure/gpt-4.1-mini \
   python -m dspy_gepa_poc.scripts.diagnose_fast_gate_rule [--run-dir <run>] [--split test]
 ```
 
-- Sin `--run-dir` audita el programa base del YAML; con `--run-dir <results/runs/...>`
-  carga `optimized_program.json` y audita el programa optimizado por GEPA.
+- Sin `--run-dir` audita el programa base del YAML y escribe el dump en
+  `results/audits/`; con `--run-dir <results/runs/...>` carga
+  `optimized_program.json` y escribe el dump dentro del run dir.
 - El dump RE-EJECUTA el LLM (GEPA no guarda predicciones por-ejemplo): cada corrida
   puede variar por la varianza del LLM (temp 0.1). Para congelar las predicciones
   dentro del run, usar `optimization.save_predictions: true` (deja

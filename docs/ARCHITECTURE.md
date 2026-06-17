@@ -51,8 +51,9 @@ y convenciones ver `docs/CONTRIBUTING.md`.
   `results/runs/<caso>_<ts>/` (`run.json`, `candidates.json`,
   `optimized_program.json`, `config_snapshot.yaml`; + `predictions_{test,val}.csv` si
   `optimization.save_predictions: true`), `results/experiments/metricas_optimizacion.csv`
-  (una fila por corrida) y `results/audits/` (dumps por-ficha generados a mano con
-  `scripts/diagnose_fast_gate_rule.py --run-dir`). El harness GEPA solo persiste
+  (una fila por corrida). El script `scripts/diagnose_fast_gate_rule.py` genera
+  dumps por-ficha: con `--run-dir` los escribe dentro del run dir; sin el flag
+  caen en `results/audits/` (diagnostico sobre programa base). El harness solo persiste
   prompts y scores agregados; las respuestas por-ejemplo requieren `save_predictions`
   o el dump.
 - MUST: los datasets CSV requieren columna `split` con valores `train`/`val`/`test`
