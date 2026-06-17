@@ -108,11 +108,14 @@ def run(run_dir: str | None = None, split: str = "test") -> int:
         for (g, p), c in color_conf.most_common():
             print(f"  {g} -> {p}: {c}")
 
-    audits_dir = get_dspy_paths().results / "audits"
-    audits_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     tag = "optimized" if run_dir else "base"
-    out_path = audits_dir / f"fast_gate_rule_{tag}_{split}_{ts}.csv"
+    if run_dir:
+        out_dir = Path(run_dir)
+    else:
+        out_dir = get_dspy_paths().results / "audits"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"fast_gate_rule_{tag}_{split}_{ts}.csv"
     cols = [
         "case_id",
         "color_ok",
