@@ -692,6 +692,41 @@ los síes: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro = P5=Sí + alto impacto):
   Convierte la tarea en 5 binarios + cálculo fijo (auditable, fiel al Marco). Plan en
   `historial/sdd.md` (D-013) y `specs/SPEC-102-flujo-intents.md`.
 
+**Ampliar el VAL no destraba GEPA si los casos nuevos no son tan difíciles como el
+TEST (2026-06-18, arquitectura determinística).** Tras confirmar que con VAL chico
+(22) GEPA elige el baseline 3/3 (cuello = señal en VAL, no budget), se ejecutó la
+palanca pendiente: **VAL 22 -> 46** con 24 casos borde concentrados en el cuello
+(Rojo<->Negro por `alto_impacto`, transiciones de conteo 1<->2 / 3<->4, colinealidad
+rota alto=Sí con P5=No). Probado a N=3 con **dos** modelos (TEST fijo de 30, métrica
+color+alto_impacto):
+
+| Task / Reflection | Baseline VAL | Opt VAL (Opt-Base) | Robustez TEST | gap VAL-TEST | veredicto |
+|---|---|---|---|---|---|
+| gpt-5-mini / gpt-5 | 92,8% | 89,5% (**-3,3**) | 79,4% | +10,1 | RUIDO [SOBREAJUSTE] [TECHO] |
+| gpt-4.1-mini / gpt-4o | 89,5% | 90,9% (**+1,5**) | 77,2% | +13,7 | RUIDO [SOBREAJUSTE] [ESTABILIZA] |
+
+Lecciones:
+- **"VAL más grande" no es "VAL con más señal".** El VAL quedó en techo (89-93%) con
+  AMBOS modelos: los casos son borde *conceptualmente* pero el LLM los resuelve. Lo
+  que le da gradiente a GEPA no es el tamaño ni la dificultad nominal, sino que el VAL
+  tenga la **misma dificultad/distribución que el TEST** — casos donde el modelo
+  *realmente* falla, no casos borde sintéticos limpios.
+- **Diagnóstico barato antes de curar VAL: comparar baseline VAL vs baseline TEST.**
+  Un gap grande (aquí +10 a +20 pp) señala que el VAL no representa el TEST → ampliarlo
+  con más de lo mismo no ayudará. El error residual del TEST (originales `TC`, más
+  diversos) es irreducible por prompt-tuning sobre un VAL no representativo.
+- **GEPA puede SUBIR en VAL y EMPEORAR en TEST.** Con gpt-4.1-mini el optimizado superó
+  al baseline en VAL (+1,5) pero el gap VAL-TEST fue +13,7: medir SIEMPRE robustez en
+  TEST, nunca decidir por el score de VAL (refuerza la lección de VAL chico de arriba).
+- **Interacción modelo×señal:** el modelo más débil (gpt-4.1-mini) da algo de gradiente
+  *aparente* (GEPA se mueve en VAL) pero generaliza peor; el fuerte (gpt-5-mini) ni se
+  mueve. Más gradiente aparente != mejor generalización. Único efecto positivo del VAL
+  mayor: `ESTABILIZA` (baja la varianza entre seeds, rango robustez 15,5 -> 6,7 con gpt-4).
+- Cierre: **GEPA no aporta en fast_gate; el mejor sistema sigue siendo baseline sin
+  GEPA**, ahora confirmado a N=3 con VAL ampliado y dos modelos (cierra D-015d). El
+  dataset ampliado se conserva como banco de medición (más resolución: cada error pesa
+  2,2 pp en vez de 4,5).
+
 ### Archivos relacionados
 
 - Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`

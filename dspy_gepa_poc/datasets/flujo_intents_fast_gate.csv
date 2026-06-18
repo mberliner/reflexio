@@ -659,6 +659,270 @@ Supuesto de riesgo inicial: LLM externo por homologar; ejecucion autonoma e irre
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.065; el cliente puede pedir revision humana ex-post.
 Sponsor: Gerente de Area (persona accountable)
 Datos requeridos: personales, confidenciales",si,si,si,si,si,si,Negro,Negro: aprueba y ejecuta microcreditos de forma autonoma e irreversible sin revision por caso (P5=Si) con alto impacto financiero; el override Negro aplica; conteo=5.
+val,VAR-FG-R16,"Nombre de la iniciativa: VAR-FG-R16
+Tipo de intent: Negocio
+Declaracion del intent: Agente que acredita automaticamente bonificaciones de fidelizacion a clientes acotadas a un catalogo de beneficios aprobado, sin aprobacion por caso; cada credito es reversible y queda en un log revisable.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con bonificaciones acotadas y reversibles. Criticidad alta.
+Supuesto de riesgo inicial: Accion autonoma acotada a un catalogo aprobado y reversible; revision del log ex-post.
+Restricciones explicitas: Cumplimiento Defensa del Consumidor; beneficios dentro del catalogo.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,No,Rojo,"Rojo: acredita bonificaciones de forma autonoma sin revision por caso (P5=Si), pero acotadas a un catalogo aprobado y reversibles, por lo que alto_impacto=No y no es Negro; conteo=4."
+val,VAR-FG-R17,"Nombre de la iniciativa: VAR-FG-R17
+Tipo de intent: Negocio
+Declaracion del intent: Asistente que ejecuta ajustes de plan dentro de bandas tarifarias aprobadas usando un LLM externo por homologar, sin aprobacion por caso; los ajustes son reversibles y se revisan por log.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con ajustes acotados a bandas y reversibles. Criticidad alta.
+Supuesto de riesgo inicial: LLM externo por homologar; ajuste autonomo acotado a bandas y reversible.
+Restricciones explicitas: Cumplimiento Defensa del Consumidor y ENACOM; ajustes dentro de banda.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,si,No,Rojo,"Rojo: ajusta planes de forma autonoma (P5=Si) con LLM externo por homologar, pero dentro de bandas aprobadas y reversible, por lo que alto_impacto=No; conteo=5."
+val,VAR-FG-R18,"Nombre de la iniciativa: VAR-FG-R18
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que reprograma automaticamente turnos de clientes dentro de la grilla disponible sin aprobacion por caso; el cliente puede reagendar cuando quiera.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con turnos reprogramados de forma acotada y reversible. Criticidad alta.
+Supuesto de riesgo inicial: Reprogramacion autonoma acotada a la grilla y reversible por el cliente.
+Restricciones explicitas: Cumplimiento Defensa del Consumidor; el cliente puede reagendar.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,No,Rojo,"Rojo: reprograma turnos de forma autonoma (P5=Si), pero acotado a la grilla y reversible por el cliente, alto_impacto=No; conteo=4 sin proveedor externo."
+val,VAR-FG-R23,"Nombre de la iniciativa: VAR-FG-R23
+Tipo de intent: Negocio
+Declaracion del intent: Agente que ejecuta reembolsos a clientes acotados a un catalogo de montos aprobado usando un LLM externo por homologar, sin aprobacion por caso; cada reembolso es reversible y queda en un log revisable.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con reembolsos acotados y reversibles. Criticidad alta.
+Supuesto de riesgo inicial: LLM externo por homologar; ejecucion autonoma acotada a un catalogo y reversible.
+Restricciones explicitas: Cumplimiento Defensa del Consumidor; montos dentro del catalogo.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,si,No,Rojo,"Rojo: ejecuta reembolsos de forma autonoma (P5=Si) con LLM externo por homologar, pero acotados a un catalogo de montos y reversibles, alto_impacto=No; conteo=5."
+val,VAR-FG-N14,"Nombre de la iniciativa: VAR-FG-N14
+Tipo de intent: Operativo
+Declaracion del intent: Agente que ejecuta automaticamente la suspension del servicio a clientes ante señales de riesgo, sin revision por caso; la suspension corta el acceso hasta una intervencion manual posterior.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes suspendidos; corte de acceso al servicio. Criticidad muy alta.
+Supuesto de riesgo inicial: Corte de servicio (denegacion de acceso, criterio b) autonomo sin revision por caso.
+Restricciones explicitas: Cumplimiento Defensa del Consumidor y ENACOM.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,si,Negro,"Negro: corta el servicio (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si) y alto impacto; conteo=4."
+val,VAR-FG-N15,"Nombre de la iniciativa: VAR-FG-N15
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que ejecuta automaticamente la baja definitiva de cuentas inactivas y borra los datos asociados sin revision por caso; la baja es irreversible.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes dados de baja con borrado irreversible de datos. Criticidad muy alta.
+Supuesto de riesgo inicial: Baja autonoma e irreversible (criterio c) sin intervencion manual posterior.
+Restricciones explicitas: Cumplimiento Ley 25.326; sin mecanismo de reversion.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,si,Negro,Negro: ejecuta una baja irreversible con borrado de datos (criterio c) sin revision por caso (P5=Si) y alto impacto; conteo=4.
+val,VAR-FG-N16,"Nombre de la iniciativa: VAR-FG-N16
+Tipo de intent: Negocio
+Declaracion del intent: Agente que perfila automaticamente a mas del 10% de la base de clientes por su comportamiento y aplica ofertas vinculantes con un LLM externo por homologar, sin revision por caso.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Mas del 10% de la base perfilada con ofertas vinculantes aplicadas. Criticidad muy alta.
+Supuesto de riesgo inicial: LLM externo por homologar; profiling a escala (criterios a y e) con accion autonoma vinculante.
+Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,si,si,Negro,Negro: perfila a mas del 10% de la base (criterios a y e) y aplica ofertas vinculantes con LLM externo por homologar sin revision (P5=Si); conteo=5.
+val,VAR-FG-N17,"Nombre de la iniciativa: VAR-FG-N17
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que aprueba y desembolsa automaticamente adelantos de efectivo a clientes segun un score, sin revision por caso; el desembolso no esta acotado a un tope predefinido.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con desembolsos financieros autonomos sin tope. Criticidad muy alta.
+Supuesto de riesgo inicial: Decision financiera no acotada (criterio b) ejecutada sin revision por caso.
+Restricciones explicitas: Cumplimiento BCRA y Ley 25.326.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,si,Negro,Negro: desembolsa adelantos financieros no acotados (criterio b) sin revision por caso (P5=Si) y alto impacto; conteo=4.
+val,VAR-FG-N18,"Nombre de la iniciativa: VAR-FG-N18
+Tipo de intent: Negocio
+Declaracion del intent: Agente que ejecuta automaticamente reportes regulatorios de operaciones sospechosas a la autoridad usando un proveedor externo por homologar, sin revision por caso; un reporte erroneo expone a sancion directa.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes reportados a la autoridad de forma autonoma. Criticidad maxima.
+Supuesto de riesgo inicial: Proveedor externo por homologar; exposicion a sancion regulatoria directa (criterio d) sin revision por caso.
+Restricciones explicitas: Cumplimiento UIF y Ley 25.326.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,si,si,Negro,Negro: ejecuta reportes regulatorios con exposicion a sancion directa (criterio d) y proveedor externo por homologar sin revision (P5=Si); conteo=5.
+val,VAR-FG-R19,"Nombre de la iniciativa: VAR-FG-R19
+Tipo de intent: Negocio
+Declaracion del intent: Sistema de scoring que condiciona el acceso al credito de clientes perfilando su riesgo con una API externa por homologar; un analista revisa y aprueba cada decision antes de notificar al cliente.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes solicitantes; el score condiciona el acceso al credito. Criticidad muy alta.
+Supuesto de riesgo inicial: API externa por homologar; decision financiera con profiling, pero el analista valida cada caso (P5=No).
+Restricciones explicitas: Cumplimiento BCRA y Ley 25.326; el analista decide cada solicitud.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,No,si,Rojo,"Rojo: condiciona el acceso al credito perfilando al cliente (alto_impacto=Si por naturaleza financiera y profiling) con API externa por homologar, pero el analista valida cada caso (P5=No), por lo que no es Negro; conteo=4."
+val,VAR-FG-R21,"Nombre de la iniciativa: VAR-FG-R21
+Tipo de intent: Operativo
+Declaracion del intent: Analizador que condiciona acciones legales sobre clientes con un modelo externo por homologar y riesgo legal si falla; el abogado valida cada hallazgo antes de actuar.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: El analisis condiciona acciones legales sobre clientes. Criticidad alta.
+Supuesto de riesgo inicial: Modelo externo por homologar; el abogado valida cada hallazgo (P5=No).
+Restricciones explicitas: Confidencialidad contractual; el abogado decide cada caso.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: confidenciales",si,si,si,si,No,No,Rojo,"Rojo: datos confidenciales, condiciona acciones legales, modelo externo por homologar y riesgo legal (4 en Si), pero el abogado valida cada caso (P5=No) y la accion no es de alto impacto autonomo; conteo=4."
+val,VAR-FG-R22,"Nombre de la iniciativa: VAR-FG-R22
+Tipo de intent: Negocio
+Declaracion del intent: Asistente de diagnostico que influye en la decision clinica con un modelo externo por homologar y riesgo legal; el medico revisa y decide cada paciente.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Pacientes; el sistema influye en el diagnostico. Criticidad muy alta.
+Supuesto de riesgo inicial: Modelo externo por homologar; el medico decide cada caso (P5=No).
+Restricciones explicitas: Datos de salud; cumplimiento regulatorio; el medico decide.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,No,No,Rojo,"Rojo: influye en el diagnostico clinico con modelo externo por homologar y riesgo legal (4 en Si), pero el medico decide cada caso (P5=No); conteo=4."
+val,VAR-FG-A24,"Nombre de la iniciativa: VAR-FG-A24
+Tipo de intent: Negocio
+Declaracion del intent: Recomendador que condiciona ofertas financieras a clientes perfilando su comportamiento, con framework interno certificado y riesgo legal si falla; el representante aprueba cada oferta antes de presentarla.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes; perfilamiento que condiciona la oferta (alto_impacto), pero el representante decide. Criticidad media.
+Supuesto de riesgo inicial: Framework interno certificado; profiling, pero el representante aprueba cada oferta (P5=No).
+Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor; el representante decide.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,No,si,Amarillo,"Amarillo: perfila al cliente condicionando ofertas financieras (alto_impacto=Si), pero con framework interno certificado (P3=No) y el representante aprueba cada oferta (P5=No); conteo=3."
+val,VAR-FG-A18,"Nombre de la iniciativa: VAR-FG-A18
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que perfila a mas de 100.000 clientes por su comportamiento de consumo para definir a quienes se ofrecen beneficios, con framework interno certificado; el equipo de marketing decide cada campania y sin riesgo legal directo.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Mas de 100.000 clientes perfilados (alto_impacto por escala), pero el equipo decide cada accion. Criticidad media.
+Supuesto de riesgo inicial: Framework interno certificado; profiling a escala, pero el equipo decide (P5=No).
+Restricciones explicitas: Cumplimiento Ley 25.326; el equipo decide cada campania.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,No,No,si,Amarillo,"Amarillo: perfila a mas de 100.000 clientes (alto_impacto=Si por escala) con framework interno certificado, pero el equipo decide cada accion (P5=No) y sin proveedor externo ni riesgo legal; conteo=2."
+val,VAR-FG-A19,"Nombre de la iniciativa: VAR-FG-A19
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que perfila a mas del 10% de la base con un LLM externo por homologar para priorizar acciones comerciales; el responsable decide cada accion y sin riesgo legal directo.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Mas del 10% de la base perfilada (alto_impacto por escala), pero el responsable decide. Criticidad media.
+Supuesto de riesgo inicial: LLM externo por homologar; profiling a escala, pero el responsable decide (P5=No).
+Restricciones explicitas: Cumplimiento Ley 25.326; el responsable decide cada accion.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,No,No,si,Amarillo,"Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada accion (P5=No) y sin riesgo legal directo; conteo=3."
+val,VAR-FG-V16,"Nombre de la iniciativa: VAR-FG-V16
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Asistente que muestra al empleado un resumen informativo de su propio historial de desempeño a partir de sus datos; no decide nada ni se comparte con terceros.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Empleado como unico usuario de su propio resumen; no decide sobre personas. Criticidad baja.
+Supuesto de riesgo inicial: Uso informativo de datos personales del propio empleado; sin automatizacion.
+Restricciones explicitas: Sin decisiones automaticas; el empleado consume su propio dato.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,No,No,No,No,Verde,"Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar; conteo=1."
+val,VAR-FG-V17,"Nombre de la iniciativa: VAR-FG-V17
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Asistente que traduce documentacion tecnica interna usando un LLM externo por homologar; sin datos personales, el autor revisa antes de usar.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Empleados como usuarios; sin datos personales ni decision sobre personas. Criticidad baja.
+Supuesto de riesgo inicial: LLM externo por homologar, pero sin datos sensibles ni decisiones; el autor revisa.
+Restricciones explicitas: Sin datos personales; revision humana previa.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: ninguno sensible",No,No,si,No,No,No,Verde,"Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones, con revision humana; conteo=1."
+val,VAR-FG-V18,"Nombre de la iniciativa: VAR-FG-V18
+Tipo de intent: Operativo
+Declaracion del intent: Tablero que muestra al gerente datos de contacto de clientes de forma informativa; no influye en decisiones ni automatiza ninguna accion.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Gerente como consumidor de un tablero informativo; no decide sobre personas. Criticidad baja.
+Supuesto de riesgo inicial: Uso informativo de datos personales; sin automatizacion ni decision.
+Restricciones explicitas: Solo lectura; sin acciones automaticas.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,No,No,No,No,Verde,"Verde: muestra datos personales de forma informativa (P1), sin influir en decisiones ni automatizar; conteo=1."
+val,VAR-FG-A20,"Nombre de la iniciativa: VAR-FG-A20
+Tipo de intent: Operativo
+Declaracion del intent: Asistente que resume historiales de clientes a partir de sus datos usando un LLM externo por homologar; es informativo, el representante decide y sin riesgo legal.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Representantes como usuarios de un resumen informativo. Criticidad media.
+Supuesto de riesgo inicial: LLM externo por homologar sobre datos personales; informativo, el representante decide.
+Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,si,No,No,No,Amarillo,"Amarillo: datos personales (P1) y LLM externo por homologar (P3), informativo y el representante decide; conteo=2."
+val,VAR-FG-A21,"Nombre de la iniciativa: VAR-FG-A21
+Tipo de intent: Negocio
+Declaracion del intent: Recomendador que sugiere al representante una accion para el cliente segun sus datos; el representante decide, con plataforma interna homologada y sin riesgo legal directo.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes via representante; influye en la oferta pero el representante decide. Criticidad media.
+Supuesto de riesgo inicial: Plataforma interna homologada; el representante decide cada accion.
+Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) e influye en la oferta (P2), pero el representante decide y plataforma interna homologada; conteo=2."
+val,VAR-FG-A22,"Nombre de la iniciativa: VAR-FG-A22
+Tipo de intent: Negocio
+Declaracion del intent: Generador de comunicaciones a clientes a partir de sus datos que condicionan su decision, con riesgo reputacional si fallan; el responsable aprueba antes de enviar, con plataforma interna homologada.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes que reciben comunicaciones que condicionan su decision. Criticidad media.
+Supuesto de riesgo inicial: Plataforma interna homologada; el responsable aprueba antes de enviar.
+Restricciones explicitas: Cumplimiento Defensa del Consumidor; revision previa del responsable.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,No,No,Amarillo,"Amarillo: datos personales (P1), influye en la decision del cliente (P2) y riesgo reputacional (P4), mitigado por revision previa y plataforma interna; conteo=3."
+val,VAR-FG-A23,"Nombre de la iniciativa: VAR-FG-A23
+Tipo de intent: Negocio
+Declaracion del intent: Asistente que analiza datos de clientes e influye en la oferta que se les presenta, con un LLM externo por homologar; el representante decide y sin riesgo legal directo.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes via representante; influye en la oferta. Criticidad media.
+Supuesto de riesgo inicial: LLM externo por homologar; el representante decide cada oferta.
+Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,No,No,No,Amarillo,"Amarillo: datos personales (P1), influye en la oferta (P2) y LLM externo por homologar (P3), el representante decide y sin riesgo legal; conteo=3."
+val,VAR-FG-N19,"Nombre de la iniciativa: VAR-FG-N19
+Tipo de intent: Operativo
+Declaracion del intent: Agente que restringe automaticamente el acceso de empleados a sistemas criticos ante señales de riesgo, sin revision por caso; la restriccion limita derechos de acceso hasta una intervencion posterior.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Empleados con acceso restringido sin revision por caso; restriccion de derechos (criterio b). Criticidad alta.
+Supuesto de riesgo inicial: Restriccion de acceso autonoma (criterio b) sin revision por caso; supervision solo ex-post.
+Restricciones explicitas: Cumplimiento normativa laboral y Ley 25.326.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,No,si,si,Negro,"Negro: restringe el acceso de empleados (restriccion de derechos, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro domina aunque el conteo sea 3."
+val,VAR-FG-N20,"Nombre de la iniciativa: VAR-FG-N20
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que ejecuta automaticamente el bloqueo de los pagos de un cliente ante un score de fraude, sin revision por caso; el bloqueo corta el acceso a sus fondos.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con pagos bloqueados sin revision por caso; corte de acceso a fondos (criterio b). Criticidad muy alta.
+Supuesto de riesgo inicial: Bloqueo autonomo (denegacion de acceso, criterio b) sin revision por caso.
+Restricciones explicitas: Cumplimiento BCRA y Ley 25.326.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,No,No,si,si,Negro,"Negro: bloquea los fondos del cliente (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro aplica aunque el conteo sea 2."
 test,TC-A-01,"Nombre de la iniciativa: Motor de Recomendación de Upgrade
 Tipo de intent: Negocio
 Declaracion del intent: Sistema de recomendación en tiempo real para representantes de atención. Analiza el historial de consumo del cliente durante la interacción y sugiere opciones de upgrade de plan. La recomendación es visible solo para el representante; el cliente recibe únicamente lo que el representante decide comunicarle.

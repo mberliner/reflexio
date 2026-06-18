@@ -27,7 +27,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | Auditoria de docs 2026-06-10 | Abierta |
 | D-013 | Implementar la regla explicita del Marco en fast_gate (Fast Gate de 5 preguntas Si/No; contar sies: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo; Negro = P5=Si + alto impacto), hoy ausente del prompt. Causa raiz del error Rojo->Amarillo (corregida 2026-06-16; el diagnostico inicial "gap de dataset por dominio regulado" queda DESCARTADO): el prompt pide deducir el color en vez de contar, y la P3 ("fuera del catalogo aprobado") tiene el default invertido (sin dato de homologacion el modelo asume P3=No y pierde un si: 4->3 -> Rojo->Amarillo). Rumbo: arquitectura deterministica A (el LLM responde P1..P5 + alto impacto; una funcion pura cuenta y deriva el color). Requiere: default de P3 (intent nuevo=No / sistema ya implementado=Si), definicion de alto impacto (doc del otro proyecto), y anotar P1..P5 como gold en el dataset (hoy 0/76) | Validacion externa + regla canonica del Marco (2026-06-16) | Resuelta 2026-06-16 (rama feat/fast-gate-deterministico) — `module.type: rule_derived`: el LLM responde P1..P5+alto_impacto y `derive_color` deriva el color. Color TEST 80% (supera el end-to-end 76,7%) y AUDITABLE; Rojo->Amarillo cerrado (P3 96,7%, P5 100%). GEPA no aporta (confirmado en 2 tandas): la 1a parecia techo de metrica (7 salidas, VAL 93-96%); corregida a color+alto_impacto, la 2a tanda (N=3) da prompt_changed=no y color 73-83% (media 80 = base+few-shot) -> la varianza del LLM domina, GEPA no separa del baseline. La palanca real fue afilar descripciones + few-shot k=8. Residuales en D-015 |
 | D-014 | Etapas nuevas diferidas de flujo-intents (decision del usuario, 2026-06-16): (a) **admisibilidad** que absorba §9.2 (atributos protegidos en decisiones de acceso) y §7.4 (duplicado), hoy sin etapa tras sacarlas de factibilidad — reasignar TC-REJ-09/TC-REJ-10; (b) etapa para **valor real** ("resuelve un dolor de negocio") hoy no cubierta por solidez; (c) reubicar **`devolucion_no_ia`** ("no requiere IA") fuera de solidez a esa etapa nueva. Hasta entonces `no_ia` se deja en solidez para no romper el holdout (TC-REJ-06) | Alineacion al Marco de Gobierno (Solidez/Factibilidad), 2026-06-16 | Abierta |
-| D-015 | Residuales del fast_gate determinista (post D-013): (a) **alto_impacto es el cuello** (~80% sobre el test, varianza alta 56-80% entre corridas; sobre-escala a Negro en casos acotados/reversibles) -> medir con N seeds y/o curar demos few-shot de casos limite; (b) **`run_inference.py` usa `create_module` generico**, no `rule_derived` -> en produccion no derivaria el color; (c) el **gold de `alto_impacto` del test es aproximado** (=Negro) para casos P5=No (no afecta el color, si la metrica del campo); (d) GEPA con VAL chico no aporta -> evaluar VAL mayor si se busca exprimir GEPA (**actualizado 2026-06-18**: val ampliado a 22 sigue en techo 86-91%; GEPA+gpt-5 N=3 elige baseline 3/3 con budget completo -> el cuello es senal en val, no budget; pendiente val ~40-50 con casos borde donde el baseline falle) | Cierre de D-013 (2026-06-16) | Abierta |
+| D-015 | Residuales del fast_gate determinista (post D-013): (a) **alto_impacto es el cuello** (~80% sobre el test, varianza alta 56-80% entre corridas; sobre-escala a Negro en casos acotados/reversibles) -> medir con N seeds y/o curar demos few-shot de casos limite; (b) **`run_inference.py` usa `create_module` generico**, no `rule_derived` -> en produccion no derivaria el color; (c) el **gold de `alto_impacto` del test es aproximado** (=Negro) para casos P5=No (no afecta el color, si la metrica del campo); (d) GEPA con VAL chico no aporta -> evaluar VAL mayor si se busca exprimir GEPA (**actualizado 2026-06-18**: val ampliado a 22 sigue en techo 86-91%; GEPA+gpt-5 N=3 elige baseline 3/3 con budget completo -> el cuello es senal en val, no budget; pendiente val ~40-50 con casos borde donde el baseline falle) | Cierre de D-013 (2026-06-16) | (a)(b)(c) Abiertas; **(d) cerrada 2026-06-18** — VAL ampliado a 46 casos borde, refutado a N=3 con gpt-5-mini Y gpt-4.1-mini (ambos RUIDO[SOBREAJUSTE]): el VAL sigue en techo 89-93% con los dos modelos y GEPA no generaliza (gap val-test +10/+14). El cuello es la REPRESENTATIVIDAD val-vs-test (los casos borde sinteticos no capturan la dificultad del TEST), no el tamaño/budget/modelo. Dataset ampliado conservado como banco de medicion |
 | D-016 | Cuelgue al final de la corrida con reasoning models (gpt-5-mini/gpt-5): `_save_predictions` RE-EJECUTABA el modelo sobre test+val (52 llamadas reasoning extra), lo que ademas era INFIEL (LLM no determinista -> el dump != predicciones que dieron el score) y bloqueaba el registro (corria antes de run.json+CSV) | Cuelgue corrida fast_gate rule_derived + gpt-5 (2026-06-17) | Resuelta 2026-06-18 — causa raiz: el dump re-ejecutaba. Fix: `_eval_repeated` captura `EvaluationResult.results` (dspy 3.x) y `_save_predictions` vuelca las predicciones REALES del eval (sin re-llamar) -> fiel al score y sin llamadas extra. Defensas adicionales: `timeout` configurable (`LLMConfig`, default 600s/`LLM_TIMEOUT`) y dump movido al final de `run()` best-effort. Tests en `test_shared_llm.py`; CI PASO (503). NOTA: los colores por-ficha de corridas previas venian del dump re-ejecutado (no del eval real); desde ahora son fieles |
 | D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
 
@@ -43,6 +43,75 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-18 — fast_gate: VAL ampliado a 46 casos borde (D-015d) + 2 arreglos de ambiente
+
+Se ejecuto la palanca pendiente de D-015(d): ampliar el VAL con casos borde "donde
+el baseline falle" para darle gradiente a GEPA. Refutada con DOS modelos.
+
+**Intervencion (dataset, conservado):** VAL 22 -> 46 con 24 casos nuevos concentrados
+en el CUELLO (no en Verde facil), en `make_variations.py` (SSOT): Rojo<->Negro por
+`alto_impacto` (P5=Si acotado+reversible -> Rojo; P5=Si y alto -> Negro), colinealidad
+rota (alto=Si con P5=No -> no Negro), transiciones de conteo 1<->2 y 3<->4, y override
+de Negro con conteo bajo. TEST intacto (30 TC-xx, 8A/7R/7V/8N). `derive_color==gold` en
+las 84 filas train/val; 0/30 mismatches dump-vs-regla en las 6 corridas (dump fiel,
+D-016).
+
+**Resultado N=3 (color+alto_impacto):**
+
+  | task / reflection      | Baseline val        | Opt val (Opt-Base)     | Robustez TEST       | gap val-test | veredicto |
+  |------------------------|---------------------|------------------------|---------------------|--------------|-----------|
+  | gpt-5-mini / gpt-5     | 92,76 [90,2..94,6]  | 89,49 (**-3,26**)      | 79,44 [73,3..85,0]  | +10,05       | RUIDO [SOBREAJUSTE] [TECHO] |
+  | gpt-4.1-mini / gpt-4o  | 89,49 [88,0..90,2]  | 90,94 (**+1,45**)      | 77,22 [73,3..80,0]  | +13,72       | RUIDO [SOBREAJUSTE] [ESTABILIZA] |
+
+  Color TEST por seed (solo `clasificacion`): gpt-5-mini 80,0/83,3/73,3 (media ~79);
+  gpt-4.1-mini 66,7/70,0/73,3 (media 70). vs referencia previa: robustez -2,50 (gpt-5)
+  y -2,93 (gpt-4), ambos dentro del ruido (rangos solapados).
+
+- **D-015(d) refutada: el VAL ampliado NO destraba GEPA con ningun modelo.** El VAL
+  sigue en techo (89-93%) tambien con el modelo debil: los casos borde son dificiles
+  *conceptualmente* pero el LLM los resuelve. Con gpt-4.1-mini GEPA hasta sube en val
+  (+1,45, a diferencia de gpt-5-mini que baja), pero NO generaliza: gap val-test +13,72
+  y robustez TEST 77,2% (peor que gpt-5-mini). El cuello no es el modelo, ni el budget,
+  ni el tamaño del val: es que **los casos borde sinteticos no capturan la dificultad
+  del TEST** (gap val-test enorme en ambos). El mejor sistema sigue siendo BASELINE sin
+  GEPA. Unico efecto: `ESTABILIZA` con gpt-4 (rango robustez 15,5 -> 6,7).
+
+**Arreglos de ambiente (independientes del experimento, "nada hardcoded de ambientes"):**
+1. **Holdout sin originales** (`dataset.py`): `build_stage_csv` omitia fast_gate
+   (`return None`) si faltaba `FLUJO_INTENTS_ORIGINALS_DIR`, atando la regeneracion de
+   train/val a una ruta externa. Nuevo `_read_existing_test`: sin originales, preserva
+   el TEST ya commiteado en el CSV y regenera solo train/val. Reproducible en cualquier
+   entorno; verificado byte-identico.
+2. **Precedencia de `.env`** (`shared/llm/config.py`): `from_env` hardcodeaba los
+   subproyectos `["gepa_standalone", "dspy_gepa_poc"]` y, con `load_dotenv(override=
+   False)`, corriendo desde la raiz cargaba el `.env` equivocado (un experimento dspy
+   tomaba gpt-4.1-mini de gepa). Se quito el fallback con nombres; precedencia explicita:
+   entorno del proceso > `LLM_ENV_FILE` (ruta, sin nombres) > `.env` del cwd > defaults.
+   `check_deployments.py` (unico consumidor shared afectado) gana `--env-file`/`LLM_ENV_FILE`
+   con default dspy_gepa_poc. El `.env` especifico ya lo carga cada subproyecto via su
+   `config.py` (mecanismo correcto preexistente).
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (Fast Gate rule_derived; cierra D-015d).
+- Includes: 24 casos VAL borde en `make_variations.py` + regeneracion de
+  `datasets/flujo_intents_fast_gate.csv` (+ `variations/`) preservando el TEST; arreglo
+  `dataset.py` (`_read_existing_test`) + test; arreglo precedencia `.env`
+  (`shared/llm/config.py` + `check_deployments.py`) + 3 tests; veredicto N=3 con
+  gpt-5-mini y gpt-4.1-mini. Excludes: no se cambio el prompt ni la regla; el dataset
+  ampliado se CONSERVA (decision del usuario: banco de medicion con mas resolucion).
+- Validaciones: `derive_color==gold` en train/val; 0/30 mismatches dump-vs-regla en las
+  6 corridas; `./shared/utils/ci_local.sh` PASO (507 tests, cobertura 95,79%); ambos
+  deployments validados antes de correr.
+- SSOT afectado: `dspy_gepa_poc/flujo_intents/make_variations.py`,
+  `dspy_gepa_poc/flujo_intents/dataset.py`,
+  `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv` (+ `variations/`),
+  `shared/llm/config.py`, `shared/utils/check_deployments.py`,
+  `tests/test_flujo_intents.py`, `tests/test_shared_llm.py`,
+  `docs/LECCIONES_APRENDIDAS.md` (seccion 11: VAL ampliado no destraba GEPA).
+- Deuda arrastrada: **D-015(d) cerrada** (val mayor refutado a N=3 con dos modelos; el
+  cuello es representatividad val-vs-test, no tamaño/budget/modelo). Residuales (a)/(b)/(c)
+  de D-015 siguen abiertos. Sin deuda nueva.
 
 ### 2026-06-18 — fast_gate: cierre N=3 de GEPA+gpt-5 (predicciones fieles) y veredicto
 
