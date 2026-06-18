@@ -35,8 +35,10 @@ from .ficha import normalize_color, serialize_ficha
 # externa al repo (no versionada), por eso su ubicacion se resuelve por entorno y NO se
 # hardcodea: variable `FLUJO_INTENTS_ORIGINALS_DIR`. Si no esta definida o el directorio
 # no existe, las etapas que dependen de originales para el test (intake, solidez,
-# fast_gate) no se regeneran (se dejan intactas); las que traen test propio en sus
-# variaciones (p.ej. factibilidad, con holdout balanceado a mano) si se regeneran.
+# fast_gate) preservan el holdout ya commiteado en su CSV (ver `_read_existing_test`):
+# train/val se regeneran de las variaciones y el test queda intacto, sin depender del
+# entorno. Las que traen test propio en sus variaciones (p.ej. factibilidad, con holdout
+# balanceado a mano) se regeneran completas.
 _ORIGINALS_ENV = "FLUJO_INTENTS_ORIGINALS_DIR"
 
 
@@ -191,6 +193,35 @@ def _stratified_cap(rows: list[dict[str, str]], target: int) -> list[dict[str, s
     return selected
 
 
+def _read_existing_test(out_path: Path, stage: str) -> list[dict[str, str]]:
+    """Lee las filas `split=test` del CSV final ya materializado, si existe.
+
+    Sirve para regenerar train/val sin la fuente externa de originales: el holdout
+    ya esta commiteado en el CSV de salida (coma-delimitado), asi que se preserva tal
+    cual en vez de omitir la etapa. NO depende de ninguna ruta de entorno; si el CSV
+    no existe o no tiene filas test, devuelve lista vacia.
+    """
+    if not out_path.exists():
+        return []
+    label_field = STAGE_LABEL_FIELD[stage]
+    extra_cols = STAGE_EXTRA_COLUMNS.get(stage, [])
+    out: list[dict[str, str]] = []
+    with open(out_path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if (row.get("split") or "").strip() != "test":
+                continue
+            entry = {
+                "id": (row.get("case_id") or "").strip(),
+                "ficha": row.get("ficha") or "",
+                "label": (row.get(label_field) or "").strip(),
+                "razonamiento": (row.get("razonamiento") or "").strip(),
+            }
+            for col in extra_cols:
+                entry[col] = (row.get(col) or "").strip()
+            out.append(entry)
+    return out
+
+
 def _read_variations(stage: str, variations_dir: Path) -> list[dict[str, str]]:
     """Lee variaciones a mano (train/val) para una etapa, si existen.
 
@@ -222,23 +253,34 @@ def build_stage_csv(
 ) -> Path | None:
     """Escribe el CSV final de una etapa.
 
-    - test: variaciones con split=test si existen; si no, originales recortados a
-      TEST_TARGET (estratificado).
+    - test (orden de prioridad): variaciones con split=test si existen; si no,
+      originales recortados a TEST_TARGET (estratificado); si la fuente externa no esta
+      disponible, el test ya commiteado en el CSV de salida (preservado tal cual).
     - train/val: variaciones a mano (la columna `split` del archivo de variaciones).
     Orden de columnas alineado al resto del repo: `split` primero, luego `case_id`.
 
-    Devuelve `None` (omite la etapa, sin pisar el CSV) si no hay test disponible: ni
-    variaciones con split=test ni originales (fuente externa ausente).
+    Devuelve `None` (omite la etapa, sin pisar el CSV) solo si no hay test por ninguna
+    via: ni variaciones con split=test, ni originales, ni holdout previo en el CSV.
     """
     label_field = STAGE_LABEL_FIELD[stage]
     output_cols = STAGE_OUTPUT_COLUMNS[stage]
+    out_path = out_dir / f"flujo_intents_{stage}.csv"
+    # El holdout previo se lee ANTES de reabrir el archivo en modo escritura.
+    existing_test = _read_existing_test(out_path, stage)
     var_rows = _read_variations(stage, variations_dir)
     # Las variaciones pueden aportar su propio split=test (holdout balanceado a mano,
     # p.ej. factibilidad para macro-F1). Si lo hacen, ese test reemplaza al recorte de
     # originales en esa etapa; el resto de etapas sigue usando los originales.
     var_train_val = [r for r in var_rows if r["split"] in {"train", "val"}]
     var_test = [r for r in var_rows if r["split"] == "test"]
-    test_rows = var_test if var_test else _stratified_cap(originals[stage], TEST_TARGET)
+    if var_test:
+        test_rows = var_test
+    elif originals[stage]:
+        test_rows = _stratified_cap(originals[stage], TEST_TARGET)
+    else:
+        # Sin fuente externa: preservar el holdout ya materializado (regenera train/val
+        # de forma reproducible sin depender de FLUJO_INTENTS_ORIGINALS_DIR).
+        test_rows = existing_test
     if not test_rows:
         return None
 
@@ -258,7 +300,6 @@ def build_stage_csv(
 
     # El harness (CSVDataLoader/CSVValidator) lee CSV con coma. La ficha contiene
     # comas y saltos de linea: csv.writer la entrecomilla automaticamente.
-    out_path = out_dir / f"flujo_intents_{stage}.csv"
     with open(out_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["split", "case_id", "ficha", *output_cols])

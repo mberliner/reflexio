@@ -207,6 +207,37 @@ def test_dataset_sin_fuga_train_val_vs_test(stage):
     assert not (trainval & test), f"{stage}: fichas compartidas train/val<->test (fuga)"
 
 
+def test_build_stage_csv_preserva_holdout_sin_originales(tmp_path):
+    # Sin fuente externa de originales, regenerar fast_gate debe preservar el test ya
+    # commiteado (no omitir la etapa) para que train/val se regeneren sin depender de
+    # FLUJO_INTENTS_ORIGINALS_DIR (no atar la regeneracion al entorno).
+    import shutil
+
+    from dspy_gepa_poc.flujo_intents.dataset import build_stage_csv
+
+    src = get_dspy_paths().datasets
+    (tmp_path / "variations").mkdir()
+    shutil.copy(
+        src / "variations" / "flujo_intents_fast_gate_var.csv",
+        tmp_path / "variations" / "flujo_intents_fast_gate_var.csv",
+    )
+    shutil.copy(src / "flujo_intents_fast_gate.csv", tmp_path / "flujo_intents_fast_gate.csv")
+    test_before = [
+        r for r in _read_csv_comma(tmp_path / "flujo_intents_fast_gate.csv") if r["split"] == "test"
+    ]
+
+    # originals vacio simula la fuente externa ausente.
+    out = build_stage_csv("fast_gate", tmp_path / "variations", tmp_path, {"fast_gate": []})
+    assert out is not None, "fast_gate omitida: no preservo el holdout"
+    test_after = [r for r in _read_csv_comma(out) if r["split"] == "test"]
+    assert test_after == test_before, "el holdout cambio al regenerar sin originales"
+
+
+def _read_csv_comma(path) -> list[dict[str, str]]:
+    with open(path, encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
 @pytest.mark.parametrize("stage", _DATASET_STAGES)
 def test_dataset_tiene_los_tres_splits(stage):
     rows = _load_stage_csv(stage)
