@@ -8,7 +8,9 @@ Uso (desde la raiz del repo):
 """
 
 import argparse
+import os
 import sys
+from pathlib import Path
 
 try:
     import litellm
@@ -318,8 +320,26 @@ def main():
         action="store_true",
         help="Muestra progreso detallado del escaneo y errores",
     )
+    parser.add_argument(
+        "--env-file",
+        default=None,
+        help="Ruta a un .env especifico (default: el de dspy_gepa_poc, que es la "
+        "config que esta herramienta verifica).",
+    )
 
     args = parser.parse_args()
+
+    # Resolver que .env usar. shared/llm ya no adivina el subproyecto (se quito el
+    # fallback hardcodeado); esta herramienta declara su default (dspy_gepa_poc) y lo
+    # expone via LLM_ENV_FILE, respetando lo que ya este en el entorno.
+    # Precedencia: entorno actual > --env-file > LLM_ENV_FILE > .env de dspy_gepa_poc.
+    if not os.getenv("LLM_API_KEY"):
+        env_file = args.env_file or os.getenv("LLM_ENV_FILE")
+        if not env_file:
+            default_env = Path(__file__).resolve().parents[2] / "dspy_gepa_poc" / ".env"
+            env_file = str(default_env) if default_env.exists() else None
+        if env_file:
+            os.environ["LLM_ENV_FILE"] = env_file
 
     # Load base config to get credentials (using 'task' as default source)
     try:

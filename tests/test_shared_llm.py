@@ -164,6 +164,40 @@ class TestLLMConfigFromEnv:
         config = LLMConfig.from_env("task")
         assert config.timeout is None
 
+    def test_env_file_override_loads_when_no_api_key(self, clear_env, monkeypatch, tmp_path):
+        # Sin API key en el entorno y con LLM_ENV_FILE apuntando a un .env explicito,
+        # from_env carga ESE archivo (override sin nombres de subproyecto).
+        monkeypatch.chdir(tmp_path)  # cwd sin .env: aisla del repo
+        env = tmp_path / "custom.env"
+        env.write_text(
+            "LLM_API_KEY=key-from-file\nLLM_MODEL_TASK=azure/gpt-5-mini\n", encoding="utf-8"
+        )
+        monkeypatch.setenv("LLM_ENV_FILE", str(env))
+        config = LLMConfig.from_env("task")
+        assert config.api_key == "key-from-file"
+        assert config.model == "azure/gpt-5-mini"
+
+    def test_process_env_wins_over_env_file(self, clear_env, monkeypatch, tmp_path):
+        # Lo ya presente en el entorno (proceso/CI) gana sobre el .env (override=False).
+        monkeypatch.chdir(tmp_path)
+        env = tmp_path / "custom.env"
+        env.write_text("LLM_API_KEY=from-file\nLLM_MODEL_TASK=azure/from-file\n", encoding="utf-8")
+        monkeypatch.setenv("LLM_ENV_FILE", str(env))
+        monkeypatch.setenv("LLM_API_KEY", "from-process")
+        monkeypatch.setenv("LLM_MODEL_TASK", "azure/from-process")
+        config = LLMConfig.from_env("task")
+        assert config.api_key == "from-process"
+        assert config.model == "azure/from-process"
+
+    def test_no_subproject_fallback(self, clear_env, monkeypatch, tmp_path):
+        # Sin API key, sin LLM_ENV_FILE y con un cwd sin .env, from_env NO inventa
+        # credenciales buscando subproyectos por nombre (el viejo fallback hardcodeado
+        # que cargaba el .env equivocado).
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("LLM_ENV_FILE", raising=False)
+        config = LLMConfig.from_env("task")
+        assert config.api_key is None
+
 
 # ==================== LLMConfig.to_kwargs ====================
 

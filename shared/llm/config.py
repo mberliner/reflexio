@@ -111,38 +111,33 @@ class LLMConfig:
 
         Returns:
             LLMConfig instance with values from environment.
+
+        Precedencia (de mayor a menor): variables YA presentes en el entorno
+        (proceso/CI) > `LLM_ENV_FILE` (ruta explicita a un .env) > `.env` del
+        directorio actual > defaults. `load_dotenv` usa override=False, asi que lo
+        que ya esta en el entorno nunca se pisa.
+
+        Esta funcion es codigo COMPARTIDO: NO conoce los subproyectos. Cada
+        subproyecto carga su propio `.env` al importar su `config.py`
+        (`load_dotenv(_ENV_FILE)`), por lo que al llegar aca sus variables ya estan
+        en el entorno. El antiguo fallback que probaba subdirectorios por nombre
+        (`gepa_standalone`, `dspy_gepa_poc`) acoplaba shared/ a los subproyectos y,
+        corriendo desde la raiz, cargaba el `.env` equivocado (bug de precedencia):
+        se reemplazo por `LLM_ENV_FILE`, un override explicito y sin nombres.
         """
         if load_env:
             from dotenv import load_dotenv
 
-            # 1. Intentar cargar .env del directorio actual
+            # 1. .env del directorio actual (conveniencia; no pisa el entorno).
             load_dotenv()
 
-            # 2. Si no hay API KEY, buscar en directorios raíz y subproyectos
+            # 2. Override explicito por ruta (sin hardcodear subproyectos): util para
+            #    herramientas que corren desde la raiz sin importar el config de un
+            #    subproyecto. Solo si todavia falta la API key.
             if not os.getenv("LLM_API_KEY"):
-                current = os.getcwd()
-                # Subir hasta encontrar la raíz o llegar al tope (5 niveles)
-                for _ in range(5):
-                    # Probar en el directorio actual
-                    load_dotenv(os.path.join(current, ".env"))
-                    if os.getenv("LLM_API_KEY"):
-                        break
-
-                    # Probar en subcarpetas específicas si estamos en la raíz del proyecto
-                    for sub in ["gepa_standalone", "dspy_gepa_poc"]:
-                        env_path = os.path.join(current, sub, ".env")
-                        if os.path.exists(env_path):
-                            load_dotenv(env_path)
-                            if os.getenv("LLM_API_KEY"):
-                                break
-                    if os.getenv("LLM_API_KEY"):
-                        break
-
-                    # Subir un nivel
-                    parent = os.path.dirname(current)
-                    if parent == current:
-                        break
-                    current = parent
+                env_file = os.getenv("LLM_ENV_FILE")
+                if env_file and os.path.exists(env_file):
+                    load_dotenv(env_file)
 
         model_var = f"LLM_MODEL_{model_name.upper()}"
 
