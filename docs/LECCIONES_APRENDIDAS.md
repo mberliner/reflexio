@@ -95,6 +95,35 @@ Desacuerdos en `val` (análisis inicial):
 - Ante delta bajo/negativo con un reasoning model, **hacer dump por ejemplo y separar casos con-señal vs ambiguos antes de culpar al modelo o al optimizador.** Si los fallos se concentran en items de gold heurístico-léxico y flipean entre corridas, es desacuerdo de criterio + inestabilidad de muestreo (no optimizable vía prompt), no incapacidad del modelo.
 - Si hay desalineación, las opciones son: re-etiquetar los casos ambiguos según un criterio cerrado, preferir tareas con verdad verificable para reasoning models, o documentar la diferencia de calibración como resultado de la experimentación.
 
+### Interacción modelo×datos: datos más representativos pueden BAJAR el accuracy (Fast Gate rule_derived)
+
+**Contexto.** Fast Gate `rule_derived` (el LLM emite P1..P5 + `alto_impacto`; una función pura deriva el color). El train/val a mano (`make_variations._FG_PREGUNTAS`) tenía dos defectos *by-design* descubiertos al auditar la distribución conjunta features↔label:
+1. **Conteo degenerado**: cada color vivía en un punto único del conteo de "Si" (Verde=0, Amarillo=3, Rojo=4); nunca los bordes (Verde con 1, Amarillo con 2, Rojo con 5) que el test SÍ tiene.
+2. **Colinealidad espuria** `alto_impacto=Si` ⟺ `Negro` (19/19 en todo el dataset): el modelo aprendía el atajo "alto=Si cuando huele a Negro" en vez del concepto. Efecto secundario: `alto_impacto` saturaba el val (techo) y **GEPA quedaba sin gradiente**.
+
+**Intervención.** Se enriqueció el train/val (13 casos): bordes de conteo + romper la colinealidad (Rojo/Amarillo con `alto_impacto=Si` y P5=No). El test NO se tocó (comparación válida).
+
+**Resultado (baseline sin GEPA, color test, N=3) — el cuadro 2×2 es la lección:**
+
+|                | datos viejos (degenerados) | datos nuevos (enriquecidos) |
+|----------------|----------------------------|------------------------------|
+| **gpt-4.1-mini** | 80,0% [73,3..86,7]        | 70,0% [63,3..73,3]          |
+| **gpt-5-mini**   | 77,8% [73,3..83,3]        | **82,2% [80,0..86,7]**      |
+
+**El gap se invierte según el modelo.** gpt-4.1-mini *baja* 10 pp con los datos realistas (los few-shot de borde lo hacen subcontar); gpt-5-mini *sube* y da el mejor número de toda la serie. Disjunto y sólido: gpt-5-mini nuevos [80..86,7] vs gpt-4.1-mini nuevos [63,3..73,3], +12 pp.
+
+**Lección:**
+- **Un descenso de accuracy con datos más representativos NO implica que los datos sean peores.** Puede significar que el modelo no tiene capacidad para captar esa realidad. La prueba que discrimina es la **interacción modelo×datos**: si un modelo más fuerte aprovecha el dataset y sube, el dataset es mejor y el cuello era el modelo (no revertir los datos).
+- **Para modelos chicos, demos prototípicos (centro de cada banda) generalizan mejor que demos de borde ambiguos.** Lo contrario para modelos capaces. El "material de enseñanza" óptimo depende del modelo.
+- **Auditar la distribución conjunta features↔label antes de optimizar.** Una colinealidad espuria en el gold (una feature que predice el label en el 100% de los casos) le enseña al modelo un atajo, satura el val (techo) y **tapa cualquier mejora** que la optimización pudiera medir. Romperla destraba el gradiente de GEPA.
+- Coherente con [[gpt5mini_clasificacion_subjetiva]]: gpt-5-mini no luce cuando el gold trae atajos (con datos viejos quedaba por debajo de gpt-4.1-mini); brilla cuando el dataset es limpio.
+
+### Feedback de métrica sobre campos DERIVADOS (no editables por el modelo)
+
+**Síntoma.** En `rule_derived`, la métrica puntuaba `clasificacion` (color), que el predictor NO emite (lo calcula una regla pura). El feedback a GEPA decía "esperado Rojo, obtenido Negro" — inaccionable: el reflection_lm no puede corregir un campo que el modelo no produce.
+
+**Lección.** Cuando un output es derivado por código, el feedback de la métrica debe **traducir el error del campo derivado al juicio controlable** que lo causó. Solución implementada: `create_rule_derived_metric_with_feedback` (`metrics.py`) muestra la traza de la regla (bits gold vs pred, conteo/override) y señala **qué juicio P1..P5/`alto_impacto` corregir** para que el color salga bien. El score no cambia (comparabilidad); solo el texto del feedback. Generaliza [[gepa_metric_feedback_pattern]] al caso de outputs derivados.
+
 ### El Efecto Techo (Ceiling Effect)
 **Síntoma:** El modelo base obtenía 100% de efectividad en la primera prueba ("Zero-Shot").
 **Causa:** Los datos eran demasiado simples e inequívocos para un modelo potente como GPT-4o-mini.

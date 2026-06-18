@@ -35,6 +35,7 @@ __all__ = [
     "_tokenize_list",
     "create_dynamic_metric",
     "create_dynamic_metric_with_feedback",
+    "create_rule_derived_metric_with_feedback",
     "create_pipeline_metric_with_feedback",
     "sentiment_accuracy_metric",
     "sentiment_with_feedback_metric",
@@ -165,6 +166,139 @@ def create_dynamic_metric_with_feedback(
         return avg
 
     return dynamic_metric_fb
+
+
+def create_rule_derived_metric_with_feedback(
+    eval_fields: list[str],
+    is_true_fn: Callable[[object], bool],
+    question_fields: tuple[str, ...] = ("p1", "p2", "p3", "p4", "p5"),
+    alto_impacto_field: str = "alto_impacto",
+    derived_field: str = "clasificacion",
+    field_configs: dict[str, dict[str, Any]] | None = None,
+    default_mode: str = "normalized",
+    fuzzy_threshold: float = 0.85,
+    list_separators: str = ",;",
+) -> Callable[..., float | dict[str, float | str]]:
+    """Factory de metrica para modulos `rule_derived` con feedback consciente de la regla.
+
+    El score es identico al de `create_dynamic_metric_with_feedback` (promedio sobre
+    `eval_fields`), para que la comparacion contra el punto estable previo se mantenga.
+    Lo que cambia es el FEEDBACK: cuando el campo derivado (`clasificacion`) sale mal,
+    el reflection_lm recibia "esperado Rojo, obtenido Negro" sobre un campo que el
+    predictor NO emite (es calculado) y por tanto no puede corregir. Esta version
+    traduce el error de color al juicio responsable: muestra los bits gold vs pred,
+    como la regla derivo cada color (conteo de Si u override Negro) y que juicios
+    revisar. Asi el reflection_lm trabaja sobre la palanca real (p1..p5/alto_impacto).
+
+    El color a mostrar (gold y pred) se lee de `derived_field`: el gold viene del CSV
+    y el pred ya lo calculo el modulo con la regla, por eso no hace falta re-derivar.
+
+    Args:
+        eval_fields: campos a puntuar (tipicamente [alto_impacto, clasificacion]).
+        is_true_fn: interpreta el booleano del juicio ('si'/'No'/bool); se inyecta
+            para no acoplar este modulo con `flujo_intents` (`ficha._is_true`).
+        question_fields: nombres de las 5 preguntas que alimentan el conteo.
+        alto_impacto_field: nombre del juicio de alto impacto (cuello + override Negro).
+        derived_field: nombre del campo de color derivado.
+        field_configs: overrides por campo (mode, fuzzy_threshold, separators).
+        default_mode: modo de comparacion default.
+        fuzzy_threshold: threshold default para modo fuzzy.
+        list_separators: separadores para modo set.
+
+    Returns:
+        Funcion metrica compatible con DSPy/GEPA.
+    """
+    if default_mode not in _VALID_FIELD_MODES:
+        raise ValueError(
+            f"default_mode invalido: '{default_mode}'. Validos: {sorted(_VALID_FIELD_MODES)}"
+        )
+    field_configs = field_configs or {}
+    for fname, cfg in field_configs.items():
+        mode = cfg.get("mode", default_mode)
+        if mode not in _VALID_FIELD_MODES:
+            raise ValueError(
+                f"Modo invalido para campo '{fname}': '{mode}'. "
+                f"Validos: {sorted(_VALID_FIELD_MODES)}"
+            )
+
+    def _bits(source: Any) -> list[bool]:
+        return [is_true_fn(getattr(source, f, "")) for f in question_fields]
+
+    def _fmt_bits(source: Any) -> str:
+        labels = [
+            f"{f}={'Si' if b else 'No'}"
+            for f, b in zip(question_fields, _bits(source), strict=True)
+        ]
+        alto = "Si" if is_true_fn(getattr(source, alto_impacto_field, "")) else "No"
+        return " ".join(labels) + f" | {alto_impacto_field}={alto}"
+
+    def _explain(source: Any) -> str:
+        bits = _bits(source)
+        alto = is_true_fn(getattr(source, alto_impacto_field, ""))
+        # P5 es el ultimo de question_fields por convencion del Marco.
+        if bits and bits[-1] and alto:
+            return f"override Negro ({question_fields[-1]}=Si Y {alto_impacto_field}=Si)"
+        return f"conteo Si={sum(bits)}"
+
+    def rule_derived_metric_fb(example, pred, trace=None, pred_name=None, pred_trace=None):
+        total = len(eval_fields)
+        if total == 0:
+            return 0.0
+
+        total_score = 0.0
+        diagnostics: list[str] = []
+        for field in eval_fields:
+            cfg = field_configs.get(field, {})
+            mode = cfg.get("mode", default_mode)
+            threshold = cfg.get("fuzzy_threshold", fuzzy_threshold)
+            seps = cfg.get("separators", list_separators)
+            score, diag = _score_field(
+                getattr(example, field, ""), getattr(pred, field, ""), mode, threshold, seps
+            )
+            total_score += score
+            if diag:
+                diagnostics.append(f"  - {field} [{mode}]: {diag}")
+
+        avg = total_score / total
+
+        if pred_name is not None or pred_trace is not None:
+            if avg == 1.0:
+                feedback = f"Clasificacion perfecta: {total}/{total} campos correctos."
+            else:
+                correct = total - len(diagnostics)
+                lines = [
+                    f"Score {avg:.2f} ({correct}/{total} campos perfectos). Errores por campo:",
+                    *diagnostics,
+                ]
+                gold_color = str(getattr(example, derived_field, "")).strip()
+                pred_color = str(getattr(pred, derived_field, "")).strip()
+                if gold_color and gold_color.lower() != pred_color.lower():
+                    diff = [
+                        f
+                        for f in (*question_fields, alto_impacto_field)
+                        if is_true_fn(getattr(example, f, "")) != is_true_fn(getattr(pred, f, ""))
+                    ]
+                    lines.append(
+                        f"El color '{derived_field}' es DERIVADO por regla (no lo edites; "
+                        "se calcula contando los Si de p1..p5: 0-1 Verde, 2-3 Amarillo, "
+                        f"4-5 Rojo; Negro si {question_fields[-1]}=Si Y "
+                        f"{alto_impacto_field}=Si). Asi salio cada color:"
+                    )
+                    lines.append(
+                        f"  - Gold: {_fmt_bits(example)} -> {_explain(example)} -> {gold_color}"
+                    )
+                    lines.append(f"  - Pred: {_fmt_bits(pred)} -> {_explain(pred)} -> {pred_color}")
+                    if diff:
+                        lines.append(
+                            f"  - Para que el color de '{gold_color}' y no '{pred_color}', "
+                            f"corregi estos juicios: {', '.join(diff)}."
+                        )
+                feedback = "\n".join(lines)
+            return {"score": avg, "feedback": feedback}
+
+        return avg
+
+    return rule_derived_metric_fb
 
 
 def create_pipeline_metric_with_feedback(

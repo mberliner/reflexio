@@ -12,6 +12,7 @@ from dspy_gepa_poc.metrics import (
     create_dynamic_metric,
     create_dynamic_metric_with_feedback,
     create_pipeline_metric_with_feedback,
+    create_rule_derived_metric_with_feedback,
 )
 from dspy_gepa_poc.results_logger import ResultsLogger
 from shared.analysis.roi_calculator import cost_from_usage
@@ -275,8 +276,15 @@ class ReflexioDeclarativa:
             )
 
             if use_feedback:
-                self.metric = create_dynamic_metric_with_feedback(
+                # Feedback consciente de la regla: traduce el error del color DERIVADO
+                # al juicio responsable (p1..p5/alto_impacto), que es lo unico que el
+                # reflection_lm puede corregir. _is_true se inyecta para no acoplar
+                # metrics.py con flujo_intents.
+                from dspy_gepa_poc.flujo_intents.ficha import _is_true
+
+                self.metric = create_rule_derived_metric_with_feedback(
                     eval_fields,
+                    is_true_fn=_is_true,
                     field_configs=field_configs,
                     default_mode=match_mode if match_mode != "exact" else "normalized",
                     fuzzy_threshold=fuzzy_threshold,
@@ -497,6 +505,8 @@ class ReflexioDeclarativa:
         optimized_score, optimized_range = self._eval_repeated(
             evaluator_val, self.optimized_student
         )
+        # Predicciones REALES del eval optimizado de val (para el dump fiel, sin re-llamar).
+        self._val_predictions = self._last_eval_results
         print_kv(
             "Optimized (val)",
             f"{self._format_score(optimized_score)} (rango {optimized_range:.1f} pp)",
@@ -511,6 +521,8 @@ class ReflexioDeclarativa:
                 display_progress=True,
             )
             test_score, test_range = self._eval_repeated(evaluator_test, self.optimized_student)
+            # Predicciones REALES del eval de test (para el dump fiel, sin re-llamar).
+            self._test_predictions = self._last_eval_results
             print_kv(
                 "Test accuracy",
                 f"{self._format_score(test_score)} (rango {test_range:.1f} pp)",
@@ -541,12 +553,15 @@ class ReflexioDeclarativa:
         )
 
     def _save_predictions(self) -> None:
-        """Vuelca predicciones por-ejemplo (gold vs pred de cada output) a CSV en el run dir.
+        """Vuelca las predicciones REALES del eval (gold vs pred por ejemplo) a CSV.
 
-        Para cada split con datos (test, val) corre el programa optimizado sobre cada
-        ejemplo y guarda `predictions_<split>.csv`. Genérico para modulos con `signature`
-        (dynamic / rule_derived); el pipeline se omite (outputs por etapa). Agrega
-        llamadas LLM (una por ejemplo), por eso es opt-in (`optimization.save_predictions`).
+        Usa las predicciones capturadas durante la evaluacion de test/val del programa
+        optimizado (`_eval_repeated` -> `EvaluationResult.results`, lista de
+        (example, prediction, score)); NO re-ejecuta el modelo. Asi el dump es FIEL al
+        score reportado (mismas predicciones que lo produjeron) y no agrega llamadas LLM
+        -- antes re-ejecutaba, lo que daba predicciones distintas (LLM no determinista) y
+        con reasoning models colgaba esta fase (D-016). Generico para modulos con
+        `signature` (dynamic / rule_derived); el pipeline se omite (outputs por etapa).
         """
         import csv as _csv
 
@@ -560,8 +575,12 @@ class ReflexioDeclarativa:
         if not isinstance(input_keys, list):
             input_keys = [input_keys]
 
-        for split_name, devset in (("test", self.testset), ("val", self.valset)):
-            if not devset:
+        splits = (
+            ("test", getattr(self, "_test_predictions", None)),
+            ("val", getattr(self, "_val_predictions", None)),
+        )
+        for split_name, captured in splits:
+            if not captured:
                 continue
             cols = [
                 "case_id",
@@ -573,8 +592,7 @@ class ReflexioDeclarativa:
             with open(path, "w", encoding="utf-8", newline="") as f:
                 writer = _csv.DictWriter(f, fieldnames=cols)
                 writer.writeheader()
-                for ex in devset:
-                    pred = self.optimized_student(**{k: getattr(ex, k) for k in input_keys})
+                for ex, pred, _score in captured:
                     row = {"case_id": getattr(ex, "case_id", "")}
                     for field in out_fields:
                         row[f"gold_{field}"] = str(getattr(ex, field, "")).strip()
@@ -582,7 +600,7 @@ class ReflexioDeclarativa:
                     for k in input_keys:
                         row[k] = getattr(ex, k, "")
                     writer.writerow({c: row.get(c, "") for c in cols})
-            log_ok(f"Predictions saved: {path} ({len(devset)} {split_name})")
+            log_ok(f"Predictions saved: {path} ({len(captured)} {split_name})")
 
     def _save_candidates(self, payload: dict) -> None:
         """Vuelca el payload de candidatos GEPA a `candidates.json` en el run dir."""
@@ -608,12 +626,6 @@ class ReflexioDeclarativa:
         with open(config_out, "w", encoding="utf-8") as f:
             yaml.safe_dump(self.config.raw_config, f, allow_unicode=True)
         log_ok(f"Config snapshot saved: {config_out}")
-
-        # Opt-in: volcar las predicciones por-ejemplo (gold vs pred de cada output) del
-        # programa optimizado. El harness solo guarda prompts y scores agregados; esto
-        # materializa las salidas por-ficha para auditoria (clave en module rule_derived).
-        if self.config.raw_config.get("optimization", {}).get("save_predictions"):
-            self._save_predictions()
 
         # Prepare notes (free-form metadata, budget goes in dedicated column)
         opt_config = self.config.raw_config.get("optimization", {})
@@ -692,6 +704,18 @@ class ReflexioDeclarativa:
 
         log_ok("Run logged successfully.")
 
+        # Opt-in: volcar las predicciones REALES del eval (capturadas en _eval_repeated,
+        # sin re-llamar al modelo) para auditoria (clave en module rule_derived). Va AL
+        # FINAL y es BEST-EFFORT por defensa: aunque ya no hace I/O de red, si algo fallara
+        # la corrida YA quedo registrada (run.json + CSV) y no se pierde nada (D-016).
+        if self.config.raw_config.get("optimization", {}).get("save_predictions"):
+            try:
+                self._save_predictions()
+            except Exception as e:  # noqa: BLE001 - dump no critico; no debe tumbar la corrida
+                log_warn(
+                    f"save_predictions fallo (no critico; la corrida ya quedo registrada): {e}"
+                )
+
     @staticmethod
     def _snapshot_instructions(module) -> dict[str, str]:
         """
@@ -716,8 +740,15 @@ class ReflexioDeclarativa:
         """
         k = max(1, int(getattr(self, "eval_repeats", 1)))
         scores: list[float] = []
+        self._last_eval_results = None
         for _ in range(k):
-            scores.append(self._to_float_score(evaluator(student)))
+            result = evaluator(student)
+            # dspy 3.x: Evaluate devuelve EvaluationResult (.score + .results, lista de
+            # (example, prediction, score)). Guardamos los results de la ultima pasada para
+            # poder volcar las predicciones REALES del eval (las que dieron el score) sin
+            # re-llamar al modelo. Con k>1 corresponden a una de las pasadas (no a la media).
+            self._last_eval_results = getattr(result, "results", None)
+            scores.append(self._to_float_score(result))
         mean = sum(scores) / len(scores)
         rng = max(scores) - min(scores) if len(scores) > 1 else 0.0
         return mean, rng

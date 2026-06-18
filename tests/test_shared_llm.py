@@ -96,6 +96,7 @@ class TestLLMConfigBasics:
         assert config.temperature == 0.7
         assert config.max_tokens == 1000
         assert config.cache is False
+        assert config.timeout == 600.0
 
     def test_explicit_params(self):
         config = LLMConfig(
@@ -149,6 +150,20 @@ class TestLLMConfigFromEnv:
         assert config.model == "azure/gpt-4.1-mini"
         assert config.api_key is None
 
+    def test_timeout_default(self, mock_env):
+        config = LLMConfig.from_env("task")
+        assert config.timeout == 600.0
+
+    def test_timeout_custom(self, mock_env, monkeypatch):
+        monkeypatch.setenv("LLM_TIMEOUT", "120")
+        config = LLMConfig.from_env("task")
+        assert config.timeout == 120.0
+
+    def test_timeout_zero_means_none(self, mock_env, monkeypatch):
+        monkeypatch.setenv("LLM_TIMEOUT", "0")
+        config = LLMConfig.from_env("task")
+        assert config.timeout is None
+
 
 # ==================== LLMConfig.to_kwargs ====================
 
@@ -174,6 +189,14 @@ class TestLLMConfigToKwargs:
         assert "cache" not in kwargs
         assert "api_key" not in kwargs
         assert "api_base" not in kwargs
+
+    def test_includes_timeout_when_set(self):
+        config = LLMConfig(model="openai/gpt-4", timeout=120.0)
+        assert config.to_kwargs()["timeout"] == 120.0
+
+    def test_excludes_timeout_when_none(self):
+        config = LLMConfig(model="openai/gpt-4", timeout=None)
+        assert "timeout" not in config.to_kwargs()
 
 
 # ==================== LLMConfig.validate ====================

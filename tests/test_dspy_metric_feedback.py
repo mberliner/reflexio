@@ -6,11 +6,13 @@ y feedback textual para GEPA).
 import dspy
 import pytest
 
+from dspy_gepa_poc.flujo_intents.ficha import _is_true
 from dspy_gepa_poc.metrics import (
     _normalize_text,
     _score_set,
     _tokenize_list,
     create_dynamic_metric_with_feedback,
+    create_rule_derived_metric_with_feedback,
 )
 
 
@@ -127,3 +129,84 @@ class TestMetricWithFeedback:
         ex = self._ex(text="t")
         pred = dspy.Prediction()
         assert metric(ex, pred) == 0.0
+
+
+class TestRuleDerivedMetricWithFeedback:
+    """La metrica rule_derived puntua igual que la dinamica pero el feedback explica
+    la derivacion del color (caso real del audit: Rojo->Negro por alto_impacto)."""
+
+    EVAL = ["alto_impacto", "clasificacion"]
+
+    def _metric(self, **kw):
+        return create_rule_derived_metric_with_feedback(
+            self.EVAL,
+            is_true_fn=_is_true,
+            field_configs={"alto_impacto": {"mode": "exact"}, "clasificacion": {"mode": "exact"}},
+            **kw,
+        )
+
+    def _ex(self, **kw):
+        return dspy.Example(**kw).with_inputs("ficha")
+
+    def test_returns_float_when_no_pred_name(self):
+        metric = self._metric()
+        ex = self._ex(ficha="f", alto_impacto="No", clasificacion="Rojo")
+        pred = dspy.Prediction(alto_impacto="No", clasificacion="Rojo")
+        assert metric(ex, pred) == 1.0
+
+    def test_score_matches_field_average(self):
+        # alto_impacto mal, clasificacion mal -> 0/2
+        metric = self._metric()
+        ex = self._ex(ficha="f", alto_impacto="No", clasificacion="Rojo")
+        pred = dspy.Prediction(alto_impacto="si", clasificacion="Negro")
+        assert metric(ex, pred) == 0.0
+
+    def test_rojo_to_negro_feedback_points_at_alto_impacto(self):
+        # Caso TC-R-02: gold Rojo (p5=si, alto_impacto=No), pred Negro (alto_impacto=si).
+        metric = self._metric()
+        ex = self._ex(
+            ficha="f",
+            p1="si",
+            p2="si",
+            p3="No",
+            p4="si",
+            p5="si",
+            alto_impacto="No",
+            clasificacion="Rojo",
+        )
+        pred = dspy.Prediction(
+            p1="si",
+            p2="si",
+            p3="No",
+            p4="si",
+            p5="si",
+            alto_impacto="si",
+            clasificacion="Negro",
+        )
+        result = metric(ex, pred, pred_name="predictor")
+        fb = result["feedback"]
+        assert result["score"] == 0.0
+        # Explica la derivacion y senala el juicio a corregir.
+        assert "DERIVADO" in fb
+        assert "override Negro" in fb
+        assert "alto_impacto" in fb
+        assert "Rojo" in fb and "Negro" in fb
+
+    def test_perfect_feedback(self):
+        metric = self._metric()
+        ex = self._ex(ficha="f", alto_impacto="si", clasificacion="Negro")
+        pred = dspy.Prediction(alto_impacto="si", clasificacion="Negro")
+        result = metric(ex, pred, pred_name="p")
+        assert result["score"] == 1.0
+        assert "perfecta" in result["feedback"].lower()
+
+    def test_empty_eval_fields_returns_zero(self):
+        metric = create_rule_derived_metric_with_feedback([], is_true_fn=_is_true)
+        ex = self._ex(ficha="f")
+        assert metric(ex, dspy.Prediction()) == 0.0
+
+    def test_invalid_default_mode_raises(self):
+        with pytest.raises(ValueError):
+            create_rule_derived_metric_with_feedback(
+                ["a"], is_true_fn=_is_true, default_mode="bogus"
+            )

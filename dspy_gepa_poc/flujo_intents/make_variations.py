@@ -2538,6 +2538,212 @@ FAST_GATE = [
         riesgo="Ajuste autonomo sin revision previa.",
         restr="Cumplimiento Defensa del Consumidor y ENACOM.",
     ),
+    # --- Bordes de conteo: cubren los valores de Si ausentes en train/val ---
+    # Verde con 1 Si (Si=1): un solo factor activo, sin alto impacto.
+    _fg(
+        "VAR-FG-V13",
+        "negocio",
+        ["personales"],
+        "Verde",
+        "train",
+        "Sistema que muestra al representante un resumen del historial de contactos del "
+        "cliente antes de la llamada; es informativo y el representante decide como "
+        "gestionar. Opera sobre el CRM interno homologado.",
+        impacto="Representantes como usuarios; el resumen es informativo y no influye en "
+        "decisiones sobre el cliente. Criticidad baja.",
+        riesgo="CRM interno homologado; el representante decide cada interaccion.",
+        restr="Cumplimiento Ley 25.326; sin proveedores externos; revision humana.",
+    ),
+    _fg(
+        "VAR-FG-V14",
+        "capacidad",
+        ["ninguno"],
+        "Verde",
+        "train",
+        "Asistente que resume papers tecnicos de acceso publico usando un LLM externo que "
+        "sera homologado antes del despliegue; sin datos personales, es informativo y el "
+        "investigador valida antes de usar el resumen.",
+        impacto="Investigadores como usuarios; sin impacto sobre personas. Criticidad baja.",
+        riesgo="El LLM externo sera homologado antes del despliegue; documentos publicos.",
+        restr="Sin datos personales; revision humana previa.",
+    ),
+    _fg(
+        "VAR-FG-V15",
+        "operativo",
+        ["personales"],
+        "Verde",
+        "val",
+        "Sistema que arma para el propio empleado un resumen de su actividad a partir de "
+        "sus datos personales, para autoconsulta; no alimenta evaluaciones ni decisiones.",
+        impacto="El empleado consulta su propia actividad; no se usa en evaluaciones ni "
+        "decisiones sobre personas. Criticidad baja.",
+        riesgo="Uso interno informativo; sin proveedores externos.",
+        restr="Cumplimiento Ley 25.326; sin impacto en desempeno.",
+    ),
+    # Amarillo con 2 Si (Si=2): dos factores, sin alto impacto, con revision humana.
+    _fg(
+        "VAR-FG-A13",
+        "capacidad",
+        ["personales"],
+        "Amarillo",
+        "train",
+        "Asistente que resume documentos internos con datos personales de empleados usando "
+        "un LLM externo aun por homologar; es informativo y el autor valida antes de usar.",
+        impacto="Empleados como usuarios; informativo. Criticidad media.",
+        riesgo="El LLM externo sera homologado antes del despliegue; revision humana.",
+        restr="Cumplimiento Ley 25.326; el autor valida.",
+    ),
+    _fg(
+        "VAR-FG-A14",
+        "negocio",
+        ["personales"],
+        "Amarillo",
+        "train",
+        "Sistema que sugiere al representante una accion de retencion segun el consumo del "
+        "cliente; el representante decide que ofrecer. Plataforma interna homologada.",
+        impacto="Clientes via representante; el representante decide. Criticidad media.",
+        riesgo="Plataforma interna homologada; el representante decide.",
+        restr="Cumplimiento Ley 25.326 y Defensa del Consumidor; el representante decide.",
+    ),
+    _fg(
+        "VAR-FG-A15",
+        "operativo",
+        ["personales"],
+        "Amarillo",
+        "val",
+        "Sistema que analiza datos personales de clientes para generar un informe interno "
+        "de calidad de servicio; un error podria exponer a la empresa a reclamos; el "
+        "equipo valida el informe antes de actuar.",
+        impacto="Clientes analizados de forma agregada; el equipo valida. Criticidad media.",
+        riesgo="Riesgo reputacional si el informe es erroneo; revision humana previa.",
+        restr="Cumplimiento Ley 25.326; sin proveedores externos.",
+    ),
+    # Rojo con 5 Si (Si=5): cumple las 5 preguntas pero acotado+reversible => alto=No
+    # (el override Negro NO aplica porque alto_impacto=No).
+    _fg(
+        "VAR-FG-R12",
+        "operativo",
+        ["personales", "confidenciales"],
+        "Rojo",
+        "train",
+        "Agente que clasifica reclamos con un LLM externo por homologar y aplica de forma "
+        "autonoma compensaciones acotadas a un catalogo aprobado (creditos menores), "
+        "cerrando el caso; escala a humano solo fuera del catalogo. El efecto es reversible "
+        "por el equipo de atencion.",
+        impacto="Clientes con reclamos; las compensaciones estan acotadas y son "
+        "reversibles. Criticidad alta.",
+        riesgo="El LLM externo sera homologado antes del despliegue; el efecto es "
+        "reversible y acotado al catalogo aprobado.",
+        restr="Compensaciones acotadas al catalogo aprobado; escalada a humano fuera de el; "
+        "cumplimiento Defensa del Consumidor.",
+    ),
+    _fg(
+        "VAR-FG-R13",
+        "negocio",
+        ["personales", "confidenciales"],
+        "Rojo",
+        "val",
+        "Agente que ajusta automaticamente beneficios del cliente dentro de bandas "
+        "aprobadas usando un servicio externo por homologar; influye en la relacion "
+        "comercial; los ajustes son reversibles y hay revision sistematica del log.",
+        impacto="Clientes con ajustes acotados a bandas y reversibles. Criticidad alta.",
+        riesgo="Servicio externo por homologar; ajustes reversibles dentro de bandas con "
+        "revision sistematica del log.",
+        restr="Ajustes acotados a bandas aprobadas; cumplimiento Defensa del Consumidor.",
+    ),
+    # --- Romper la colinealidad alto_impacto <=> Negro: alto=Si pero NO Negro (P5=No) ---
+    # Rojo con alto=Si y P5=No (Si=4): alto impacto por naturaleza/profiling, pero un
+    # humano valida cada caso, por lo que el override Negro no aplica.
+    _fg(
+        "VAR-FG-R14",
+        "negocio",
+        ["personales"],
+        "Rojo",
+        "train",
+        "Motor de scoring crediticio que perfila al cliente y condiciona el acceso al "
+        "credito; usa una API externa de scoring por homologar; el analista valida y "
+        "registra cada decision antes de aplicarla.",
+        impacto="Clientes solicitantes; el score condiciona el acceso al credito y hay "
+        "perfilamiento. Criticidad muy alta.",
+        riesgo="La API externa sera homologada antes de produccion; el analista valida cada "
+        "caso antes de ejecutar.",
+        restr="Cumplimiento BCRA y Ley 25.326; el analista decide; sin variables discriminatorias.",
+    ),
+    _fg(
+        "VAR-FG-R15",
+        "negocio",
+        ["personales"],
+        "Rojo",
+        "val",
+        "Sistema que evalua solicitudes de un beneficio financiero perfilando al cliente "
+        "con un modelo externo por homologar; un comite humano aprueba cada caso antes de "
+        "otorgar el beneficio.",
+        impacto="Clientes evaluados; decision financiera con perfilamiento. Criticidad alta.",
+        riesgo="Modelo externo por homologar; el comite aprueba cada caso antes de actuar.",
+        restr="Cumplimiento BCRA y Ley 25.326; revision humana por caso.",
+    ),
+    # Amarillo con alto=Si y P5=No (Si=2 y 3): profiling a escala => alto=Si, pero
+    # framework interno, sin proveedor externo o riesgo legal y con decision humana.
+    _fg(
+        "VAR-FG-A16",
+        "negocio",
+        ["personales"],
+        "Amarillo",
+        "train",
+        "Modelo predictivo de churn que perfila automaticamente a mas de 100.000 clientes y "
+        "publica scores en el CRM; el equipo comercial decide autonomamente que accion "
+        "tomar. Framework interno certificado; el sistema no actua sobre el cliente.",
+        impacto="Mas de 100.000 clientes perfilados; el equipo comercial decide la accion. "
+        "Criticidad media.",
+        riesgo="Framework interno certificado; el equipo decide cada accion.",
+        restr="Cumplimiento Ley 25.326; el sistema no actua sobre el cliente; sin "
+        "discriminacion entre cohortes.",
+    ),
+    _fg(
+        "VAR-FG-A17",
+        "negocio",
+        ["personales"],
+        "Amarillo",
+        "val",
+        "Sistema que segmenta y perfila a mas del 10% de la base de clientes para campanias "
+        "usando un LLM externo por homologar; el responsable de marketing decide cada "
+        "campania.",
+        impacto="Mas del 10% de la base perfilada; el responsable decide. Criticidad media.",
+        riesgo="LLM externo por homologar; el responsable decide cada campania.",
+        restr="Cumplimiento Ley 25.326; el responsable decide; sin discriminacion.",
+    ),
+    # --- Negro con conteo distinto de 4: que el override (P5=Si Y alto=Si) domine ---
+    # Negro con Si=3 (normalmente Amarillo) que escala por el override.
+    _fg(
+        "VAR-FG-N12",
+        "operativo",
+        ["personales"],
+        "Negro",
+        "train",
+        "Agente que cancela automaticamente beneficios a empleados con cuotas vencidas en "
+        "un proceso nocturno sin revision por caso; RRHH recibe un reporte al dia "
+        "siguiente. La cancelacion restringe el acceso del empleado al beneficio.",
+        impacto="Empleados con beneficios cancelados; restriccion de acceso sin revision "
+        "por caso. Criticidad alta.",
+        riesgo="Ejecucion autonoma sin revision por caso; supervision solo ex-post.",
+        restr="Cumplimiento normativa laboral y Ley 25.326; reporte ex-post a RRHH.",
+    ),
+    # Negro con Si=5 (la cota alta del conteo) + override.
+    _fg(
+        "VAR-FG-N13",
+        "negocio",
+        ["personales", "confidenciales"],
+        "Negro",
+        "val",
+        "Pipeline que aprueba y ejecuta microcreditos de forma autonoma usando un LLM "
+        "externo por homologar, sin intervencion humana por solicitud; la decision "
+        "financiera es irreversible sin accion manual posterior.",
+        impacto="Clientes solicitantes; decision financiera autonoma e irreversible. "
+        "Criticidad maxima.",
+        riesgo="LLM externo por homologar; ejecucion autonoma e irreversible sin revision "
+        "por caso.",
+        restr="Cumplimiento BCRA y Ley 25.065; el cliente puede pedir revision humana ex-post.",
+    ),
 ]
 
 
@@ -2580,6 +2786,23 @@ _FG_RAZONAMIENTO: dict[str, str] = {
     "VAR-FG-N05": "Negro: perfila automaticamente el riesgo crediticio y decide el acceso al credito (naturaleza financiera, criterio b; profiling, criterio e) sin revision -- P5=Si y alto impacto.",
     "VAR-FG-N06": "Negro: termina contratos de forma autonoma e irreversible sin intervencion manual posterior -- P5=Si y alto impacto por irreversibilidad (criterio c).",
     "VAR-FG-N07": "Negro: perfila automaticamente el comportamiento del cliente (profiling, criterio e) y ejecuta ofertas vinculantes basadas en ese perfil sin revision -- P5=Si y alto impacto.",
+    # Bordes de conteo.
+    "VAR-FG-V13": "Verde: usa datos personales (P1) pero es informativo y el representante decide (P2=No), sin proveedor externo ni riesgo legal y con revision humana; conteo=1.",
+    "VAR-FG-V14": "Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones sobre personas, con revision humana; conteo=1.",
+    "VAR-FG-V15": "Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar nada; conteo=1.",
+    "VAR-FG-A13": "Amarillo: datos personales (P1) y LLM externo por homologar (P3), mitigado por revision humana; sin decision directa ni riesgo legal; conteo=2.",
+    "VAR-FG-A14": "Amarillo: datos personales (P1) e influye en la oferta al cliente (P2), pero el representante decide y no hay proveedor externo ni riesgo legal; conteo=2.",
+    "VAR-FG-A15": "Amarillo: datos personales (P1) y riesgo reputacional si el informe falla (P4), mitigado por revision humana previa; conteo=2.",
+    "VAR-FG-R12": "Rojo: cumple las 5 preguntas (datos personales, decision sobre el cliente, LLM externo por homologar, riesgo legal y ejecucion autonoma), pero la accion esta acotada a un catalogo aprobado y es reversible, por lo que alto_impacto=No y no escala a Negro; conteo=5.",
+    "VAR-FG-R13": "Rojo: las 5 preguntas en Si, pero los ajustes estan acotados a bandas aprobadas y son reversibles con revision del log, por lo que alto_impacto=No y no es Negro; conteo=5.",
+    # Romper colinealidad alto_impacto <=> Negro (alto=Si pero P5=No -> no Negro).
+    "VAR-FG-R14": "Rojo: condiciona el acceso al credito perfilando al cliente (alto_impacto=Si por naturaleza financiera y profiling), con API externa por homologar y riesgo regulatorio, pero el analista valida cada caso (P5=No), por lo que no es Negro; conteo=4.",
+    "VAR-FG-R15": "Rojo: decision financiera con perfilamiento (alto_impacto=Si) y modelo externo por homologar, pero el comite aprueba cada caso (P5=No); conteo=4.",
+    "VAR-FG-A16": "Amarillo: perfila a mas de 100.000 clientes (alto_impacto=Si por profiling a escala) con datos personales, pero el framework es interno certificado, sin proveedor externo ni riesgo legal y el equipo decide cada accion (P5=No); conteo=2.",
+    "VAR-FG-A17": "Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada campania (P5=No) y no hay riesgo legal directo; conteo=3.",
+    # Negro por override con conteo distinto de 4.
+    "VAR-FG-N12": "Negro: ejecuta de forma autonoma sin revision por caso (P5=Si) una restriccion de acceso del empleado (alto_impacto por naturaleza, criterio b); el override Negro domina aunque el conteo sea 3.",
+    "VAR-FG-N13": "Negro: aprueba y ejecuta microcreditos de forma autonoma e irreversible sin revision por caso (P5=Si) con alto impacto financiero; el override Negro aplica; conteo=5.",
 }
 
 # Anotacion de las 5 preguntas Si/No del Marco + alto_impacto por VAR-FG (D-013,
@@ -2634,6 +2857,23 @@ _FG_PREGUNTAS: dict[str, tuple[str, str, str, str, str, str]] = {
     "VAR-FG-V10": ("No", "No", "No", "No", "No", "No"),
     "VAR-FG-V11": ("No", "No", "No", "No", "No", "No"),
     "VAR-FG-V12": ("No", "No", "No", "No", "No", "No"),
+    # Bordes de conteo.
+    "VAR-FG-V13": ("si", "No", "No", "No", "No", "No"),
+    "VAR-FG-V14": ("No", "No", "si", "No", "No", "No"),
+    "VAR-FG-V15": ("si", "No", "No", "No", "No", "No"),
+    "VAR-FG-A13": ("si", "No", "si", "No", "No", "No"),
+    "VAR-FG-A14": ("si", "si", "No", "No", "No", "No"),
+    "VAR-FG-A15": ("si", "No", "No", "si", "No", "No"),
+    "VAR-FG-R12": ("si", "si", "si", "si", "si", "No"),
+    "VAR-FG-R13": ("si", "si", "si", "si", "si", "No"),
+    # Romper colinealidad: alto=Si con P5=No -> Rojo/Amarillo (no Negro).
+    "VAR-FG-R14": ("si", "si", "si", "si", "No", "si"),
+    "VAR-FG-R15": ("si", "si", "si", "si", "No", "si"),
+    "VAR-FG-A16": ("si", "si", "No", "No", "No", "si"),
+    "VAR-FG-A17": ("si", "si", "si", "No", "No", "si"),
+    # Negro por override con conteo distinto de 4.
+    "VAR-FG-N12": ("si", "si", "No", "No", "si", "si"),
+    "VAR-FG-N13": ("si", "si", "si", "si", "si", "si"),
 }
 
 for _c in FAST_GATE:

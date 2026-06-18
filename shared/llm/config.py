@@ -45,6 +45,10 @@ class LLMConfig:
     temperature: float = 0.7
     max_tokens: int = 1000
     cache: bool = False  # DSPy LM cache (True = cachea respuestas, False = resultados frescos)
+    # Timeout por request en segundos. Evita cuelgues indefinidos con reasoning models
+    # (gpt-5-mini/gpt-5), que ocasionalmente no devuelven respuesta (D-016). None = sin
+    # limite. Default alto (600s): no corta requests legitimas, solo cuelgues reales.
+    timeout: float | None = 600.0
 
     @property
     def is_reasoning_model(self) -> bool:
@@ -149,6 +153,12 @@ class LLMConfig:
             api_version=os.getenv("LLM_API_VERSION", "2024-02-15-preview"),
         )
         config.cache = os.getenv("LLM_CACHE", "false").lower() == "true"
+        # Timeout por request (segundos). LLM_TIMEOUT=0 (o invalido) -> sin limite (None).
+        try:
+            _timeout = float(os.getenv("LLM_TIMEOUT", "600"))
+            config.timeout = _timeout if _timeout > 0 else None
+        except ValueError:
+            config.timeout = 600.0
 
         # Apply overrides
         for key, value in overrides.items():
@@ -180,6 +190,8 @@ class LLMConfig:
             kwargs["api_base"] = self.api_base
         if self.api_version:
             kwargs["api_version"] = self.api_version
+        if self.timeout:
+            kwargs["timeout"] = self.timeout
 
         return self.apply_reasoning_constraints(kwargs)
 

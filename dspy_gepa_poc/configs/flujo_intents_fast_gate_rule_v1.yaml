@@ -61,16 +61,25 @@ signature:
         aprueba cada caso individual antes de que el sistema actue.
     - name: "alto_impacto"
       desc: >-
-        Si/No: se cumple al menos uno: (a) escala (afecta a >=10% de la base de
-        clientes o >=100.000 clientes); (b) naturaleza (decision financiera, corte de
-        servicio, denegacion de acceso o restriccion de derechos); (c) irreversibilidad
-        (efecto no revertible sin intervencion manual posterior); (d) regulatorio
-        (error con exposicion a sancion directa); (e) profiling (perfilamiento
-        automatizado de personas). IMPORTANTE: una accion autonoma ACOTADA a bandas o
-        a un catalogo predefinido y REVERSIBLE (o con reversion sistematica) NO alcanza
-        alto impacto por si sola; en ese caso respondé No, salvo que cumpla claramente
-        (a)-(e) por otra via. Una accion favorable y reversible (ej. dar de alta,
-        enviar comunicaciones) tampoco es alto impacto.
+        Si/No: juicio de alto impacto. Decidí en DOS pasos, en este orden:
+        PASO 1 (filtro de acotamiento y reversibilidad): si la accion automatica esta
+        ACOTADA a bandas, limites o un catalogo predefinido Y es REVERSIBLE (el cliente
+        o un equipo puede revertirla, o hay reversion sistematica posterior), respondé
+        No -- SALVO que igual produzca (c) un efecto irreversible sin intervencion
+        manual, o (b) un corte de servicio, denegacion de acceso o restriccion de
+        derechos efectiva. Una accion favorable y reversible (dar de alta, enviar
+        comunicaciones, ajustar dentro de banda con revision a pedido, cambio
+        reversible del catalogo) NO es alto impacto: respondé No aunque sea financiera
+        o afecte a miles de personas.
+        PASO 2 (criterios): si la accion NO quedo descartada en el PASO 1, respondé Si
+        cuando se cumpla al menos uno: (a) escala COMPROBABLE -- la ficha indica
+        >=100.000 personas afectadas o explicitamente >=10% de la base; no asumas
+        escala alta solo porque haya miles de casos sin ese umbral; (b) naturaleza --
+        corte de servicio, denegacion de acceso, restriccion de derechos, o decision
+        financiera que NO sea acotada+reversible; (c) irreversibilidad -- efecto no
+        revertible sin intervencion manual posterior; (d) regulatorio -- error con
+        exposicion a sancion directa; (e) profiling -- perfilamiento automatizado de
+        personas a escala.
     - name: "razonamiento"
       desc: "Justificacion breve (1-2 oraciones) de las respuestas."
     - name: "clasificacion"

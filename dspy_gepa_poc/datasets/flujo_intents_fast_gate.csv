@@ -505,6 +505,160 @@ Supuesto de riesgo inicial: Ajuste autonomo sin revision previa.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor y ENACOM.
 Sponsor: Gerente de Area (persona accountable)
 Datos requeridos: personales",si,si,No,si,si,si,Negro,
+train,VAR-FG-V13,"Nombre de la iniciativa: VAR-FG-V13
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que muestra al representante un resumen del historial de contactos del cliente antes de la llamada; es informativo y el representante decide como gestionar. Opera sobre el CRM interno homologado.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Representantes como usuarios; el resumen es informativo y no influye en decisiones sobre el cliente. Criticidad baja.
+Supuesto de riesgo inicial: CRM interno homologado; el representante decide cada interaccion.
+Restricciones explicitas: Cumplimiento Ley 25.326; sin proveedores externos; revision humana.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,No,No,No,No,Verde,"Verde: usa datos personales (P1) pero es informativo y el representante decide (P2=No), sin proveedor externo ni riesgo legal y con revision humana; conteo=1."
+train,VAR-FG-V14,"Nombre de la iniciativa: VAR-FG-V14
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Asistente que resume papers tecnicos de acceso publico usando un LLM externo que sera homologado antes del despliegue; sin datos personales, es informativo y el investigador valida antes de usar el resumen.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Investigadores como usuarios; sin impacto sobre personas. Criticidad baja.
+Supuesto de riesgo inicial: El LLM externo sera homologado antes del despliegue; documentos publicos.
+Restricciones explicitas: Sin datos personales; revision humana previa.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: ninguno sensible",No,No,si,No,No,No,Verde,"Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones sobre personas, con revision humana; conteo=1."
+val,VAR-FG-V15,"Nombre de la iniciativa: VAR-FG-V15
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que arma para el propio empleado un resumen de su actividad a partir de sus datos personales, para autoconsulta; no alimenta evaluaciones ni decisiones.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: El empleado consulta su propia actividad; no se usa en evaluaciones ni decisiones sobre personas. Criticidad baja.
+Supuesto de riesgo inicial: Uso interno informativo; sin proveedores externos.
+Restricciones explicitas: Cumplimiento Ley 25.326; sin impacto en desempeno.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,No,No,No,No,Verde,"Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar nada; conteo=1."
+train,VAR-FG-A13,"Nombre de la iniciativa: VAR-FG-A13
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Asistente que resume documentos internos con datos personales de empleados usando un LLM externo aun por homologar; es informativo y el autor valida antes de usar.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Empleados como usuarios; informativo. Criticidad media.
+Supuesto de riesgo inicial: El LLM externo sera homologado antes del despliegue; revision humana.
+Restricciones explicitas: Cumplimiento Ley 25.326; el autor valida.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,si,No,No,No,Amarillo,"Amarillo: datos personales (P1) y LLM externo por homologar (P3), mitigado por revision humana; sin decision directa ni riesgo legal; conteo=2."
+train,VAR-FG-A14,"Nombre de la iniciativa: VAR-FG-A14
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que sugiere al representante una accion de retencion segun el consumo del cliente; el representante decide que ofrecer. Plataforma interna homologada.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes via representante; el representante decide. Criticidad media.
+Supuesto de riesgo inicial: Plataforma interna homologada; el representante decide.
+Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor; el representante decide.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) e influye en la oferta al cliente (P2), pero el representante decide y no hay proveedor externo ni riesgo legal; conteo=2."
+val,VAR-FG-A15,"Nombre de la iniciativa: VAR-FG-A15
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que analiza datos personales de clientes para generar un informe interno de calidad de servicio; un error podria exponer a la empresa a reclamos; el equipo valida el informe antes de actuar.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes analizados de forma agregada; el equipo valida. Criticidad media.
+Supuesto de riesgo inicial: Riesgo reputacional si el informe es erroneo; revision humana previa.
+Restricciones explicitas: Cumplimiento Ley 25.326; sin proveedores externos.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,No,No,si,No,No,Amarillo,"Amarillo: datos personales (P1) y riesgo reputacional si el informe falla (P4), mitigado por revision humana previa; conteo=2."
+train,VAR-FG-R12,"Nombre de la iniciativa: VAR-FG-R12
+Tipo de intent: Operativo
+Declaracion del intent: Agente que clasifica reclamos con un LLM externo por homologar y aplica de forma autonoma compensaciones acotadas a un catalogo aprobado (creditos menores), cerrando el caso; escala a humano solo fuera del catalogo. El efecto es reversible por el equipo de atencion.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con reclamos; las compensaciones estan acotadas y son reversibles. Criticidad alta.
+Supuesto de riesgo inicial: El LLM externo sera homologado antes del despliegue; el efecto es reversible y acotado al catalogo aprobado.
+Restricciones explicitas: Compensaciones acotadas al catalogo aprobado; escalada a humano fuera de el; cumplimiento Defensa del Consumidor.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales, confidenciales",si,si,si,si,si,No,Rojo,"Rojo: cumple las 5 preguntas (datos personales, decision sobre el cliente, LLM externo por homologar, riesgo legal y ejecucion autonoma), pero la accion esta acotada a un catalogo aprobado y es reversible, por lo que alto_impacto=No y no escala a Negro; conteo=5."
+val,VAR-FG-R13,"Nombre de la iniciativa: VAR-FG-R13
+Tipo de intent: Negocio
+Declaracion del intent: Agente que ajusta automaticamente beneficios del cliente dentro de bandas aprobadas usando un servicio externo por homologar; influye en la relacion comercial; los ajustes son reversibles y hay revision sistematica del log.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes con ajustes acotados a bandas y reversibles. Criticidad alta.
+Supuesto de riesgo inicial: Servicio externo por homologar; ajustes reversibles dentro de bandas con revision sistematica del log.
+Restricciones explicitas: Ajustes acotados a bandas aprobadas; cumplimiento Defensa del Consumidor.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales, confidenciales",si,si,si,si,si,No,Rojo,"Rojo: las 5 preguntas en Si, pero los ajustes estan acotados a bandas aprobadas y son reversibles con revision del log, por lo que alto_impacto=No y no es Negro; conteo=5."
+train,VAR-FG-R14,"Nombre de la iniciativa: VAR-FG-R14
+Tipo de intent: Negocio
+Declaracion del intent: Motor de scoring crediticio que perfila al cliente y condiciona el acceso al credito; usa una API externa de scoring por homologar; el analista valida y registra cada decision antes de aplicarla.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes solicitantes; el score condiciona el acceso al credito y hay perfilamiento. Criticidad muy alta.
+Supuesto de riesgo inicial: La API externa sera homologada antes de produccion; el analista valida cada caso antes de ejecutar.
+Restricciones explicitas: Cumplimiento BCRA y Ley 25.326; el analista decide; sin variables discriminatorias.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,No,si,Rojo,"Rojo: condiciona el acceso al credito perfilando al cliente (alto_impacto=Si por naturaleza financiera y profiling), con API externa por homologar y riesgo regulatorio, pero el analista valida cada caso (P5=No), por lo que no es Negro; conteo=4."
+val,VAR-FG-R15,"Nombre de la iniciativa: VAR-FG-R15
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que evalua solicitudes de un beneficio financiero perfilando al cliente con un modelo externo por homologar; un comite humano aprueba cada caso antes de otorgar el beneficio.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes evaluados; decision financiera con perfilamiento. Criticidad alta.
+Supuesto de riesgo inicial: Modelo externo por homologar; el comite aprueba cada caso antes de actuar.
+Restricciones explicitas: Cumplimiento BCRA y Ley 25.326; revision humana por caso.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,si,No,si,Rojo,"Rojo: decision financiera con perfilamiento (alto_impacto=Si) y modelo externo por homologar, pero el comite aprueba cada caso (P5=No); conteo=4."
+train,VAR-FG-A16,"Nombre de la iniciativa: VAR-FG-A16
+Tipo de intent: Negocio
+Declaracion del intent: Modelo predictivo de churn que perfila automaticamente a mas de 100.000 clientes y publica scores en el CRM; el equipo comercial decide autonomamente que accion tomar. Framework interno certificado; el sistema no actua sobre el cliente.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Mas de 100.000 clientes perfilados; el equipo comercial decide la accion. Criticidad media.
+Supuesto de riesgo inicial: Framework interno certificado; el equipo decide cada accion.
+Restricciones explicitas: Cumplimiento Ley 25.326; el sistema no actua sobre el cliente; sin discriminacion entre cohortes.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,No,No,si,Amarillo,"Amarillo: perfila a mas de 100.000 clientes (alto_impacto=Si por profiling a escala) con datos personales, pero el framework es interno certificado, sin proveedor externo ni riesgo legal y el equipo decide cada accion (P5=No); conteo=2."
+val,VAR-FG-A17,"Nombre de la iniciativa: VAR-FG-A17
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que segmenta y perfila a mas del 10% de la base de clientes para campanias usando un LLM externo por homologar; el responsable de marketing decide cada campania.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Mas del 10% de la base perfilada; el responsable decide. Criticidad media.
+Supuesto de riesgo inicial: LLM externo por homologar; el responsable decide cada campania.
+Restricciones explicitas: Cumplimiento Ley 25.326; el responsable decide; sin discriminacion.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,si,No,No,si,Amarillo,"Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada campania (P5=No) y no hay riesgo legal directo; conteo=3."
+train,VAR-FG-N12,"Nombre de la iniciativa: VAR-FG-N12
+Tipo de intent: Operativo
+Declaracion del intent: Agente que cancela automaticamente beneficios a empleados con cuotas vencidas en un proceso nocturno sin revision por caso; RRHH recibe un reporte al dia siguiente. La cancelacion restringe el acceso del empleado al beneficio.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Empleados con beneficios cancelados; restriccion de acceso sin revision por caso. Criticidad alta.
+Supuesto de riesgo inicial: Ejecucion autonoma sin revision por caso; supervision solo ex-post.
+Restricciones explicitas: Cumplimiento normativa laboral y Ley 25.326; reporte ex-post a RRHH.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,No,si,si,Negro,"Negro: ejecuta de forma autonoma sin revision por caso (P5=Si) una restriccion de acceso del empleado (alto_impacto por naturaleza, criterio b); el override Negro domina aunque el conteo sea 3."
+val,VAR-FG-N13,"Nombre de la iniciativa: VAR-FG-N13
+Tipo de intent: Negocio
+Declaracion del intent: Pipeline que aprueba y ejecuta microcreditos de forma autonoma usando un LLM externo por homologar, sin intervencion humana por solicitud; la decision financiera es irreversible sin accion manual posterior.
+Area proponente: Operaciones
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de tiempo >= 40% (linea base 10h/mes; meta 6h/mes)
+Impacto en personas: Clientes solicitantes; decision financiera autonoma e irreversible. Criticidad maxima.
+Supuesto de riesgo inicial: LLM externo por homologar; ejecucion autonoma e irreversible sin revision por caso.
+Restricciones explicitas: Cumplimiento BCRA y Ley 25.065; el cliente puede pedir revision humana ex-post.
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales, confidenciales",si,si,si,si,si,si,Negro,Negro: aprueba y ejecuta microcreditos de forma autonoma e irreversible sin revision por caso (P5=Si) con alto impacto financiero; el override Negro aplica; conteo=5.
 test,TC-A-01,"Nombre de la iniciativa: Motor de Recomendación de Upgrade
 Tipo de intent: Negocio
 Declaracion del intent: Sistema de recomendación en tiempo real para representantes de atención. Analiza el historial de consumo del cliente durante la interacción y sugiere opciones de upgrade de plan. La recomendación es visible solo para el representante; el cliente recibe únicamente lo que el representante decide comunicarle.
@@ -516,39 +670,6 @@ Supuesto de riesgo inicial: El representante valida la relevancia de la recomend
 Restricciones explicitas: El sistema no se comunica directamente con el cliente; solo asiste al representante; cumplimiento Ley 25.326 y Ley de Defensa del Consumidor; el representante toma la decisión final; presupuesto máximo USD 50.000
 Sponsor: Claudia Herrera — Gerenta de Atención al Cliente
 Datos requeridos: personales",si,si,No,si,No,No,Amarillo,
-test,TC-A-03,"Nombre de la iniciativa: Chatbot de Autoatención con IA Generativa
-Tipo de intent: Negocio
-Declaracion del intent: Chatbot de autoatención que accede a datos personales del cliente (plan; facturación; perfil) y entrega respuestas en tiempo real. Escala a agente humano cuando la consulta supera el dominio configurado.
-Area proponente: Atención Digital
-Flujo de valor o area afectada: Canal digital de autoatención al cliente
-Metricas de exito: Tasa de resolución sin escalada >= 70%; CSAT >= 4/5; reducción de contactos al call center >= 25%
-Impacto en personas: Clientes (~30.000 por mes) que interactúan directamente con el sistema. Las respuestas del chatbot influyen en las decisiones del cliente sobre su plan y servicios. Criticidad alta.
-Supuesto de riesgo inicial: El LLM externo será homologado en el catálogo corporativo antes del lanzamiento; el modelo no revelará datos del cliente fuera del dominio configurado
-Restricciones explicitas: El chatbot no ejecuta cambios contractuales; todos los cambios formales requieren confirmación por canal regulado; el LLM externo debe completar evaluación de seguridad y cumplimiento Ley 25.326 antes del despliegue; escalada obligatoria a humano fuera del dominio; presupuesto máximo USD 110.000
-Sponsor: Gabriela Moreno — Directora de Canales Digitales
-Datos requeridos: personales",si,si,si,si,No,No,Rojo,
-test,TC-EXT-01,"Nombre de la iniciativa: Analizador de Logs Técnicos DevOps
-Tipo de intent: Tecnico/Arquitectural
-Declaracion del intent: Sistema de análisis de logs de errores de aplicaciones que genera reportes técnicos de incidencias para el equipo de DevOps. No accede a datos de clientes ni de empleados como sujetos. Los reportes son insumos técnicos para priorizar la resolución de incidencias.
-Area proponente: Ingeniería de Plataforma
-Flujo de valor o area afectada: Gestión de incidencias y estabilidad de plataforma
-Metricas de exito: Tiempo de detección de incidencias reducido >= 50%; cobertura de logs analizados >= 95%; falsos positivos en alertas < 5%
-Impacto en personas: Empleados (8 ingenieros DevOps) que reciben los reportes como insumo técnico para priorizar trabajo. No afecta directamente a clientes ni empleados como sujetos de decisiones. Criticidad baja para personas; alta para estabilidad técnica.
-Supuesto de riesgo inicial: Los logs no contienen datos de identificación de usuarios ni de clientes; el sistema es de uso exclusivo del equipo de ingeniería
-Restricciones explicitas: El sistema no puede acceder a logs que contengan datos personales o de clientes; los reportes son para uso exclusivo del equipo técnico; presupuesto máximo USD 15.000
-Sponsor: Jefe de Ingeniería de Plataforma
-Datos requeridos: operativos",No,No,No,No,No,No,Verde,
-test,TC-N-01,"Nombre de la iniciativa: Agente de Cortes por Impago
-Tipo de intent: Operativo
-Declaracion del intent: Agente automatizado que consulta diariamente el sistema de facturación; identifica clientes que superaron el período de gracia por impago; verifica ausencia de disputas o acuerdos activos y ejecuta el corte técnico del servicio vía plataforma de red. Opera sin intervención humana en cada caso individual.
-Area proponente: Cobranzas Operativas
-Flujo de valor o area afectada: Gestión operativa de la cartera en mora
-Metricas de exito: Tasa de cortes ejecutados dentro del período correcto >= 99;8%; tiempo de procesamiento del ciclo diario < 2 horas; tasa de error en clasificación de mora < 0;1%
-Impacto en personas: Clientes (~4.500 en mora procesados por ciclo mensual). El corte técnico afecta directamente el acceso al servicio del cliente. No hay revisión humana por caso individual. Criticidad muy alta — pérdida de acceso al servicio.
-Supuesto de riesgo inicial: Los datos de mora y período de gracia están correctamente actualizados antes del ciclo diario; el proceso está respaldado por las condiciones contractuales vigentes
-Restricciones explicitas: El agente no puede ejecutar cortes sobre clientes con disputas activas o acuerdos de pago vigentes; cumplimiento contractual de períodos de gracia; Ley de Defensa del Consumidor y normativa ENACOM; el corte es reversible por el equipo de cobranzas en menos de 4 horas tras regularización; presupuesto máximo USD 110.000
-Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
-Datos requeridos: personales, confidenciales",si,si,No,si,si,si,Negro,
 test,TC-A-02,"Nombre de la iniciativa: Analizador de Cláusulas de Riesgo
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que analiza contratos de clientes corporativos e identifica cláusulas de riesgo para revisión del equipo legal. Genera un informe de hallazgos. El abogado responsable valida el informe y define si escalar o negociar.
@@ -560,39 +681,17 @@ Supuesto de riesgo inicial: El equipo legal siempre valida el informe antes de a
 Restricciones explicitas: El sistema no propone posiciones de negociación; solo identifica cláusulas; el abogado responsable valida cada hallazgo antes de actuar; cumplimiento de obligaciones de confidencialidad contractual y secreto profesional; presupuesto máximo USD 70.000
 Sponsor: Ignacio Palacios — Director Legal Corporativo
 Datos requeridos: confidenciales",si,si,No,si,No,No,Amarillo,
-test,TC-EXT-03,"Nombre de la iniciativa: Agente de Análisis Documental
-Tipo de intent: Capacidad de Equipo
-Declaracion del intent: Agente que analiza documentos internos de gestión y genera resúmenes ejecutivos para el equipo directivo. Usa un LLM externo (API de proveedor cloud) que será dado de alta en el catálogo corporativo antes del go-live. La evaluación de seguridad del proveedor está en curso.
-Area proponente: Dirección General
-Flujo de valor o area afectada: Análisis y síntesis de documentación estratégica
-Metricas de exito: Tiempo de análisis documental reducido >= 60%; satisfacción del equipo directivo >= 4/5
-Impacto en personas: Empleados (5 directores) que reciben resúmenes como insumo para decisiones estratégicas. Los documentos pueden incluir información de empleados en forma de organigramas o listas. Criticidad alta por la naturaleza estratégica de los documentos.
-Supuesto de riesgo inicial: El LLM externo (GPT-4o API) será homologado en el catálogo corporativo antes del despliegue en producción. La evaluación de seguridad está en curso. Los documentos no se usan para entrenamiento del modelo según los términos del proveedor.
-Restricciones explicitas: El LLM externo debe completar la evaluación de seguridad antes del despliegue; los documentos de Directorio tienen restricción adicional de acceso; cumplimiento Ley 25.326; presupuesto máximo USD 25.000
-Sponsor: Director General
-Datos requeridos: confidenciales",si,si,si,si,No,No,Rojo,
-test,TC-PRE-01,"Nombre de la iniciativa: Resumen de Historial (caso pre-clasificado)
-Tipo de intent: Operativo
-Declaracion del intent: Sistema que genera un resumen del historial de contactos del cliente antes de cada llamada entrante: últimas interacciones; estado de reclamos abiertos y plan activo. El intent del sistema coincide con el caso pre-clasificado publicado en el catálogo del N2. El área solicita registro directo con referencia al caso pre-clasificado.
-Area proponente: Atención al Cliente
-Flujo de valor o area afectada: Atención de llamadas entrantes en canal corporativo de clientes
-Metricas de exito: Disponibilidad del resumen en pantalla antes de la conexión >= 98%; tiempo de carga del resumen < 3 segundos; satisfacción del representante con la herramienta >= 4/5
-Impacto en personas: Empleados (95 representantes de atención al cliente corporativo) como usuarios del sistema. El resumen informa al representante; no influye directamente en decisiones sobre el cliente.
-Supuesto de riesgo inicial: El caso pre-clasificado del catálogo N2 coincide exactamente con el intent del sistema; la plataforma CRM está disponible con latencia aceptable antes de cada llamada
-Restricciones explicitas: El sistema no propone acciones; solo presenta resumen informativo; cumplimiento Ley 25.326; si el intent difiere del caso pre-clasificado en cualquier dimensión; debe completarse el Fast Gate completo; presupuesto máximo USD 23.000
-Sponsor: Claudia Herrera — Gerenta de Atención al Cliente
-Datos requeridos: personales",si,No,No,No,No,No,Verde,
-test,TC-N-02,"Nombre de la iniciativa: Agente de Pricing Dinámico
+test,TC-A-03,"Nombre de la iniciativa: Chatbot de Autoatención con IA Generativa
 Tipo de intent: Negocio
-Declaracion del intent: Agente que ajusta automáticamente precios y descuentos de planes por segmento de clientes en función de parámetros de mercado y comportamiento de consumo en tiempo real. Los ajustes se aplican dentro de bandas predefinidas por el área comercial sin requerir aprobación individual.
-Area proponente: Gestión Comercial
-Flujo de valor o area afectada: Gestión dinámica de la oferta comercial y retención de clientes
-Metricas de exito: Incremento en ARPU del segmento >= 5%; tasa de churn en segmento objetivo reducida >= 10%; ajustes dentro de bandas de política >= 99;9%
-Impacto en personas: Clientes (~350.000 activos distribuidos en 8 segmentos comerciales). Los ajustes de precio y descuento afectan directamente la relación comercial de cada cliente en el segmento. Criticidad muy alta — impacto masivo en condiciones comerciales.
-Supuesto de riesgo inicial: Las bandas tarifarias están dentro de los límites regulatorios vigentes; el área comercial revisa las bandas antes de cada ciclo de ajuste
-Restricciones explicitas: Los ajustes no pueden superar las bandas tarifarias definidas y aprobadas; cumplimiento de regulación tarifaria ENACOM; Ley de Defensa del Consumidor; toda modificación a las bandas requiere aprobación de Gestión Comercial y revisión regulatoria previa; presupuesto máximo USD 250.000
-Sponsor: Sebastián Castro — Director Comercial
-Datos requeridos: personales, confidenciales",si,si,No,si,si,si,Negro,
+Declaracion del intent: Chatbot de autoatención que accede a datos personales del cliente (plan; facturación; perfil) y entrega respuestas en tiempo real. Escala a agente humano cuando la consulta supera el dominio configurado.
+Area proponente: Atención Digital
+Flujo de valor o area afectada: Canal digital de autoatención al cliente
+Metricas de exito: Tasa de resolución sin escalada >= 70%; CSAT >= 4/5; reducción de contactos al call center >= 25%
+Impacto en personas: Clientes (~30.000 por mes) que interactúan directamente con el sistema. Las respuestas del chatbot influyen en las decisiones del cliente sobre su plan y servicios. Criticidad alta.
+Supuesto de riesgo inicial: El LLM externo será homologado en el catálogo corporativo antes del lanzamiento; el modelo no revelará datos del cliente fuera del dominio configurado
+Restricciones explicitas: El chatbot no ejecuta cambios contractuales; todos los cambios formales requieren confirmación por canal regulado; el LLM externo debe completar evaluación de seguridad y cumplimiento Ley 25.326 antes del despliegue; escalada obligatoria a humano fuera del dominio; presupuesto máximo USD 110.000
+Sponsor: Gabriela Moreno — Directora de Canales Digitales
+Datos requeridos: personales",si,si,si,si,No,No,Rojo,
 test,TC-A-04,"Nombre de la iniciativa: Chatbot de Gestión de Reclamos
 Tipo de intent: Negocio
 Declaracion del intent: Chatbot de gestión de reclamos que interpreta el problema del cliente; consulta el historial de interacciones y propone soluciones dentro de un catálogo de respuestas estándar pre-aprobadas (créditos de factura menores; ajustes de plan menores; seguimiento de incidencias técnicas). Escala obligatoriamente a agente humano cuando el reclamo es complejo o de naturaleza legal. Opera sobre plataforma de atención interna homologada.
@@ -604,39 +703,6 @@ Supuesto de riesgo inicial: El catálogo de soluciones estándar está correctam
 Restricciones explicitas: Las compensaciones ofrecidas no pueden superar los límites de policy vigentes; los reclamos de naturaleza legal requieren escalada obligatoria a agente humano; cumplimiento Ley de Defensa del Consumidor y normativa ENACOM; presupuesto máximo USD 90.000
 Sponsor: Tomás Elizondo — Gerente de Operaciones de Reclamos
 Datos requeridos: personales, confidenciales",si,si,No,si,No,No,Amarillo,
-test,TC-EXT-05,"Nombre de la iniciativa: Agente de Alta Automática de Clientes
-Tipo de intent: Operativo
-Declaracion del intent: Agente que verifica el cumplimiento de los criterios de alta y ejecuta automáticamente el registro del cliente en el sistema CRM y de facturación; sin intervención del operador en cada caso. El alta se confirma al cliente por email inmediatamente después de la ejecución.
-Area proponente: Operaciones Comerciales
-Flujo de valor o area afectada: Proceso de alta de nuevos clientes
-Metricas de exito: Tiempo de alta < 3 minutos desde la solicitud; tasa de alta correcta >= 99;5%; satisfacción del cliente post-alta >= 4/5
-Impacto en personas: Clientes (~5.000 nuevos por mes). El agente ejecuta el alta de forma autónoma; lo que establece la relación contractual con el cliente. Criticidad alta — inicio de relación comercial.
-Supuesto de riesgo inicial: Los criterios de alta están correctamente definidos y actualizados; la verificación automática cubre todos los casos estándar
-Restricciones explicitas: Límite ético: sin acción autónoma sin supervisión. Los casos con documentación incompleta o fuera de los criterios estándar requieren revisión manual. Cumplimiento Ley 25.326; presupuesto máximo USD 40.000.
-Sponsor: Gerente de Operaciones Comerciales
-Datos requeridos: personales",si,si,No,si,si,No,Rojo,
-test,TC-V-01,"Nombre de la iniciativa: Asistente de Redacción de Comunicados
-Tipo de intent: Capacidad de Equipo
-Declaracion del intent: Asistente de lenguaje que genera borradores de comunicados internos a partir de consignas del redactor. No accede a datos de clientes ni de empleados. Toda publicación requiere revisión y aprobación del redactor responsable.
-Area proponente: Comunicaciones Corporativas
-Flujo de valor o area afectada: Producción de contenido interno corporativo
-Metricas de exito: Reducción tiempo de redacción >= 50%; satisfacción del redactor >= 4/5; tasa de aprobación de borradores sin revisión mayor >= 80%
-Impacto en personas: Empleados (8 redactores de Comunicaciones Corporativas) como usuarios de la herramienta. No afecta directamente a clientes ni empleados como sujetos de decisiones. Criticidad baja.
-Supuesto de riesgo inicial: El modelo del catálogo produce texto coherente y sin sesgos; el redactor siempre revisa antes de publicar
-Restricciones explicitas: No procesar datos personales de clientes ni empleados; toda publicación requiere revisión y aprobación humana antes de difusión; presupuesto máximo USD 10.000
-Sponsor: Marcela Ríos — Gerenta de Comunicaciones Corporativas
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,Verde,
-test,TC-N-03,"Nombre de la iniciativa: Agente de Terminación de Contratos por Incumplimiento
-Tipo de intent: Operativo
-Declaracion del intent: Agente que monitorea el cumplimiento de condiciones contractuales de clientes corporativos y ejecuta automáticamente la terminación del contrato al detectar incumplimientos que superan los umbrales definidos. Genera notificación al cliente y registra la acción en el sistema de gestión.
-Area proponente: Gestión de Cuentas Corporativas
-Flujo de valor o area afectada: Gestión del ciclo de vida de contratos corporativos
-Metricas de exito: Tiempo de detección de incumplimiento < 24 horas; precisión en la clasificación de incumplimientos >= 99%; reducción de morosidad corporativa >= 20%
-Impacto en personas: Clientes corporativos (~800 contratos corporativos activos). La terminación automática afecta de forma permanente la relación comercial con el cliente corporativo. No hay revisión humana previa por caso. Criticidad máxima — terminación irreversible de contrato.
-Supuesto de riesgo inicial: Los umbrales de incumplimiento están correctamente definidos y validados por el área legal; el sistema notifica al cliente antes de ejecutar con el plazo contractual establecido
-Restricciones explicitas: El agente no puede operar sin validación legal previa de los umbrales de incumplimiento; cumplimiento de plazos contractuales de notificación; Ley de Defensa del Consumidor para PYMEs; el cliente recibe notificación previa con plazo para regularizar antes de la ejecución; presupuesto máximo USD 200.000
-Sponsor: Ignacio Palacios — Director Legal Corporativo
-Datos requeridos: confidenciales",si,si,No,si,si,si,Negro,
 test,TC-A-05,"Nombre de la iniciativa: Agente de Onboarding Digital de Clientes
 Tipo de intent: Negocio
 Declaracion del intent: Agente que detecta la activación de un nuevo plan y envía automáticamente al cliente un conjunto de comunicaciones de bienvenida personalizadas: confirmación del alta; guía de uso del servicio y contacto de atención. No toma decisiones sobre el plan ni sus condiciones.
@@ -648,39 +714,6 @@ Supuesto de riesgo inicial: El evento de activación del plan dispara el agente 
 Restricciones explicitas: El agente no puede modificar condiciones del plan ni enviar comunicaciones fuera del conjunto de bienvenida predefinido; cumplimiento Ley 26.951 (No Llame) y Ley 25.326; el cliente puede solicitar baja del canal en cualquier momento; presupuesto máximo USD 35.000
 Sponsor: Carolina Bernal — Gerenta de Onboarding y Activación
 Datos requeridos: personales",si,si,No,si,No,No,Amarillo,
-test,TC-R-01,"Nombre de la iniciativa: Motor de Scoring Crediticio
-Tipo de intent: Negocio
-Declaracion del intent: Sistema de evaluación crediticia que calcula un score de riesgo para solicitudes de plan pospago. Procesa datos financieros y de comportamiento del cliente; llama a una API externa de scoring y devuelve una recomendación de aprobación o rechazo al analista. El analista registra la decisión final.
-Area proponente: Crédito y Cobranzas
-Flujo de valor o area afectada: Proceso de evaluación y aprobación de planes pospago
-Metricas de exito: Tasa de mora en cohorte de aprobados <= 3%; tiempo de evaluación crediticia < 3 minutos; tasa de aprobación dentro de banda de política +/- 5%
-Impacto en personas: Clientes (~5.000 solicitantes de plan pospago por mes). El score determina en la práctica si el cliente accede al plan. 35 analistas de crédito registran la decisión formal. Criticidad muy alta — decisión financiera con impacto en acceso al servicio.
-Supuesto de riesgo inicial: La API externa de scoring será homologada antes del despliegue en producción; el analista valida y registra formalmente la decisión final en cada caso
-Restricciones explicitas: El sistema no toma la decisión; el analista de crédito registra formalmente la aprobación o rechazo; cumplimiento BCRA; Ley 25.326 y Ley 25.065 de Tarjetas de Crédito; prohibición de uso de variables que generen sesgo discriminatorio; presupuesto máximo USD 150.000
-Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
-Datos requeridos: personales",si,si,si,si,No,No,Rojo,
-test,TC-V-02,"Nombre de la iniciativa: Analizador de Informes de Gestión
-Tipo de intent: Operativo
-Declaracion del intent: Sistema de análisis que procesa reportes mensuales de gestión interna y genera resúmenes ejecutivos con identificación de tendencias y desvíos. No procesa datos de clientes individuales ni de recursos humanos. Outputs revisados por gerencia antes de su uso.
-Area proponente: Planificación Financiera
-Flujo de valor o area afectada: Ciclo mensual de reporte gerencial
-Metricas de exito: Tiempo de generación de resumen ejecutivo < 2 horas; precisión de detección de desvíos >= 85%; adopción por gerentes >= 75%
-Impacto en personas: Empleados (12 gerentes y directores de área) como consumidores del output. Ninguna decisión sobre personas individuales depende directamente del output. Criticidad media para el proceso gerencial; baja para personas.
-Supuesto de riesgo inicial: Los reportes están correctamente estructurados y disponibles al cierre del mes; la gerencia valida los análisis antes de usarlos
-Restricciones explicitas: No procesar datos personales de clientes ni de RRHH; outputs no pueden distribuirse fuera del perímetro corporativo; presupuesto máximo USD 20.000
-Sponsor: Rodrigo Varela — Director de Planificación Financiera
-Datos requeridos: confidenciales",si,No,No,No,No,No,Verde,
-test,TC-N-04,"Nombre de la iniciativa: Agente de Cobranza End-to-End
-Tipo de intent: Operativo
-Declaracion del intent: Agente de gestión de cobranza que opera de forma autónoma sobre clientes en mora: identifica la situación; genera y envía comunicaciones de negociación personalizadas; procesa la respuesta del cliente; ofrece planes de pago dentro de parámetros de política; registra los acuerdos alcanzados y actualiza el CRM. Sin intervención humana en ningún caso individual.
-Area proponente: Cobranzas
-Flujo de valor o area afectada: Ciclo completo de gestión de cobranza en cartera morosa
-Metricas de exito: Tasa de acuerdos de pago alcanzados >= 25%; recupero de cartera morosa >= 18% del saldo procesado; satisfacción del cliente post-acuerdo >= 3;5/5
-Impacto en personas: Clientes (~22.000 en mora por mes). El agente negocia condiciones de pago y ejecuta acuerdos con valor contractual sin intervención humana en ningún paso del ciclo. Criticidad máxima — acuerdos financieros con valor legal.
-Supuesto de riesgo inicial: El LLM externo para generación de comunicaciones será homologado antes del despliegue; los acuerdos registrados tienen validez contractual y son auditables
-Restricciones explicitas: El agente no puede ofrecer condiciones fuera del catálogo de planes de pago aprobado; el LLM externo debe completar evaluación de seguridad antes del despliegue; cumplimiento Ley 25.326 y Ley 26.951 (No Llame); el cliente puede solicitar contacto con agente humano en cualquier momento del ciclo; presupuesto máximo USD 320.000
-Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
-Datos requeridos: personales, confidenciales",si,si,si,si,si,si,Negro,
 test,TC-AS-01,"Nombre de la iniciativa: Modelo Predictivo de Churn
 Tipo de intent: Negocio
 Declaracion del intent: Modelo XGBoost entrenado sobre datos históricos de comportamiento de clientes pospago para predecir probabilidad de baja voluntaria en los próximos 30 días. Los scores se publican diariamente en el CRM para consulta del equipo comercial; que decide qué clientes contactar y con qué oferta. Opera bajo framework MLOps certificado por el N2.
@@ -692,39 +725,17 @@ Supuesto de riesgo inicial: El framework MLOps está correctamente certificado p
 Restricciones explicitas: El sistema no actúa sobre el cliente; solo publica scores como insumo para el equipo comercial; cumplimiento Ley 25.326; certificación MLOps vigente para conservar el track simplificado §7.7; las acciones de retención no pueden generar discriminación entre cohortes de cliente; presupuesto máximo USD 75.000
 Sponsor: Sebastián Castro — Director Comercial
 Datos requeridos: personales",si,si,No,No,No,No,Amarillo,
-test,TC-R-02,"Nombre de la iniciativa: Ajuste Automático de Límites de Crédito
-Tipo de intent: Negocio
-Declaracion del intent: Sistema que analiza mensualmente el comportamiento de pago de cada cliente pospago y ajusta automáticamente su límite de crédito dentro de los parámetros y bandas definidos por la política de crédito vigente; sin discrecionalidad fuera de esos límites. Genera log mensual revisable por el equipo de crédito dentro de las 48 horas.
-Area proponente: Crédito y Cobranzas
-Flujo de valor o area afectada: Gestión mensual del riesgo crediticio de la base pospago
-Metricas de exito: Reducción de mora en cartera >= 15%; tiempo de procesamiento del ciclo mensual < 4 horas; ajustes dentro de parámetros de política >= 99;5%
-Impacto en personas: Clientes (~85.000 pospago activos) que reciben ajustes automáticos de límite de crédito sin intervención humana por caso. El ajuste afecta directamente la capacidad de consumo del cliente. Criticidad alta.
-Supuesto de riesgo inicial: Los parámetros de política de crédito están correctamente definidos y vigentes; el log mensual es revisado por el equipo de crédito dentro de las 48 horas posteriores al ciclo
-Restricciones explicitas: Los ajustes no pueden superar los límites máximos definidos en la política de crédito aprobada; cumplimiento BCRA y Ley 25.326; el cliente debe poder solicitar revisión humana de cualquier ajuste de su límite; presupuesto máximo USD 100.000
-Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
-Datos requeridos: personales, confidenciales",si,si,No,si,si,No,Rojo,
-test,TC-V-04,"Nombre de la iniciativa: Resumen de Historial de Contacto
-Tipo de intent: Operativo
-Declaracion del intent: Sistema que genera; antes de cada llamada entrante; un resumen del historial de contactos del cliente (últimas interacciones; reclamos abiertos; plan activo) visible solo para el representante. El sistema es informativo y no propone acciones. El representante decide cómo gestionar la interacción.
-Area proponente: Atención al Cliente
-Flujo de valor o area afectada: Atención de llamadas entrantes al call center
-Metricas de exito: Reducción del tiempo de consulta de historial >= 60%; tiempo de gestión promedio por llamada reducido >= 15%; satisfacción del representante >= 4;2/5
-Impacto en personas: Empleados (380 representantes de atención) como usuarios del sistema. El resumen informa al representante; no influye directamente en decisiones sobre el cliente. Un resumen incorrecto es verificable directamente con el cliente durante la llamada. Criticidad media para el representante; baja para el cliente.
-Supuesto de riesgo inicial: La plataforma CRM está disponible con latencia < 2 segundos al inicio de cada llamada; los datos de historial están correctamente actualizados
-Restricciones explicitas: El sistema no propone acciones; solo presenta resumen informativo; cumplimiento Ley 25.326; el representante toma todas las decisiones sobre la interacción; presupuesto máximo USD 25.000
-Sponsor: Claudia Herrera — Gerenta de Atención al Cliente
-Datos requeridos: personales",si,No,No,No,No,No,Verde,
-test,TC-N-05,"Nombre de la iniciativa: Agente de Bloqueo de Cuentas por Fraude
-Tipo de intent: Operativo
-Declaracion del intent: Sistema de prevención de fraude que analiza el comportamiento del cliente en tiempo real y bloquea automáticamente la cuenta completa cuando el nivel de riesgo detectado supera el umbral configurado. El equipo de fraude recibe la alerta y puede desbloquear la cuenta si la revisión lo indica.
-Area proponente: Prevención de Fraude
-Flujo de valor o area afectada: Protección de cuentas activas ante riesgo de fraude sistémico
-Metricas de exito: Tasa de detección de fraude en cuentas bloqueadas >= 92%; falsos positivos < 1;5%; tiempo de bloqueo desde detección < 1 segundo; tiempo promedio de revisión y desbloqueo < 4 horas
-Impacto en personas: Clientes (~95.000 cuentas activas monitoreadas). El bloqueo afecta el acceso del cliente a todos sus servicios simultáneamente. El equipo de fraude (12 analistas) puede revertir el bloqueo ex-post. Criticidad máxima — pérdida total de acceso.
-Supuesto de riesgo inicial: El equipo de fraude tiene capacidad operativa para revisar y resolver alertas críticas en menos de 4 horas; la plataforma de detección interna tiene disponibilidad >= 99;99%
-Restricciones explicitas: El sistema no puede bloquear cuentas corporativas sin escalada adicional a Account Management; cumplimiento Ley 25.326 y BCRA; notificación obligatoria al cliente del bloqueo y motivos; el bloqueo de cuenta solo puede ser revertido por el equipo de fraude tras revisión documentada; presupuesto máximo USD 240.000
-Sponsor: Diego Carrasco — Gerente de Prevención de Fraude
-Datos requeridos: personales, confidenciales",si,si,No,si,si,si,Negro,
+test,TC-EXT-01,"Nombre de la iniciativa: Analizador de Logs Técnicos DevOps
+Tipo de intent: Tecnico/Arquitectural
+Declaracion del intent: Sistema de análisis de logs de errores de aplicaciones que genera reportes técnicos de incidencias para el equipo de DevOps. No accede a datos de clientes ni de empleados como sujetos. Los reportes son insumos técnicos para priorizar la resolución de incidencias.
+Area proponente: Ingeniería de Plataforma
+Flujo de valor o area afectada: Gestión de incidencias y estabilidad de plataforma
+Metricas de exito: Tiempo de detección de incidencias reducido >= 50%; cobertura de logs analizados >= 95%; falsos positivos en alertas < 5%
+Impacto en personas: Empleados (8 ingenieros DevOps) que reciben los reportes como insumo técnico para priorizar trabajo. No afecta directamente a clientes ni empleados como sujetos de decisiones. Criticidad baja para personas; alta para estabilidad técnica.
+Supuesto de riesgo inicial: Los logs no contienen datos de identificación de usuarios ni de clientes; el sistema es de uso exclusivo del equipo de ingeniería
+Restricciones explicitas: El sistema no puede acceder a logs que contengan datos personales o de clientes; los reportes son para uso exclusivo del equipo técnico; presupuesto máximo USD 15.000
+Sponsor: Jefe de Ingeniería de Plataforma
+Datos requeridos: operativos",No,No,No,No,No,No,Verde,
 test,TC-EXT-02,"Nombre de la iniciativa: Analizador de Logs de Acceso con User ID
 Tipo de intent: Tecnico/Arquitectural
 Declaracion del intent: Sistema de análisis de logs de acceso a aplicaciones corporativas que incluyen identificador de usuario (user_id) y timestamp para detectar patrones de uso anómalo. El user_id es un identificador interno que puede vincularse al empleado.
@@ -736,39 +747,17 @@ Supuesto de riesgo inicial: El user_id puede vincularse a la identidad del emple
 Restricciones explicitas: El sistema solo puede escalar alertas al equipo de seguridad; cualquier acción sobre el empleado requiere intervención humana; cumplimiento Ley 25.326; presupuesto máximo USD 30.000
 Sponsor: Director de Seguridad de la Información
 Datos requeridos: operativos",si,si,No,si,No,No,Amarillo,
-test,TC-R-03,"Nombre de la iniciativa: Agente de Resolución Automática de Reclamos
-Tipo de intent: Negocio
-Declaracion del intent: Agente que recibe reclamos de clientes vía API; los clasifica con un LLM externo y aplica automáticamente compensaciones acotadas al catálogo de resoluciones aprobado por policy (crédito de factura; ajuste de plan menor); cerrando el caso en el sistema de gestión. Escala a humano solo cuando el reclamo no encaja en ninguna categoría predefinida.
-Area proponente: Operaciones de Atención
-Flujo de valor o area afectada: Procesamiento automatizado de reclamos simples multicanal
-Metricas de exito: Tasa de resolución automatizada >= 65%; tiempo promedio de cierre de reclamos simples < 2 horas; satisfacción del cliente post-resolución >= 3;9/5
-Impacto en personas: Clientes (~8.000 con reclamos simples por mes). El agente aplica resoluciones concretas (créditos; ajustes) sobre el reclamo del cliente sin revisión humana por caso. Criticidad alta — las resoluciones afectan la relación comercial.
-Supuesto de riesgo inicial: El LLM externo clasifica correctamente el tipo de reclamo con precisión >= 92%; las resoluciones aplicadas están dentro del catálogo de compensaciones aprobado
-Restricciones explicitas: El agente no puede aplicar compensaciones fuera del catálogo aprobado; el LLM externo cumple evaluaciones de seguridad y confidencialidad; cumplimiento Ley de Defensa del Consumidor; escalada obligatoria a humano cuando el reclamo no encaja en categorías predefinidas; presupuesto máximo USD 130.000
-Sponsor: Tomás Elizondo — Gerente de Operaciones de Reclamos
-Datos requeridos: personales, confidenciales",si,si,No,si,si,No,Rojo,
-test,TC-V-05,"Nombre de la iniciativa: Monitoreo Inteligente de Red
-Tipo de intent: Operativo
-Declaracion del intent: Sistema de monitoreo que analiza métricas de rendimiento de red en tiempo real y genera alertas automáticas hacia equipos técnicos internos cuando detecta desvíos de umbrales. No procesa datos de clientes individuales. Las alertas son insumos para que el equipo técnico evalúe y decida si intervenir.
-Area proponente: Ingeniería de Red
-Flujo de valor o area afectada: Operación y mantenimiento de la red de telecomunicaciones
-Metricas de exito: MTTD reducido >= 40%; falsos positivos < 8%; disponibilidad del sistema >= 99;9%
-Impacto en personas: Empleados (25 ingenieros de red y operadores NOC) como destinatarios de alertas. No afecta directamente a clientes ni empleados individuales como sujetos de decisiones. Las alertas son insumos técnicos. Criticidad alta para la continuidad del servicio; no para personas individuales.
-Supuesto de riesgo inicial: Los umbrales de alerta están correctamente calibrados; el equipo técnico responde y decide ante cada alerta
-Restricciones explicitas: No procesar datos identificables de clientes individuales; las alertas son insumo para decisión técnica del equipo NOC; no acciones automáticas sobre la red; cumplimiento normativa ENACOM; presupuesto máximo USD 40.000
-Sponsor: Alberto Fuentes — Director de Ingeniería de Red
-Datos requeridos: operativos, confidenciales",si,No,No,No,No,No,Verde,
-test,TC-N-06,"Nombre de la iniciativa: Cancelación Automática de Reservas por Impago
-Tipo de intent: Operativo
-Declaracion del intent: Sistema que cancela automáticamente reservas de instalaciones corporativas (gimnasio; comedor; estacionamiento) a empleados con cuotas vencidas más de 30 días; en proceso nocturno sin intervención humana por caso; y bloquea nuevas reservas hasta regularizar. RRHH recibe reporte consolidado al día siguiente.
-Area proponente: Servicios Generales / RRHH
-Flujo de valor o area afectada: Gestión de acceso a instalaciones corporativas para empleados
-Metricas de exito: Tasa de procesamiento correcto de cancelaciones >= 99;5%; tiempo de procesamiento del ciclo diario < 30 minutos; reducción de cuotas vencidas en cartera de instalaciones >= 30%
-Impacto en personas: Empleados (~2.400 con reservas activas). La cancelación afecta directamente el acceso del empleado a la instalación en la fecha programada. No hay revisión humana por caso. RRHH recibe reporte al día siguiente (ex-post). Criticidad media para cada empleado individual; alta por el volumen colectivo.
-Supuesto de riesgo inicial: Los datos de cuotas están correctamente actualizados en el sistema antes del ciclo nocturno; RRHH revisa el reporte consolidado dentro de las 24 horas siguientes al ciclo
-Restricciones explicitas: El sistema no puede cancelar reservas con menos de 72 horas de anticipación por impacto operativo; cumplimiento normativa laboral sobre beneficios al empleado; Ley 25.326; RRHH puede revertir cancelaciones individualmente antes de que tomen efecto; el empleado recibe notificación previa con plazo de regularización; presupuesto máximo USD 40.000
-Sponsor: Valeria Montes — Gerenta de Desarrollo Organizacional
-Datos requeridos: personales",si,si,No,No,si,si,Negro,
+test,TC-EXT-03,"Nombre de la iniciativa: Agente de Análisis Documental
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Agente que analiza documentos internos de gestión y genera resúmenes ejecutivos para el equipo directivo. Usa un LLM externo (API de proveedor cloud) que será dado de alta en el catálogo corporativo antes del go-live. La evaluación de seguridad del proveedor está en curso.
+Area proponente: Dirección General
+Flujo de valor o area afectada: Análisis y síntesis de documentación estratégica
+Metricas de exito: Tiempo de análisis documental reducido >= 60%; satisfacción del equipo directivo >= 4/5
+Impacto en personas: Empleados (5 directores) que reciben resúmenes como insumo para decisiones estratégicas. Los documentos pueden incluir información de empleados en forma de organigramas o listas. Criticidad alta por la naturaleza estratégica de los documentos.
+Supuesto de riesgo inicial: El LLM externo (GPT-4o API) será homologado en el catálogo corporativo antes del despliegue en producción. La evaluación de seguridad está en curso. Los documentos no se usan para entrenamiento del modelo según los términos del proveedor.
+Restricciones explicitas: El LLM externo debe completar la evaluación de seguridad antes del despliegue; los documentos de Directorio tienen restricción adicional de acceso; cumplimiento Ley 25.326; presupuesto máximo USD 25.000
+Sponsor: Director General
+Datos requeridos: confidenciales",si,si,si,si,No,No,Rojo,
 test,TC-EXT-04,"Nombre de la iniciativa: Sistema de Reportes de Riesgo Automáticos
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que genera y envía automáticamente reportes de exposición de riesgo crediticio a la gerencia de Crédito y Cobranzas al cierre de cada día hábil. Los reportes se envían sin revisión previa; el equipo de riesgo los revisa al día siguiente.
@@ -780,28 +769,83 @@ Supuesto de riesgo inicial: Los datos de cierre están disponibles y consolidado
 Restricciones explicitas: Los reportes son para uso exclusivo de la gerencia de Crédito; no pueden distribuirse fuera del perímetro corporativo; cumplimiento regulatorio BCRA; presupuesto máximo USD 18.000
 Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
 Datos requeridos: confidenciales",si,No,No,No,si,No,Amarillo,
-test,TC-RECLA-01,"Nombre de la iniciativa: Re-clasificación: Chatbot con módulo de ejecución autónoma de cambios de plan
-Tipo de intent: Negocio
-Declaracion del intent: Chatbot de atención al cliente (aprobado como Amarillo) al que el área de Canales Digitales propone agregar un módulo de ejecución autónoma de cambios de plan. El módulo recibe la solicitud del cliente; verifica disponibilidad del upgrade en el catálogo; ejecuta el cambio en el sistema de facturación y confirma al cliente; sin intervención de un agente humano.
-Area proponente: Canales Digitales
-Flujo de valor o area afectada: Autogestión de cambios de plan en canal digital
-Metricas de exito: Tasa de cambios de plan completados sin intervención humana >= 80%; tiempo de procesamiento del cambio < 3 minutos; satisfacción del cliente post-cambio >= 4/5
-Impacto en personas: Clientes (~25.000 por mes que solicitan cambios de plan en canal digital). El módulo ejecuta cambios contractuales de forma autónoma sin revisión humana por caso. Criticidad alta — modificación de contrato.
-Supuesto de riesgo inicial: El módulo opera solo sobre upgrades dentro del catálogo vigente; el cambio de plan es reversible por el cliente dentro de las 24 horas siguientes
-Restricciones explicitas: El cambio solo puede ejecutarse dentro del catálogo de upgrades aprobados; toda modificación con condiciones contractuales no estándar requiere escalada a agente humano; este cambio activa el gatillo §6.3.1 y requiere re-clasificación completa; cumplimiento Ley de Defensa del Consumidor y normativa ENACOM; el cambio es reversible por el cliente dentro de las 24 horas siguientes; presupuesto máximo USD 65.000
-Sponsor: Gabriela Moreno — Directora de Canales Digitales
-Datos requeridos: personales, confidenciales",si,si,No,si,si,No,Rojo,
-test,TC-V-07,"Nombre de la iniciativa: Recomendador de Capacitaciones
+test,TC-EXT-05,"Nombre de la iniciativa: Agente de Alta Automática de Clientes
 Tipo de intent: Operativo
-Declaracion del intent: Sistema que presenta al empleado; al inicio de cada trimestre; una lista de cursos de la plataforma interna seleccionados en función de su rol y área. El empleado puede inscribirse; ignorar las sugerencias o buscar otros cursos libremente. Ningún indicador de desempeño refleja si el empleado siguió las recomendaciones.
-Area proponente: Recursos Humanos
-Flujo de valor o area afectada: Gestión del desarrollo y capacitación de empleados
-Metricas de exito: Tasa de inscripción a cursos recomendados >= 35%; relevancia percibida de recomendaciones >= 4/5; cobertura de empleados con al menos 1 recomendación por trimestre >= 90%
-Impacto en personas: Empleados (2.400 empleados de planta) como destinatarios de recomendaciones. La decisión de inscripción es enteramente del empleado; sin impacto en indicadores de desempeño. Criticidad baja.
-Supuesto de riesgo inicial: El catálogo de cursos está correctamente categorizado por rol y área; el empleado tiene libertad total de ignorar o sobrepasar las sugerencias
-Restricciones explicitas: No usar datos de desempeño individual ni indicadores de gestión personal; las recomendaciones no pueden incidir en evaluación; promoción ni compensación; cumplimiento Ley 25.326; presupuesto máximo USD 22.000
+Declaracion del intent: Agente que verifica el cumplimiento de los criterios de alta y ejecuta automáticamente el registro del cliente en el sistema CRM y de facturación; sin intervención del operador en cada caso. El alta se confirma al cliente por email inmediatamente después de la ejecución.
+Area proponente: Operaciones Comerciales
+Flujo de valor o area afectada: Proceso de alta de nuevos clientes
+Metricas de exito: Tiempo de alta < 3 minutos desde la solicitud; tasa de alta correcta >= 99;5%; satisfacción del cliente post-alta >= 4/5
+Impacto en personas: Clientes (~5.000 nuevos por mes). El agente ejecuta el alta de forma autónoma; lo que establece la relación contractual con el cliente. Criticidad alta — inicio de relación comercial.
+Supuesto de riesgo inicial: Los criterios de alta están correctamente definidos y actualizados; la verificación automática cubre todos los casos estándar
+Restricciones explicitas: Límite ético: sin acción autónoma sin supervisión. Los casos con documentación incompleta o fuera de los criterios estándar requieren revisión manual. Cumplimiento Ley 25.326; presupuesto máximo USD 40.000.
+Sponsor: Gerente de Operaciones Comerciales
+Datos requeridos: personales",si,si,No,si,si,No,Rojo,
+test,TC-N-01,"Nombre de la iniciativa: Agente de Cortes por Impago
+Tipo de intent: Operativo
+Declaracion del intent: Agente automatizado que consulta diariamente el sistema de facturación; identifica clientes que superaron el período de gracia por impago; verifica ausencia de disputas o acuerdos activos y ejecuta el corte técnico del servicio vía plataforma de red. Opera sin intervención humana en cada caso individual.
+Area proponente: Cobranzas Operativas
+Flujo de valor o area afectada: Gestión operativa de la cartera en mora
+Metricas de exito: Tasa de cortes ejecutados dentro del período correcto >= 99;8%; tiempo de procesamiento del ciclo diario < 2 horas; tasa de error en clasificación de mora < 0;1%
+Impacto en personas: Clientes (~4.500 en mora procesados por ciclo mensual). El corte técnico afecta directamente el acceso al servicio del cliente. No hay revisión humana por caso individual. Criticidad muy alta — pérdida de acceso al servicio.
+Supuesto de riesgo inicial: Los datos de mora y período de gracia están correctamente actualizados antes del ciclo diario; el proceso está respaldado por las condiciones contractuales vigentes
+Restricciones explicitas: El agente no puede ejecutar cortes sobre clientes con disputas activas o acuerdos de pago vigentes; cumplimiento contractual de períodos de gracia; Ley de Defensa del Consumidor y normativa ENACOM; el corte es reversible por el equipo de cobranzas en menos de 4 horas tras regularización; presupuesto máximo USD 110.000
+Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
+Datos requeridos: personales, confidenciales",si,si,No,si,si,si,Negro,
+test,TC-N-02,"Nombre de la iniciativa: Agente de Pricing Dinámico
+Tipo de intent: Negocio
+Declaracion del intent: Agente que ajusta automáticamente precios y descuentos de planes por segmento de clientes en función de parámetros de mercado y comportamiento de consumo en tiempo real. Los ajustes se aplican dentro de bandas predefinidas por el área comercial sin requerir aprobación individual.
+Area proponente: Gestión Comercial
+Flujo de valor o area afectada: Gestión dinámica de la oferta comercial y retención de clientes
+Metricas de exito: Incremento en ARPU del segmento >= 5%; tasa de churn en segmento objetivo reducida >= 10%; ajustes dentro de bandas de política >= 99;9%
+Impacto en personas: Clientes (~350.000 activos distribuidos en 8 segmentos comerciales). Los ajustes de precio y descuento afectan directamente la relación comercial de cada cliente en el segmento. Criticidad muy alta — impacto masivo en condiciones comerciales.
+Supuesto de riesgo inicial: Las bandas tarifarias están dentro de los límites regulatorios vigentes; el área comercial revisa las bandas antes de cada ciclo de ajuste
+Restricciones explicitas: Los ajustes no pueden superar las bandas tarifarias definidas y aprobadas; cumplimiento de regulación tarifaria ENACOM; Ley de Defensa del Consumidor; toda modificación a las bandas requiere aprobación de Gestión Comercial y revisión regulatoria previa; presupuesto máximo USD 250.000
+Sponsor: Sebastián Castro — Director Comercial
+Datos requeridos: personales, confidenciales",si,si,No,si,si,si,Negro,
+test,TC-N-03,"Nombre de la iniciativa: Agente de Terminación de Contratos por Incumplimiento
+Tipo de intent: Operativo
+Declaracion del intent: Agente que monitorea el cumplimiento de condiciones contractuales de clientes corporativos y ejecuta automáticamente la terminación del contrato al detectar incumplimientos que superan los umbrales definidos. Genera notificación al cliente y registra la acción en el sistema de gestión.
+Area proponente: Gestión de Cuentas Corporativas
+Flujo de valor o area afectada: Gestión del ciclo de vida de contratos corporativos
+Metricas de exito: Tiempo de detección de incumplimiento < 24 horas; precisión en la clasificación de incumplimientos >= 99%; reducción de morosidad corporativa >= 20%
+Impacto en personas: Clientes corporativos (~800 contratos corporativos activos). La terminación automática afecta de forma permanente la relación comercial con el cliente corporativo. No hay revisión humana previa por caso. Criticidad máxima — terminación irreversible de contrato.
+Supuesto de riesgo inicial: Los umbrales de incumplimiento están correctamente definidos y validados por el área legal; el sistema notifica al cliente antes de ejecutar con el plazo contractual establecido
+Restricciones explicitas: El agente no puede operar sin validación legal previa de los umbrales de incumplimiento; cumplimiento de plazos contractuales de notificación; Ley de Defensa del Consumidor para PYMEs; el cliente recibe notificación previa con plazo para regularizar antes de la ejecución; presupuesto máximo USD 200.000
+Sponsor: Ignacio Palacios — Director Legal Corporativo
+Datos requeridos: confidenciales",si,si,No,si,si,si,Negro,
+test,TC-N-04,"Nombre de la iniciativa: Agente de Cobranza End-to-End
+Tipo de intent: Operativo
+Declaracion del intent: Agente de gestión de cobranza que opera de forma autónoma sobre clientes en mora: identifica la situación; genera y envía comunicaciones de negociación personalizadas; procesa la respuesta del cliente; ofrece planes de pago dentro de parámetros de política; registra los acuerdos alcanzados y actualiza el CRM. Sin intervención humana en ningún caso individual.
+Area proponente: Cobranzas
+Flujo de valor o area afectada: Ciclo completo de gestión de cobranza en cartera morosa
+Metricas de exito: Tasa de acuerdos de pago alcanzados >= 25%; recupero de cartera morosa >= 18% del saldo procesado; satisfacción del cliente post-acuerdo >= 3;5/5
+Impacto en personas: Clientes (~22.000 en mora por mes). El agente negocia condiciones de pago y ejecuta acuerdos con valor contractual sin intervención humana en ningún paso del ciclo. Criticidad máxima — acuerdos financieros con valor legal.
+Supuesto de riesgo inicial: El LLM externo para generación de comunicaciones será homologado antes del despliegue; los acuerdos registrados tienen validez contractual y son auditables
+Restricciones explicitas: El agente no puede ofrecer condiciones fuera del catálogo de planes de pago aprobado; el LLM externo debe completar evaluación de seguridad antes del despliegue; cumplimiento Ley 25.326 y Ley 26.951 (No Llame); el cliente puede solicitar contacto con agente humano en cualquier momento del ciclo; presupuesto máximo USD 320.000
+Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
+Datos requeridos: personales, confidenciales",si,si,si,si,si,si,Negro,
+test,TC-N-05,"Nombre de la iniciativa: Agente de Bloqueo de Cuentas por Fraude
+Tipo de intent: Operativo
+Declaracion del intent: Sistema de prevención de fraude que analiza el comportamiento del cliente en tiempo real y bloquea automáticamente la cuenta completa cuando el nivel de riesgo detectado supera el umbral configurado. El equipo de fraude recibe la alerta y puede desbloquear la cuenta si la revisión lo indica.
+Area proponente: Prevención de Fraude
+Flujo de valor o area afectada: Protección de cuentas activas ante riesgo de fraude sistémico
+Metricas de exito: Tasa de detección de fraude en cuentas bloqueadas >= 92%; falsos positivos < 1;5%; tiempo de bloqueo desde detección < 1 segundo; tiempo promedio de revisión y desbloqueo < 4 horas
+Impacto en personas: Clientes (~95.000 cuentas activas monitoreadas). El bloqueo afecta el acceso del cliente a todos sus servicios simultáneamente. El equipo de fraude (12 analistas) puede revertir el bloqueo ex-post. Criticidad máxima — pérdida total de acceso.
+Supuesto de riesgo inicial: El equipo de fraude tiene capacidad operativa para revisar y resolver alertas críticas en menos de 4 horas; la plataforma de detección interna tiene disponibilidad >= 99;99%
+Restricciones explicitas: El sistema no puede bloquear cuentas corporativas sin escalada adicional a Account Management; cumplimiento Ley 25.326 y BCRA; notificación obligatoria al cliente del bloqueo y motivos; el bloqueo de cuenta solo puede ser revertido por el equipo de fraude tras revisión documentada; presupuesto máximo USD 240.000
+Sponsor: Diego Carrasco — Gerente de Prevención de Fraude
+Datos requeridos: personales, confidenciales",si,si,No,si,si,si,Negro,
+test,TC-N-06,"Nombre de la iniciativa: Cancelación Automática de Reservas por Impago
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que cancela automáticamente reservas de instalaciones corporativas (gimnasio; comedor; estacionamiento) a empleados con cuotas vencidas más de 30 días; en proceso nocturno sin intervención humana por caso; y bloquea nuevas reservas hasta regularizar. RRHH recibe reporte consolidado al día siguiente.
+Area proponente: Servicios Generales / RRHH
+Flujo de valor o area afectada: Gestión de acceso a instalaciones corporativas para empleados
+Metricas de exito: Tasa de procesamiento correcto de cancelaciones >= 99;5%; tiempo de procesamiento del ciclo diario < 30 minutos; reducción de cuotas vencidas en cartera de instalaciones >= 30%
+Impacto en personas: Empleados (~2.400 con reservas activas). La cancelación afecta directamente el acceso del empleado a la instalación en la fecha programada. No hay revisión humana por caso. RRHH recibe reporte al día siguiente (ex-post). Criticidad media para cada empleado individual; alta por el volumen colectivo.
+Supuesto de riesgo inicial: Los datos de cuotas están correctamente actualizados en el sistema antes del ciclo nocturno; RRHH revisa el reporte consolidado dentro de las 24 horas siguientes al ciclo
+Restricciones explicitas: El sistema no puede cancelar reservas con menos de 72 horas de anticipación por impacto operativo; cumplimiento normativa laboral sobre beneficios al empleado; Ley 25.326; RRHH puede revertir cancelaciones individualmente antes de que tomen efecto; el empleado recibe notificación previa con plazo de regularización; presupuesto máximo USD 40.000
 Sponsor: Valeria Montes — Gerenta de Desarrollo Organizacional
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,Verde,
+Datos requeridos: personales",si,si,No,No,si,si,Negro,
 test,TC-PP-01,"Nombre de la iniciativa: Pipeline de Aprobación de Microcréditos
 Tipo de intent: Negocio
 Declaracion del intent: Pipeline de procesamiento de solicitudes de microcrédito compuesto por tres componentes: Componente A calcula el score crediticio; Componente B genera automáticamente la comunicación personalizada al cliente con el resultado usando un LLM externo; Componente C ejecuta el alta del crédito o el rechazo en el sistema de facturación sin intervención humana por solicitud.
@@ -813,17 +857,50 @@ Supuesto de riesgo inicial: El LLM externo (Componente B) será homologado antes
 Restricciones explicitas: El LLM externo (Componente B) no puede emitir comunicaciones fuera del template aprobado; los umbrales de aprobación deben estar validados por el área de Riesgo; el LLM externo debe completar evaluación de seguridad del proveedor; cumplimiento BCRA y Ley 25.065 de Tarjetas de Crédito; prohibición de sesgo discriminatorio; el cliente debe poder solicitar revisión humana de la decisión; presupuesto máximo USD 220.000
 Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
 Datos requeridos: personales, confidenciales",si,si,si,si,si,si,Negro,
-test,TC-V-03,"Nombre de la iniciativa: Resumidor de Actas con IA
-Tipo de intent: Capacidad de Equipo
-Declaracion del intent: Herramienta que genera resúmenes automáticos de actas de reuniones internas. Recibe transcripciones y produce un resumen con puntos clave y compromisos. No accede a datos de clientes ni a información financiera. Los participantes validan el resumen antes de compartirlo.
-Area proponente: Gestión de Proyectos
-Flujo de valor o area afectada: Documentación y seguimiento de reuniones de proyecto
-Metricas de exito: Tiempo de documentación de actas reducido >= 70%; tasa de validación sin cambios mayores >= 65%; satisfacción del equipo >= 4/5
-Impacto en personas: Empleados (45 líderes de proyecto y coordinadores) como consumidores del output. El resumen no influye en decisiones sobre clientes ni empleados. Criticidad baja.
-Supuesto de riesgo inicial: El LLM externo será homologado en catálogo antes del despliegue; las transcripciones no contienen datos personales sensibles
-Restricciones explicitas: No procesar reuniones con datos de clientes ni reuniones del Directorio; el LLM externo debe completar evaluación de seguridad y cumplimiento Ley 25.326 antes de producción; el resumen es validado por participantes antes de su distribución; presupuesto máximo USD 15.000
-Sponsor: Patricia Soto — Directora de PMO
-Datos requeridos: personales, confidenciales",si,No,si,No,No,No,Amarillo,
+test,TC-PRE-01,"Nombre de la iniciativa: Resumen de Historial (caso pre-clasificado)
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que genera un resumen del historial de contactos del cliente antes de cada llamada entrante: últimas interacciones; estado de reclamos abiertos y plan activo. El intent del sistema coincide con el caso pre-clasificado publicado en el catálogo del N2. El área solicita registro directo con referencia al caso pre-clasificado.
+Area proponente: Atención al Cliente
+Flujo de valor o area afectada: Atención de llamadas entrantes en canal corporativo de clientes
+Metricas de exito: Disponibilidad del resumen en pantalla antes de la conexión >= 98%; tiempo de carga del resumen < 3 segundos; satisfacción del representante con la herramienta >= 4/5
+Impacto en personas: Empleados (95 representantes de atención al cliente corporativo) como usuarios del sistema. El resumen informa al representante; no influye directamente en decisiones sobre el cliente.
+Supuesto de riesgo inicial: El caso pre-clasificado del catálogo N2 coincide exactamente con el intent del sistema; la plataforma CRM está disponible con latencia aceptable antes de cada llamada
+Restricciones explicitas: El sistema no propone acciones; solo presenta resumen informativo; cumplimiento Ley 25.326; si el intent difiere del caso pre-clasificado en cualquier dimensión; debe completarse el Fast Gate completo; presupuesto máximo USD 23.000
+Sponsor: Claudia Herrera — Gerenta de Atención al Cliente
+Datos requeridos: personales",si,No,No,No,No,No,Verde,
+test,TC-R-01,"Nombre de la iniciativa: Motor de Scoring Crediticio
+Tipo de intent: Negocio
+Declaracion del intent: Sistema de evaluación crediticia que calcula un score de riesgo para solicitudes de plan pospago. Procesa datos financieros y de comportamiento del cliente; llama a una API externa de scoring y devuelve una recomendación de aprobación o rechazo al analista. El analista registra la decisión final.
+Area proponente: Crédito y Cobranzas
+Flujo de valor o area afectada: Proceso de evaluación y aprobación de planes pospago
+Metricas de exito: Tasa de mora en cohorte de aprobados <= 3%; tiempo de evaluación crediticia < 3 minutos; tasa de aprobación dentro de banda de política +/- 5%
+Impacto en personas: Clientes (~5.000 solicitantes de plan pospago por mes). El score determina en la práctica si el cliente accede al plan. 35 analistas de crédito registran la decisión formal. Criticidad muy alta — decisión financiera con impacto en acceso al servicio.
+Supuesto de riesgo inicial: La API externa de scoring será homologada antes del despliegue en producción; el analista valida y registra formalmente la decisión final en cada caso
+Restricciones explicitas: El sistema no toma la decisión; el analista de crédito registra formalmente la aprobación o rechazo; cumplimiento BCRA; Ley 25.326 y Ley 25.065 de Tarjetas de Crédito; prohibición de uso de variables que generen sesgo discriminatorio; presupuesto máximo USD 150.000
+Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
+Datos requeridos: personales",si,si,si,si,No,No,Rojo,
+test,TC-R-02,"Nombre de la iniciativa: Ajuste Automático de Límites de Crédito
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que analiza mensualmente el comportamiento de pago de cada cliente pospago y ajusta automáticamente su límite de crédito dentro de los parámetros y bandas definidos por la política de crédito vigente; sin discrecionalidad fuera de esos límites. Genera log mensual revisable por el equipo de crédito dentro de las 48 horas.
+Area proponente: Crédito y Cobranzas
+Flujo de valor o area afectada: Gestión mensual del riesgo crediticio de la base pospago
+Metricas de exito: Reducción de mora en cartera >= 15%; tiempo de procesamiento del ciclo mensual < 4 horas; ajustes dentro de parámetros de política >= 99;5%
+Impacto en personas: Clientes (~85.000 pospago activos) que reciben ajustes automáticos de límite de crédito sin intervención humana por caso. El ajuste afecta directamente la capacidad de consumo del cliente. Criticidad alta.
+Supuesto de riesgo inicial: Los parámetros de política de crédito están correctamente definidos y vigentes; el log mensual es revisado por el equipo de crédito dentro de las 48 horas posteriores al ciclo
+Restricciones explicitas: Los ajustes no pueden superar los límites máximos definidos en la política de crédito aprobada; cumplimiento BCRA y Ley 25.326; el cliente debe poder solicitar revisión humana de cualquier ajuste de su límite; presupuesto máximo USD 100.000
+Sponsor: Fernando Aguirre — Director de Crédito y Cobranzas
+Datos requeridos: personales, confidenciales",si,si,No,si,si,No,Rojo,
+test,TC-R-03,"Nombre de la iniciativa: Agente de Resolución Automática de Reclamos
+Tipo de intent: Negocio
+Declaracion del intent: Agente que recibe reclamos de clientes vía API; los clasifica con un LLM externo y aplica automáticamente compensaciones acotadas al catálogo de resoluciones aprobado por policy (crédito de factura; ajuste de plan menor); cerrando el caso en el sistema de gestión. Escala a humano solo cuando el reclamo no encaja en ninguna categoría predefinida.
+Area proponente: Operaciones de Atención
+Flujo de valor o area afectada: Procesamiento automatizado de reclamos simples multicanal
+Metricas de exito: Tasa de resolución automatizada >= 65%; tiempo promedio de cierre de reclamos simples < 2 horas; satisfacción del cliente post-resolución >= 3;9/5
+Impacto en personas: Clientes (~8.000 con reclamos simples por mes). El agente aplica resoluciones concretas (créditos; ajustes) sobre el reclamo del cliente sin revisión humana por caso. Criticidad alta — las resoluciones afectan la relación comercial.
+Supuesto de riesgo inicial: El LLM externo clasifica correctamente el tipo de reclamo con precisión >= 92%; las resoluciones aplicadas están dentro del catálogo de compensaciones aprobado
+Restricciones explicitas: El agente no puede aplicar compensaciones fuera del catálogo aprobado; el LLM externo cumple evaluaciones de seguridad y confidencialidad; cumplimiento Ley de Defensa del Consumidor; escalada obligatoria a humano cuando el reclamo no encaja en categorías predefinidas; presupuesto máximo USD 130.000
+Sponsor: Tomás Elizondo — Gerente de Operaciones de Reclamos
+Datos requeridos: personales, confidenciales",si,si,No,si,si,No,Rojo,
 test,TC-R-04,"Nombre de la iniciativa: Detección de Fraude con Bloqueo de Transacciones
 Tipo de intent: Operativo
 Declaracion del intent: Sistema de prevención de fraude que analiza cada transacción en tiempo real y bloquea automáticamente las que superan el umbral de riesgo definido. El equipo de fraude recibe alertas y puede revertir el bloqueo caso por caso.
@@ -835,3 +912,80 @@ Supuesto de riesgo inicial: El modelo de fraude externo está en proceso de eval
 Restricciones explicitas: El bloqueo es solo a nivel de transacción individual; no de cuenta completa; el modelo de scoring de fraude debe completar homologación de seguridad y cumplimiento BCRA antes del uso en producción; el bloqueo es reversible por el equipo de fraude dentro de las 2 horas siguientes; presupuesto máximo USD 200.000
 Sponsor: Diego Carrasco — Gerente de Prevención de Fraude
 Datos requeridos: personales",si,si,si,si,si,si,Negro,
+test,TC-RECLA-01,"Nombre de la iniciativa: Re-clasificación: Chatbot con módulo de ejecución autónoma de cambios de plan
+Tipo de intent: Negocio
+Declaracion del intent: Chatbot de atención al cliente (aprobado como Amarillo) al que el área de Canales Digitales propone agregar un módulo de ejecución autónoma de cambios de plan. El módulo recibe la solicitud del cliente; verifica disponibilidad del upgrade en el catálogo; ejecuta el cambio en el sistema de facturación y confirma al cliente; sin intervención de un agente humano.
+Area proponente: Canales Digitales
+Flujo de valor o area afectada: Autogestión de cambios de plan en canal digital
+Metricas de exito: Tasa de cambios de plan completados sin intervención humana >= 80%; tiempo de procesamiento del cambio < 3 minutos; satisfacción del cliente post-cambio >= 4/5
+Impacto en personas: Clientes (~25.000 por mes que solicitan cambios de plan en canal digital). El módulo ejecuta cambios contractuales de forma autónoma sin revisión humana por caso. Criticidad alta — modificación de contrato.
+Supuesto de riesgo inicial: El módulo opera solo sobre upgrades dentro del catálogo vigente; el cambio de plan es reversible por el cliente dentro de las 24 horas siguientes
+Restricciones explicitas: El cambio solo puede ejecutarse dentro del catálogo de upgrades aprobados; toda modificación con condiciones contractuales no estándar requiere escalada a agente humano; este cambio activa el gatillo §6.3.1 y requiere re-clasificación completa; cumplimiento Ley de Defensa del Consumidor y normativa ENACOM; el cambio es reversible por el cliente dentro de las 24 horas siguientes; presupuesto máximo USD 65.000
+Sponsor: Gabriela Moreno — Directora de Canales Digitales
+Datos requeridos: personales, confidenciales",si,si,No,si,si,No,Rojo,
+test,TC-V-01,"Nombre de la iniciativa: Asistente de Redacción de Comunicados
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Asistente de lenguaje que genera borradores de comunicados internos a partir de consignas del redactor. No accede a datos de clientes ni de empleados. Toda publicación requiere revisión y aprobación del redactor responsable.
+Area proponente: Comunicaciones Corporativas
+Flujo de valor o area afectada: Producción de contenido interno corporativo
+Metricas de exito: Reducción tiempo de redacción >= 50%; satisfacción del redactor >= 4/5; tasa de aprobación de borradores sin revisión mayor >= 80%
+Impacto en personas: Empleados (8 redactores de Comunicaciones Corporativas) como usuarios de la herramienta. No afecta directamente a clientes ni empleados como sujetos de decisiones. Criticidad baja.
+Supuesto de riesgo inicial: El modelo del catálogo produce texto coherente y sin sesgos; el redactor siempre revisa antes de publicar
+Restricciones explicitas: No procesar datos personales de clientes ni empleados; toda publicación requiere revisión y aprobación humana antes de difusión; presupuesto máximo USD 10.000
+Sponsor: Marcela Ríos — Gerenta de Comunicaciones Corporativas
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,Verde,
+test,TC-V-02,"Nombre de la iniciativa: Analizador de Informes de Gestión
+Tipo de intent: Operativo
+Declaracion del intent: Sistema de análisis que procesa reportes mensuales de gestión interna y genera resúmenes ejecutivos con identificación de tendencias y desvíos. No procesa datos de clientes individuales ni de recursos humanos. Outputs revisados por gerencia antes de su uso.
+Area proponente: Planificación Financiera
+Flujo de valor o area afectada: Ciclo mensual de reporte gerencial
+Metricas de exito: Tiempo de generación de resumen ejecutivo < 2 horas; precisión de detección de desvíos >= 85%; adopción por gerentes >= 75%
+Impacto en personas: Empleados (12 gerentes y directores de área) como consumidores del output. Ninguna decisión sobre personas individuales depende directamente del output. Criticidad media para el proceso gerencial; baja para personas.
+Supuesto de riesgo inicial: Los reportes están correctamente estructurados y disponibles al cierre del mes; la gerencia valida los análisis antes de usarlos
+Restricciones explicitas: No procesar datos personales de clientes ni de RRHH; outputs no pueden distribuirse fuera del perímetro corporativo; presupuesto máximo USD 20.000
+Sponsor: Rodrigo Varela — Director de Planificación Financiera
+Datos requeridos: confidenciales",si,No,No,No,No,No,Verde,
+test,TC-V-03,"Nombre de la iniciativa: Resumidor de Actas con IA
+Tipo de intent: Capacidad de Equipo
+Declaracion del intent: Herramienta que genera resúmenes automáticos de actas de reuniones internas. Recibe transcripciones y produce un resumen con puntos clave y compromisos. No accede a datos de clientes ni a información financiera. Los participantes validan el resumen antes de compartirlo.
+Area proponente: Gestión de Proyectos
+Flujo de valor o area afectada: Documentación y seguimiento de reuniones de proyecto
+Metricas de exito: Tiempo de documentación de actas reducido >= 70%; tasa de validación sin cambios mayores >= 65%; satisfacción del equipo >= 4/5
+Impacto en personas: Empleados (45 líderes de proyecto y coordinadores) como consumidores del output. El resumen no influye en decisiones sobre clientes ni empleados. Criticidad baja.
+Supuesto de riesgo inicial: El LLM externo será homologado en catálogo antes del despliegue; las transcripciones no contienen datos personales sensibles
+Restricciones explicitas: No procesar reuniones con datos de clientes ni reuniones del Directorio; el LLM externo debe completar evaluación de seguridad y cumplimiento Ley 25.326 antes de producción; el resumen es validado por participantes antes de su distribución; presupuesto máximo USD 15.000
+Sponsor: Patricia Soto — Directora de PMO
+Datos requeridos: personales, confidenciales",si,No,si,No,No,No,Amarillo,
+test,TC-V-04,"Nombre de la iniciativa: Resumen de Historial de Contacto
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que genera; antes de cada llamada entrante; un resumen del historial de contactos del cliente (últimas interacciones; reclamos abiertos; plan activo) visible solo para el representante. El sistema es informativo y no propone acciones. El representante decide cómo gestionar la interacción.
+Area proponente: Atención al Cliente
+Flujo de valor o area afectada: Atención de llamadas entrantes al call center
+Metricas de exito: Reducción del tiempo de consulta de historial >= 60%; tiempo de gestión promedio por llamada reducido >= 15%; satisfacción del representante >= 4;2/5
+Impacto en personas: Empleados (380 representantes de atención) como usuarios del sistema. El resumen informa al representante; no influye directamente en decisiones sobre el cliente. Un resumen incorrecto es verificable directamente con el cliente durante la llamada. Criticidad media para el representante; baja para el cliente.
+Supuesto de riesgo inicial: La plataforma CRM está disponible con latencia < 2 segundos al inicio de cada llamada; los datos de historial están correctamente actualizados
+Restricciones explicitas: El sistema no propone acciones; solo presenta resumen informativo; cumplimiento Ley 25.326; el representante toma todas las decisiones sobre la interacción; presupuesto máximo USD 25.000
+Sponsor: Claudia Herrera — Gerenta de Atención al Cliente
+Datos requeridos: personales",si,No,No,No,No,No,Verde,
+test,TC-V-05,"Nombre de la iniciativa: Monitoreo Inteligente de Red
+Tipo de intent: Operativo
+Declaracion del intent: Sistema de monitoreo que analiza métricas de rendimiento de red en tiempo real y genera alertas automáticas hacia equipos técnicos internos cuando detecta desvíos de umbrales. No procesa datos de clientes individuales. Las alertas son insumos para que el equipo técnico evalúe y decida si intervenir.
+Area proponente: Ingeniería de Red
+Flujo de valor o area afectada: Operación y mantenimiento de la red de telecomunicaciones
+Metricas de exito: MTTD reducido >= 40%; falsos positivos < 8%; disponibilidad del sistema >= 99;9%
+Impacto en personas: Empleados (25 ingenieros de red y operadores NOC) como destinatarios de alertas. No afecta directamente a clientes ni empleados individuales como sujetos de decisiones. Las alertas son insumos técnicos. Criticidad alta para la continuidad del servicio; no para personas individuales.
+Supuesto de riesgo inicial: Los umbrales de alerta están correctamente calibrados; el equipo técnico responde y decide ante cada alerta
+Restricciones explicitas: No procesar datos identificables de clientes individuales; las alertas son insumo para decisión técnica del equipo NOC; no acciones automáticas sobre la red; cumplimiento normativa ENACOM; presupuesto máximo USD 40.000
+Sponsor: Alberto Fuentes — Director de Ingeniería de Red
+Datos requeridos: operativos, confidenciales",si,No,No,No,No,No,Verde,
+test,TC-V-07,"Nombre de la iniciativa: Recomendador de Capacitaciones
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que presenta al empleado; al inicio de cada trimestre; una lista de cursos de la plataforma interna seleccionados en función de su rol y área. El empleado puede inscribirse; ignorar las sugerencias o buscar otros cursos libremente. Ningún indicador de desempeño refleja si el empleado siguió las recomendaciones.
+Area proponente: Recursos Humanos
+Flujo de valor o area afectada: Gestión del desarrollo y capacitación de empleados
+Metricas de exito: Tasa de inscripción a cursos recomendados >= 35%; relevancia percibida de recomendaciones >= 4/5; cobertura de empleados con al menos 1 recomendación por trimestre >= 90%
+Impacto en personas: Empleados (2.400 empleados de planta) como destinatarios de recomendaciones. La decisión de inscripción es enteramente del empleado; sin impacto en indicadores de desempeño. Criticidad baja.
+Supuesto de riesgo inicial: El catálogo de cursos está correctamente categorizado por rol y área; el empleado tiene libertad total de ignorar o sobrepasar las sugerencias
+Restricciones explicitas: No usar datos de desempeño individual ni indicadores de gestión personal; las recomendaciones no pueden incidir en evaluación; promoción ni compensación; cumplimiento Ley 25.326; presupuesto máximo USD 22.000
+Sponsor: Valeria Montes — Gerenta de Desarrollo Organizacional
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,Verde,
