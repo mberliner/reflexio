@@ -3434,6 +3434,49 @@ FAST_GATE = [
         "presupuesto maximo USD 150.000",
         sponsor="Fernando Aguirre - Director de Credito",
     ),
+    # === D-017 (few-shot fijos): demos ENSENANTES de las distinciones del cuello ===
+    # 2 demos train nuevos con razonamiento explicito para las 2 confusiones que el
+    # few-shot sampleado no cubria (ningun demo Amarillo con p2 sutil ni con p5 posterior).
+    # Se usan via `few_shot_ids` junto con V03/V13/R01/R04/N01/N02 (set fijo 2/2/2/2).
+    _fg(
+        "VAR-FG-D01",
+        "negocio",
+        ["personales"],
+        "Amarillo",
+        "train",
+        "Sistema que calcula un indice de propension de compra de cada cliente y lo "
+        "publica en el CRM; el ejecutivo comercial usa ese indice para decidir a quien "
+        "ofrecer un upgrade y en que condiciones. El sistema no contacta al cliente.",
+        nombre="Indice de Propension de Compra",
+        area="Gestion Comercial",
+        metricas="Precision del indice >= 0;80; conversion en cohorte priorizada >= 15%; "
+        "cobertura de la base scoreada >= 100%",
+        impacto="Clientes (~60.000) cuyo indice se calcula. El ejecutivo decide la oferta "
+        "a partir del indice. El sistema no actua sobre el cliente. Criticidad media.",
+        riesgo="El indice es un insumo; el ejecutivo decide cada oferta; framework interno homologado.",
+        restr="El sistema no contacta ni decide; solo publica el indice; cumplimiento Ley 25.326.",
+        sponsor="Sebastian Castro - Director Comercial",
+    ),
+    _fg(
+        "VAR-FG-D02",
+        "operativo",
+        ["personales"],
+        "Amarillo",
+        "train",
+        "Sistema que asigna automaticamente cada caso entrante a un equipo de atencion "
+        "segun su contenido, sin revision previa; un coordinador audita el resultado del "
+        "dia a la manana siguiente y reasigna lo que haga falta.",
+        nombre="Asignacion Automatica de Casos",
+        area="Operaciones de Atencion",
+        metricas="Precision de asignacion >= 90%; reduccion del tiempo de derivacion >= 55%; "
+        "tasa de reasignacion < 7%",
+        impacto="Clientes cuyos casos se asignan automaticamente; la asignacion define el "
+        "equipo que atiende, sin decidir sobre la persona. Criticidad baja.",
+        riesgo="La asignacion se ejecuta automatica sin revision previa; el coordinador "
+        "audita el resultado a la manana siguiente.",
+        restr="Cumplimiento Ley 25.326; framework interno homologado; sin proveedores externos.",
+        sponsor="Carla Mendez - Gerente de Atencion",
+    ),
 ]
 
 
@@ -3521,6 +3564,10 @@ _FG_RAZONAMIENTO: dict[str, str] = {
     # Override de Negro con conteo bajo (P5=Si Y alto=Si, suma de Si < 4).
     "VAR-FG-N19": "Negro: restringe el acceso de empleados (restriccion de derechos, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro domina aunque el conteo sea 3.",
     "VAR-FG-N20": "Negro: bloquea los fondos del cliente (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro aplica aunque el conteo sea 2.",
+    # Demos ensenantes few-shot fijos (D-017): el razonamiento explicita la regla que el
+    # modelo sub-aplica (P2 cuando el sistema produce un insumo; P5 con supervision ex-post).
+    "VAR-FG-D01": "Amarillo: usa datos personales (P1=Si) y, aunque el ejecutivo toma la decision final, el sistema produce un indice que CONDICIONA esa decision sobre el cliente -> influye (P2=Si). Sin proveedor externo (P3=No), sin riesgo legal directo (P4=No) y sin ejecucion autonoma (P5=No); conteo=2 -> Amarillo.",
+    "VAR-FG-D02": "Amarillo: la asignacion se ejecuta de forma automatica y la unica supervision es POSTERIOR (auditoria a la manana siguiente), lo que NO es revision por caso -> P5=Si. Usa datos de clientes (P1=Si) pero no influye en una decision sobre la persona (P2=No), sin proveedor externo ni riesgo legal; conteo=2 -> Amarillo. La revision ex-post no baja P5.",
 }
 
 # Anotacion de las 5 preguntas Si/No del Marco + alto_impacto por VAR-FG (D-013,
@@ -3643,6 +3690,9 @@ _FG_PREGUNTAS: dict[str, tuple[str, str, str, str, str, str]] = {
     "VAR-FG-T13": ("si", "si", "No", "si", "si", "si"),
     # Patron 2b: Rojo con apoyo a decision financiera, p5=No (el analista decide).
     "VAR-FG-T14": ("si", "si", "si", "si", "No", "No"),
+    # Demos ensenantes few-shot fijos (D-017): Amarillo p2-sutil y Amarillo p5-posterior.
+    "VAR-FG-D01": ("si", "si", "No", "No", "No", "No"),
+    "VAR-FG-D02": ("si", "No", "No", "No", "si", "No"),
 }
 
 for _c in FAST_GATE:

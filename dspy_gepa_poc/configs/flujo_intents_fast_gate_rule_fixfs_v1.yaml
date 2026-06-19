@@ -1,0 +1,137 @@
+# flujo-intents | Etapa 4: Fast Gate -- REGLA DETERMINISTA (arquitectura A, D-013)
+#
+# El LLM NO clasifica el color: responde las 5 preguntas Si/No del Marco + el juicio
+# de alto impacto. El color (clasificacion) se DERIVA con fast_gate_rule.derive_color
+# (module.type: rule_derived). Contar los Si: 0-1 Verde / 2-3 Amarillo / 4-5 Rojo;
+# Negro = P5=Si Y alto impacto. Reemplaza el enfoque "deducir el color" (prompt v1),
+# cuya causa de fallo Rojo->Amarillo era el conteo no modelado + el default de P3.
+#
+# Variante FEW-SHOT FIJOS (D-017). Identica a rule_v1 salvo `few_shot_ids`: en vez de
+# samplear 8 demos del train (LabeledFewShot, Random(0) -> dieta sesgada: 4 Negro, 1
+# Rojo, 1 Amarillo, 0 Rojo-acotado), se pinan 8 demos BALANCEADOS (2/2/2/2) que cubren
+# las distinciones del cuello: Amarillo p2-sutil (D01) y p5-posterior (D02), Rojo
+# acotado+reversible alto=No (R04) y apoyo p5=No (R01), Negro escala (N01) y denegacion
+# (N02), Verde 0 y 1 (V03/V13). Hipotesis: el modelo nunca veia demos de las distinciones
+# que falla -> few-shot fijos balanceados deberian subir la robustez del baseline.
+
+case:
+  name: "flujo_intents_fast_gate_rule_fixfs_v1"
+  title: "flujo-intents | Etapa 4: Fast Gate (regla determinista, few-shot fijos)"
+  description: "Etapa 4 (Fast Gate) rule_derived con few-shot FIJOS balanceados (few_shot_ids) que cubren las distinciones del cuello (p2 sutil, p5 posterior, alto_impacto). Variante de D-017 para aislar el efecto de la dieta de demos. Trazabilidad en SPEC-102."
+
+module:
+  type: "rule_derived"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos la etapa Fast Gate del Marco de Gobierno de IA. La ficha ya paso el triage.
+    NO clasifiques el color directamente: respondé las 5 preguntas de control (Si/No)
+    y el juicio de alto impacto. El color se calcula despues con una regla fija a
+    partir de tus respuestas (contar los Si: 0-1 Verde, 2-3 Amarillo, 4-5 Rojo; Negro
+    si P5=Si y hay alto impacto). Respondé cada pregunta con 'si' o 'No' segun lo que
+    la ficha permita inferir.
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "p1"
+      desc: "Si/No: el sistema usa datos personales o datos de clientes."
+    - name: "p2"
+      desc: "Si/No: influye en una decision que afecta directamente a un cliente o empleado."
+    - name: "p3"
+      desc: >-
+        Si/No: usa herramientas o proveedores fuera del catalogo aprobado de la
+        organizacion. Si la ficha menciona una herramienta externa, API de proveedor
+        o LLM externo, respondé Si AUNQUE diga que sera homologada, dada de alta en el
+        catalogo o evaluada mas adelante: lo que cuenta es que al momento de la ficha
+        todavia NO esta homologada. Si el intent es nuevo y no menciona ninguna
+        herramienta, asumi que se implementara con una homologada (No). Si la ficha
+        indica un framework/plataforma ya certificado o interno homologado, No. Si dice
+        que el sistema ya esta implementado, Si.
+    - name: "p4"
+      desc: "Si/No: el resultado podria generar riesgo legal o danar la reputacion de la empresa si falla."
+    - name: "p5"
+      desc: >-
+        Si/No: el sistema toma o ejecuta decisiones sin que ningun humano las revise
+        por caso ANTES de ejecutarlas. Respondé Si si la accion se ejecuta de forma
+        automatica y la unica supervision es POSTERIOR (log revisable, reporte al dia
+        siguiente, auditoria, revision dentro de N horas, posibilidad de revertir
+        despues): eso NO es revision por caso. Respondé No solo si un humano valida o
+        aprueba cada caso individual antes de que el sistema actue.
+    - name: "alto_impacto"
+      desc: >-
+        Si/No: juicio de alto impacto. Decidí en DOS pasos, en este orden:
+        PASO 1 (filtro de acotamiento y reversibilidad): si la accion automatica esta
+        ACOTADA a bandas, limites o un catalogo predefinido Y es REVERSIBLE (el cliente
+        o un equipo puede revertirla, o hay reversion sistematica posterior), respondé
+        No -- SALVO que igual produzca (c) un efecto irreversible sin intervencion
+        manual, o (b) un corte de servicio, denegacion de acceso o restriccion de
+        derechos efectiva. Una accion favorable y reversible (dar de alta, enviar
+        comunicaciones, ajustar dentro de banda con revision a pedido, cambio
+        reversible del catalogo) NO es alto impacto: respondé No aunque sea financiera
+        o afecte a miles de personas.
+        PASO 2 (criterios): si la accion NO quedo descartada en el PASO 1, respondé Si
+        cuando se cumpla al menos uno: (a) escala COMPROBABLE -- la ficha indica
+        >=100.000 personas afectadas o explicitamente >=10% de la base; no asumas
+        escala alta solo porque haya miles de casos sin ese umbral; (b) naturaleza --
+        corte de servicio, denegacion de acceso, restriccion de derechos, o decision
+        financiera que NO sea acotada+reversible; (c) irreversibilidad -- efecto no
+        revertible sin intervencion manual posterior; (d) regulatorio -- error con
+        exposicion a sancion directa; (e) profiling -- perfilamiento automatizado de
+        personas a escala.
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de las respuestas."
+    - name: "clasificacion"
+      desc: "Color derivado por la regla a partir de las respuestas (no lo decidis vos)."
+
+data:
+  csv_filename: "flujo_intents_fast_gate.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 90
+  predictor_type: "cot"
+  match_mode: "exact"
+  metric_feedback: true
+  eval_repeats: 1
+  use_few_shot: true
+  few_shot_count: 8
+  # Few-shot FIJOS balanceados (anula el sampleo de LabeledFewShot). Orden didactico
+  # Verde -> Amarillo -> Rojo -> Negro. D01/D02 son demos ensenantes (p2 sutil / p5
+  # posterior); R04 vs N01/N02 ensena alto=No (acotado+reversible) vs alto=Si.
+  few_shot_ids:
+    - "VAR-FG-V03"
+    - "VAR-FG-V13"
+    - "VAR-FG-D01"
+    - "VAR-FG-D02"
+    - "VAR-FG-R01"
+    - "VAR-FG-R04"
+    - "VAR-FG-N01"
+    - "VAR-FG-N02"
+  # Vuelca predicciones por-ficha (gold vs pred de las 6 respuestas + color) a
+  # predictions_test.csv / predictions_val.csv en el run dir. Materializa la
+  # auditabilidad de rule_derived sin correr el dump aparte.
+  save_predictions: true
+  # La metrica evalua SOLO el objetivo (color derivado) + el cuello (alto_impacto).
+  # Evaluar las 7 salidas inflaba el baseline al techo (~93-96% en VAL) porque P1/P2/P3/P5
+  # ya estan en 90-100% y diluyen: GEPA quedaba sin margen ni presion sobre el cuello.
+  # Con color + alto_impacto el baseline baja y GEPA tiene senal sobre lo que importa.
+  ignore_in_metric:
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
+    - "razonamiento"
+  field_configs:
+    alto_impacto: { mode: "exact" }
+    clasificacion: { mode: "exact" }

@@ -1077,6 +1077,28 @@ Supuesto de riesgo inicial: La API externa sera homologada antes de produccion; 
 Restricciones explicitas: El sistema no toma la decision; el analista registra la aprobacion o rechazo; cumplimiento BCRA, Ley 25.326 y Ley 25.065; sin variables discriminatorias; presupuesto maximo USD 150.000
 Sponsor: Fernando Aguirre - Director de Credito
 Datos requeridos: personales",si,si,si,si,No,No,Rojo,
+train,VAR-FG-D01,"Nombre de la iniciativa: Indice de Propension de Compra
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que calcula un indice de propension de compra de cada cliente y lo publica en el CRM; el ejecutivo comercial usa ese indice para decidir a quien ofrecer un upgrade y en que condiciones. El sistema no contacta al cliente.
+Area proponente: Gestion Comercial
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Precision del indice >= 0;80; conversion en cohorte priorizada >= 15%; cobertura de la base scoreada >= 100%
+Impacto en personas: Clientes (~60.000) cuyo indice se calcula. El ejecutivo decide la oferta a partir del indice. El sistema no actua sobre el cliente. Criticidad media.
+Supuesto de riesgo inicial: El indice es un insumo; el ejecutivo decide cada oferta; framework interno homologado.
+Restricciones explicitas: El sistema no contacta ni decide; solo publica el indice; cumplimiento Ley 25.326.
+Sponsor: Sebastian Castro - Director Comercial
+Datos requeridos: personales",si,si,No,No,No,No,Amarillo,"Amarillo: usa datos personales (P1=Si) y, aunque el ejecutivo toma la decision final, el sistema produce un indice que CONDICIONA esa decision sobre el cliente -> influye (P2=Si). Sin proveedor externo (P3=No), sin riesgo legal directo (P4=No) y sin ejecucion autonoma (P5=No); conteo=2 -> Amarillo."
+train,VAR-FG-D02,"Nombre de la iniciativa: Asignacion Automatica de Casos
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que asigna automaticamente cada caso entrante a un equipo de atencion segun su contenido, sin revision previa; un coordinador audita el resultado del dia a la manana siguiente y reasigna lo que haga falta.
+Area proponente: Operaciones de Atencion
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Precision de asignacion >= 90%; reduccion del tiempo de derivacion >= 55%; tasa de reasignacion < 7%
+Impacto en personas: Clientes cuyos casos se asignan automaticamente; la asignacion define el equipo que atiende, sin decidir sobre la persona. Criticidad baja.
+Supuesto de riesgo inicial: La asignacion se ejecuta automatica sin revision previa; el coordinador audita el resultado a la manana siguiente.
+Restricciones explicitas: Cumplimiento Ley 25.326; framework interno homologado; sin proveedores externos.
+Sponsor: Carla Mendez - Gerente de Atencion
+Datos requeridos: personales",si,No,No,No,si,No,Amarillo,"Amarillo: la asignacion se ejecuta de forma automatica y la unica supervision es POSTERIOR (auditoria a la manana siguiente), lo que NO es revision por caso -> P5=Si. Usa datos de clientes (P1=Si) pero no influye en una decision sobre la persona (P2=No), sin proveedor externo ni riesgo legal; conteo=2 -> Amarillo. La revision ex-post no baja P5."
 test,TC-A-01,"Nombre de la iniciativa: Motor de Recomendación de Upgrade
 Tipo de intent: Negocio
 Declaracion del intent: Sistema de recomendación en tiempo real para representantes de atención. Analiza el historial de consumo del cliente durante la interacción y sugiere opciones de upgrade de plan. La recomendación es visible solo para el representante; el cliente recibe únicamente lo que el representante decide comunicarle.

@@ -100,6 +100,47 @@ verificado, sin fallback). Se sincronizo la tabla DUPLICADA de `docs/ANALISIS_UT
   D-010, D-011, D-014, D-015(a)(b)(c). D-017 refutada/cerrada (sub-linea metrica solo-color
   como nota no bloqueante).
 
+#### Anexo (mismo dia) — few-shot FIJOS: la dieta de demos es model-dependiente
+
+Tras refutar D-017, se ataco la 4a palanca: la composicion del few-shot. Hallazgo de
+partida: `LabeledFewShot(k=8)` usa `Random(0)` (seed FIJO) -> los 8 demos son
+deterministas, y resultaron una **dieta sesgada** (4 Negro / 1 Rojo / 1 Amarillo /
+0 Rojo-acotado): el modelo NUNCA veia un demo de las distinciones que falla.
+
+**Intervencion:** nuevo mecanismo `few_shot_ids` (config + `reflexio_declarativa`):
+pina demos explicitos por `case_id` en vez de samplear. Set fijo BALANCEADO 2/2/2/2
+(`V03,V13,D01,D02,R01,R04,N01,N02`) que cubre las distinciones: D01 (Amarillo p2-sutil)
+y D02 (Amarillo p5-posterior) son demos ensenantes NUEVOS (train 38 -> 40), R04 (alto=No)
+vs N01/N02 (alto=Si) ensena el contraste de `alto_impacto`.
+
+**Resultado (color test, repeats=3, fijo vs sampleado, mismo dataset):**
+
+  | Task model    | Sampleado | Fijo curado | delta  | nota |
+  |---------------|-----------|-------------|--------|------|
+  | gpt-5.4-mini  | 81,1%     | **82,2%**   | +1,1   | ruido; estabiliza (5 vs 8 inestables) |
+  | gpt-4.1-mini  | **77,8%** | 70,0%       | **-7,8** | el modelo debil EMPEORA con demos de borde |
+
+- **No confirma la hipotesis.** El set fijo balanceado NO supera al sampleo de forma
+  robusta; con el modelo debil lo EMPEORA 7,8 pp. Causa: los demos D01/D02 son casos de
+  BORDE/sutiles, y (cuadro 2x2, secciones 8 y 11) **los modelos chicos prefieren demos
+  prototipicos; los de borde los confunden** (Amarillo->Verde subio a 9, Rojo->Negro a 8).
+  El modelo capaz (gpt-5.4-mini) los aprovecha apenas (+1,1, ruido).
+- **Lo valido:** la dieta de demos importa y es MODEL-DEPENDIENTE -- no hay set
+  universalmente mejor. `few_shot_ids` se conserva como feature (reproducibilidad +
+  control de cobertura). El cuello real es `alto_impacto` (juicio subjetivo, Negro<->Rojo),
+  irreducible por few-shot. Techo ~82% confirmado estructural.
+- **Decision (usuario):** documentar y cerrar; mantener `few_shot_ids`. El cuello
+  `alto_impacto` queda como linea aparte (no se abre deuda nueva: es el mismo techo de
+  modelo ya registrado en D-015a).
+
+[SDD-Check anexo]
+- Spec afectada: `SPEC-102-flujo-intents` (mecanismo few_shot_ids para fast_gate).
+- Includes: `few_shot_ids` en `config_schema.py` + `reflexio_declarativa.py` (+ test),
+  2 demos `VAR-FG-D01/D02` en `make_variations.py` (train 38->40), config
+  `flujo_intents_fast_gate_rule_fixfs_v1.yaml`.
+- Lenguaje normativo: N/A. [NEEDS CLARIFICATION]: ninguno.
+- Deuda: sin cambios (el cuello alto_impacto = D-015a, ya abierta).
+
 ### 2026-06-18 — fast_gate: VAL ampliado a 46 casos borde (D-015d) + 2 arreglos de ambiente
 
 Se ejecuto la palanca pendiente de D-015(d): ampliar el VAL con casos borde "donde

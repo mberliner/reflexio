@@ -779,6 +779,32 @@ Lecciones (refinan y NO contradicen D-015d):
   es baseline sin GEPA.** El cuello es estructural: `alto_impacto` es un juicio subjetivo
   con techo de modelo y, además, satura la métrica combinada tapando el gradiente.
 
+**La 4a palanca — la dieta de few-shot — importa pero es MODEL-DEPENDIENTE (2026-06-19).**
+Quedaba probar la composición del few-shot. Hallazgo de partida: `LabeledFewShot(k=8)`
+usa `random.Random(0)` (seed **fijo**) → los 8 demos son deterministas y resultaron una
+**dieta sesgada** (4 Negro / 1 Rojo / 1 Amarillo / **0 Rojo-acotado**): el modelo nunca
+veía un demo de las distinciones que falla. Se implementó `few_shot_ids` (pinar demos por
+`case_id`) y se curó un set balanceado 2/2/2/2 que cubre las distinciones (incl. 2 demos
+enseñantes nuevos: Amarillo p2-sutil y p5-posterior). Resultado (color test, repeats=3):
+
+| Task model | Sampleado | Fijo curado | Δ |
+|---|---|---|---|
+| gpt-5.4-mini | 81,1% | 82,2% | +1,1 (ruido; estabiliza 5 vs 8 inestables) |
+| gpt-4.1-mini | 77,8% | 70,0% | **−7,8** (el modelo débil EMPEORA) |
+
+- **No hay set de demos universalmente mejor.** El set balanceado con demos de **borde**
+  (p2-sutil, p5-posterior) ayuda apenas al modelo capaz (+1,1, ruido) pero **perjudica al
+  modelo débil** (−7,8): confirma y refina la regla de las secciones 8 y 11 — *los modelos
+  chicos generalizan mejor con demos prototípicos (centro de banda); los de borde los
+  confunden* (con gpt-4.1-mini subieron Amarillo→Verde a 9 y Rojo→Negro a 8). Lo contrario
+  para modelos capaces.
+- **`few_shot_ids` se conserva como feature** (reproducibilidad + control de cobertura de
+  clases/distinciones), pero curar demos no es una palanca de mejora robusta acá.
+- **El cuello irreducible es `alto_impacto`** (juicio subjetivo, confusión Negro↔Rojo):
+  ningún few-shot lo cierra porque no es un problema de conteo sino de criterio con techo
+  de modelo. Cierra el ciclo de las 4 palancas (VAL, GEPA, modelo, demos): **el techo
+  ~82% de fast_gate es estructural.**
+
 ### Archivos relacionados
 
 - Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`
@@ -786,4 +812,5 @@ Lecciones (refinan y NO contradicen D-015d):
 - Set testigo externo (AI Act + AR) y su builder: `dspy_gepa_poc/datasets/flujo_intents_fast_gate_witness.csv`, `dspy_gepa_poc/scripts/build_witness.py`
 - Scripts: `dspy_gepa_poc/scripts/baseline_only.py` (eval sin GEPA, N seeds), `dspy_gepa_poc/scripts/per_field_accuracy.py` (matriz de confusión), `dspy_gepa_poc/scripts/witness_eval.py` (eval testigo fuera de distribución), `dspy_gepa_poc/scripts/diagnose_rule_baseline.py` (diagnóstico por-caso del baseline rule_derived: esperado vs obtenido + juicios p1..p5/alto_impacto, D-017)
 - VAL representativo (D-017): casos `VAR-FG-T01..T14` en `make_variations.py` (fichas neutrales + textura rica calibradas a las confusiones del TEST)
+- Few-shot fijos (D-017): mecanismo `few_shot_ids` (`config_schema.py` + `reflexio_declarativa.py`), demos enseñantes `VAR-FG-D01/D02`, config `flujo_intents_fast_gate_rule_fixfs_v1.yaml`
 - Registro de fases: `historial/sdd.md` (2026-06-15/16, Hallazgo 5 y validación externa)
