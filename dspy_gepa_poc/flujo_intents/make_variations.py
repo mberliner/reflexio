@@ -3081,6 +3081,359 @@ FAST_GATE = [
         riesgo="Bloqueo autonomo (denegacion de acceso, criterio b) sin revision por caso.",
         restr="Cumplimiento BCRA y Ley 25.326.",
     ),
+    # === D-017: VAL representativo del TEST (VAR-FG-T01..T14, todos split=val) ===
+    # Casos sembrados con la dificultad REAL del TEST (los TC-xx que el baseline falla
+    # 2/2), no casos borde sinteticos limpios. Cada patron reproduce una confusion
+    # observada en el diagnostico por-caso (diagnose_rule_baseline). No copian ningun
+    # TC: son fichas NUEVAS con la misma estructura de trampa Y la misma textura rica
+    # (metricas numericas, multiples restricciones, sponsor nombrado, escala concreta).
+    # CLAVE: las fichas son NEUTRALES -- describen el escenario de negocio sin nombrar
+    # p1..p5, alto_impacto, criterios ni el color (el modelo debe inferir los juicios,
+    # como en los TC reales). Una version previa filtraba la respuesta en el campo
+    # supuesto_riesgo y el modelo acertaba sin esfuerzo. El TEST no se toca.
+    #
+    # Patron 1 -- Amarillo con p2 sutil: el sistema genera un INSUMO (informe/score/
+    # analisis) sobre clientes/empleados y un humano decide; el modelo razona "el humano
+    # decide -> no influye -> p2=No" y subcuenta. Gold p2=si (influir en la decision = si).
+    _fg(
+        "VAR-FG-T01",
+        "operativo",
+        ["personales"],
+        "Amarillo",
+        "val",
+        "Sistema que analiza las transcripciones de las llamadas de cada agente de call "
+        "center y calcula un score mensual de calidad de atencion (claridad, resolucion, "
+        "tono), publicandolo en un ranking que el supervisor consulta para planificar el "
+        "coaching y el feedback de su equipo.",
+        nombre="Evaluador de Calidad de Atencion",
+        area="Gestion de Contact Center",
+        metricas="Cobertura de llamadas evaluadas >= 95%; correlacion del score con la "
+        "auditoria manual >= 0;85; tiempo de armado del ranking < 2 horas",
+        impacto="Empleados (140 agentes) cuyas llamadas se puntuan mensualmente. El ranking "
+        "informa las decisiones de coaching y feedback del supervisor sobre cada agente. El "
+        "supervisor decide cada accion. Criticidad media.",
+        riesgo="El score se calcula sobre transcripciones completas y el supervisor lo usa "
+        "como insumo; framework interno homologado; el agente puede pedir revision de su score.",
+        restr="El sistema no toma decisiones sobre el agente; solo publica el score; "
+        "cumplimiento Ley 25.326; el supervisor valida; presupuesto maximo USD 35.000",
+        sponsor="Lucia Fernandez - Gerente de Contact Center",
+    ),
+    _fg(
+        "VAR-FG-T02",
+        "negocio",
+        ["personales"],
+        "Amarillo",
+        "val",
+        "Modelo que estima diariamente la probabilidad de mora de cada cliente pospago en "
+        "los proximos 30 dias y publica el score en el CRM para consulta del equipo de "
+        "cobranzas, que decide a que clientes contactar y con que plan de pago ofrecer. El "
+        "sistema no actua sobre el cliente.",
+        nombre="Modelo Predictivo de Mora",
+        area="Cobranzas",
+        metricas="AUC-ROC >= 0;80; reduccion de mora en cohorte contactada >= 12%; "
+        "cobertura de la cartera scoreada >= 100%",
+        impacto="Clientes (~90.000 pospago) cuyo score se calcula a diario. El equipo de "
+        "cobranzas (30 gestores) decide autonomamente la accion. El sistema no contacta ni "
+        "actua sobre el cliente. Criticidad media.",
+        riesgo="El score es un insumo para el gestor, que decide cada contacto; framework "
+        "MLOps interno certificado y vigente.",
+        restr="El sistema no actua sobre el cliente; solo publica scores; cumplimiento BCRA "
+        "y Ley 25.326; sin variables que generen sesgo; presupuesto maximo USD 80.000",
+        sponsor="Martin Rios - Director de Cobranzas",
+    ),
+    _fg(
+        "VAR-FG-T03",
+        "operativo",
+        ["confidenciales"],
+        "Amarillo",
+        "val",
+        "Sistema que revisa los contratos de clientes corporativos e identifica clausulas "
+        "de riesgo (penalidades, renovacion automatica, exclusividad), generando un informe "
+        "de hallazgos para el equipo legal. El abogado responsable valida el informe y "
+        "decide si negociar, escalar o aceptar.",
+        nombre="Analizador de Clausulas Contractuales",
+        area="Legal Corporativo",
+        metricas="Tiempo de revision contractual reducido >= 60%; cobertura de clausulas de "
+        "riesgo detectadas >= 90%; falsos negativos < 5%",
+        impacto="El analisis condiciona las posiciones legales sobre los contratos de ~180 "
+        "clientes corporativos por mes. Empleados (15 abogados) consumen el informe. El "
+        "abogado decide cada accion. Criticidad alta.",
+        riesgo="El informe es un insumo; el abogado valida cada hallazgo antes de actuar; "
+        "los documentos estan digitalizados; sin proveedores externos.",
+        restr="El sistema no propone posiciones de negociacion; solo identifica clausulas; "
+        "confidencialidad contractual y secreto profesional; el abogado valida; presupuesto "
+        "maximo USD 70.000",
+        sponsor="Ignacio Vera - Director Legal",
+    ),
+    # Patron 5 -- Amarillo con p5 de supervision SOLO posterior: la accion se ejecuta
+    # automatica y la unica revision es ex-post (al dia siguiente) -> gold p5=si, pero
+    # conteo bajo -> Amarillo. El modelo lee "el equipo revisa" y subcuenta p5=No.
+    _fg(
+        "VAR-FG-T04",
+        "operativo",
+        ["confidenciales"],
+        "Amarillo",
+        "val",
+        "Sistema que genera y envia automaticamente, al cierre de cada dia habil, los "
+        "reportes de exposicion de riesgo a la gerencia de Riesgo, sin revision previa. El "
+        "equipo de riesgo revisa el reporte consolidado a la manana siguiente.",
+        nombre="Reportes Automaticos de Exposicion",
+        area="Riesgo Financiero",
+        metricas="Disponibilidad del reporte antes de las 7:00 AM; precision de las metricas "
+        "de exposicion >= 99%; cobertura de la cartera >= 100%",
+        impacto="Empleados (10 gerentes y analistas de Riesgo) como destinatarios. Los "
+        "reportes informan decisiones de gestion del riesgo; no deciden sobre personas. "
+        "Criticidad media.",
+        riesgo="Los datos de cierre estan consolidados antes del proceso nocturno; el envio "
+        "es automatico y la revision del equipo es a la manana siguiente.",
+        restr="Reportes de uso exclusivo de la gerencia de Riesgo; no se distribuyen fuera "
+        "del perimetro; cumplimiento BCRA; sin proveedores externos; presupuesto maximo USD 20.000",
+        sponsor="Fernando Aguirre - Director de Riesgo",
+    ),
+    _fg(
+        "VAR-FG-T05",
+        "operativo",
+        ["personales"],
+        "Amarillo",
+        "val",
+        "Herramienta que clasifica automaticamente los emails entrantes de clientes por tipo "
+        "y urgencia y los rutea a las colas de atencion correspondientes sin revision previa. "
+        "Un supervisor audita una muestra del ruteo al final de cada dia.",
+        nombre="Ruteo Automatico de Emails de Clientes",
+        area="Atencion al Cliente",
+        metricas="Precision de clasificacion >= 88%; reduccion del tiempo de primera "
+        "asignacion >= 50%; tasa de re-ruteo manual < 8%",
+        impacto="Clientes cuyos emails se clasifican y rutean automaticamente. El ruteo "
+        "determina el orden y la cola de atencion, no una decision sobre la persona. "
+        "Criticidad baja.",
+        riesgo="El ruteo es automatico sin revision previa; el supervisor audita una muestra "
+        "a posteriori; framework interno homologado.",
+        restr="Cumplimiento Ley 25.326; los emails se conservan segun la politica de "
+        "retencion; sin proveedores externos; presupuesto maximo USD 22.000",
+        sponsor="Carla Mendez - Gerente de Atencion",
+    ),
+    # Patron 2 -- Rojo con P5 autonomo ACOTADO + REVERSIBLE: ejecuta sin revision por
+    # caso (p5=si) pero limitado a catalogo/bandas y reversible -> alto_impacto=No (filtro
+    # del PASO 1) -> Rojo (conteo 4-5), NO Negro. El modelo o subcuenta p5 (cree que
+    # "acotado" = revisado) o sobre-escala alto_impacto a Negro.
+    _fg(
+        "VAR-FG-T06",
+        "negocio",
+        ["personales"],
+        "Rojo",
+        "val",
+        "Sistema que analiza mensualmente el comportamiento de pago de cada cliente pospago "
+        "y ajusta automaticamente su cupo de compra dentro de las bandas definidas por la "
+        "politica de credito vigente, sin discrecionalidad fuera de esos limites ni "
+        "intervencion por caso. Genera un log mensual revisable por el equipo de credito a "
+        "las 48 horas; el cliente puede solicitar revision.",
+        nombre="Ajuste Automatico de Cupo de Compra",
+        area="Credito y Cobranzas",
+        metricas="Reduccion de mora >= 15%; ajustes dentro de banda >= 99;5%; tiempo del "
+        "ciclo mensual < 4 horas",
+        impacto="Clientes (~80.000 pospago) que reciben ajustes automaticos de cupo sin "
+        "intervencion humana por caso. El ajuste afecta directamente su capacidad de "
+        "consumo. Criticidad alta.",
+        riesgo="Los parametros de politica estan vigentes; el log mensual se revisa a las "
+        "48 horas; el cliente puede pedir revision humana de cualquier ajuste.",
+        restr="Los ajustes no superan los limites de la politica aprobada; cumplimiento BCRA "
+        "y Ley 25.326; el cliente puede solicitar revision; presupuesto maximo USD 100.000",
+        sponsor="Fernando Aguirre - Director de Credito",
+    ),
+    _fg(
+        "VAR-FG-T07",
+        "negocio",
+        ["personales"],
+        "Rojo",
+        "val",
+        "Agente que recibe reclamos de clientes via API, los clasifica con un LLM de un "
+        "proveedor externo aun no homologado y aplica automaticamente compensaciones "
+        "acotadas al catalogo aprobado por policy (credito de factura, ajuste de plan "
+        "menor), cerrando el caso. Escala a un agente humano solo cuando el reclamo no "
+        "encaja en ninguna categoria del catalogo. Las resoluciones son reversibles.",
+        nombre="Resolucion Automatica de Reclamos",
+        area="Operaciones de Atencion",
+        metricas="Tasa de resolucion automatizada >= 65%; tiempo de cierre de reclamos "
+        "simples < 2 horas; satisfaccion post-resolucion >= 3;9/5",
+        impacto="Clientes (~7.000 con reclamos por mes) cuyos casos se resuelven de forma "
+        "autonoma dentro del catalogo aprobado. Las resoluciones afectan la relacion "
+        "comercial. Criticidad alta.",
+        riesgo="El LLM externo clasifica el tipo de reclamo; las resoluciones estan dentro "
+        "del catalogo aprobado y son reversibles; el proveedor externo aun no esta homologado.",
+        restr="El agente no aplica compensaciones fuera del catalogo; escalada obligatoria "
+        "cuando no encaja; cumplimiento Defensa del Consumidor; el LLM externo debe "
+        "homologarse; presupuesto maximo USD 130.000",
+        sponsor="Tomas Elizondo - Gerente de Operaciones de Reclamos",
+    ),
+    _fg(
+        "VAR-FG-T08",
+        "negocio",
+        ["personales"],
+        "Rojo",
+        "val",
+        "Modulo del canal digital que ejecuta de forma autonoma los cambios de plan "
+        "solicitados por el cliente: verifica la disponibilidad del upgrade en el catalogo "
+        "vigente, ejecuta el cambio en el sistema de facturacion y lo confirma, sin "
+        "intervencion de un agente humano. El cambio es reversible por el cliente dentro de "
+        "las 24 horas.",
+        nombre="Ejecucion Autonoma de Cambios de Plan",
+        area="Canales Digitales",
+        metricas="Cambios completados sin intervencion humana >= 80%; tiempo de "
+        "procesamiento < 3 minutos; satisfaccion post-cambio >= 4/5",
+        impacto="Clientes (~25.000 por mes) cuyos cambios de plan se ejecutan de forma "
+        "autonoma dentro del catalogo. Es una modificacion contractual. Criticidad alta.",
+        riesgo="El modulo opera solo sobre upgrades del catalogo vigente; el cambio es "
+        "reversible por el cliente dentro de 24 horas; las condiciones no estandar se escalan.",
+        restr="Solo upgrades del catalogo aprobado; las condiciones no estandar requieren "
+        "agente humano; cumplimiento Defensa del Consumidor y ENACOM; reversible 24hs; "
+        "presupuesto maximo USD 65.000",
+        sponsor="Gabriela Moreno - Directora de Canales Digitales",
+    ),
+    _fg(
+        "VAR-FG-T09",
+        "operativo",
+        ["personales"],
+        "Rojo",
+        "val",
+        "Agente que verifica el cumplimiento de los criterios de alta estandar y ejecuta "
+        "automaticamente el registro del cliente en el CRM y en facturacion, sin "
+        "intervencion del operador por caso, confirmando el alta al cliente por email. Los "
+        "casos con documentacion incompleta o fuera de los criterios estandar se derivan a "
+        "revision manual.",
+        nombre="Alta Automatica de Clientes",
+        area="Operaciones Comerciales",
+        metricas="Tiempo de alta < 3 minutos; tasa de alta correcta >= 99;5%; satisfaccion "
+        "post-alta >= 4/5",
+        impacto="Clientes (~5.000 nuevos por mes) cuya alta se ejecuta de forma autonoma, "
+        "estableciendo la relacion contractual. Criticidad alta.",
+        riesgo="Los criterios de alta estan definidos y vigentes; los casos fuera de "
+        "criterio van a revision manual; el alta es una accion favorable solicitada por el "
+        "cliente.",
+        restr="Los casos fuera de los criterios estandar requieren revision manual; "
+        "cumplimiento Ley 25.326; presupuesto maximo USD 40.000",
+    ),
+    # Patron 3 -- Negro por ESCALA MASIVA pese a bandas: accion autonoma sobre >=10% de la
+    # base o >=100.000 personas -> alto_impacto=si por criterio (a), aunque sea acotada a
+    # bandas. El modelo aplica el filtro de acotamiento del PASO 1 y subcuenta alto=No.
+    _fg(
+        "VAR-FG-T10",
+        "negocio",
+        ["personales"],
+        "Negro",
+        "val",
+        "Agente que ajusta automaticamente precios y descuentos de los planes de unos "
+        "300.000 clientes activos, segmentados, en funcion de parametros de mercado y "
+        "comportamiento de consumo en tiempo real. Los ajustes se aplican dentro de bandas "
+        "predefinidas por el area comercial sin requerir aprobacion individual.",
+        nombre="Pricing Dinamico por Segmento",
+        area="Gestion Comercial",
+        metricas="Incremento de ARPU del segmento >= 5%; reduccion de churn >= 10%; ajustes "
+        "dentro de bandas >= 99;9%",
+        impacto="Clientes (~300.000 activos en 8 segmentos) cuyos precios y descuentos se "
+        "ajustan de forma autonoma. Afecta las condiciones comerciales de cada cliente del "
+        "segmento. Criticidad muy alta.",
+        riesgo="Las bandas tarifarias estan dentro de los limites regulatorios vigentes; el "
+        "area comercial revisa las bandas antes de cada ciclo; los ajustes se aplican sin "
+        "aprobacion individual.",
+        restr="Los ajustes no superan las bandas aprobadas; cumplimiento ENACOM y Defensa "
+        "del Consumidor; los cambios de bandas requieren aprobacion de Gestion Comercial; "
+        "presupuesto maximo USD 250.000",
+        sponsor="Sebastian Castro - Director Comercial",
+    ),
+    _fg(
+        "VAR-FG-T11",
+        "negocio",
+        ["personales"],
+        "Negro",
+        "val",
+        "Sistema que recalcula y aplica automaticamente la tarifa de mas del 10% de la base "
+        "de clientes segun su patron de consumo mensual, dentro de las bandas aprobadas por "
+        "el area comercial, sin revision por caso.",
+        nombre="Recalculo Automatico de Tarifas",
+        area="Gestion Comercial",
+        metricas="Cobertura de la base recalculada >= 10%; ajustes dentro de bandas >= "
+        "99;9%; reclamos por cambio de tarifa < 1%",
+        impacto="Clientes (mas del 10% de la base activa) cuyas tarifas se recalculan y "
+        "aplican de forma autonoma. Afecta directamente lo que paga cada cliente alcanzado. "
+        "Criticidad muy alta.",
+        riesgo="Las bandas estan dentro de los limites regulatorios; el area revisa las "
+        "bandas antes de cada ciclo; el recalculo se aplica sin revision por caso.",
+        restr="Los recalculos no superan las bandas aprobadas; cumplimiento ENACOM y "
+        "Defensa del Consumidor; presupuesto maximo USD 180.000",
+        sponsor="Sebastian Castro - Director Comercial",
+    ),
+    # Patron 4 -- Negro por DENEGACION/RESTRICCION de acceso, aunque reversible: corte de
+    # servicio, bloqueo o restriccion de derechos -> alto_impacto=si por criterio (b),
+    # aunque el equipo pueda revertir despues. El modelo lee "reversible" y subcuenta alto=No.
+    _fg(
+        "VAR-FG-T12",
+        "operativo",
+        ["personales"],
+        "Negro",
+        "val",
+        "Sistema que analiza cada transaccion en tiempo real y bloquea automaticamente las "
+        "que superan el umbral de riesgo definido, sin revision por caso. El equipo de "
+        "fraude recibe alertas y puede revertir el bloqueo dentro de las 2 horas siguientes.",
+        nombre="Bloqueo Automatico Antifraude",
+        area="Prevencion de Fraude",
+        metricas="Deteccion de fraude real >= 95%; falsos positivos < 2%; tiempo de decision "
+        "< 500ms por transaccion",
+        impacto="Clientes (~120.000 transacciones por dia) cuyas operaciones pueden "
+        "bloquearse en el momento. El bloqueo impide completar la transaccion. Criticidad "
+        "muy alta.",
+        riesgo="El bloqueo es a nivel de transaccion individual; el equipo de fraude puede "
+        "revertirlo dentro de 2 horas; el modelo de scoring esta en evaluacion.",
+        restr="El bloqueo es solo de la transaccion, no de la cuenta; reversible por el "
+        "equipo en 2 horas; cumplimiento BCRA; presupuesto maximo USD 200.000",
+        sponsor="Diego Carrasco - Gerente de Prevencion de Fraude",
+    ),
+    _fg(
+        "VAR-FG-T13",
+        "operativo",
+        ["personales"],
+        "Negro",
+        "val",
+        "Agente que suspende automaticamente el acceso de un cliente a la plataforma de "
+        "autogestion ante senales de riesgo de seguridad (patrones de acceso anomalos, "
+        "indicios de cuenta comprometida), sin revision previa por caso. El area de soporte "
+        "puede restituir el acceso a pedido del cliente.",
+        nombre="Suspension Automatica de Acceso",
+        area="Seguridad de la Informacion",
+        metricas="Deteccion de accesos comprometidos >= 90%; falsos positivos < 3%; tiempo "
+        "de restitucion < 4 horas",
+        impacto="Clientes cuyo acceso a la plataforma se suspende de forma autonoma ante "
+        "senales de riesgo. Quedan sin acceso hasta la restitucion. Criticidad alta.",
+        riesgo="La suspension es automatica ante senales de riesgo; soporte restituye a "
+        "pedido; las senales pueden tener falsos positivos.",
+        restr="La suspension se aplica sin revision previa; soporte restituye a pedido del "
+        "cliente; cumplimiento Ley 25.326 y Defensa del Consumidor; presupuesto maximo USD 50.000",
+    ),
+    # Patron 2b -- Rojo con apoyo a decision financiera + proveedor externo (sin ejecucion
+    # autonoma): p5=No (el analista decide cada caso) -> conteo 4 -> Rojo. El modelo
+    # subcuenta p3/p5 y baja a Amarillo. No es Negro (p5=No).
+    _fg(
+        "VAR-FG-T14",
+        "negocio",
+        ["personales"],
+        "Rojo",
+        "val",
+        "Sistema que procesa los datos financieros y de comportamiento del cliente, llama a "
+        "una API externa de scoring aun no homologada y devuelve al analista de credito una "
+        "recomendacion de aprobacion o rechazo de plan pospago. El analista valida la "
+        "recomendacion y registra la decision final en cada caso.",
+        nombre="Motor de Scoring Crediticio Asistido",
+        area="Credito y Cobranzas",
+        metricas="Tasa de mora en aprobados <= 3%; tiempo de evaluacion < 3 minutos; tasa "
+        "de aprobacion dentro de banda +/- 5%",
+        impacto="Clientes (~5.000 solicitantes por mes). El score condiciona en la practica "
+        "el acceso al plan. 30 analistas registran la decision formal. Criticidad muy alta.",
+        riesgo="La API externa sera homologada antes de produccion; el analista valida y "
+        "registra la decision en cada caso.",
+        restr="El sistema no toma la decision; el analista registra la aprobacion o rechazo; "
+        "cumplimiento BCRA, Ley 25.326 y Ley 25.065; sin variables discriminatorias; "
+        "presupuesto maximo USD 150.000",
+        sponsor="Fernando Aguirre - Director de Credito",
+    ),
 ]
 
 
@@ -3269,6 +3622,27 @@ _FG_PREGUNTAS: dict[str, tuple[str, str, str, str, str, str]] = {
     # Override de Negro con conteo bajo (P5=Si Y alto=Si).
     "VAR-FG-N19": ("si", "si", "No", "No", "si", "si"),
     "VAR-FG-N20": ("si", "No", "No", "No", "si", "si"),
+    # D-017: VAL representativo del TEST (VAR-FG-T01..T14).
+    # Patron 1: Amarillo con p2 sutil (insumo que un humano usa para decidir -> p2=si).
+    "VAR-FG-T01": ("si", "si", "No", "No", "No", "No"),
+    "VAR-FG-T02": ("si", "si", "No", "si", "No", "No"),
+    "VAR-FG-T03": ("si", "si", "No", "si", "No", "No"),
+    # Patron 5: Amarillo con p5 de supervision solo posterior (p5=si, conteo bajo).
+    "VAR-FG-T04": ("si", "No", "No", "No", "si", "No"),
+    "VAR-FG-T05": ("si", "No", "No", "No", "si", "No"),
+    # Patron 2: Rojo con p5 autonomo acotado+reversible (p5=si, alto=No -> Rojo).
+    "VAR-FG-T06": ("si", "si", "No", "si", "si", "No"),
+    "VAR-FG-T07": ("si", "si", "si", "si", "si", "No"),
+    "VAR-FG-T08": ("si", "si", "No", "si", "si", "No"),
+    "VAR-FG-T09": ("si", "si", "No", "si", "si", "No"),
+    # Patron 3: Negro por escala masiva pese a bandas (alto=si por criterio a).
+    "VAR-FG-T10": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-T11": ("si", "si", "No", "si", "si", "si"),
+    # Patron 4: Negro por denegacion/restriccion reversible (alto=si por criterio b).
+    "VAR-FG-T12": ("si", "si", "No", "si", "si", "si"),
+    "VAR-FG-T13": ("si", "si", "No", "si", "si", "si"),
+    # Patron 2b: Rojo con apoyo a decision financiera, p5=No (el analista decide).
+    "VAR-FG-T14": ("si", "si", "si", "si", "No", "No"),
 }
 
 for _c in FAST_GATE:

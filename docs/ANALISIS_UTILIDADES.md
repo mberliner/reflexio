@@ -242,8 +242,14 @@ Configurados en `roi_calculator.py`:
 | gpt-4o-mini | $0.15 | $0.60 |
 | gpt-4.1-mini | $0.15 | $0.60 |
 | gpt-4.1-nano | $0.10 | $0.40 |
+| gpt-5 | $1.25 | $10.00 |
+| gpt-5-mini | $0.25 | $2.00 |
+| gpt-5.4 | $2.50 | $15.00 |
+| gpt-5.4-mini | $0.75 | $4.50 |
+| gpt-5.5 | $5.00 | $30.00 |
 
-Para actualizar precios, editar `DEFAULT_PRICING` en `shared/analysis/roi_calculator.py`.
+Para actualizar precios, editar `DEFAULT_PRICING` en `shared/analysis/roi_calculator.py`
+(SSOT). Esta tabla debe mantenerse sincronizada con ese diccionario.
 
 ## Escala de Estabilidad
 

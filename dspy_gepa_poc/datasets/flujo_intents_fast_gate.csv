@@ -923,6 +923,160 @@ Supuesto de riesgo inicial: Bloqueo autonomo (denegacion de acceso, criterio b) 
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
 Datos requeridos: personales",si,No,No,No,si,si,Negro,"Negro: bloquea los fondos del cliente (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro aplica aunque el conteo sea 2."
+val,VAR-FG-T01,"Nombre de la iniciativa: Evaluador de Calidad de Atencion
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que analiza las transcripciones de las llamadas de cada agente de call center y calcula un score mensual de calidad de atencion (claridad, resolucion, tono), publicandolo en un ranking que el supervisor consulta para planificar el coaching y el feedback de su equipo.
+Area proponente: Gestion de Contact Center
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Cobertura de llamadas evaluadas >= 95%; correlacion del score con la auditoria manual >= 0;85; tiempo de armado del ranking < 2 horas
+Impacto en personas: Empleados (140 agentes) cuyas llamadas se puntuan mensualmente. El ranking informa las decisiones de coaching y feedback del supervisor sobre cada agente. El supervisor decide cada accion. Criticidad media.
+Supuesto de riesgo inicial: El score se calcula sobre transcripciones completas y el supervisor lo usa como insumo; framework interno homologado; el agente puede pedir revision de su score.
+Restricciones explicitas: El sistema no toma decisiones sobre el agente; solo publica el score; cumplimiento Ley 25.326; el supervisor valida; presupuesto maximo USD 35.000
+Sponsor: Lucia Fernandez - Gerente de Contact Center
+Datos requeridos: personales",si,si,No,No,No,No,Amarillo,
+val,VAR-FG-T02,"Nombre de la iniciativa: Modelo Predictivo de Mora
+Tipo de intent: Negocio
+Declaracion del intent: Modelo que estima diariamente la probabilidad de mora de cada cliente pospago en los proximos 30 dias y publica el score en el CRM para consulta del equipo de cobranzas, que decide a que clientes contactar y con que plan de pago ofrecer. El sistema no actua sobre el cliente.
+Area proponente: Cobranzas
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: AUC-ROC >= 0;80; reduccion de mora en cohorte contactada >= 12%; cobertura de la cartera scoreada >= 100%
+Impacto en personas: Clientes (~90.000 pospago) cuyo score se calcula a diario. El equipo de cobranzas (30 gestores) decide autonomamente la accion. El sistema no contacta ni actua sobre el cliente. Criticidad media.
+Supuesto de riesgo inicial: El score es un insumo para el gestor, que decide cada contacto; framework MLOps interno certificado y vigente.
+Restricciones explicitas: El sistema no actua sobre el cliente; solo publica scores; cumplimiento BCRA y Ley 25.326; sin variables que generen sesgo; presupuesto maximo USD 80.000
+Sponsor: Martin Rios - Director de Cobranzas
+Datos requeridos: personales",si,si,No,si,No,No,Amarillo,
+val,VAR-FG-T03,"Nombre de la iniciativa: Analizador de Clausulas Contractuales
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que revisa los contratos de clientes corporativos e identifica clausulas de riesgo (penalidades, renovacion automatica, exclusividad), generando un informe de hallazgos para el equipo legal. El abogado responsable valida el informe y decide si negociar, escalar o aceptar.
+Area proponente: Legal Corporativo
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Tiempo de revision contractual reducido >= 60%; cobertura de clausulas de riesgo detectadas >= 90%; falsos negativos < 5%
+Impacto en personas: El analisis condiciona las posiciones legales sobre los contratos de ~180 clientes corporativos por mes. Empleados (15 abogados) consumen el informe. El abogado decide cada accion. Criticidad alta.
+Supuesto de riesgo inicial: El informe es un insumo; el abogado valida cada hallazgo antes de actuar; los documentos estan digitalizados; sin proveedores externos.
+Restricciones explicitas: El sistema no propone posiciones de negociacion; solo identifica clausulas; confidencialidad contractual y secreto profesional; el abogado valida; presupuesto maximo USD 70.000
+Sponsor: Ignacio Vera - Director Legal
+Datos requeridos: confidenciales",si,si,No,si,No,No,Amarillo,
+val,VAR-FG-T04,"Nombre de la iniciativa: Reportes Automaticos de Exposicion
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que genera y envia automaticamente, al cierre de cada dia habil, los reportes de exposicion de riesgo a la gerencia de Riesgo, sin revision previa. El equipo de riesgo revisa el reporte consolidado a la manana siguiente.
+Area proponente: Riesgo Financiero
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Disponibilidad del reporte antes de las 7:00 AM; precision de las metricas de exposicion >= 99%; cobertura de la cartera >= 100%
+Impacto en personas: Empleados (10 gerentes y analistas de Riesgo) como destinatarios. Los reportes informan decisiones de gestion del riesgo; no deciden sobre personas. Criticidad media.
+Supuesto de riesgo inicial: Los datos de cierre estan consolidados antes del proceso nocturno; el envio es automatico y la revision del equipo es a la manana siguiente.
+Restricciones explicitas: Reportes de uso exclusivo de la gerencia de Riesgo; no se distribuyen fuera del perimetro; cumplimiento BCRA; sin proveedores externos; presupuesto maximo USD 20.000
+Sponsor: Fernando Aguirre - Director de Riesgo
+Datos requeridos: confidenciales",si,No,No,No,si,No,Amarillo,
+val,VAR-FG-T05,"Nombre de la iniciativa: Ruteo Automatico de Emails de Clientes
+Tipo de intent: Operativo
+Declaracion del intent: Herramienta que clasifica automaticamente los emails entrantes de clientes por tipo y urgencia y los rutea a las colas de atencion correspondientes sin revision previa. Un supervisor audita una muestra del ruteo al final de cada dia.
+Area proponente: Atencion al Cliente
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Precision de clasificacion >= 88%; reduccion del tiempo de primera asignacion >= 50%; tasa de re-ruteo manual < 8%
+Impacto en personas: Clientes cuyos emails se clasifican y rutean automaticamente. El ruteo determina el orden y la cola de atencion, no una decision sobre la persona. Criticidad baja.
+Supuesto de riesgo inicial: El ruteo es automatico sin revision previa; el supervisor audita una muestra a posteriori; framework interno homologado.
+Restricciones explicitas: Cumplimiento Ley 25.326; los emails se conservan segun la politica de retencion; sin proveedores externos; presupuesto maximo USD 22.000
+Sponsor: Carla Mendez - Gerente de Atencion
+Datos requeridos: personales",si,No,No,No,si,No,Amarillo,
+val,VAR-FG-T06,"Nombre de la iniciativa: Ajuste Automatico de Cupo de Compra
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que analiza mensualmente el comportamiento de pago de cada cliente pospago y ajusta automaticamente su cupo de compra dentro de las bandas definidas por la politica de credito vigente, sin discrecionalidad fuera de esos limites ni intervencion por caso. Genera un log mensual revisable por el equipo de credito a las 48 horas; el cliente puede solicitar revision.
+Area proponente: Credito y Cobranzas
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Reduccion de mora >= 15%; ajustes dentro de banda >= 99;5%; tiempo del ciclo mensual < 4 horas
+Impacto en personas: Clientes (~80.000 pospago) que reciben ajustes automaticos de cupo sin intervencion humana por caso. El ajuste afecta directamente su capacidad de consumo. Criticidad alta.
+Supuesto de riesgo inicial: Los parametros de politica estan vigentes; el log mensual se revisa a las 48 horas; el cliente puede pedir revision humana de cualquier ajuste.
+Restricciones explicitas: Los ajustes no superan los limites de la politica aprobada; cumplimiento BCRA y Ley 25.326; el cliente puede solicitar revision; presupuesto maximo USD 100.000
+Sponsor: Fernando Aguirre - Director de Credito
+Datos requeridos: personales",si,si,No,si,si,No,Rojo,
+val,VAR-FG-T07,"Nombre de la iniciativa: Resolucion Automatica de Reclamos
+Tipo de intent: Negocio
+Declaracion del intent: Agente que recibe reclamos de clientes via API, los clasifica con un LLM de un proveedor externo aun no homologado y aplica automaticamente compensaciones acotadas al catalogo aprobado por policy (credito de factura, ajuste de plan menor), cerrando el caso. Escala a un agente humano solo cuando el reclamo no encaja en ninguna categoria del catalogo. Las resoluciones son reversibles.
+Area proponente: Operaciones de Atencion
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Tasa de resolucion automatizada >= 65%; tiempo de cierre de reclamos simples < 2 horas; satisfaccion post-resolucion >= 3;9/5
+Impacto en personas: Clientes (~7.000 con reclamos por mes) cuyos casos se resuelven de forma autonoma dentro del catalogo aprobado. Las resoluciones afectan la relacion comercial. Criticidad alta.
+Supuesto de riesgo inicial: El LLM externo clasifica el tipo de reclamo; las resoluciones estan dentro del catalogo aprobado y son reversibles; el proveedor externo aun no esta homologado.
+Restricciones explicitas: El agente no aplica compensaciones fuera del catalogo; escalada obligatoria cuando no encaja; cumplimiento Defensa del Consumidor; el LLM externo debe homologarse; presupuesto maximo USD 130.000
+Sponsor: Tomas Elizondo - Gerente de Operaciones de Reclamos
+Datos requeridos: personales",si,si,si,si,si,No,Rojo,
+val,VAR-FG-T08,"Nombre de la iniciativa: Ejecucion Autonoma de Cambios de Plan
+Tipo de intent: Negocio
+Declaracion del intent: Modulo del canal digital que ejecuta de forma autonoma los cambios de plan solicitados por el cliente: verifica la disponibilidad del upgrade en el catalogo vigente, ejecuta el cambio en el sistema de facturacion y lo confirma, sin intervencion de un agente humano. El cambio es reversible por el cliente dentro de las 24 horas.
+Area proponente: Canales Digitales
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Cambios completados sin intervencion humana >= 80%; tiempo de procesamiento < 3 minutos; satisfaccion post-cambio >= 4/5
+Impacto en personas: Clientes (~25.000 por mes) cuyos cambios de plan se ejecutan de forma autonoma dentro del catalogo. Es una modificacion contractual. Criticidad alta.
+Supuesto de riesgo inicial: El modulo opera solo sobre upgrades del catalogo vigente; el cambio es reversible por el cliente dentro de 24 horas; las condiciones no estandar se escalan.
+Restricciones explicitas: Solo upgrades del catalogo aprobado; las condiciones no estandar requieren agente humano; cumplimiento Defensa del Consumidor y ENACOM; reversible 24hs; presupuesto maximo USD 65.000
+Sponsor: Gabriela Moreno - Directora de Canales Digitales
+Datos requeridos: personales",si,si,No,si,si,No,Rojo,
+val,VAR-FG-T09,"Nombre de la iniciativa: Alta Automatica de Clientes
+Tipo de intent: Operativo
+Declaracion del intent: Agente que verifica el cumplimiento de los criterios de alta estandar y ejecuta automaticamente el registro del cliente en el CRM y en facturacion, sin intervencion del operador por caso, confirmando el alta al cliente por email. Los casos con documentacion incompleta o fuera de los criterios estandar se derivan a revision manual.
+Area proponente: Operaciones Comerciales
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Tiempo de alta < 3 minutos; tasa de alta correcta >= 99;5%; satisfaccion post-alta >= 4/5
+Impacto en personas: Clientes (~5.000 nuevos por mes) cuya alta se ejecuta de forma autonoma, estableciendo la relacion contractual. Criticidad alta.
+Supuesto de riesgo inicial: Los criterios de alta estan definidos y vigentes; los casos fuera de criterio van a revision manual; el alta es una accion favorable solicitada por el cliente.
+Restricciones explicitas: Los casos fuera de los criterios estandar requieren revision manual; cumplimiento Ley 25.326; presupuesto maximo USD 40.000
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,No,Rojo,
+val,VAR-FG-T10,"Nombre de la iniciativa: Pricing Dinamico por Segmento
+Tipo de intent: Negocio
+Declaracion del intent: Agente que ajusta automaticamente precios y descuentos de los planes de unos 300.000 clientes activos, segmentados, en funcion de parametros de mercado y comportamiento de consumo en tiempo real. Los ajustes se aplican dentro de bandas predefinidas por el area comercial sin requerir aprobacion individual.
+Area proponente: Gestion Comercial
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Incremento de ARPU del segmento >= 5%; reduccion de churn >= 10%; ajustes dentro de bandas >= 99;9%
+Impacto en personas: Clientes (~300.000 activos en 8 segmentos) cuyos precios y descuentos se ajustan de forma autonoma. Afecta las condiciones comerciales de cada cliente del segmento. Criticidad muy alta.
+Supuesto de riesgo inicial: Las bandas tarifarias estan dentro de los limites regulatorios vigentes; el area comercial revisa las bandas antes de cada ciclo; los ajustes se aplican sin aprobacion individual.
+Restricciones explicitas: Los ajustes no superan las bandas aprobadas; cumplimiento ENACOM y Defensa del Consumidor; los cambios de bandas requieren aprobacion de Gestion Comercial; presupuesto maximo USD 250.000
+Sponsor: Sebastian Castro - Director Comercial
+Datos requeridos: personales",si,si,No,si,si,si,Negro,
+val,VAR-FG-T11,"Nombre de la iniciativa: Recalculo Automatico de Tarifas
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que recalcula y aplica automaticamente la tarifa de mas del 10% de la base de clientes segun su patron de consumo mensual, dentro de las bandas aprobadas por el area comercial, sin revision por caso.
+Area proponente: Gestion Comercial
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Cobertura de la base recalculada >= 10%; ajustes dentro de bandas >= 99;9%; reclamos por cambio de tarifa < 1%
+Impacto en personas: Clientes (mas del 10% de la base activa) cuyas tarifas se recalculan y aplican de forma autonoma. Afecta directamente lo que paga cada cliente alcanzado. Criticidad muy alta.
+Supuesto de riesgo inicial: Las bandas estan dentro de los limites regulatorios; el area revisa las bandas antes de cada ciclo; el recalculo se aplica sin revision por caso.
+Restricciones explicitas: Los recalculos no superan las bandas aprobadas; cumplimiento ENACOM y Defensa del Consumidor; presupuesto maximo USD 180.000
+Sponsor: Sebastian Castro - Director Comercial
+Datos requeridos: personales",si,si,No,si,si,si,Negro,
+val,VAR-FG-T12,"Nombre de la iniciativa: Bloqueo Automatico Antifraude
+Tipo de intent: Operativo
+Declaracion del intent: Sistema que analiza cada transaccion en tiempo real y bloquea automaticamente las que superan el umbral de riesgo definido, sin revision por caso. El equipo de fraude recibe alertas y puede revertir el bloqueo dentro de las 2 horas siguientes.
+Area proponente: Prevencion de Fraude
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Deteccion de fraude real >= 95%; falsos positivos < 2%; tiempo de decision < 500ms por transaccion
+Impacto en personas: Clientes (~120.000 transacciones por dia) cuyas operaciones pueden bloquearse en el momento. El bloqueo impide completar la transaccion. Criticidad muy alta.
+Supuesto de riesgo inicial: El bloqueo es a nivel de transaccion individual; el equipo de fraude puede revertirlo dentro de 2 horas; el modelo de scoring esta en evaluacion.
+Restricciones explicitas: El bloqueo es solo de la transaccion, no de la cuenta; reversible por el equipo en 2 horas; cumplimiento BCRA; presupuesto maximo USD 200.000
+Sponsor: Diego Carrasco - Gerente de Prevencion de Fraude
+Datos requeridos: personales",si,si,No,si,si,si,Negro,
+val,VAR-FG-T13,"Nombre de la iniciativa: Suspension Automatica de Acceso
+Tipo de intent: Operativo
+Declaracion del intent: Agente que suspende automaticamente el acceso de un cliente a la plataforma de autogestion ante senales de riesgo de seguridad (patrones de acceso anomalos, indicios de cuenta comprometida), sin revision previa por caso. El area de soporte puede restituir el acceso a pedido del cliente.
+Area proponente: Seguridad de la Informacion
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Deteccion de accesos comprometidos >= 90%; falsos positivos < 3%; tiempo de restitucion < 4 horas
+Impacto en personas: Clientes cuyo acceso a la plataforma se suspende de forma autonoma ante senales de riesgo. Quedan sin acceso hasta la restitucion. Criticidad alta.
+Supuesto de riesgo inicial: La suspension es automatica ante senales de riesgo; soporte restituye a pedido; las senales pueden tener falsos positivos.
+Restricciones explicitas: La suspension se aplica sin revision previa; soporte restituye a pedido del cliente; cumplimiento Ley 25.326 y Defensa del Consumidor; presupuesto maximo USD 50.000
+Sponsor: Gerente de Area (persona accountable)
+Datos requeridos: personales",si,si,No,si,si,si,Negro,
+val,VAR-FG-T14,"Nombre de la iniciativa: Motor de Scoring Crediticio Asistido
+Tipo de intent: Negocio
+Declaracion del intent: Sistema que procesa los datos financieros y de comportamiento del cliente, llama a una API externa de scoring aun no homologada y devuelve al analista de credito una recomendacion de aprobacion o rechazo de plan pospago. El analista valida la recomendacion y registra la decision final en cada caso.
+Area proponente: Credito y Cobranzas
+Flujo de valor o area afectada: Proceso interno del area
+Metricas de exito: Tasa de mora en aprobados <= 3%; tiempo de evaluacion < 3 minutos; tasa de aprobacion dentro de banda +/- 5%
+Impacto en personas: Clientes (~5.000 solicitantes por mes). El score condiciona en la practica el acceso al plan. 30 analistas registran la decision formal. Criticidad muy alta.
+Supuesto de riesgo inicial: La API externa sera homologada antes de produccion; el analista valida y registra la decision en cada caso.
+Restricciones explicitas: El sistema no toma la decision; el analista registra la aprobacion o rechazo; cumplimiento BCRA, Ley 25.326 y Ley 25.065; sin variables discriminatorias; presupuesto maximo USD 150.000
+Sponsor: Fernando Aguirre - Director de Credito
+Datos requeridos: personales",si,si,si,si,No,No,Rojo,
 test,TC-A-01,"Nombre de la iniciativa: Motor de Recomendación de Upgrade
 Tipo de intent: Negocio
 Declaracion del intent: Sistema de recomendación en tiempo real para representantes de atención. Analiza el historial de consumo del cliente durante la interacción y sugiere opciones de upgrade de plan. La recomendación es visible solo para el representante; el cliente recibe únicamente lo que el representante decide comunicarle.
