@@ -369,6 +369,114 @@ def test_rule_derived_module_construye_con_outputs_completos():
     assert {"p1", "p5", "alto_impacto"} <= set(module._predicted)
 
 
+class _FakeSubhechoPredictor:
+    """Predictor falso para el modulo rule_derived_alto: devuelve respuestas fijas."""
+
+    def __init__(self, **answers):
+        self._answers = answers
+
+    def __call__(self, **_kwargs):
+        import dspy
+
+        return dspy.Prediction(**self._answers)
+
+
+def test_rule_derived_alto_module_exige_subhechos_en_outputs():
+    from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+
+    sig = {
+        "instruction": "x",
+        "inputs": [{"name": "ficha"}],
+        # faltan los sub-hechos (solo p1..p5 + derivados):
+        "outputs": [{"name": n} for n in ("p1", "p2", "p3", "p4", "p5", "clasificacion")],
+    }
+    with pytest.raises(ValueError, match="rule_derived_alto requiere"):
+        DynamicModuleFactory.create_rule_derived_alto_impacto_module(sig)
+
+
+def _alto_sig():
+    from dspy_gepa_poc.flujo_intents.fast_gate_rule import ALTO_IMPACTO_SUBHECHO_FIELDS
+
+    outs = [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5",
+        *ALTO_IMPACTO_SUBHECHO_FIELDS,
+        "razonamiento",
+        "alto_impacto",
+        "clasificacion",
+    ]
+    return {
+        "instruction": "x",
+        "inputs": [{"name": "ficha"}],
+        "outputs": [{"name": n} for n in outs],
+    }
+
+
+def test_rule_derived_alto_module_no_predice_los_derivados():
+    from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+
+    module = DynamicModuleFactory.create_rule_derived_alto_impacto_module(_alto_sig())
+    assert "alto_impacto" not in module._predicted
+    assert "clasificacion" not in module._predicted
+    assert {"acotado", "reversible", "p5"} <= set(module._predicted)
+
+
+def test_rule_derived_alto_module_deriva_ambos_campos():
+    from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+
+    module = DynamicModuleFactory.create_rule_derived_alto_impacto_module(_alto_sig())
+    # P5=Si + escala_masiva (sin gate acotado+reversible) -> alto_impacto=si.
+    # 5 sies (p1..p5) + alto -> Negro.
+    module.predictor = _FakeSubhechoPredictor(
+        p1="si",
+        p2="si",
+        p3="si",
+        p4="si",
+        p5="si",
+        acotado="No",
+        reversible="No",
+        escala_masiva="si",
+        naturaleza_restrictiva="No",
+        decision_financiera="No",
+        irreversible_sin_intervencion="No",
+        exposicion_regulatoria="No",
+        profiling="No",
+        razonamiento="x",
+    )
+    pred = module(ficha="cualquiera")
+    assert pred.alto_impacto == "si"
+    assert pred.clasificacion == "Negro"
+
+
+def test_rule_derived_alto_module_gate_acotado_reversible():
+    from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+
+    module = DynamicModuleFactory.create_rule_derived_alto_impacto_module(_alto_sig())
+    # acotado+reversible sin override -> alto_impacto=No; P5=Si, 5 sies pero sin alto -> Rojo.
+    module.predictor = _FakeSubhechoPredictor(
+        p1="si",
+        p2="si",
+        p3="si",
+        p4="si",
+        p5="si",
+        acotado="si",
+        reversible="si",
+        escala_masiva="si",
+        naturaleza_restrictiva="No",
+        decision_financiera="si",
+        irreversible_sin_intervencion="No",
+        exposicion_regulatoria="No",
+        profiling="No",
+        razonamiento="x",
+    )
+    pred = module(ficha="cualquiera")
+    assert pred.alto_impacto == "No"
+    assert pred.clasificacion == "Rojo"
+
+
 def test_dataset_fast_gate_color_consistente_con_preguntas():
     # Invariante de la arquitectura rule_derived: en todo el dataset de fast_gate, el
     # color gold se reproduce contando las P1..P5 + alto_impacto anotadas.

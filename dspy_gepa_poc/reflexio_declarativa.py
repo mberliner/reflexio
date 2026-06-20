@@ -248,18 +248,26 @@ class ReflexioDeclarativa:
                 teleprompter = LabeledFewShot(k=k)
                 self.student = teleprompter.compile(self.student, trainset=self.trainset)
 
-        elif module_type == "rule_derived":
-            # El LLM emite p1..p5 + alto_impacto; el color (clasificacion) se DERIVA
-            # con fast_gate_rule.derive_color. Fiel al Marco y auditable (D-013).
+        elif module_type in ("rule_derived", "rule_derived_alto"):
+            # rule_derived: el LLM emite p1..p5 + alto_impacto; el color se DERIVA (D-013).
+            # rule_derived_alto: el LLM emite p1..p5 + SUB-HECHOS; alto_impacto Y el color se
+            # derivan (D-015a, un nivel mas profundo). Ambos fieles al Marco y auditables.
             sig_config = self.config.raw_config.get("signature")
             if not sig_config:
-                raise ValueError("Module type is 'rule_derived' but no 'signature' section found.")
+                raise ValueError(
+                    f"Module type is '{module_type}' but no 'signature' section found."
+                )
 
             opt_config = self.config.raw_config.get("optimization", {})
             predictor_type = opt_config.get("predictor_type", "cot")
-            self.student = DynamicModuleFactory.create_rule_derived_module(
-                sig_config, predictor_type=predictor_type
-            )
+            if module_type == "rule_derived_alto":
+                self.student = DynamicModuleFactory.create_rule_derived_alto_impacto_module(
+                    sig_config, predictor_type=predictor_type
+                )
+            else:
+                self.student = DynamicModuleFactory.create_rule_derived_module(
+                    sig_config, predictor_type=predictor_type
+                )
 
             output_fields = [out["name"] for out in sig_config.get("outputs", [])]
             ignore_fields = opt_config.get("ignore_in_metric", [])
@@ -383,7 +391,7 @@ class ReflexioDeclarativa:
         else:
             raise ValueError(
                 f"Unsupported module type: {module_type}. "
-                "Supported: 'dynamic', 'rule_derived', 'pipeline'."
+                "Supported: 'dynamic', 'rule_derived', 'rule_derived_alto', 'pipeline'."
             )
 
     def _validate_metric_fields(self, eval_fields: list, output_fields: list) -> None:

@@ -21,6 +21,10 @@ def build_inference_module(raw_config: dict) -> dspy.Module:
     module_type = raw_config.get("module", {}).get("type", "dynamic")
     predictor_type = raw_config.get("optimization", {}).get("predictor_type", "cot")
 
+    if module_type == "rule_derived_alto":
+        return DynamicModuleFactory.create_rule_derived_alto_impacto_module(
+            sig_config, predictor_type=predictor_type
+        )
     if module_type == "rule_derived":
         return DynamicModuleFactory.create_rule_derived_module(
             sig_config, predictor_type=predictor_type

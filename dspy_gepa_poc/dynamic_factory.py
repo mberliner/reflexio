@@ -140,6 +140,73 @@ class DynamicModuleFactory:
         return RuleDerivedModule()
 
     @staticmethod
+    def create_rule_derived_alto_impacto_module(
+        signature_config: dict[str, Any],
+        predictor_type: str = "cot",
+    ) -> dspy.Module:
+        """Modulo rule_derived de DOS niveles (D-015a): deriva `alto_impacto` y `clasificacion`.
+
+        El LLM emite p1..p5 + los SUB-HECHOS objetivos de alto impacto (acotado,
+        reversible, escala_masiva, ...); el `forward` deriva primero `alto_impacto` con
+        `derive_alto_impacto` (la precedencia del Marco en codigo) y luego `clasificacion`
+        con `derive_color`. Ningun juicio compuesto lo decide el LLM: ambos campos son
+        deterministicos y auditables (un nivel mas profundo que rule_derived).
+
+        La signature del predictor se construye con todos los outputs del YAML MENOS los
+        dos derivados (`alto_impacto`, `clasificacion`). Requiere p1..p5 + los 8 sub-hechos
+        en outputs.
+        """
+        from dspy_gepa_poc.flujo_intents.fast_gate_rule import (
+            ALTO_IMPACTO_SUBHECHO_FIELDS,
+            derive_alto_impacto,
+            derive_color,
+        )
+
+        derived_fields = ("alto_impacto", "clasificacion")
+        all_outputs = [o["name"] for o in signature_config.get("outputs", [])]
+        predicted_outputs = [n for n in all_outputs if n not in derived_fields]
+        required = {"p1", "p2", "p3", "p4", "p5", *ALTO_IMPACTO_SUBHECHO_FIELDS}
+        missing = required - set(predicted_outputs)
+        if missing:
+            raise ValueError(
+                f"rule_derived_alto requiere outputs {sorted(required)}; faltan: {sorted(missing)}"
+            )
+
+        predicted_cfg = dict(signature_config)
+        predicted_cfg["outputs"] = [
+            o for o in signature_config.get("outputs", []) if o["name"] not in derived_fields
+        ]
+        signature_class = DynamicModuleFactory.create_signature(predicted_cfg)
+
+        class RuleDerivedAltoImpactoModule(dspy.Module):
+            def __init__(self):
+                super().__init__()
+                self._predicted = predicted_outputs
+                if predictor_type == "cot":
+                    self.predictor = dspy.ChainOfThought(signature_class)
+                else:
+                    self.predictor = dspy.Predict(signature_class)
+
+            def forward(self, **kwargs):
+                result = self.predictor(**kwargs)
+                data = {name: getattr(result, name, "") for name in self._predicted}
+                if hasattr(result, "reasoning"):
+                    data["reasoning"] = result.reasoning
+                alto = derive_alto_impacto(**{f: data.get(f) for f in ALTO_IMPACTO_SUBHECHO_FIELDS})
+                data["alto_impacto"] = "si" if alto else "No"
+                data["clasificacion"] = derive_color(
+                    data.get("p1"),
+                    data.get("p2"),
+                    data.get("p3"),
+                    data.get("p4"),
+                    data.get("p5"),
+                    data["alto_impacto"],
+                )
+                return dspy.Prediction(**data)
+
+        return RuleDerivedAltoImpactoModule()
+
+    @staticmethod
     def create_pipeline_module(
         stages_config: list[dict[str, Any]],
         routing_config: dict[str, Any],

@@ -58,6 +58,10 @@ class ConfigValidator(BaseConfigValidator):
             "required": [],
             "optional": [],
         },
+        "rule_derived_alto": {
+            "required": [],
+            "optional": [],
+        },
         "pipeline": {
             "required": [],
             "optional": [],
