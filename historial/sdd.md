@@ -141,6 +141,38 @@ vs N01/N02 (alto=Si) ensena el contraste de `alto_impacto`.
 - Lenguaje normativo: N/A. [NEEDS CLARIFICATION]: ninguno.
 - Deuda: sin cambios (el cuello alto_impacto = D-015a, ya abierta).
 
+#### Anexo 2 (mismo dia) — alto_impacto: descripcion suma cero + benchmark gpt-5.4
+
+Se ataco el cuello real (`alto_impacto`, juicio subjetivo Negro<->Rojo) por la via barata
+(afinar descripcion) antes de la descomposicion.
+
+- **Diagnostico aislado** (`diagnose_rule_baseline.py` extendido para reportar el campo
+  sobre casos P5=Si): gpt-5.4-mini N=3 da **87,2%** (34/39), error asimetrico (4 sub-escala
+  / 1 sobre-escala). Causa (dump del razonamiento): aplica de mas el FILTRO de acotamiento;
+  no respeta la excepcion (escala>=100k, corte/denegacion, irreversibilidad dominan). Es
+  error de PRECEDENCIA, no de hecho.
+- **Intervencion descripcion (FALLIDA):** reescribir invirtiendo la logica (overrides
+  primero). Resultado: alto_impacto **71,8%** (de 87,2), error invertido (sobre-escala
+  10, antes 1); color 88,9 -> 76,7. **SUMA CERO** (patron email_urgency, seccion 2). El
+  juicio de precedencia no se calibra por prompt. Descripcion REVERTIDA (git checkout).
+- **Benchmark gpt-5.4 (contraste, leaderboard refrescado):** mismo modelo, GEPA N=3:
+  `cv_extraction_v3` 49,8 -> 97,8 (**+48 pp**, GEPA brilla); `email_urgency` 63 -> 73
+  (varianza enorme [60..100]); `cv_triage_v2` baseline 97,9 (techo). El mismo modelo que
+  sube extraccion +48 no mueve fast_gate -> **el techo de fast_gate es de la TAREA**
+  (alto_impacto subjetivo), no del modelo/setup. 9 filas nuevas en el CSV con gpt-5.4.
+- **Rumbo (decision usuario):** documentar+commit (a) y luego encarar la DESCOMPOSICION
+  de alto_impacto (b): el LLM responde sub-hechos objetivos y una funcion pura aplica la
+  precedencia (patron rule_derived un nivel mas profundo). Unica palanca no probada.
+
+[SDD-Check anexo 2]
+- Spec afectada: `SPEC-102-flujo-intents` (diagnostico de alto_impacto; benchmark de
+  referencia gpt-5.4).
+- Includes: extension de `diagnose_rule_baseline.py` (reporte de alto_impacto por P5=Si);
+  9 corridas gpt-5.4 registradas en `metricas_optimizacion.csv` (email_urgency, cv_triage_v2,
+  cv_extraction_v3).
+- Lenguaje normativo: N/A. [NEEDS CLARIFICATION]: ninguno.
+- Deuda: D-015a (alto_impacto) sigue abierta; la descomposicion (b) la atacara.
+
 ### 2026-06-18 — fast_gate: VAL ampliado a 46 casos borde (D-015d) + 2 arreglos de ambiente
 
 Se ejecuto la palanca pendiente de D-015(d): ampliar el VAL con casos borde "donde

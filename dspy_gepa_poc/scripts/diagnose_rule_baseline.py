@@ -38,11 +38,18 @@ def _diagnose_split(student, dataset, split_name: str, repeats: int) -> tuple[in
     n_total = 0
     # Para detectar inestabilidad de muestreo: cuenta aciertos por caso sobre repeats.
     per_case_ok: dict[str, int] = {}
+    # Diagnostico aislado de alto_impacto SOLO donde decide el color (gold P5=Si:
+    # Negro = P5 y alto). ai_conf cuenta sub-escala (si->no) y sobre-escala (no->si).
+    ai_ok = 0
+    ai_total = 0
+    ai_conf: Counter = Counter()
     print(f"{'caso':12} {'esperado':9} {'obtenido':9}  ok   (juicios pred si difieren del gold)")
     print("-" * 90)
     for ex in dataset:
         cid = getattr(ex, "case_id", "?")
         exp = str(ex.clasificacion).strip()
+        p5_gold = str(getattr(ex, "p5", "") or "").strip().lower()
+        ai_gold = str(getattr(ex, "alto_impacto", "") or "").strip().lower()
         for _ in range(repeats):
             pred = student(ficha=ex.ficha)
             got = str(pred.clasificacion).strip()
@@ -50,6 +57,12 @@ def _diagnose_split(student, dataset, split_name: str, repeats: int) -> tuple[in
             ok_total += hit
             n_total += 1
             per_case_ok[cid] = per_case_ok.get(cid, 0) + int(hit)
+            if p5_gold == "si":
+                ai_pred = str(getattr(pred, "alto_impacto", "") or "").strip().lower()
+                ai_ok += ai_gold == ai_pred
+                ai_total += 1
+                if ai_gold != ai_pred:
+                    ai_conf[(ai_gold, ai_pred)] += 1
             if not hit:
                 conf[(exp, got)] += 1
                 diffs = []
@@ -62,16 +75,26 @@ def _diagnose_split(student, dataset, split_name: str, repeats: int) -> tuple[in
                 print(f"{cid:12} {exp:9} {got:9}  X {detail}")
     print("-" * 90)
     acc = ok_total / n_total if n_total else 0.0
-    print(f"Accuracy {split_name}: {ok_total}/{n_total} = {acc:.1%}")
+    print(f"Accuracy {split_name} (color): {ok_total}/{n_total} = {acc:.1%}")
     # Casos inestables (ni 0 ni full): senal de muestreo, no de criterio.
     if repeats > 1:
         unstable = [c for c, k in per_case_ok.items() if 0 < k < repeats]
         if unstable:
             print(f"Casos inestables entre repeats ({len(unstable)}): {sorted(unstable)}")
     if conf:
-        print("Confusiones (esperado -> obtenido):")
+        print("Confusiones color (esperado -> obtenido):")
         for (e, g), n in conf.most_common():
             print(f"  {e} -> {g}: {n}")
+    # Reporte aislado de alto_impacto (donde decide Negro vs Rojo).
+    if ai_total:
+        ai_acc = ai_ok / ai_total
+        print(
+            f"\nalto_impacto sobre casos P5=Si (decide Negro/Rojo): "
+            f"{ai_ok}/{ai_total} = {ai_acc:.1%}"
+        )
+        for (g, p), n in ai_conf.most_common():
+            etiqueta = "sub-escala (Negro->Rojo)" if g == "si" else "sobre-escala (Rojo->Negro)"
+            print(f"  alto {g}->{p}: {n}  [{etiqueta}]")
     return ok_total, n_total
 
 

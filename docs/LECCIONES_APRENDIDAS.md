@@ -805,6 +805,38 @@ enseñantes nuevos: Amarillo p2-sutil y p5-posterior). Resultado (color test, re
   de modelo. Cierra el ciclo de las 4 palancas (VAL, GEPA, modelo, demos): **el techo
   ~82% de fast_gate es estructural.**
 
+**Atacar `alto_impacto` con la descripción es de SUMA CERO (2026-06-19).** Diagnóstico
+aislado del campo (`diagnose_rule_baseline.py` extendido) sobre los casos P5=Sí (donde
+decide Negro vs Rojo), gpt-5.4-mini N=3: **87,2%** (34/39), con error **asimétrico**:
+4 sub-escala (alto sí→no, Negro→Rojo) vs 1 sobre-escala. El dump del razonamiento mostró
+la causa: el modelo aplica **de más el filtro de acotamiento** (acotado+reversible → No)
+y no respeta su excepción (escala ≥100k, corte/denegación, irreversibilidad **dominan**).
+Es un error de **precedencia**, no de hecho. Intervención: reescribir la descripción
+invirtiendo la lógica (overrides primero, "Sí aunque sea acotado/reversible", con
+ejemplos de los casos que fallaban). Resultado: `alto_impacto` **bajó a 71,8%** y el
+error se **invirtió** (sobre-escala 10, antes 1) — color test 88,9% → 76,7%. Mover el
+énfasis solo traslada el error de un lado al otro: el patrón **suma cero** de email_urgency
+(§2). **Lección: un juicio de precedencia entre criterios no se calibra por prompt;** la
+palanca que queda es **descomponerlo** (sub-hechos objetivos + una función que aplique la
+precedencia — el patrón `rule_derived` un nivel más profundo). Descripción revertida.
+
+**Contraste que cierra el diagnóstico: el techo de fast_gate es de la TAREA, no del
+modelo (benchmark gpt-5.4, 2026-06-19).** Con el MISMO gpt-5.4-mini, GEPA N=3 sobre tres
+casos de referencia (leaderboard refrescado tras el retiro de gpt-5/gpt-5-mini):
+
+| Caso | Baseline | Optimizado | Robustez | GEPA aporta |
+|---|---|---|---|---|
+| `cv_extraction_v3` (verdad objetiva) | 49,8% | 98,7% | **97,8%** | **+48 pp** |
+| `email_urgency` (subjetivo) | 63,3% | 70,0% | 73,3% [60..100] | +10 media, varianza enorme |
+| `cv_triage_v2` | 97,9% | 91,7% | 93,8% | no (baseline saturado) |
+| `fast_gate` (alto_impacto subjetivo) | ~88% | ~87% | ~82% | no (techo) |
+
+El mismo modelo que sube extracción **+48 pp** no mueve fast_gate: la diferencia es la
+**naturaleza de la tarea** (verdad objetiva verificable vs juicio subjetivo de
+precedencia), exactamente como predice la sección 8 y [[gpt5mini_clasificacion_subjetiva]].
+Confirma que invertir en fast_gate vía prompt/GEPA/modelo no tiene retorno; la única
+palanca con sentido es data-centric / arquitectónica (descomponer el juicio).
+
 ### Archivos relacionados
 
 - Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`
