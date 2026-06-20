@@ -233,6 +233,40 @@ class TestLLMConfigToKwargs:
         assert "timeout" not in config.to_kwargs()
 
 
+# ==================== Reasoning model detection ====================
+
+
+class TestReasoningModelDetection:
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "azure/gpt-5",
+            "azure/gpt-5-mini",
+            "openai/gpt-5-nano",
+            "azure/gpt-5.4",  # version menor con punto
+            "azure/gpt-5.4-mini",  # modelo activo del proyecto (gpt-5.4-mini)
+            "o1",
+            "o3-mini",
+        ],
+    )
+    def test_reasoning_models_detected(self, model):
+        assert LLMConfig(model=model).is_reasoning_model is True
+
+    @pytest.mark.parametrize(
+        "model",
+        ["azure/gpt-4.1-mini", "azure/gpt-4o", "openai/gpt-4", "azure/gpt-5-chat"],
+    )
+    def test_non_reasoning_models_not_detected(self, model):
+        assert LLMConfig(model=model).is_reasoning_model is False
+
+    def test_reasoning_forces_temperature_one(self):
+        # gpt-5.4-mini con temperature de config 0.1 -> overridden a 1.0 (litellm lo exige).
+        config = LLMConfig(model="azure/gpt-5.4-mini", temperature=0.1, max_tokens=4000)
+        kwargs = config.to_kwargs()
+        assert kwargs["temperature"] == 1.0
+        assert kwargs["max_tokens"] >= 16000
+
+
 # ==================== LLMConfig.validate ====================
 
 

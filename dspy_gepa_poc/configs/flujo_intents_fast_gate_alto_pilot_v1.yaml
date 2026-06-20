@@ -1,0 +1,96 @@
+# flujo-intents | Etapa 4: Fast Gate -- PILOT de descomposicion de alto_impacto (D-015a)
+#
+# Fase 0 (go/no-go): el LLM NO emite alto_impacto como juicio compuesto; responde
+# SUB-HECHOS OBJETIVOS (acotado, reversible, escala, naturaleza, financiera,
+# irreversibilidad, regulatorio, profiling). El diagnostico (--pilot) deriva alto_impacto
+# con fast_gate_rule.derive_alto_impacto (la PRECEDENCIA en codigo) y mide su precision
+# sobre los casos TEST P5=Si contra el gold. Hipotesis: el error del baseline era de
+# PRECEDENCIA, no de hecho -> mover la precedencia a codigo deberia subir la precision.
+#
+# Tipo `dynamic` y SIN few-shot a proposito: el pilot es zero-shot sobre los sub-hechos
+# (todavia no hay gold de sub-hechos en el dataset; eso es Fase 2). Si zero-shot ya
+# empata/supera el alto_impacto del baseline (few-shot), la senal es fuerte.
+
+case:
+  name: "flujo_intents_fast_gate_alto_pilot_v1"
+  title: "flujo-intents | Fast Gate -- pilot descomposicion alto_impacto"
+  description: "Pilot D-015a: el LLM responde sub-hechos objetivos; alto_impacto se deriva con la regla de precedencia. Solo para diagnostico --pilot."
+
+module:
+  type: "dynamic"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos la etapa Fast Gate del Marco de Gobierno de IA. La ficha ya paso el triage.
+    NO juzgues el "alto impacto" directamente: respondé los HECHOS objetivos de abajo
+    (Si/No) segun lo que la ficha permita inferir. Otro componente combina tus
+    respuestas con una regla fija. Respondé cada campo con 'si' o 'No'.
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "p1"
+      desc: "Si/No: el sistema usa datos personales o datos de clientes."
+    - name: "p2"
+      desc: "Si/No: influye en una decision que afecta directamente a un cliente o empleado."
+    - name: "p3"
+      desc: >-
+        Si/No: usa herramientas o proveedores fuera del catalogo aprobado. Si menciona
+        herramienta externa, API de proveedor o LLM externo aun no homologada, Si. Intent
+        nuevo sin herramienta mencionada, asumi homologada (No). Si ya esta implementado, Si.
+    - name: "p4"
+      desc: "Si/No: el resultado podria generar riesgo legal o danar la reputacion si falla."
+    - name: "p5"
+      desc: >-
+        Si/No: ejecuta decisiones sin que un humano las revise por caso ANTES de actuar.
+        Supervision solo POSTERIOR (log, auditoria, reversion despues) cuenta como Si.
+    # --- Sub-hechos objetivos de alto_impacto (la precedencia la aplica el codigo) ---
+    - name: "acotado"
+      desc: >-
+        Si/No: la accion automatica esta ACOTADA a bandas, limites o un catalogo
+        predefinido (no tiene discrecionalidad fuera de ese marco). No juzgues el impacto,
+        solo si esta acotada o no.
+    - name: "reversible"
+      desc: >-
+        Si/No: la accion se puede revertir -- el cliente o un equipo puede deshacerla, o
+        hay una reversion sistematica posterior. No juzgues el impacto, solo la reversibilidad.
+    - name: "escala_masiva"
+      desc: >-
+        Si/No: la ficha indica que afecta a >=100.000 personas o explicitamente a >=10%
+        de la base. No asumas escala alta solo por haber miles de casos sin ese umbral.
+    - name: "naturaleza_restrictiva"
+      desc: >-
+        Si/No: la accion corta un servicio, deniega un acceso o restringe un derecho de la
+        persona (efecto restrictivo, no favorable).
+    - name: "decision_financiera"
+      desc: "Si/No: la accion es una decision financiera sobre el cliente (credito, precio, limite, cargo)."
+    - name: "irreversible_sin_intervencion"
+      desc: >-
+        Si/No: el efecto NO se puede revertir sin intervencion manual posterior (una vez
+        ejecutado, queda firme salvo que alguien lo deshaga a mano).
+    - name: "exposicion_regulatoria"
+      desc: "Si/No: un error expone a la empresa a una sancion regulatoria directa."
+    - name: "profiling"
+      desc: "Si/No: realiza perfilamiento automatizado de personas a escala."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de las respuestas."
+
+data:
+  csv_filename: "flujo_intents_fast_gate.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 1
+  predictor_type: "cot"
+  match_mode: "exact"
+  eval_repeats: 1
+  use_few_shot: false

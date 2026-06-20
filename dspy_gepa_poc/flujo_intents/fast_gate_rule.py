@@ -66,3 +66,68 @@ def derive_color_from_row(row: Mapping[str, object]) -> str:
         row.get("p5"),
         row.get(ALTO_IMPACTO_FIELD),
     )
+
+
+# Sub-hechos OBJETIVOS de los que se deriva `alto_impacto` (D-015a). El LLM responde
+# cada uno (Si/No, verificable en la ficha); `derive_alto_impacto` aplica la PRECEDENCIA
+# del Marco, que es el juicio que el modelo fallaba al hacerlo end-to-end (no por error de
+# hecho sino de precedencia: aplicaba de mas el filtro de acotamiento e ignoraba las
+# excepciones). Misma estrategia que `derive_color`: sacar la composicion del prompt y
+# meterla en codigo determinista y auditable.
+ALTO_IMPACTO_SUBHECHO_FIELDS: tuple[str, ...] = (
+    "acotado",
+    "reversible",
+    "escala_masiva",
+    "naturaleza_restrictiva",
+    "decision_financiera",
+    "irreversible_sin_intervencion",
+    "exposicion_regulatoria",
+    "profiling",
+)
+
+
+def derive_alto_impacto(
+    acotado: object = False,
+    reversible: object = False,
+    escala_masiva: object = False,
+    naturaleza_restrictiva: object = False,
+    decision_financiera: object = False,
+    irreversible_sin_intervencion: object = False,
+    exposicion_regulatoria: object = False,
+    profiling: object = False,
+) -> bool:
+    """Deriva el juicio `alto_impacto` a partir de sub-hechos objetivos (D-015a).
+
+    Precedencia del Marco (fiel a la descripcion del YAML, ahora en codigo):
+    PASO 1 (gate): si la accion esta ACOTADA a bandas/limites/catalogo Y es REVERSIBLE,
+    NO es alto impacto -- SALVO override por (b) naturaleza restrictiva (corte de
+    servicio, denegacion de acceso, restriccion de derechos) o (c) irreversibilidad sin
+    intervencion. La `decision_financiera`, la `escala_masiva` y el `profiling` NO
+    override-ean el gate (solo cuentan cuando no hay acotamiento+reversibilidad).
+    PASO 2 (criterios): si no quedo descartada en el gate, es alto impacto si se cumple
+    al menos uno de (a) escala, (b) naturaleza restrictiva o financiera, (c)
+    irreversibilidad, (d) exposicion regulatoria, (e) profiling.
+
+    Acepta valores en cualquier forma reconocida por `ficha._is_true`.
+    """
+    restrictiva = _is_true(naturaleza_restrictiva)
+    irreversible = _is_true(irreversible_sin_intervencion)
+    override = restrictiva or irreversible
+    if _is_true(acotado) and _is_true(reversible):
+        return override
+    return (
+        _is_true(escala_masiva)
+        or restrictiva
+        or _is_true(decision_financiera)
+        or irreversible
+        or _is_true(exposicion_regulatoria)
+        or _is_true(profiling)
+    )
+
+
+def derive_alto_impacto_from_row(row: Mapping[str, object]) -> bool:
+    """Como `derive_alto_impacto` pero leyendo los sub-hechos de un dict/fila.
+
+    Campos ausentes se tratan como No (default seguro: el sub-hecho no esta presente).
+    """
+    return derive_alto_impacto(**{f: row.get(f, False) for f in ALTO_IMPACTO_SUBHECHO_FIELDS})

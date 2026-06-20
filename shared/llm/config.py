@@ -12,9 +12,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-# Same regex DSPy uses internally to detect reasoning models (o1/3/4/5, gpt-5 family)
+# Same regex DSPy uses internally to detect reasoning models (o1/3/4/5, gpt-5 family).
+# El sufijo de la familia gpt-5 admite tanto '-' (gpt-5-mini) como '.' para versiones
+# menores con punto (gpt-5.4, gpt-5.4-mini): ambos exigen temperature=1.0.
 _REASONING_MODEL_PATTERN = re.compile(
-    r"^(?:o[1345](?:-(?:mini|nano|pro))?(?:-\d{4}-\d{2}-\d{2})?|gpt-5(?!-chat)(?:-.*)?)$"
+    r"^(?:o[1345](?:-(?:mini|nano|pro))?(?:-\d{4}-\d{2}-\d{2})?|gpt-5(?!-chat)(?:[.-].*)?)$"
 )
 _REASONING_TEMPERATURE = 1.0
 _REASONING_MIN_MAX_TOKENS = 16000

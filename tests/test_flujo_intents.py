@@ -291,6 +291,56 @@ def test_derive_color_reproduce_el_lote_anotado():
         assert got == gold, f"{r['case_id']}: derive={got} != gold={gold} (p={ps})"
 
 
+# --- alto_impacto: descomposicion en sub-hechos objetivos (D-015a) ----------------
+
+
+@pytest.mark.parametrize(
+    "kw,expected",
+    [
+        # Gate: acotado + reversible -> No, SALVO override por restrictiva/irreversible.
+        ({"acotado": True, "reversible": True}, False),
+        # financiera acotada+reversible NO es alto impacto (no override-ea):
+        ({"acotado": True, "reversible": True, "decision_financiera": True}, False),
+        # escala/profiling NO override-ean el gate:
+        ({"acotado": True, "reversible": True, "escala_masiva": True, "profiling": True}, False),
+        # override (b): corte/denegacion/restriccion aun acotado+reversible:
+        ({"acotado": True, "reversible": True, "naturaleza_restrictiva": True}, True),
+        # override (c): irreversibilidad:
+        ({"acotado": True, "reversible": True, "irreversible_sin_intervencion": True}, True),
+        # Sin gate (no acotado o no reversible): cualquier criterio (a)-(e) -> Si.
+        ({"escala_masiva": True}, True),  # (a) escala
+        ({"naturaleza_restrictiva": True}, True),  # (b) naturaleza restrictiva
+        ({"decision_financiera": True}, True),  # (b) financiera no acotada
+        ({"irreversible_sin_intervencion": True}, True),  # (c) irreversibilidad
+        ({"exposicion_regulatoria": True}, True),  # (d) regulatorio
+        ({"profiling": True}, True),  # (e) profiling
+        ({}, False),  # ningun criterio
+        ({"acotado": True}, False),  # acotado pero NO reversible y sin criterios
+    ],
+)
+def test_derive_alto_impacto_tabla_de_verdad(kw, expected):
+    from dspy_gepa_poc.flujo_intents.fast_gate_rule import derive_alto_impacto
+
+    assert derive_alto_impacto(**kw) is expected
+
+
+def test_derive_alto_impacto_acepta_si_no_strings():
+    from dspy_gepa_poc.flujo_intents.fast_gate_rule import derive_alto_impacto
+
+    # Reusa _is_true: 'si'/'No'/'true'/'1'/bool.
+    assert derive_alto_impacto(escala_masiva="si") is True
+    assert derive_alto_impacto(acotado="Si", reversible="si") is False
+    assert derive_alto_impacto(acotado="si", reversible="si", naturaleza_restrictiva="si") is True
+
+
+def test_derive_alto_impacto_from_row():
+    from dspy_gepa_poc.flujo_intents.fast_gate_rule import derive_alto_impacto_from_row
+
+    row = {"acotado": "si", "reversible": "si", "irreversible_sin_intervencion": "si"}
+    assert derive_alto_impacto_from_row(row) is True
+    assert derive_alto_impacto_from_row({"profiling": "No"}) is False
+
+
 def test_rule_derived_module_exige_preguntas_en_outputs():
     from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
 
