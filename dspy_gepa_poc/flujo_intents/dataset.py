@@ -62,18 +62,42 @@ STAGE_ORDER: tuple[str, ...] = ("intake", "triage_solidez", "triage_factibilidad
 # Todas las columnas de output de la signature de cada etapa (el harness exige que
 # existan en el CSV aunque esten en ignore_in_metric). El label se rellena; el resto
 # queda vacio (razonamiento, p1..p5 son diagnosticos ignorados por la metrica).
+# Sub-hechos objetivos de alto_impacto (D-015a). Los emite el modulo rule_derived_alto
+# y `derive_alto_impacto` deriva alto_impacto de ellos. Solo estan anotados (gold) en un
+# set de demos curado; el resto de filas los trae vacios (la metrica los ignora).
+_FG_SUBHECHO_COLS: list[str] = [
+    "acotado",
+    "reversible",
+    "escala_masiva",
+    "naturaleza_restrictiva",
+    "decision_financiera",
+    "irreversible_sin_intervencion",
+    "exposicion_regulatoria",
+    "profiling",
+]
+
 STAGE_OUTPUT_COLUMNS: dict[str, list[str]] = {
     "intake": ["admision", "razonamiento"],
     "triage_solidez": ["solidez", "razonamiento"],
     "triage_factibilidad": ["factibilidad", "razonamiento"],
-    "fast_gate": ["p1", "p2", "p3", "p4", "p5", "alto_impacto", "clasificacion", "razonamiento"],
+    "fast_gate": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5",
+        "alto_impacto",
+        *_FG_SUBHECHO_COLS,
+        "clasificacion",
+        "razonamiento",
+    ],
 }
 
 # Columnas extra (mas alla de label/razonamiento) que algunas etapas traen en sus
 # variaciones y deben copiarse tal cual al CSV final. fast_gate trae las 5 preguntas
-# Si/No + alto_impacto que el modulo rule_derived usa para derivar el color (D-013).
+# Si/No + alto_impacto (rule_derived, D-013) + los sub-hechos de alto_impacto (D-015a).
 STAGE_EXTRA_COLUMNS: dict[str, list[str]] = {
-    "fast_gate": ["p1", "p2", "p3", "p4", "p5", "alto_impacto"],
+    "fast_gate": ["p1", "p2", "p3", "p4", "p5", "alto_impacto", *_FG_SUBHECHO_COLS],
 }
 
 # Valor "pasa" de cada etapa-gate (lo que permite avanzar a la siguiente).

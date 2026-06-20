@@ -1,0 +1,139 @@
+# flujo-intents | Etapa 4: Fast Gate -- DESCOMPOSICION de alto_impacto (D-015a, Fase 1-2)
+#
+# Arquitectura rule_derived_alto (dos niveles): el LLM NO juzga alto_impacto ni el color;
+# responde las 5 preguntas Si/No + los 8 SUB-HECHOS objetivos de alto impacto. El codigo
+# deriva alto_impacto (derive_alto_impacto, la precedencia del Marco) y luego el color
+# (derive_color). Ambos campos deterministicos y auditables. Ataca el cuello estructural
+# de alto_impacto (D-015a): el pilot mostro que el error es de sub-hechos (reversible/
+# regulatorio mal marcados), no de precedencia -> el few-shot curado los calibra.
+
+case:
+  name: "flujo_intents_fast_gate_descompuesto_v1"
+  title: "flujo-intents | Etapa 4: Fast Gate (alto_impacto descompuesto)"
+  description: "Etapa 4 (Fast Gate): el LLM responde 5 preguntas Si/No + 8 sub-hechos objetivos; alto_impacto y el color se derivan con reglas fijas (rule_derived_alto). Equivale al Fast Gate (§7) del Marco. Trazabilidad en SPEC-102 (D-015a)."
+
+module:
+  type: "rule_derived_alto"
+
+models:
+  cache: false
+  temperature: 0.1
+  max_tokens: 4000
+
+signature:
+  instruction: |
+    Sos la etapa Fast Gate del Marco de Gobierno de IA. La ficha ya paso el triage.
+    NO clasifiques el color ni juzgues "alto impacto" directamente: respondé las 5
+    preguntas de control (Si/No) y los HECHOS objetivos de abajo. Otro componente
+    combina tus respuestas con reglas fijas (cuenta los Si para el color; aplica la
+    precedencia del Marco para el alto impacto). Respondé cada campo con 'si' o 'No'.
+  inputs:
+    - name: "ficha"
+      desc: "Ficha de Intent completa."
+  outputs:
+    - name: "p1"
+      desc: "Si/No: el sistema usa datos personales o datos de clientes."
+    - name: "p2"
+      desc: "Si/No: influye en una decision que afecta directamente a un cliente o empleado."
+    - name: "p3"
+      desc: >-
+        Si/No: usa herramientas o proveedores fuera del catalogo aprobado. Si menciona
+        herramienta externa, API de proveedor o LLM externo aun no homologada, respondé Si
+        AUNQUE diga que sera homologada mas adelante. Intent nuevo sin herramienta
+        mencionada, asumi homologada (No). Si ya esta implementado, Si.
+    - name: "p4"
+      desc: "Si/No: el resultado podria generar riesgo legal o danar la reputacion si falla."
+    - name: "p5"
+      desc: >-
+        Si/No: ejecuta decisiones sin que un humano las revise por caso ANTES de actuar.
+        Supervision solo POSTERIOR (log, auditoria, reporte al dia siguiente, reversion
+        despues) cuenta como Si. No solo si un humano valida cada caso antes de actuar.
+    # --- Sub-hechos objetivos de alto_impacto (la precedencia la aplica el codigo) ---
+    - name: "acotado"
+      desc: >-
+        Si/No: la accion automatica esta ACOTADA a bandas, limites o un catalogo
+        predefinido (sin discrecionalidad fuera de ese marco). Solo describe si esta
+        acotada, no juzgues el impacto.
+    - name: "reversible"
+      desc: >-
+        Si/No: la accion se puede revertir -- el cliente o un equipo puede deshacerla, o
+        hay reversion sistematica posterior. Una transaccion ya ejecutada sobre el cliente
+        (precio cobrado, reintegro pagado, acceso denegado) NO es reversible.
+    - name: "escala_masiva"
+      desc: >-
+        Si/No: la ficha indica que afecta a >=100.000 personas o explicitamente a >=10%
+        de la base. No asumas escala alta solo por haber miles de casos sin ese umbral.
+    - name: "naturaleza_restrictiva"
+      desc: >-
+        Si/No: la accion corta un servicio, deniega un acceso, rechaza una solicitud o
+        restringe un derecho/beneficio de la persona (efecto restrictivo, no favorable).
+    - name: "decision_financiera"
+      desc: "Si/No: la accion es una decision financiera sobre el cliente (credito, precio, limite, cargo, reintegro)."
+    - name: "irreversible_sin_intervencion"
+      desc: >-
+        Si/No: el efecto NO se puede revertir sin intervencion manual posterior (una vez
+        ejecutado queda firme salvo que alguien lo deshaga a mano).
+    - name: "exposicion_regulatoria"
+      desc: >-
+        Si/No: un error en la ACCION del sistema expone a la empresa a una sancion
+        regulatoria DIRECTA. Un mero reporte interno o un insumo que un humano revisa NO
+        expone a sancion directa.
+    - name: "profiling"
+      desc: "Si/No: realiza perfilamiento automatizado de personas (scoring, segmentacion individual, perfil de riesgo)."
+    - name: "razonamiento"
+      desc: "Justificacion breve (1-2 oraciones) de las respuestas."
+    - name: "alto_impacto"
+      desc: "Juicio de alto impacto DERIVADO por la regla a partir de los sub-hechos (no lo decidis vos)."
+    - name: "clasificacion"
+      desc: "Color derivado por la regla a partir de las respuestas (no lo decidis vos)."
+
+data:
+  csv_filename: "flujo_intents_fast_gate.csv"
+  input_columns:
+    - "ficha"
+
+adapter:
+  max_text_length: 4000
+
+optimization:
+  max_metric_calls: 90
+  predictor_type: "cot"
+  match_mode: "exact"
+  metric_feedback: true
+  eval_repeats: 1
+  use_few_shot: true
+  # Few-shot FIJOS curados (D-015a): demos que cubren las distinciones de sub-hechos que
+  # el pilot mostro fallando (acotado+reversible aunque financiera -> No; escala/profiling/
+  # restrictiva -> Si; alto sin P5). Son los unicos casos con sub-hechos gold anotados.
+  few_shot_ids:
+    - "VAR-FG-V03"
+    - "VAR-FG-A01"
+    - "VAR-FG-R07"
+    - "VAR-FG-R04"
+    - "VAR-FG-D02"
+    - "VAR-FG-N01"
+    - "VAR-FG-N03"
+    - "VAR-FG-N05"
+    - "VAR-FG-R14"
+    - "VAR-FG-A16"
+    - "VAR-FG-N12"
+  # La metrica evalua SOLO los campos derivados (alto_impacto + color). Los sub-hechos y
+  # p1..p5 son intermedios (gold solo en los demos curados) -> se ignoran.
+  ignore_in_metric:
+    - "p1"
+    - "p2"
+    - "p3"
+    - "p4"
+    - "p5"
+    - "acotado"
+    - "reversible"
+    - "escala_masiva"
+    - "naturaleza_restrictiva"
+    - "decision_financiera"
+    - "irreversible_sin_intervencion"
+    - "exposicion_regulatoria"
+    - "profiling"
+    - "razonamiento"
+  field_configs:
+    alto_impacto: { mode: "exact" }
+    clasificacion: { mode: "exact" }

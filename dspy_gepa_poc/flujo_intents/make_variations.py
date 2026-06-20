@@ -3695,11 +3695,55 @@ _FG_PREGUNTAS: dict[str, tuple[str, str, str, str, str, str]] = {
     "VAR-FG-D02": ("si", "No", "No", "No", "si", "No"),
 }
 
+# Sub-hechos objetivos de alto_impacto (D-015a). Cada tupla, en el orden de
+# `_FG_SUBHECHO_COLS`: (acotado, reversible, escala_masiva, naturaleza_restrictiva,
+# decision_financiera, irreversible_sin_intervencion, exposicion_regulatoria, profiling).
+# Invariante: derive_alto_impacto(sub_hechos) == alto_impacto de _FG_PREGUNTAS (test en
+# test_flujo_intents). SET CURADO de demos few-shot (Fase 2, D-015a): cubre las
+# distinciones que el pilot mostro fallando (acotado+reversible -> No aunque financiera;
+# escala/profiling/restrictiva -> Si). El resto de casos queda sin anotar (columnas
+# vacias) hasta completar los 100 (la metrica ignora estos campos; el few-shot usa
+# few_shot_ids fijos sobre este set). Orden de columnas en `dataset._FG_SUBHECHO_COLS`.
+_FG_SUBHECHO_COLS: tuple[str, ...] = (
+    "acotado",
+    "reversible",
+    "escala_masiva",
+    "naturaleza_restrictiva",
+    "decision_financiera",
+    "irreversible_sin_intervencion",
+    "exposicion_regulatoria",
+    "profiling",
+)
+_FG_SUBHECHOS: dict[str, tuple[str, str, str, str, str, str, str, str]] = {
+    # Low / alto=No (acotado=No, sin criterios) -- ensena el piso.
+    "VAR-FG-V03": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A01": ("No", "si", "No", "No", "No", "No", "No", "No"),
+    # GATE acotado+reversible -> alto=No AUNQUE sea financiera (la distincion clave).
+    "VAR-FG-R07": ("si", "si", "No", "No", "si", "No", "No", "No"),
+    "VAR-FG-R04": ("si", "si", "No", "No", "si", "No", "No", "No"),
+    "VAR-FG-D02": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    # alto=si por escala (>10% base / >=100k) sin acotamiento.
+    "VAR-FG-N01": ("No", "No", "si", "No", "si", "No", "No", "No"),
+    # alto=si por naturaleza financiera + irreversibilidad (reintegro ejecutado).
+    "VAR-FG-N03": ("No", "No", "No", "No", "si", "si", "No", "No"),
+    # alto=si por naturaleza restrictiva (denegacion de credito) + profiling.
+    "VAR-FG-N05": ("No", "No", "No", "si", "si", "No", "No", "si"),
+    # alto=si por restrictiva + profiling AUNQUE p5=No (rompe colinealidad alto<->Negro).
+    "VAR-FG-R14": ("No", "No", "No", "si", "si", "No", "No", "si"),
+    # alto=si por escala + profiling aunque el sistema no actue (publica scores), p5=No.
+    "VAR-FG-A16": ("No", "si", "si", "No", "No", "No", "No", "si"),
+    # alto=si por restrictiva (corte de beneficio al empleado).
+    "VAR-FG-N12": ("No", "No", "No", "si", "No", "No", "No", "No"),
+}
+
 for _c in FAST_GATE:
     if _c["id"] in _FG_RAZONAMIENTO:
         _c["razonamiento"] = _FG_RAZONAMIENTO[_c["id"]]
     if _c["id"] in _FG_PREGUNTAS:
         for _col, _val in zip(_FG_COLS_EXTRA, _FG_PREGUNTAS[_c["id"]], strict=True):
+            _c[_col] = _val
+    if _c["id"] in _FG_SUBHECHOS:
+        for _col, _val in zip(_FG_SUBHECHO_COLS, _FG_SUBHECHOS[_c["id"]], strict=True):
             _c[_col] = _val
 
 
@@ -3715,8 +3759,9 @@ def write_variations(out_dir: Path) -> dict[str, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
     for stage, cases in STAGE_CASES.items():
-        # fast_gate agrega las 5 preguntas + alto_impacto (arquitectura rule_derived).
-        extra = list(_FG_COLS_EXTRA) if stage == "fast_gate" else []
+        # fast_gate agrega las 5 preguntas + alto_impacto (rule_derived, D-013) + los
+        # sub-hechos de alto_impacto (rule_derived_alto, D-015a; vacios salvo demos curados).
+        extra = list(_FG_COLS_EXTRA) + list(_FG_SUBHECHO_COLS) if stage == "fast_gate" else []
         header = [*_FICHA_COLS, *extra, "label", "razonamiento", "split"]
         path = out_dir / f"flujo_intents_{stage}_var.csv"
         with open(path, "w", encoding="utf-8", newline="") as f:

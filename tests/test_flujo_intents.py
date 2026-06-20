@@ -477,6 +477,22 @@ def test_rule_derived_alto_module_gate_acotado_reversible():
     assert pred.clasificacion == "Rojo"
 
 
+def test_dataset_fast_gate_subhechos_consistentes_con_alto_impacto():
+    # Invariante de rule_derived_alto (D-015a): donde hay sub-hechos anotados (demos
+    # curados), derive_alto_impacto(sub_hechos) reproduce el alto_impacto gold.
+    from dspy_gepa_poc.flujo_intents.fast_gate_rule import (
+        ALTO_IMPACTO_SUBHECHO_FIELDS,
+        derive_alto_impacto_from_row,
+    )
+
+    rows = _load_stage_csv("fast_gate")
+    annotated = [r for r in rows if any(r.get(f, "").strip() for f in ALTO_IMPACTO_SUBHECHO_FIELDS)]
+    assert annotated, "no hay filas con sub-hechos anotados"
+    for r in annotated:
+        derived = "si" if derive_alto_impacto_from_row(r) else "No"
+        assert derived.lower() == r["alto_impacto"].strip().lower(), r["case_id"]
+
+
 def test_dataset_fast_gate_color_consistente_con_preguntas():
     # Invariante de la arquitectura rule_derived: en todo el dataset de fast_gate, el
     # color gold se reproduce contando las P1..P5 + alto_impacto anotadas.
