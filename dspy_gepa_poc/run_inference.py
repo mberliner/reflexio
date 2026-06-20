@@ -9,6 +9,25 @@ from dspy_gepa_poc import DynamicModuleFactory, LLMConfig
 from shared.display import print_header
 
 
+def build_inference_module(raw_config: dict) -> dspy.Module:
+    """Reconstruye el modulo de inferencia respetando `module.type` del config.
+
+    Para `rule_derived` (Fast Gate, D-013) usa `create_rule_derived_module`: el LLM
+    emite p1..p5 + alto_impacto y `derive_color` calcula `clasificacion`. El modulo
+    generico (`create_module`) NO deriva el color -> en produccion `clasificacion`
+    saldria vacia/N/A y se perderia el determinismo del Marco (D-015b).
+    """
+    sig_config = raw_config["signature"]
+    module_type = raw_config.get("module", {}).get("type", "dynamic")
+    predictor_type = raw_config.get("optimization", {}).get("predictor_type", "cot")
+
+    if module_type == "rule_derived":
+        return DynamicModuleFactory.create_rule_derived_module(
+            sig_config, predictor_type=predictor_type
+        )
+    return DynamicModuleFactory.create_module(sig_config, predictor_type=predictor_type)
+
+
 def run_production_inference(run_dir_path: str):
     # 1. Cargar Variables de Entorno (API Keys)
     project_dir = Path(__file__).parent
@@ -44,12 +63,11 @@ def run_production_inference(run_dir_path: str):
     print(f"Modelo cargado: {task_config.model}")
 
     # 4. Reconstruir la Arquitectura del Módulo
-    # Usamos la misma 'Signature' definida en el YAML
-    print("Reconstruyendo arquitectura del módulo...")
-    predictor_type = raw_config.get("optimization", {}).get("predictor_type", "cot")
-    module = DynamicModuleFactory.create_module(
-        raw_config["signature"], predictor_type=predictor_type
-    )
+    # Respetamos module.type: 'rule_derived' deriva el color con la regla del Marco;
+    # 'dynamic' usa el predictor directo (D-015b).
+    module_type = raw_config.get("module", {}).get("type", "dynamic")
+    print(f"Reconstruyendo arquitectura del módulo (type: {module_type})...")
+    module = build_inference_module(raw_config)
 
     # 5. CARGAR la "Inteligencia Congelada" (El JSON Optimizado)
     # Aquí es donde el modelo barato se vuelve inteligente
