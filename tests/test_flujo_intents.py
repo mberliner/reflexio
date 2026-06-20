@@ -343,3 +343,20 @@ def test_flujo_rojo_recomendacion_con_nivel(flujo_cfg):
     )
     assert res["aprobacion"]["decision"] == "recomendacion"
     assert "Legal" in res["aprobacion"]["nivel_requerido"]
+
+
+def test_fixfs_config_few_shot_ids_existen_en_train():
+    # El config de few-shot FIJOS (D-017) pina demos por case_id. Invariante: todos los
+    # few_shot_ids deben existir en el dataset y pertenecer al split train (LabeledFewShot
+    # y la inyeccion fija solo pueden usar el trainset como demos).
+    import yaml
+
+    cfg_path = get_dspy_paths().configs / "flujo_intents_fast_gate_rule_fixfs_v1.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    ids = cfg["optimization"]["few_shot_ids"]
+    assert len(ids) == len(set(ids)), "few_shot_ids con duplicados"
+
+    rows = _load_stage_csv("fast_gate")
+    train_ids = {r["case_id"] for r in rows if r["split"] == "train"}
+    faltan = [cid for cid in ids if cid not in train_ids]
+    assert not faltan, f"few_shot_ids ausentes del split train: {faltan}"

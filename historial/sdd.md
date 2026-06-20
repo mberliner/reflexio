@@ -30,7 +30,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-015 | Residuales del fast_gate determinista (post D-013): (a) **alto_impacto es el cuello** (~80% sobre el test, varianza alta 56-80% entre corridas; sobre-escala a Negro en casos acotados/reversibles) -> medir con N seeds y/o curar demos few-shot de casos limite; (b) **`run_inference.py` usa `create_module` generico**, no `rule_derived` -> en produccion no derivaria el color; (c) el **gold de `alto_impacto` del test es aproximado** (=Negro) para casos P5=No (no afecta el color, si la metrica del campo); (d) GEPA con VAL chico no aporta -> evaluar VAL mayor si se busca exprimir GEPA (**actualizado 2026-06-18**: val ampliado a 22 sigue en techo 86-91%; GEPA+gpt-5 N=3 elige baseline 3/3 con budget completo -> el cuello es senal en val, no budget; pendiente val ~40-50 con casos borde donde el baseline falle) | Cierre de D-013 (2026-06-16) | (a)(b)(c) Abiertas; **(d) cerrada 2026-06-18** — VAL ampliado a 46 casos borde, refutado a N=3 con gpt-5-mini Y gpt-4.1-mini (ambos RUIDO[SOBREAJUSTE]): el VAL sigue en techo 89-93% con los dos modelos y GEPA no generaliza (gap val-test +10/+14). El cuello es la REPRESENTATIVIDAD val-vs-test (los casos borde sinteticos no capturan la dificultad del TEST), no el tamaño/budget/modelo. Dataset ampliado conservado como banco de medicion |
 | D-016 | Cuelgue al final de la corrida con reasoning models (gpt-5-mini/gpt-5): `_save_predictions` RE-EJECUTABA el modelo sobre test+val (52 llamadas reasoning extra), lo que ademas era INFIEL (LLM no determinista -> el dump != predicciones que dieron el score) y bloqueaba el registro (corria antes de run.json+CSV) | Cuelgue corrida fast_gate rule_derived + gpt-5 (2026-06-17) | Resuelta 2026-06-18 — causa raiz: el dump re-ejecutaba. Fix: `_eval_repeated` captura `EvaluationResult.results` (dspy 3.x) y `_save_predictions` vuelca las predicciones REALES del eval (sin re-llamar) -> fiel al score y sin llamadas extra. Defensas adicionales: `timeout` configurable (`LLMConfig`, default 600s/`LLM_TIMEOUT`) y dump movido al final de `run()` best-effort. Tests en `test_shared_llm.py`; CI PASO (503). NOTA: los colores por-ficha de corridas previas venian del dump re-ejecutado (no del eval real); desde ahora son fieles |
 | D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
-| D-017 | Linea de investigacion (fast_gate): curar un VAL **representativo del TEST** para que GEPA tenga gradiente real. Cierre de D-015d (2026-06-18) probo que ampliar el VAL con casos borde sinteticos NO destraba GEPA: el VAL queda en techo 89-93% con gpt-5-mini y gpt-4.1-mini porque los casos son dificiles *conceptualmente* pero el LLM los resuelve; el cuello es la REPRESENTATIVIDAD (gap VAL-TEST +10/+14 pp), no tamaño/budget/modelo. Hipotesis a probar: un VAL sembrado con **casos donde el modelo realmente falla** (de la dificultad del TEST) si daria gradiente. Vias baratas identificadas: (i) usar los **casos testigo** (witness AI Act + AR, `flujo_intents_fast_gate_witness.csv`) o errores reales del TEST como semilla; (ii) generar variaciones de los TC-xx que el baseline falle. Criterio de exito: baseline VAL se acerca al baseline TEST (gap < ~5 pp) y GEPA mejora la robustez TEST fuera del ruido (protocolo N seeds). Si tampoco aporta, confirma techo del modelo -> baseline sin GEPA es definitivo | Cierre de D-015d (2026-06-18) | Abierta — linea de investigacion, no bloqueante |
+| D-017 | Linea de investigacion (fast_gate): curar un VAL **representativo del TEST** para que GEPA tenga gradiente real. Hipotesis: un VAL sembrado con casos donde el modelo realmente falla (de la dificultad del TEST) daria gradiente | Cierre de D-015d (2026-06-18) | **Refutada 2026-06-19** — se ejecuto el ciclo completo: diagnostico por-caso (`diagnose_rule_baseline.py`), 14 casos `VAR-FG-T01..T14` calibrados a las 5 confusiones del TEST con textura rica y fichas NEUTRALES (se corrigio una fuga de juicio en `supuesto_riesgo`). Gate: el gap de color bajo +22,6 -> +14,1 pp (no cerro <5; residuo = confusion Rojo->Negro). GEPA N=3 con DOS modelos (gpt-5* retirado; nuevos gpt-5.4*): gpt-4.1-mini RUIDO[SOBREAJUSTE][TECHO][ESTABILIZA] (Opt-Base -1,4; Rob TEST 80,0), gpt-5.4-mini SIN REF[SOBREAJUSTE][TECHO] (Opt-Base -2,5; Rob TEST 77,8). Causa raiz nueva: el VAL es representativo en COLOR pero GEPA optimiza la metrica COMBINADA (alto_impacto+color), saturada en techo (87-89%) porque alto_impacto se acierta ~90% y diluye el cuello. El modelo mas nuevo (gpt-5.4-mini) NO mejora -> techo del enfoque, no del modelo. Mejor sistema sigue siendo baseline sin GEPA. Dataset (val 60) y script de diagnostico conservados. Sub-linea abierta: probar metrica solo-color | Cierre de D-015d (2026-06-18) | **Refutada/cerrada 2026-06-19** (la sub-linea "metrica solo-color" queda como nota, no bloqueante) |
 
 ## Deuda resuelta
 
@@ -44,6 +44,134 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-06-19 — fast_gate: VAL calibrado al diagnostico del TEST (D-017) + precios gpt-5.4
+
+**D-017 refutada.** Se ejecuto la hipotesis pendiente: curar un VAL *representativo
+del TEST* (no casos borde sinteticos limpios, sino calibrados a donde el modelo falla).
+
+**Ciclo:**
+1. **Diagnostico por-caso** (`diagnose_rule_baseline.py`, nuevo): baseline gpt-4.1-mini
+   por caso sobre TEST -> gap VAL-TEST **+22,6 pp** (VAL 85,9% color / TEST 63,3%) y la
+   causa por juicio: subcuenta **p2** (insumo que un humano usa pero el sistema influye),
+   **p5** (supervision solo posterior) y **alto_impacto** (acotado+reversible vs escala/
+   denegacion).
+2. **VAL representativo:** 14 casos `VAR-FG-T01..T14` (todos val) calibrados a esas 5
+   confusiones, con textura rica (metricas, sponsor, restricciones, escala) y **fichas
+   neutrales**. Se corrigio una **fuga de juicio**: la 1a version escribia "alto_impacto=Si
+   (criterio a)" en `supuesto_riesgo` -> el modelo acertaba leyendo la respuesta. VAL 46 -> 60.
+3. **Gate:** gap de color **+22,6 -> +14,1 pp** (VAL 80,8% / TEST 66,7%), densidad de
+   error 14% -> 19%, fallando por las MISMAS causas que el TEST. No cerro <5 pp (residuo
+   = Rojo->Negro, dificil de fabricar). Se decidio correr GEPA igual (VAL mas representativo
+   logrado).
+4. **GEPA N=3, DOS modelos** (gpt-5-mini/gpt-5 retirados del endpoint; disponibles los
+   nuevos gpt-5.4*):
+
+  | task / reflection      | Baseline VAL | Opt VAL (Opt-Base) | Robustez TEST       | gap  | veredicto |
+  |------------------------|--------------|--------------------|---------------------|------|-----------|
+  | gpt-4.1-mini / gpt-4o  | 88,6%        | 87,2% (**-1,4**)   | 80,0% [75,0..83,3]  | +7,2 | RUIDO [SOBREAJUSTE] [TECHO] [ESTABILIZA] |
+  | gpt-5.4-mini / gpt-5.4 | 87,5%        | 85,0% (**-2,5**)   | 77,8% [73,3..80,0]  | +7,2 | SIN REF [SOBREAJUSTE] [TECHO] |
+
+  Run-ids: gpt-4.1-mini `..._{f14bd3e7,d6a0efd9,b37238b8}`; gpt-5.4 `..._{20552ed9,8c482ea0,59cc8058}`.
+
+- **Causa raiz nueva (la leccion):** el VAL es representativo en COLOR, pero GEPA optimiza
+  la metrica COMBINADA `alto_impacto + clasificacion`, que sigue en techo (87-89%) porque
+  `alto_impacto` se acierta ~90% y diluye el cuello del color. **El cuello debe estar en la
+  metrica que GEPA ve, no en una proyeccion de ella.** Sub-linea abierta: metrica solo-color.
+- **El modelo mas nuevo no cambia el techo:** gpt-5.4-mini (mas potente) NO supera a
+  gpt-4.1-mini en robustez TEST (77,8 vs 80,0; rangos solapan). Techo del enfoque, no del
+  modelo. Unico efecto positivo: `ESTABILIZA` (rango robustez 15,5 -> 8,3 con gpt-4.1-mini).
+- **Cierre de la linea (D-015d + D-017):** ni ampliar, ni curar al diagnostico, ni cambiar
+  de modelo destraba GEPA en fast_gate. Mejor sistema = baseline sin GEPA.
+
+**Precios gpt-5.4 en el leaderboard.** Ya estaban en `DEFAULT_PRICING` (`roi_calculator.py`,
+SSOT): gpt-5.4 $2,50/$15,00, gpt-5.4-mini $0,75/$4,50; el leaderboard ya los usa (lookup
+verificado, sin fallback). Se sincronizo la tabla DUPLICADA de `docs/ANALISIS_UTILIDADES.md`
+(estaba en 4 modelos) con el codigo y se anoto el SSOT (avance parcial de D-009).
+
+[SDD-Check]
+- Spec afectada: `SPEC-102-flujo-intents` (Fast Gate rule_derived; refuta/cierra D-017).
+- Includes: `diagnose_rule_baseline.py` (nuevo) + 14 casos `VAR-FG-T01..T14` en
+  `make_variations.py` con fichas neutrales + textura rica + regeneracion del dataset
+  (val 46 -> 60, TEST intacto); sync de precios gpt-5.4 en `docs/ANALISIS_UTILIDADES.md`.
+- Lenguaje normativo: N/A (experimento + doc, no nueva capacidad normativa).
+- [NEEDS CLARIFICATION]: ninguno.
+- Deuda arrastrada: D-001, D-005, D-006, D-008, D-009 (avanza parcial: precios sync),
+  D-010, D-011, D-014, D-015(a)(b)(c). D-017 refutada/cerrada (sub-linea metrica solo-color
+  como nota no bloqueante).
+
+#### Anexo (mismo dia) — few-shot FIJOS: la dieta de demos es model-dependiente
+
+Tras refutar D-017, se ataco la 4a palanca: la composicion del few-shot. Hallazgo de
+partida: `LabeledFewShot(k=8)` usa `Random(0)` (seed FIJO) -> los 8 demos son
+deterministas, y resultaron una **dieta sesgada** (4 Negro / 1 Rojo / 1 Amarillo /
+0 Rojo-acotado): el modelo NUNCA veia un demo de las distinciones que falla.
+
+**Intervencion:** nuevo mecanismo `few_shot_ids` (config + `reflexio_declarativa`):
+pina demos explicitos por `case_id` en vez de samplear. Set fijo BALANCEADO 2/2/2/2
+(`V03,V13,D01,D02,R01,R04,N01,N02`) que cubre las distinciones: D01 (Amarillo p2-sutil)
+y D02 (Amarillo p5-posterior) son demos ensenantes NUEVOS (train 38 -> 40), R04 (alto=No)
+vs N01/N02 (alto=Si) ensena el contraste de `alto_impacto`.
+
+**Resultado (color test, repeats=3, fijo vs sampleado, mismo dataset):**
+
+  | Task model    | Sampleado | Fijo curado | delta  | nota |
+  |---------------|-----------|-------------|--------|------|
+  | gpt-5.4-mini  | 81,1%     | **82,2%**   | +1,1   | ruido; estabiliza (5 vs 8 inestables) |
+  | gpt-4.1-mini  | **77,8%** | 70,0%       | **-7,8** | el modelo debil EMPEORA con demos de borde |
+
+- **No confirma la hipotesis.** El set fijo balanceado NO supera al sampleo de forma
+  robusta; con el modelo debil lo EMPEORA 7,8 pp. Causa: los demos D01/D02 son casos de
+  BORDE/sutiles, y (cuadro 2x2, secciones 8 y 11) **los modelos chicos prefieren demos
+  prototipicos; los de borde los confunden** (Amarillo->Verde subio a 9, Rojo->Negro a 8).
+  El modelo capaz (gpt-5.4-mini) los aprovecha apenas (+1,1, ruido).
+- **Lo valido:** la dieta de demos importa y es MODEL-DEPENDIENTE -- no hay set
+  universalmente mejor. `few_shot_ids` se conserva como feature (reproducibilidad +
+  control de cobertura). El cuello real es `alto_impacto` (juicio subjetivo, Negro<->Rojo),
+  irreducible por few-shot. Techo ~82% confirmado estructural.
+- **Decision (usuario):** documentar y cerrar; mantener `few_shot_ids`. El cuello
+  `alto_impacto` queda como linea aparte (no se abre deuda nueva: es el mismo techo de
+  modelo ya registrado en D-015a).
+
+[SDD-Check anexo]
+- Spec afectada: `SPEC-102-flujo-intents` (mecanismo few_shot_ids para fast_gate).
+- Includes: `few_shot_ids` en `config_schema.py` + `reflexio_declarativa.py` (+ test),
+  2 demos `VAR-FG-D01/D02` en `make_variations.py` (train 38->40), config
+  `flujo_intents_fast_gate_rule_fixfs_v1.yaml`.
+- Lenguaje normativo: N/A. [NEEDS CLARIFICATION]: ninguno.
+- Deuda: sin cambios (el cuello alto_impacto = D-015a, ya abierta).
+
+#### Anexo 2 (mismo dia) — alto_impacto: descripcion suma cero + benchmark gpt-5.4
+
+Se ataco el cuello real (`alto_impacto`, juicio subjetivo Negro<->Rojo) por la via barata
+(afinar descripcion) antes de la descomposicion.
+
+- **Diagnostico aislado** (`diagnose_rule_baseline.py` extendido para reportar el campo
+  sobre casos P5=Si): gpt-5.4-mini N=3 da **87,2%** (34/39), error asimetrico (4 sub-escala
+  / 1 sobre-escala). Causa (dump del razonamiento): aplica de mas el FILTRO de acotamiento;
+  no respeta la excepcion (escala>=100k, corte/denegacion, irreversibilidad dominan). Es
+  error de PRECEDENCIA, no de hecho.
+- **Intervencion descripcion (FALLIDA):** reescribir invirtiendo la logica (overrides
+  primero). Resultado: alto_impacto **71,8%** (de 87,2), error invertido (sobre-escala
+  10, antes 1); color 88,9 -> 76,7. **SUMA CERO** (patron email_urgency, seccion 2). El
+  juicio de precedencia no se calibra por prompt. Descripcion REVERTIDA (git checkout).
+- **Benchmark gpt-5.4 (contraste, leaderboard refrescado):** mismo modelo, GEPA N=3:
+  `cv_extraction_v3` 49,8 -> 97,8 (**+48 pp**, GEPA brilla); `email_urgency` 63 -> 73
+  (varianza enorme [60..100]); `cv_triage_v2` baseline 97,9 (techo). El mismo modelo que
+  sube extraccion +48 no mueve fast_gate -> **el techo de fast_gate es de la TAREA**
+  (alto_impacto subjetivo), no del modelo/setup. 9 filas nuevas en el CSV con gpt-5.4.
+- **Rumbo (decision usuario):** documentar+commit (a) y luego encarar la DESCOMPOSICION
+  de alto_impacto (b): el LLM responde sub-hechos objetivos y una funcion pura aplica la
+  precedencia (patron rule_derived un nivel mas profundo). Unica palanca no probada.
+
+[SDD-Check anexo 2]
+- Spec afectada: `SPEC-102-flujo-intents` (diagnostico de alto_impacto; benchmark de
+  referencia gpt-5.4).
+- Includes: extension de `diagnose_rule_baseline.py` (reporte de alto_impacto por P5=Si);
+  9 corridas gpt-5.4 registradas en `metricas_optimizacion.csv` (email_urgency, cv_triage_v2,
+  cv_extraction_v3).
+- Lenguaje normativo: N/A. [NEEDS CLARIFICATION]: ninguno.
+- Deuda: D-015a (alto_impacto) sigue abierta; la descomposicion (b) la atacara.
 
 ### 2026-06-18 — fast_gate: VAL ampliado a 46 casos borde (D-015d) + 2 arreglos de ambiente
 

@@ -13,7 +13,11 @@ from shared.validation import BaseConfigValidator, CSVValidator
 OPTIONAL_OPTIMIZATION_FIELDS = {
     "predictor_type": "str - 'cot' o 'predict' (default: 'cot')",
     "use_few_shot": "bool - Habilitar few-shot learning",
-    "few_shot_count": "int - Numero de ejemplos few-shot",
+    "few_shot_count": "int - Numero de ejemplos few-shot (sampleo LabeledFewShot)",
+    "few_shot_ids": (
+        "list - case_ids del train a fijar como demos (en orden), en vez de samplear. "
+        "Garantiza cobertura de clases/distinciones. Requiere use_few_shot=True."
+    ),
     "ignore_in_metric": "list - Campos a ignorar en evaluacion",
     "auto_budget": "str - 'light', 'medium', 'heavy'",
     "match_mode": "str - 'exact', 'normalized', 'fuzzy' (default: 'exact')",

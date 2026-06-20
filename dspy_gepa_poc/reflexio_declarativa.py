@@ -298,12 +298,34 @@ class ReflexioDeclarativa:
             log_ok(f"rule_derived module created with outputs: {output_fields}")
 
             if opt_config.get("use_few_shot", False):
-                k = opt_config.get("few_shot_count", 3)
-                log_info(f"Injecting {k} few-shot examples from trainset into the student.")
-                from dspy.teleprompt import LabeledFewShot
+                few_shot_ids = opt_config.get("few_shot_ids")
+                if few_shot_ids:
+                    # Few-shot FIJOS curados: en vez de samplear k del train con
+                    # LabeledFewShot (Random(0), dieta sesgada por azar), se pinan demos
+                    # explicitos por case_id. Garantiza cobertura de clases y de las
+                    # distinciones del cuello (p2 sutil, p5 acotado/reversible,
+                    # alto_impacto). Mismo orden que la lista. Ver D-017 (few-shot fijos).
+                    by_id = {getattr(ex, "case_id", None): ex for ex in self.trainset}
+                    missing = [cid for cid in few_shot_ids if cid not in by_id]
+                    if missing:
+                        raise ConfigurationError(
+                            f"few_shot_ids no encontrados en el trainset (split=train): {missing}"
+                        )
+                    demos = [by_id[cid] for cid in few_shot_ids]
+                    self.student = self.student.reset_copy()
+                    for predictor in self.student.predictors():
+                        predictor.demos = demos
+                    log_info(
+                        f"Injecting {len(demos)} FIXED few-shot demos (few_shot_ids): "
+                        f"{', '.join(few_shot_ids)}"
+                    )
+                else:
+                    k = opt_config.get("few_shot_count", 3)
+                    log_info(f"Injecting {k} few-shot examples from trainset into the student.")
+                    from dspy.teleprompt import LabeledFewShot
 
-                teleprompter = LabeledFewShot(k=k)
-                self.student = teleprompter.compile(self.student, trainset=self.trainset)
+                    teleprompter = LabeledFewShot(k=k)
+                    self.student = teleprompter.compile(self.student, trainset=self.trainset)
 
         elif module_type == "pipeline":
             stages = self.config.raw_config.get("stages")

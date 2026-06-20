@@ -727,10 +727,122 @@ Lecciones:
   dataset ampliado se conserva como banco de medición (más resolución: cada error pesa
   2,2 pp en vez de 4,5).
 
+**Un VAL CALIBRADO al diagnóstico del TEST tampoco destraba GEPA (2026-06-19, D-017).**
+D-015d dejó la hipótesis: si el VAL se siembra con casos *de la dificultad real del TEST*
+(donde el modelo falla), GEPA tendría gradiente. Se ejecutó el ciclo completo:
+1. **Diagnóstico por caso** (`diagnose_rule_baseline.py`, nuevo): baseline gpt-4.1-mini
+   sobre TEST por caso reveló el gap VAL-TEST en **+22,6 pp** (VAL 85,9% color vs TEST
+   63,3%) y, lo valioso, la causa por juicio: el modelo **subcuenta p2** ("influye en la
+   decisión" cuando un humano produce el insumo pero el sistema *influye*), **p5**
+   (supervisión sólo posterior la lee como revisión por caso) y **alto_impacto**
+   (sobre/sub-escala en acotado+reversible vs escala/denegación).
+2. **VAL representativo:** 14 casos nuevos (`VAR-FG-T01..T14`) calibrados a esas 5
+   confusiones, con **textura rica** (métricas numéricas, sponsor nombrado, múltiples
+   restricciones, escala concreta) y **fichas neutrales** — error de autoría corregido:
+   una primera versión filtraba el juicio en el campo `supuesto_riesgo` ("alto_impacto=Sí,
+   criterio a") y el modelo acertaba sin esfuerzo. Las fichas finales describen sólo el
+   escenario de negocio; el modelo debe *inferir* p1..p5/alto.
+3. **Gate:** el VAL nuevo bajó el gap de color a **+14,1 pp** (VAL 80,8% vs TEST 66,7%),
+   densidad de error 14% -> 19%, fallando por las MISMAS causas que el TEST. No cerró
+   <5 pp: el residuo es la confusión **Rojo->Negro** (alto sobre-escalado), difícil de
+   fabricar de forma confiable (mis casos Rojo el modelo los SUB-escala, no los sobre).
+4. **GEPA N=3, dos modelos** (gpt-5/gpt-5-mini retirados del endpoint; nuevos gpt-5.4*):
+
+  | Task / Reflection | Baseline VAL | Opt VAL (Opt-Base) | Robustez TEST | gap VAL-TEST | veredicto |
+  |---|---|---|---|---|---|
+  | gpt-4.1-mini / gpt-4o | 88,6% | 87,2% (**-1,4**) | 80,0% [75..83,3] | +7,2 | RUIDO [SOBREAJUSTE] [TECHO] [ESTABILIZA] |
+  | gpt-5.4-mini / gpt-5.4 | 87,5% | 85,0% (**-2,5**) | 77,8% [73,3..80] | +7,2 | SIN REF [SOBREAJUSTE] [TECHO] |
+
+Lecciones (refinan y NO contradicen D-015d):
+- **Hacer el VAL representativo en el OBJETIVO no basta si la MÉTRICA promedia el
+  objetivo con un campo saturado.** Calibré el VAL en *color* (gap +14 pp logrado), pero
+  GEPA optimiza la métrica **combinada `alto_impacto + clasificacion`**, y `alto_impacto`
+  se acierta ~90% -> el baseline COMBINADO sigue en techo (87-89%) y diluye el cuello del
+  color. **El cuello debe estar en la métrica que GEPA ve, no sólo en una proyección de
+  ella.** Palanca futura: métrica sólo-color (trasladaría el cuello a GEPA), con el
+  trade-off de perder presión sobre `alto_impacto` (ver D-013, donde sólo-objetivo dio
+  ruido). Línea abierta en D-017.
+- **El modelo más nuevo/potente no cambió el techo:** gpt-5.4-mini (más capaz) NO superó
+  a gpt-4.1-mini en robustez TEST (77,8% vs 80,0%; rangos solapan). El techo es del
+  ENFOQUE (rule_derived end-to-end + few-shot sobre un cuello subjetivo de alto_impacto),
+  no del modelo. Coherente con la sección 8: si el baseline está saturado, GEPA y "subir
+  de modelo" no mueven la aguja.
+- **GEPA sobreajusta el VAL en AMBOS modelos** (Opt-Base -1,4 y -2,5; gap val-test +7,2
+  idéntico): aun con el VAL más representativo logrado, el optimizador baja el val (no
+  hay gradiente real) y el gap a TEST persiste. Refuerza "medir robustez en TEST, nunca
+  el score de VAL".
+- **Único efecto positivo, otra vez `ESTABILIZA`:** con gpt-4.1-mini el rango de robustez
+  cayó 15,5 -> 8,3 vs la referencia previa — el VAL representativo reduce la varianza
+  entre seeds aunque no suba la media. Es lo máximo que aporta curar el VAL acá.
+- Cierre definitivo de la línea de investigación (D-015d + D-017): **en fast_gate, ni
+  ampliar, ni curar al diagnóstico, ni cambiar de modelo destraba GEPA; el mejor sistema
+  es baseline sin GEPA.** El cuello es estructural: `alto_impacto` es un juicio subjetivo
+  con techo de modelo y, además, satura la métrica combinada tapando el gradiente.
+
+**La 4a palanca — la dieta de few-shot — importa pero es MODEL-DEPENDIENTE (2026-06-19).**
+Quedaba probar la composición del few-shot. Hallazgo de partida: `LabeledFewShot(k=8)`
+usa `random.Random(0)` (seed **fijo**) → los 8 demos son deterministas y resultaron una
+**dieta sesgada** (4 Negro / 1 Rojo / 1 Amarillo / **0 Rojo-acotado**): el modelo nunca
+veía un demo de las distinciones que falla. Se implementó `few_shot_ids` (pinar demos por
+`case_id`) y se curó un set balanceado 2/2/2/2 que cubre las distinciones (incl. 2 demos
+enseñantes nuevos: Amarillo p2-sutil y p5-posterior). Resultado (color test, repeats=3):
+
+| Task model | Sampleado | Fijo curado | Δ |
+|---|---|---|---|
+| gpt-5.4-mini | 81,1% | 82,2% | +1,1 (ruido; estabiliza 5 vs 8 inestables) |
+| gpt-4.1-mini | 77,8% | 70,0% | **−7,8** (el modelo débil EMPEORA) |
+
+- **No hay set de demos universalmente mejor.** El set balanceado con demos de **borde**
+  (p2-sutil, p5-posterior) ayuda apenas al modelo capaz (+1,1, ruido) pero **perjudica al
+  modelo débil** (−7,8): confirma y refina la regla de las secciones 8 y 11 — *los modelos
+  chicos generalizan mejor con demos prototípicos (centro de banda); los de borde los
+  confunden* (con gpt-4.1-mini subieron Amarillo→Verde a 9 y Rojo→Negro a 8). Lo contrario
+  para modelos capaces.
+- **`few_shot_ids` se conserva como feature** (reproducibilidad + control de cobertura de
+  clases/distinciones), pero curar demos no es una palanca de mejora robusta acá.
+- **El cuello irreducible es `alto_impacto`** (juicio subjetivo, confusión Negro↔Rojo):
+  ningún few-shot lo cierra porque no es un problema de conteo sino de criterio con techo
+  de modelo. Cierra el ciclo de las 4 palancas (VAL, GEPA, modelo, demos): **el techo
+  ~82% de fast_gate es estructural.**
+
+**Atacar `alto_impacto` con la descripción es de SUMA CERO (2026-06-19).** Diagnóstico
+aislado del campo (`diagnose_rule_baseline.py` extendido) sobre los casos P5=Sí (donde
+decide Negro vs Rojo), gpt-5.4-mini N=3: **87,2%** (34/39), con error **asimétrico**:
+4 sub-escala (alto sí→no, Negro→Rojo) vs 1 sobre-escala. El dump del razonamiento mostró
+la causa: el modelo aplica **de más el filtro de acotamiento** (acotado+reversible → No)
+y no respeta su excepción (escala ≥100k, corte/denegación, irreversibilidad **dominan**).
+Es un error de **precedencia**, no de hecho. Intervención: reescribir la descripción
+invirtiendo la lógica (overrides primero, "Sí aunque sea acotado/reversible", con
+ejemplos de los casos que fallaban). Resultado: `alto_impacto` **bajó a 71,8%** y el
+error se **invirtió** (sobre-escala 10, antes 1) — color test 88,9% → 76,7%. Mover el
+énfasis solo traslada el error de un lado al otro: el patrón **suma cero** de email_urgency
+(§2). **Lección: un juicio de precedencia entre criterios no se calibra por prompt;** la
+palanca que queda es **descomponerlo** (sub-hechos objetivos + una función que aplique la
+precedencia — el patrón `rule_derived` un nivel más profundo). Descripción revertida.
+
+**Contraste que cierra el diagnóstico: el techo de fast_gate es de la TAREA, no del
+modelo (benchmark gpt-5.4, 2026-06-19).** Con el MISMO gpt-5.4-mini, GEPA N=3 sobre tres
+casos de referencia (leaderboard refrescado tras el retiro de gpt-5/gpt-5-mini):
+
+| Caso | Baseline | Optimizado | Robustez | GEPA aporta |
+|---|---|---|---|---|
+| `cv_extraction_v3` (verdad objetiva) | 49,8% | 98,7% | **97,8%** | **+48 pp** |
+| `email_urgency` (subjetivo) | 63,3% | 70,0% | 73,3% [60..100] | +10 media, varianza enorme |
+| `cv_triage_v2` | 97,9% | 91,7% | 93,8% | no (baseline saturado) |
+| `fast_gate` (alto_impacto subjetivo) | ~88% | ~87% | ~82% | no (techo) |
+
+El mismo modelo que sube extracción **+48 pp** no mueve fast_gate: la diferencia es la
+**naturaleza de la tarea** (verdad objetiva verificable vs juicio subjetivo de
+precedencia), exactamente como predice la sección 8 y [[gpt5mini_clasificacion_subjetiva]].
+Confirma que invertir en fast_gate vía prompt/GEPA/modelo no tiene retorno; la única
+palanca con sentido es data-centric / arquitectónica (descomponer el juicio).
+
 ### Archivos relacionados
 
 - Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`
 - Dataset y generador: `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv`, `dspy_gepa_poc/flujo_intents/make_variations.py`
 - Set testigo externo (AI Act + AR) y su builder: `dspy_gepa_poc/datasets/flujo_intents_fast_gate_witness.csv`, `dspy_gepa_poc/scripts/build_witness.py`
-- Scripts: `dspy_gepa_poc/scripts/baseline_only.py` (eval sin GEPA, N seeds), `dspy_gepa_poc/scripts/per_field_accuracy.py` (matriz de confusión), `dspy_gepa_poc/scripts/witness_eval.py` (eval testigo fuera de distribución)
+- Scripts: `dspy_gepa_poc/scripts/baseline_only.py` (eval sin GEPA, N seeds), `dspy_gepa_poc/scripts/per_field_accuracy.py` (matriz de confusión), `dspy_gepa_poc/scripts/witness_eval.py` (eval testigo fuera de distribución), `dspy_gepa_poc/scripts/diagnose_rule_baseline.py` (diagnóstico por-caso del baseline rule_derived: esperado vs obtenido + juicios p1..p5/alto_impacto, D-017)
+- VAL representativo (D-017): casos `VAR-FG-T01..T14` en `make_variations.py` (fichas neutrales + textura rica calibradas a las confusiones del TEST)
+- Few-shot fijos (D-017): mecanismo `few_shot_ids` (`config_schema.py` + `reflexio_declarativa.py`), demos enseñantes `VAR-FG-D01/D02`, config `flujo_intents_fast_gate_rule_fixfs_v1.yaml`
 - Registro de fases: `historial/sdd.md` (2026-06-15/16, Hallazgo 5 y validación externa)
