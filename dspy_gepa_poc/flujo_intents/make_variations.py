@@ -3734,6 +3734,112 @@ _FG_SUBHECHOS: dict[str, tuple[str, str, str, str, str, str, str, str]] = {
     "VAR-FG-A16": ("No", "si", "si", "No", "No", "No", "No", "si"),
     # alto=si por restrictiva (corte de beneficio al empleado).
     "VAR-FG-N12": ("No", "No", "No", "si", "No", "No", "No", "No"),
+    # --- Lote piloto D-015 (anotacion completa, 2026-06-20): 20 casos variados ---
+    # Verde: informativo / decision humana / datos propios -> todos los sub-hechos No.
+    "VAR-FG-V01": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V15": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # Amarillo alto=No: revision/aprobacion humana previa; sin accion autonoma.
+    "VAR-FG-A02": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A08": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A14": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A15": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # Amarillo alto=si por escala/profiling aunque el humano decide (P5=No).
+    "VAR-FG-A17": ("No", "No", "si", "No", "No", "No", "No", "si"),
+    "VAR-FG-A18": ("No", "No", "si", "No", "No", "No", "No", "si"),
+    "VAR-FG-A19": ("No", "No", "si", "No", "No", "No", "No", "si"),
+    "VAR-FG-A24": ("No", "No", "No", "No", "No", "No", "No", "si"),
+    # Rojo alto=No: scoring advisory (humano decide) o GATE acotado+reversible.
+    "VAR-FG-R02": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R12": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R18": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    # Rojo alto=si: decision financiera + profiling, sin gate (no acotado+reversible).
+    "VAR-FG-R15": ("No", "No", "No", "No", "si", "No", "No", "si"),
+    "VAR-FG-R19": ("No", "No", "No", "No", "si", "No", "No", "si"),
+    # Negro alto=si: restrictiva/irreversible/financiera/regulatoria/profiling autonomos.
+    "VAR-FG-N02": ("No", "No", "No", "si", "No", "si", "No", "No"),
+    "VAR-FG-N06": ("No", "No", "No", "si", "No", "si", "No", "No"),
+    "VAR-FG-N07": ("No", "No", "No", "No", "No", "No", "No", "si"),
+    "VAR-FG-N17": ("No", "No", "No", "No", "si", "No", "No", "No"),
+    "VAR-FG-N18": ("No", "No", "No", "No", "No", "No", "si", "No"),
+    # --- Lote completo D-015 (anotacion restante, 2026-06-20): 69 casos ---
+    # Verde (alto=No): informativo / decision humana / datos propios -> todo No.
+    "VAR-FG-V02": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V04": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V05": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V06": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V07": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V08": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V09": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V10": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V11": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V12": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V13": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V14": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V16": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V17": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-V18": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # Amarillo (alto=No): revision/aprobacion humana; advisory; sin accion autonoma -> todo No.
+    "VAR-FG-A03": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A04": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A05": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A06": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A07": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A09": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A10": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A11": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A12": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A13": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A20": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A21": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A22": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-A23": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # D01/T01-T03: scores e informes advisory (humano decide, escala <100k) -> alto=No.
+    "VAR-FG-D01": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T01": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T02": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T03": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # T04/T05: reporte/ruteo automatico (P5=si) pero no decide sobre personas -> alto=No.
+    "VAR-FG-T04": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T05": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # Rojo advisory (alto=No): el humano decide cada caso -> todo No.
+    "VAR-FG-R01": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R03": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R05": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R06": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R08": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R09": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R10": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R21": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R22": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T14": ("No", "No", "No", "No", "No", "No", "No", "No"),
+    # Rojo GATE acotado+reversible (alto=No aunque P5=si): accion autonoma acotada+reversible.
+    "VAR-FG-R11": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R13": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R16": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R17": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-R23": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T06": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T07": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T08": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    "VAR-FG-T09": ("si", "si", "No", "No", "No", "No", "No", "No"),
+    # Negro (alto=si): restrictiva / irreversible / financiera / escala / profiling / regulatoria.
+    "VAR-FG-N04": ("No", "No", "No", "si", "No", "No", "No", "No"),
+    "VAR-FG-N08": ("No", "No", "No", "si", "No", "No", "No", "No"),
+    "VAR-FG-N09": ("No", "No", "No", "No", "si", "No", "No", "No"),
+    "VAR-FG-N10": ("No", "No", "No", "si", "No", "No", "No", "No"),
+    "VAR-FG-N11": ("No", "No", "No", "No", "si", "No", "No", "No"),
+    "VAR-FG-N13": ("No", "No", "No", "No", "si", "si", "No", "No"),
+    "VAR-FG-N14": ("No", "No", "No", "si", "No", "si", "No", "No"),
+    "VAR-FG-N15": ("No", "No", "No", "si", "No", "si", "No", "No"),
+    "VAR-FG-N16": ("No", "No", "si", "No", "No", "No", "No", "si"),
+    "VAR-FG-N19": ("No", "No", "No", "si", "No", "No", "No", "No"),
+    "VAR-FG-N20": ("No", "No", "No", "si", "No", "No", "No", "No"),
+    # T10/T11: escala masiva + financiera; acotado a bandas pero NO reversible (no gate).
+    "VAR-FG-T10": ("si", "No", "si", "No", "si", "No", "No", "No"),
+    "VAR-FG-T11": ("si", "No", "si", "No", "si", "No", "No", "No"),
+    # T12/T13: restrictiva (bloqueo/suspension) reversible pero NO acotada (no gate).
+    "VAR-FG-T12": ("No", "si", "No", "si", "No", "No", "No", "No"),
+    "VAR-FG-T13": ("No", "si", "No", "si", "No", "No", "No", "No"),
 }
 
 for _c in FAST_GATE:

@@ -870,9 +870,32 @@ puras en cadena.
   cubría `gpt-5.4`(-mini) — el `.` del minor no matcheaba el patrón `gpt-5(?:-.*)?`, así que
   no forzaba `temperature=1.0` y litellm rechazaba la corrida. Corregido a `gpt-5(?:[.-].*)?`.
 
+**El few-shot libre NO supera al curado, ni siquiera con anotación completa (2026-06-20,
+D-015).** Se completaron los 8 sub-hechos en las 100 filas train+val (antes 11/100), lo que
+era condición necesaria para PROBAR el muestreo libre (`LabeledFewShot k=10` sobre todo el
+train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
+- **Baseline (sin GEPA):** color TEST **idéntico 85,6%** (libre y fijo) — el techo no depende
+  de la dieta de demos. Pero el libre es **peor en `alto_impacto`** (82,1% vs 89,7% fijos):
+  el sample aleatorio no fija las distinciones de escala/precedencia que los demos curados
+  cubren a propósito, y aparecen más confusiones Rojo↔Negro (over/under-escala).
+- **GEPA (`reflexio_declarativa`, 3+3 runs externos):** delta opt-base **negativo en ambos**
+  (fijo −1,4; libre −1,7 pp en val); `prompt_changed=no` en 5/6 runs (el único que cambió
+  empeoró). Test held-out (media): fijo 84,4% > libre 81,7%.
+- **Lección.** Anotar todo el dataset **habilita** una palanca (sampleo libre / GEPA sobre
+  sub-hechos) pero **no la hace funcionar**: confirma el patrón [[gpt5mini_clasificacion_subjetiva]]
+  y D-017 — la dieta aleatoria es model-dependent y algo inferior en la distinción del
+  cuello. Los **demos curados fijos siguen siendo la mejor config**, y GEPA no mueve el techo
+  (consistente con D-015d/D-017). Cierra las 5 palancas (VAL, GEPA, modelo, demos libres,
+  descomposición): ninguna rompe el techo estructural de la tarea.
+- Hallazgo de gold (insumo D-015c): `alto_impacto` está marcado INCONSISTENTE entre casos
+  advisory casi idénticos — `VAR-FG-R02` (alto=No) vs `VAR-FG-R15`/`R19` (alto=Sí), scoring
+  financiero con humano que aprueba cada caso. El criterio objetivo de sub-hechos no los
+  distingue; curar este gold es lo que resta de la línea alto_impacto.
+
 ### Archivos relacionados
 
 - Descomposición de alto_impacto (D-015a): `dspy_gepa_poc/flujo_intents/fast_gate_rule.py` (`derive_alto_impacto`), `dspy_gepa_poc/dynamic_factory.py` (`create_rule_derived_alto_impacto_module`), config `dspy_gepa_poc/configs/flujo_intents_fast_gate_descompuesto_v1.yaml`, demos curados `_FG_SUBHECHOS` en `make_variations.py`, modo `--pilot` en `diagnose_rule_baseline.py`
+- Few-shot libre vs fijo (D-015, anotación 100/100): config `dspy_gepa_poc/configs/flujo_intents_fast_gate_descompuesto_fewshot_v1.yaml` (`few_shot_count: 10`), `_FG_SUBHECHOS` completo en `make_variations.py`
 
 - Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`
 - Dataset y generador: `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv`, `dspy_gepa_poc/flujo_intents/make_variations.py`

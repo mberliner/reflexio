@@ -9,7 +9,7 @@ Impacto en personas: Empleados como usuarios; no decide sobre personas. Criticid
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,,,,,,,,,Verde,"Verde: uso interno de baja criticidad, sin datos sensibles ni decision sobre personas; el autor revisa antes de compartir."
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: uso interno de baja criticidad, sin datos sensibles ni decision sobre personas; el autor revisa antes de compartir."
 train,VAR-FG-V02,"Nombre de la iniciativa: VAR-FG-V02
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que alerta al equipo tecnico ante desvios de metricas de infraestructura; el equipo decide.
@@ -20,7 +20,7 @@ Impacto en personas: Equipo tecnico como destinatario. Criticidad baja para pers
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Alertas no automaticas sobre la red.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: operativos",No,No,No,No,No,No,,,,,,,,,Verde,Verde: datos operativos no sensibles y alerta no automatica; el equipo tecnico decide la intervencion.
+Datos requeridos: operativos",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,Verde: datos operativos no sensibles y alerta no automatica; el equipo tecnico decide la intervencion.
 train,VAR-FG-V03,"Nombre de la iniciativa: VAR-FG-V03
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que ordena correos internos por tema; el empleado decide que hacer.
@@ -42,7 +42,7 @@ Impacto en personas: Empleados; la decision es del empleado; sin impacto en dese
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,,,,,,,,,Verde,"Verde: la decision queda en el empleado, sin impacto en su desempeno ni datos sensibles."
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: la decision queda en el empleado, sin impacto en su desempeno ni datos sensibles."
 train,VAR-FG-V05,"Nombre de la iniciativa: VAR-FG-V05
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que resume metricas operativas no sensibles para el equipo; la gerencia valida.
@@ -53,7 +53,7 @@ Impacto en personas: Gerentes como consumidores; no decide sobre personas. Criti
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: operativos",No,No,No,No,No,No,,,,,,,,,Verde,Verde: datos operativos no sensibles y no decide sobre personas; la gerencia valida.
+Datos requeridos: operativos",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,Verde: datos operativos no sensibles y no decide sobre personas; la gerencia valida.
 train,VAR-FG-V06,"Nombre de la iniciativa: VAR-FG-V06
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que propone respuestas a tickets internos; el agente revisa antes de enviar.
@@ -64,7 +64,7 @@ Impacto en personas: Empleados como usuarios. Criticidad baja.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,,,,,,,,,Verde,Verde: uso interno y el agente revisa antes de enviar; sin datos sensibles.
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,Verde: uso interno y el agente revisa antes de enviar; sin datos sensibles.
 train,VAR-FG-V07,"Nombre de la iniciativa: VAR-FG-V07
 Tipo de intent: Operativo
 Declaracion del intent: Generador de borradores de documentacion interna a partir de notas; el autor aprueba.
@@ -75,7 +75,7 @@ Impacto en personas: Empleados como usuarios. Criticidad baja.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,,,,,,,,,Verde,Verde: documentacion interna y el autor aprueba; sin impacto en personas.
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,Verde: documentacion interna y el autor aprueba; sin impacto en personas.
 train,VAR-FG-V08,"Nombre de la iniciativa: VAR-FG-V08
 Tipo de intent: Tecnico/Arquitectural
 Declaracion del intent: Pipeline que clasifica logs tecnicos para el equipo de plataforma.
@@ -86,7 +86,7 @@ Impacto en personas: Equipo tecnico. Criticidad baja para personas.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: operativos",No,No,No,No,No,No,,,,,,,,,Verde,"Verde: datos tecnicos internos, sin impacto en personas externas."
+Datos requeridos: operativos",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: datos tecnicos internos, sin impacto en personas externas."
 val,VAR-FG-V09,"Nombre de la iniciativa: VAR-FG-V09
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que resume papers para el equipo de investigacion; ellos validan.
@@ -97,7 +97,7 @@ Impacto en personas: Empleados como usuarios. Criticidad baja.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,,,,,,,,,Verde,
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,
 val,VAR-FG-V10,"Nombre de la iniciativa: VAR-FG-V10
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que sugiere reposicion de stock al comprador; el comprador decide.
@@ -108,7 +108,7 @@ Impacto en personas: Empleados como usuarios. Criticidad baja.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: operativos",No,No,No,No,No,No,,,,,,,,,Verde,
+Datos requeridos: operativos",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,
 val,VAR-FG-V11,"Nombre de la iniciativa: VAR-FG-V11
 Tipo de intent: Operativo
 Declaracion del intent: Asistente que traduce documentacion interna no sensible; el autor revisa.
@@ -119,7 +119,7 @@ Impacto en personas: Empleados como usuarios. Criticidad baja.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,No,No,No,No,,,,,,,,,Verde,
+Datos requeridos: ninguno sensible",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,
 val,VAR-FG-V12,"Nombre de la iniciativa: VAR-FG-V12
 Tipo de intent: Operativo
 Declaracion del intent: Tablero que resume indicadores operativos para gerentes; ninguna decision sobre personas depende del output.
@@ -130,7 +130,7 @@ Impacto en personas: Gerentes como consumidores. Criticidad baja.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Sin datos personales; revision humana previa; presupuesto acotado.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: operativos",No,No,No,No,No,No,,,,,,,,,Verde,
+Datos requeridos: operativos",No,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,
 train,VAR-FG-A01,"Nombre de la iniciativa: VAR-FG-A01
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que resume actas internas usando un LLM externo que sera homologado; los participantes validan.
@@ -152,7 +152,7 @@ Impacto en personas: Canal de salida publico; un error afecta la imagen. Critici
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Normativa de defensa del consumidor sobre publicidad; revision previa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: confidenciales",si,si,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: salida a un canal publico con riesgo reputacional, acotado por aprobacion previa del responsable."
+Datos requeridos: confidenciales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: salida a un canal publico con riesgo reputacional, acotado por aprobacion previa del responsable."
 train,VAR-FG-A03,"Nombre de la iniciativa: VAR-FG-A03
 Tipo de intent: Negocio
 Declaracion del intent: Recomendador de upgrade que el representante presenta; el representante decide.
@@ -163,7 +163,7 @@ Impacto en personas: Clientes via representante; el sistema condiciona la oferta
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales y condiciona la oferta al cliente, pero el representante decide."
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales y condiciona la oferta al cliente, pero el representante decide."
 train,VAR-FG-A04,"Nombre de la iniciativa: VAR-FG-A04
 Tipo de intent: Operativo
 Declaracion del intent: Analizador de clausulas de contratos de clientes; el abogado valida cada hallazgo.
@@ -174,7 +174,7 @@ Impacto en personas: El analisis condiciona acciones legales sobre clientes. Cri
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Confidencialidad contractual; el abogado valida.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: confidenciales",si,si,No,si,No,No,,,,,,,,,Amarillo,Amarillo: datos confidenciales que condicionan acciones legales sobre clientes; el abogado valida cada hallazgo.
+Datos requeridos: confidenciales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,Amarillo: datos confidenciales que condicionan acciones legales sobre clientes; el abogado valida cada hallazgo.
 train,VAR-FG-A05,"Nombre de la iniciativa: VAR-FG-A05
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Resumidor de reuniones con lista de participantes usando un LLM externo por homologar; validan los participantes.
@@ -185,7 +185,7 @@ Impacto en personas: Empleados como usuarios. Criticidad baja.
 Supuesto de riesgo inicial: El LLM externo sera homologado.
 Restricciones explicitas: Revision previa; cumplimiento Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,No,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales y proveedor externo por homologar, con validacion humana de los participantes."
+Datos requeridos: personales",si,si,si,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales y proveedor externo por homologar, con validacion humana de los participantes."
 train,VAR-FG-A06,"Nombre de la iniciativa: VAR-FG-A06
 Tipo de intent: Negocio
 Declaracion del intent: Agente que envia comunicaciones de bienvenida predefinidas al cliente; contenido aprobado.
@@ -196,7 +196,7 @@ Impacto en personas: Clientes que reciben comunicaciones. Criticidad media.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Cumplimiento Ley 26.951 No Llame y Ley 25.326; plantillas aprobadas.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: contacto con clientes y datos personales, mitigado por plantillas de contenido aprobadas."
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: contacto con clientes y datos personales, mitigado por plantillas de contenido aprobadas."
 train,VAR-FG-A07,"Nombre de la iniciativa: VAR-FG-A07
 Tipo de intent: Operativo
 Declaracion del intent: Generador de comunicados para redes sociales corporativas; el responsable aprueba.
@@ -207,7 +207,7 @@ Impacto en personas: Audiencia externa publica; error afecta imagen. Criticidad 
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Normativa de defensa del consumidor; revision previa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: confidenciales",si,si,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: exposicion publica con riesgo de imagen, acotada por revision previa del responsable."
+Datos requeridos: confidenciales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: exposicion publica con riesgo de imagen, acotada por revision previa del responsable."
 train,VAR-FG-A08,"Nombre de la iniciativa: VAR-FG-A08
 Tipo de intent: Negocio
 Declaracion del intent: Chatbot que propone soluciones estandar pre-aprobadas a reclamos; escala casos complejos a humano.
@@ -218,7 +218,7 @@ Impacto en personas: Clientes que interactuan; propone compensaciones. Criticida
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Defensa del Consumidor y ENACOM; escalada obligatoria.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: interaccion con clientes en reclamos, limitada a respuestas pre-aprobadas y con escalada a humano."
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: interaccion con clientes en reclamos, limitada a respuestas pre-aprobadas y con escalada a humano."
 val,VAR-FG-A09,"Nombre de la iniciativa: VAR-FG-A09
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que resume documentos internos usando un LLM externo por homologar; el autor valida.
@@ -229,7 +229,7 @@ Impacto en personas: Empleados como usuarios; no decide sobre personas. Criticid
 Supuesto de riesgo inicial: El LLM externo sera homologado.
 Restricciones explicitas: Revision previa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: confidenciales",si,si,si,No,No,No,,,,,,,,,Amarillo,
+Datos requeridos: confidenciales",si,si,si,No,No,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-A10,"Nombre de la iniciativa: VAR-FG-A10
 Tipo de intent: Negocio
 Declaracion del intent: Recomendador de productos que el representante presenta al cliente; el representante decide.
@@ -240,7 +240,7 @@ Impacto en personas: Clientes via representante. Criticidad media.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-A11,"Nombre de la iniciativa: VAR-FG-A11
 Tipo de intent: Operativo
 Declaracion del intent: Generador de contenido para el blog publico de la empresa; el responsable aprueba.
@@ -251,7 +251,7 @@ Impacto en personas: Audiencia externa. Criticidad alta.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Defensa del consumidor; revision previa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: confidenciales",si,si,No,si,No,No,,,,,,,,,Amarillo,
+Datos requeridos: confidenciales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-A12,"Nombre de la iniciativa: VAR-FG-A12
 Tipo de intent: Negocio
 Declaracion del intent: Analizador de cumplimiento de contratos de clientes; el equipo legal valida.
@@ -262,7 +262,7 @@ Impacto en personas: Condiciona acciones sobre clientes. Criticidad alta.
 Supuesto de riesgo inicial: El modelo del catalogo es adecuado; hay revision humana previa.
 Restricciones explicitas: Confidencialidad; el abogado valida.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,
 train,VAR-FG-R01,"Nombre de la iniciativa: VAR-FG-R01
 Tipo de intent: Negocio
 Declaracion del intent: Chatbot que accede a datos del cliente y responde en tiempo real con un LLM externo por homologar; escala a humano.
@@ -273,7 +273,7 @@ Impacto en personas: Clientes que interactuan; las respuestas influyen en sus de
 Supuesto de riesgo inicial: El LLM externo sera homologado antes del lanzamiento.
 Restricciones explicitas: Cumplimiento Ley 25.326; evaluacion de seguridad del proveedor pendiente.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,"Rojo: datos personales, influye en decisiones del cliente y usa un LLM externo aun por homologar; mitigado por escalada a humano."
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,"Rojo: datos personales, influye en decisiones del cliente y usa un LLM externo aun por homologar; mitigado por escalada a humano."
 train,VAR-FG-R02,"Nombre de la iniciativa: VAR-FG-R02
 Tipo de intent: Negocio
 Declaracion del intent: Scoring crediticio con API externa por homologar; el analista registra la decision.
@@ -284,7 +284,7 @@ Impacto en personas: Clientes solicitantes; el score determina el acceso. Critic
 Supuesto de riesgo inicial: La API externa sera homologada antes de produccion.
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.326; prohibido sesgo discriminatorio.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,Rojo: condiciona el acceso a credito con una API externa por homologar; el analista registra la decision.
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,Rojo: condiciona el acceso a credito con una API externa por homologar; el analista registra la decision.
 train,VAR-FG-R03,"Nombre de la iniciativa: VAR-FG-R03
 Tipo de intent: Negocio
 Declaracion del intent: Asistente de diagnostico que sugiere al medico con un modelo externo por homologar; el medico decide.
@@ -295,7 +295,7 @@ Impacto en personas: Pacientes; el sistema influye en el diagnostico. Criticidad
 Supuesto de riesgo inicial: Modelo externo por homologar.
 Restricciones explicitas: Datos de salud; cumplimiento regulatorio; el medico decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,Rojo: influye en un diagnostico medico con un modelo externo por homologar; el medico decide.
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,Rojo: influye en un diagnostico medico con un modelo externo por homologar; el medico decide.
 train,VAR-FG-R04,"Nombre de la iniciativa: VAR-FG-R04
 Tipo de intent: Negocio
 Declaracion del intent: Agente de reclamos que aplica automaticamente compensaciones acotadas al catalogo aprobado por policy; escala a un agente humano solo si el reclamo no encaja en el catalogo.
@@ -317,7 +317,7 @@ Impacto en personas: Clientes; influye en decisiones financieras. Criticidad muy
 Supuesto de riesgo inicial: LLM externo por homologar.
 Restricciones explicitas: Cumplimiento CNV y Ley 25.326; el asesor decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,Rojo: influye en decisiones financieras del cliente con un LLM externo por homologar; el asesor decide.
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,Rojo: influye en decisiones financieras del cliente con un LLM externo por homologar; el asesor decide.
 train,VAR-FG-R06,"Nombre de la iniciativa: VAR-FG-R06
 Tipo de intent: Negocio
 Declaracion del intent: Chatbot legal que orienta al cliente con un modelo externo por homologar; el abogado revisa.
@@ -328,7 +328,7 @@ Impacto en personas: Clientes; influye en decisiones legales. Criticidad alta.
 Supuesto de riesgo inicial: Modelo externo por homologar.
 Restricciones explicitas: Secreto profesional; el abogado revisa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,Rojo: influye en decisiones legales del cliente con un modelo externo por homologar; el abogado revisa.
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,Rojo: influye en decisiones legales del cliente con un modelo externo por homologar; el abogado revisa.
 train,VAR-FG-R07,"Nombre de la iniciativa: VAR-FG-R07
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que ajusta automaticamente el limite de credito de clientes dentro de bandas de politica vigente, sin discrecionalidad fuera de ellas; log mensual revisable por el equipo de credito dentro de las 48 horas.
@@ -350,7 +350,7 @@ Impacto en personas: Clientes; influye en decisiones sobre su plan. Criticidad a
 Supuesto de riesgo inicial: LLM externo por homologar.
 Restricciones explicitas: Cumplimiento Ley 25.326; seguridad del proveedor pendiente.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,
 val,VAR-FG-R09,"Nombre de la iniciativa: VAR-FG-R09
 Tipo de intent: Negocio
 Declaracion del intent: Evaluador de siniestros que recomienda al liquidador con proveedor externo por homologar; el liquidador decide.
@@ -361,7 +361,7 @@ Impacto en personas: Clientes; condiciona la cobertura. Criticidad alta.
 Supuesto de riesgo inicial: Proveedor externo por homologar.
 Restricciones explicitas: Cumplimiento regulatorio; el liquidador decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,
 val,VAR-FG-R10,"Nombre de la iniciativa: VAR-FG-R10
 Tipo de intent: Negocio
 Declaracion del intent: Asistente de cobranzas que define la estrategia hacia el cliente con LLM externo por homologar; el gestor decide.
@@ -372,7 +372,7 @@ Impacto en personas: Clientes con deuda; influye en la gestion. Criticidad alta.
 Supuesto de riesgo inicial: LLM externo por homologar.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor; el gestor decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,
 val,VAR-FG-R11,"Nombre de la iniciativa: VAR-FG-R11
 Tipo de intent: Operativo
 Declaracion del intent: Agente que ejecuta automaticamente el alta de un nuevo cliente en el CRM y facturacion al verificar los criterios de elegibilidad, sin intervencion del operador; confirma el alta al cliente por email.
@@ -383,7 +383,7 @@ Impacto en personas: Nuevos clientes que solicitan el alta del servicio. Critici
 Supuesto de riesgo inicial: Alta autonoma sin revision previa por caso, pero es una accion favorable solicitada por el propio cliente.
 Restricciones explicitas: Cumplimiento Ley 25.326; alta dentro de los criterios de elegibilidad estandar.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,No,si,si,No,si,si,No,No,No,No,No,No,Rojo,
 train,VAR-FG-N01,"Nombre de la iniciativa: VAR-FG-N01
 Tipo de intent: Negocio
 Declaracion del intent: Agente que ajusta automaticamente precios y descuentos de planes para mas del 10% de la base de clientes activos, segun parametros de mercado en tiempo real, sin bandas ni catalogo acotado.
@@ -405,7 +405,7 @@ Impacto en personas: Clientes cortados; perdida de acceso al servicio. Criticida
 Supuesto de riesgo inicial: Corte de servicio (denegacion de acceso) autonomo, sin revision sistematica ni mecanismo de reversion.
 Restricciones explicitas: Cumplimiento Ley de Defensa del Consumidor y ENACOM.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,"Negro: corta el servicio (denegacion de acceso, criterio de naturaleza) de forma autonoma sin revision sistematica ni reversion -- P5=Si y alto impacto por naturaleza (criterio b)."
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,si,No,No,Negro,"Negro: corta el servicio (denegacion de acceso, criterio de naturaleza) de forma autonoma sin revision sistematica ni reversion -- P5=Si y alto impacto por naturaleza (criterio b)."
 train,VAR-FG-N03,"Nombre de la iniciativa: VAR-FG-N03
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que aprueba y ejecuta reintegros a clientes automaticamente sin revision por caso.
@@ -427,7 +427,7 @@ Impacto en personas: Clientes bloqueados. Criticidad muy alta.
 Supuesto de riesgo inicial: Bloqueo autonomo sin revision por caso.
 Restricciones explicitas: Cumplimiento BCRA.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,"Negro: bloquea cuentas de clientes de forma autonoma ante senales de riesgo, sin revision previa."
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,No,No,No,Negro,"Negro: bloquea cuentas de clientes de forma autonoma ante senales de riesgo, sin revision previa."
 train,VAR-FG-N05,"Nombre de la iniciativa: VAR-FG-N05
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que evalua el perfil de riesgo crediticio de cada cliente en tiempo real y aprueba o rechaza la solicitud de credito de forma automatica, notificando el resultado sin intervencion humana.
@@ -449,7 +449,7 @@ Impacto en personas: Clientes corporativos con contrato terminado de forma perma
 Supuesto de riesgo inicial: Terminacion de contrato irreversible sin intervencion manual posterior, ejecutada de forma autonoma.
 Restricciones explicitas: Cumplimiento Ley de Defensa del Consumidor; validacion legal de umbrales.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,Negro: termina contratos de forma autonoma e irreversible sin intervencion manual posterior -- P5=Si y alto impacto por irreversibilidad (criterio c).
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,si,No,No,Negro,Negro: termina contratos de forma autonoma e irreversible sin intervencion manual posterior -- P5=Si y alto impacto por irreversibilidad (criterio c).
 train,VAR-FG-N07,"Nombre de la iniciativa: VAR-FG-N07
 Tipo de intent: Operativo
 Declaracion del intent: Agente que perfila automaticamente el riesgo de abandono de cada cliente segun su comportamiento de consumo y ejecuta de forma autonoma ofertas de retencion vinculantes (descuentos contractuales) basadas en ese perfil, sin aprobacion por caso.
@@ -460,7 +460,7 @@ Impacto en personas: Clientes perfilados y con ofertas vinculantes aplicadas. Cr
 Supuesto de riesgo inicial: Perfilamiento automatizado del comportamiento del cliente que dispara acciones vinculantes autonomas, sin revision.
 Restricciones explicitas: Cumplimiento Ley de Defensa del Consumidor y Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,"Negro: perfila automaticamente el comportamiento del cliente (profiling, criterio e) y ejecuta ofertas vinculantes basadas en ese perfil sin revision -- P5=Si y alto impacto."
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,No,No,No,No,si,Negro,"Negro: perfila automaticamente el comportamiento del cliente (profiling, criterio e) y ejecuta ofertas vinculantes basadas en ese perfil sin revision -- P5=Si y alto impacto."
 val,VAR-FG-N08,"Nombre de la iniciativa: VAR-FG-N08
 Tipo de intent: Operativo
 Declaracion del intent: Agente que da de baja servicios de clientes automaticamente segun reglas de riesgo, sin revision previa.
@@ -471,7 +471,7 @@ Impacto en personas: Clientes dados de baja. Criticidad muy alta.
 Supuesto de riesgo inicial: Baja autonoma sin revision por caso.
 Restricciones explicitas: Cumplimiento regulatorio.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,No,No,No,Negro,
 val,VAR-FG-N09,"Nombre de la iniciativa: VAR-FG-N09
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que aplica penalidades a clientes y las ejecuta automaticamente sin intervencion humana.
@@ -482,7 +482,7 @@ Impacto en personas: Clientes penalizados. Criticidad alta.
 Supuesto de riesgo inicial: Penalidad autonoma sin revision.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,No,si,No,No,No,Negro,
 val,VAR-FG-N10,"Nombre de la iniciativa: VAR-FG-N10
 Tipo de intent: Operativo
 Declaracion del intent: Agente que reasigna recursos criticos de produccion de forma autonoma con impacto en clientes, sin revision.
@@ -493,7 +493,7 @@ Impacto en personas: Clientes afectados por el servicio. Criticidad muy alta.
 Supuesto de riesgo inicial: Reasignacion autonoma de alto impacto sin revision previa.
 Restricciones explicitas: Cumplimiento regulatorio.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,No,No,No,Negro,
 val,VAR-FG-N11,"Nombre de la iniciativa: VAR-FG-N11
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que ejecuta ajustes de tarifa al cliente de forma automatica sin aprobacion por caso.
@@ -504,7 +504,7 @@ Impacto en personas: Clientes con cambios de tarifa. Criticidad alta.
 Supuesto de riesgo inicial: Ajuste autonomo sin revision previa.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor y ENACOM.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,No,si,No,No,No,Negro,
 train,VAR-FG-V13,"Nombre de la iniciativa: VAR-FG-V13
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que muestra al representante un resumen del historial de contactos del cliente antes de la llamada; es informativo y el representante decide como gestionar. Opera sobre el CRM interno homologado.
@@ -515,7 +515,7 @@ Impacto en personas: Representantes como usuarios; el resumen es informativo y n
 Supuesto de riesgo inicial: CRM interno homologado; el representante decide cada interaccion.
 Restricciones explicitas: Cumplimiento Ley 25.326; sin proveedores externos; revision humana.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,No,No,No,No,,,,,,,,,Verde,"Verde: usa datos personales (P1) pero es informativo y el representante decide (P2=No), sin proveedor externo ni riesgo legal y con revision humana; conteo=1."
+Datos requeridos: personales",si,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: usa datos personales (P1) pero es informativo y el representante decide (P2=No), sin proveedor externo ni riesgo legal y con revision humana; conteo=1."
 train,VAR-FG-V14,"Nombre de la iniciativa: VAR-FG-V14
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que resume papers tecnicos de acceso publico usando un LLM externo que sera homologado antes del despliegue; sin datos personales, es informativo y el investigador valida antes de usar el resumen.
@@ -526,7 +526,7 @@ Impacto en personas: Investigadores como usuarios; sin impacto sobre personas. C
 Supuesto de riesgo inicial: El LLM externo sera homologado antes del despliegue; documentos publicos.
 Restricciones explicitas: Sin datos personales; revision humana previa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,si,No,No,No,,,,,,,,,Verde,"Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones sobre personas, con revision humana; conteo=1."
+Datos requeridos: ninguno sensible",No,No,si,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones sobre personas, con revision humana; conteo=1."
 val,VAR-FG-V15,"Nombre de la iniciativa: VAR-FG-V15
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que arma para el propio empleado un resumen de su actividad a partir de sus datos personales, para autoconsulta; no alimenta evaluaciones ni decisiones.
@@ -537,7 +537,7 @@ Impacto en personas: El empleado consulta su propia actividad; no se usa en eval
 Supuesto de riesgo inicial: Uso interno informativo; sin proveedores externos.
 Restricciones explicitas: Cumplimiento Ley 25.326; sin impacto en desempeno.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,No,No,No,No,,,,,,,,,Verde,"Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar nada; conteo=1."
+Datos requeridos: personales",si,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar nada; conteo=1."
 train,VAR-FG-A13,"Nombre de la iniciativa: VAR-FG-A13
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que resume documentos internos con datos personales de empleados usando un LLM externo aun por homologar; es informativo y el autor valida antes de usar.
@@ -548,7 +548,7 @@ Impacto en personas: Empleados como usuarios; informativo. Criticidad media.
 Supuesto de riesgo inicial: El LLM externo sera homologado antes del despliegue; revision humana.
 Restricciones explicitas: Cumplimiento Ley 25.326; el autor valida.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,si,No,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1) y LLM externo por homologar (P3), mitigado por revision humana; sin decision directa ni riesgo legal; conteo=2."
+Datos requeridos: personales",si,No,si,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) y LLM externo por homologar (P3), mitigado por revision humana; sin decision directa ni riesgo legal; conteo=2."
 train,VAR-FG-A14,"Nombre de la iniciativa: VAR-FG-A14
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que sugiere al representante una accion de retencion segun el consumo del cliente; el representante decide que ofrecer. Plataforma interna homologada.
@@ -559,7 +559,7 @@ Impacto en personas: Clientes via representante; el representante decide. Critic
 Supuesto de riesgo inicial: Plataforma interna homologada; el representante decide.
 Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,No,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1) e influye en la oferta al cliente (P2), pero el representante decide y no hay proveedor externo ni riesgo legal; conteo=2."
+Datos requeridos: personales",si,si,No,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) e influye en la oferta al cliente (P2), pero el representante decide y no hay proveedor externo ni riesgo legal; conteo=2."
 val,VAR-FG-A15,"Nombre de la iniciativa: VAR-FG-A15
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que analiza datos personales de clientes para generar un informe interno de calidad de servicio; un error podria exponer a la empresa a reclamos; el equipo valida el informe antes de actuar.
@@ -570,7 +570,7 @@ Impacto en personas: Clientes analizados de forma agregada; el equipo valida. Cr
 Supuesto de riesgo inicial: Riesgo reputacional si el informe es erroneo; revision humana previa.
 Restricciones explicitas: Cumplimiento Ley 25.326; sin proveedores externos.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1) y riesgo reputacional si el informe falla (P4), mitigado por revision humana previa; conteo=2."
+Datos requeridos: personales",si,No,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) y riesgo reputacional si el informe falla (P4), mitigado por revision humana previa; conteo=2."
 train,VAR-FG-R12,"Nombre de la iniciativa: VAR-FG-R12
 Tipo de intent: Operativo
 Declaracion del intent: Agente que clasifica reclamos con un LLM externo por homologar y aplica de forma autonoma compensaciones acotadas a un catalogo aprobado (creditos menores), cerrando el caso; escala a humano solo fuera del catalogo. El efecto es reversible por el equipo de atencion.
@@ -581,7 +581,7 @@ Impacto en personas: Clientes con reclamos; las compensaciones estan acotadas y 
 Supuesto de riesgo inicial: El LLM externo sera homologado antes del despliegue; el efecto es reversible y acotado al catalogo aprobado.
 Restricciones explicitas: Compensaciones acotadas al catalogo aprobado; escalada a humano fuera de el; cumplimiento Defensa del Consumidor.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales, confidenciales",si,si,si,si,si,No,,,,,,,,,Rojo,"Rojo: cumple las 5 preguntas (datos personales, decision sobre el cliente, LLM externo por homologar, riesgo legal y ejecucion autonoma), pero la accion esta acotada a un catalogo aprobado y es reversible, por lo que alto_impacto=No y no escala a Negro; conteo=5."
+Datos requeridos: personales, confidenciales",si,si,si,si,si,No,si,si,No,No,No,No,No,No,Rojo,"Rojo: cumple las 5 preguntas (datos personales, decision sobre el cliente, LLM externo por homologar, riesgo legal y ejecucion autonoma), pero la accion esta acotada a un catalogo aprobado y es reversible, por lo que alto_impacto=No y no escala a Negro; conteo=5."
 val,VAR-FG-R13,"Nombre de la iniciativa: VAR-FG-R13
 Tipo de intent: Negocio
 Declaracion del intent: Agente que ajusta automaticamente beneficios del cliente dentro de bandas aprobadas usando un servicio externo por homologar; influye en la relacion comercial; los ajustes son reversibles y hay revision sistematica del log.
@@ -592,7 +592,7 @@ Impacto en personas: Clientes con ajustes acotados a bandas y reversibles. Criti
 Supuesto de riesgo inicial: Servicio externo por homologar; ajustes reversibles dentro de bandas con revision sistematica del log.
 Restricciones explicitas: Ajustes acotados a bandas aprobadas; cumplimiento Defensa del Consumidor.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales, confidenciales",si,si,si,si,si,No,,,,,,,,,Rojo,"Rojo: las 5 preguntas en Si, pero los ajustes estan acotados a bandas aprobadas y son reversibles con revision del log, por lo que alto_impacto=No y no es Negro; conteo=5."
+Datos requeridos: personales, confidenciales",si,si,si,si,si,No,si,si,No,No,No,No,No,No,Rojo,"Rojo: las 5 preguntas en Si, pero los ajustes estan acotados a bandas aprobadas y son reversibles con revision del log, por lo que alto_impacto=No y no es Negro; conteo=5."
 train,VAR-FG-R14,"Nombre de la iniciativa: VAR-FG-R14
 Tipo de intent: Negocio
 Declaracion del intent: Motor de scoring crediticio que perfila al cliente y condiciona el acceso al credito; usa una API externa de scoring por homologar; el analista valida y registra cada decision antes de aplicarla.
@@ -614,7 +614,7 @@ Impacto en personas: Clientes evaluados; decision financiera con perfilamiento. 
 Supuesto de riesgo inicial: Modelo externo por homologar; el comite aprueba cada caso antes de actuar.
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.326; revision humana por caso.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,si,,,,,,,,,Rojo,"Rojo: decision financiera con perfilamiento (alto_impacto=Si) y modelo externo por homologar, pero el comite aprueba cada caso (P5=No); conteo=4."
+Datos requeridos: personales",si,si,si,si,No,si,No,No,No,No,si,No,No,si,Rojo,"Rojo: decision financiera con perfilamiento (alto_impacto=Si) y modelo externo por homologar, pero el comite aprueba cada caso (P5=No); conteo=4."
 train,VAR-FG-A16,"Nombre de la iniciativa: VAR-FG-A16
 Tipo de intent: Negocio
 Declaracion del intent: Modelo predictivo de churn que perfila automaticamente a mas de 100.000 clientes y publica scores en el CRM; el equipo comercial decide autonomamente que accion tomar. Framework interno certificado; el sistema no actua sobre el cliente.
@@ -636,7 +636,7 @@ Impacto en personas: Mas del 10% de la base perfilada; el responsable decide. Cr
 Supuesto de riesgo inicial: LLM externo por homologar; el responsable decide cada campania.
 Restricciones explicitas: Cumplimiento Ley 25.326; el responsable decide; sin discriminacion.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,No,No,si,,,,,,,,,Amarillo,"Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada campania (P5=No) y no hay riesgo legal directo; conteo=3."
+Datos requeridos: personales",si,si,si,No,No,si,No,No,si,No,No,No,No,si,Amarillo,"Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada campania (P5=No) y no hay riesgo legal directo; conteo=3."
 train,VAR-FG-N12,"Nombre de la iniciativa: VAR-FG-N12
 Tipo de intent: Operativo
 Declaracion del intent: Agente que cancela automaticamente beneficios a empleados con cuotas vencidas en un proceso nocturno sin revision por caso; RRHH recibe un reporte al dia siguiente. La cancelacion restringe el acceso del empleado al beneficio.
@@ -658,7 +658,7 @@ Impacto en personas: Clientes solicitantes; decision financiera autonoma e irrev
 Supuesto de riesgo inicial: LLM externo por homologar; ejecucion autonoma e irreversible sin revision por caso.
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.065; el cliente puede pedir revision humana ex-post.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales, confidenciales",si,si,si,si,si,si,,,,,,,,,Negro,Negro: aprueba y ejecuta microcreditos de forma autonoma e irreversible sin revision por caso (P5=Si) con alto impacto financiero; el override Negro aplica; conteo=5.
+Datos requeridos: personales, confidenciales",si,si,si,si,si,si,No,No,No,No,si,si,No,No,Negro,Negro: aprueba y ejecuta microcreditos de forma autonoma e irreversible sin revision por caso (P5=Si) con alto impacto financiero; el override Negro aplica; conteo=5.
 val,VAR-FG-R16,"Nombre de la iniciativa: VAR-FG-R16
 Tipo de intent: Negocio
 Declaracion del intent: Agente que acredita automaticamente bonificaciones de fidelizacion a clientes acotadas a un catalogo de beneficios aprobado, sin aprobacion por caso; cada credito es reversible y queda en un log revisable.
@@ -669,7 +669,7 @@ Impacto en personas: Clientes con bonificaciones acotadas y reversibles. Critici
 Supuesto de riesgo inicial: Accion autonoma acotada a un catalogo aprobado y reversible; revision del log ex-post.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor; beneficios dentro del catalogo.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,No,,,,,,,,,Rojo,"Rojo: acredita bonificaciones de forma autonoma sin revision por caso (P5=Si), pero acotadas a un catalogo aprobado y reversibles, por lo que alto_impacto=No y no es Negro; conteo=4."
+Datos requeridos: personales",si,si,No,si,si,No,si,si,No,No,No,No,No,No,Rojo,"Rojo: acredita bonificaciones de forma autonoma sin revision por caso (P5=Si), pero acotadas a un catalogo aprobado y reversibles, por lo que alto_impacto=No y no es Negro; conteo=4."
 val,VAR-FG-R17,"Nombre de la iniciativa: VAR-FG-R17
 Tipo de intent: Negocio
 Declaracion del intent: Asistente que ejecuta ajustes de plan dentro de bandas tarifarias aprobadas usando un LLM externo por homologar, sin aprobacion por caso; los ajustes son reversibles y se revisan por log.
@@ -680,7 +680,7 @@ Impacto en personas: Clientes con ajustes acotados a bandas y reversibles. Criti
 Supuesto de riesgo inicial: LLM externo por homologar; ajuste autonomo acotado a bandas y reversible.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor y ENACOM; ajustes dentro de banda.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,si,No,,,,,,,,,Rojo,"Rojo: ajusta planes de forma autonoma (P5=Si) con LLM externo por homologar, pero dentro de bandas aprobadas y reversible, por lo que alto_impacto=No; conteo=5."
+Datos requeridos: personales",si,si,si,si,si,No,si,si,No,No,No,No,No,No,Rojo,"Rojo: ajusta planes de forma autonoma (P5=Si) con LLM externo por homologar, pero dentro de bandas aprobadas y reversible, por lo que alto_impacto=No; conteo=5."
 val,VAR-FG-R18,"Nombre de la iniciativa: VAR-FG-R18
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que reprograma automaticamente turnos de clientes dentro de la grilla disponible sin aprobacion por caso; el cliente puede reagendar cuando quiera.
@@ -691,7 +691,7 @@ Impacto en personas: Clientes con turnos reprogramados de forma acotada y revers
 Supuesto de riesgo inicial: Reprogramacion autonoma acotada a la grilla y reversible por el cliente.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor; el cliente puede reagendar.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,No,,,,,,,,,Rojo,"Rojo: reprograma turnos de forma autonoma (P5=Si), pero acotado a la grilla y reversible por el cliente, alto_impacto=No; conteo=4 sin proveedor externo."
+Datos requeridos: personales",si,si,No,si,si,No,si,si,No,No,No,No,No,No,Rojo,"Rojo: reprograma turnos de forma autonoma (P5=Si), pero acotado a la grilla y reversible por el cliente, alto_impacto=No; conteo=4 sin proveedor externo."
 val,VAR-FG-R23,"Nombre de la iniciativa: VAR-FG-R23
 Tipo de intent: Negocio
 Declaracion del intent: Agente que ejecuta reembolsos a clientes acotados a un catalogo de montos aprobado usando un LLM externo por homologar, sin aprobacion por caso; cada reembolso es reversible y queda en un log revisable.
@@ -702,7 +702,7 @@ Impacto en personas: Clientes con reembolsos acotados y reversibles. Criticidad 
 Supuesto de riesgo inicial: LLM externo por homologar; ejecucion autonoma acotada a un catalogo y reversible.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor; montos dentro del catalogo.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,si,No,,,,,,,,,Rojo,"Rojo: ejecuta reembolsos de forma autonoma (P5=Si) con LLM externo por homologar, pero acotados a un catalogo de montos y reversibles, alto_impacto=No; conteo=5."
+Datos requeridos: personales",si,si,si,si,si,No,si,si,No,No,No,No,No,No,Rojo,"Rojo: ejecuta reembolsos de forma autonoma (P5=Si) con LLM externo por homologar, pero acotados a un catalogo de montos y reversibles, alto_impacto=No; conteo=5."
 val,VAR-FG-N14,"Nombre de la iniciativa: VAR-FG-N14
 Tipo de intent: Operativo
 Declaracion del intent: Agente que ejecuta automaticamente la suspension del servicio a clientes ante señales de riesgo, sin revision por caso; la suspension corta el acceso hasta una intervencion manual posterior.
@@ -713,7 +713,7 @@ Impacto en personas: Clientes suspendidos; corte de acceso al servicio. Criticid
 Supuesto de riesgo inicial: Corte de servicio (denegacion de acceso, criterio b) autonomo sin revision por caso.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor y ENACOM.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,"Negro: corta el servicio (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si) y alto impacto; conteo=4."
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,si,No,No,Negro,"Negro: corta el servicio (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si) y alto impacto; conteo=4."
 val,VAR-FG-N15,"Nombre de la iniciativa: VAR-FG-N15
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que ejecuta automaticamente la baja definitiva de cuentas inactivas y borra los datos asociados sin revision por caso; la baja es irreversible.
@@ -724,7 +724,7 @@ Impacto en personas: Clientes dados de baja con borrado irreversible de datos. C
 Supuesto de riesgo inicial: Baja autonoma e irreversible (criterio c) sin intervencion manual posterior.
 Restricciones explicitas: Cumplimiento Ley 25.326; sin mecanismo de reversion.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,Negro: ejecuta una baja irreversible con borrado de datos (criterio c) sin revision por caso (P5=Si) y alto impacto; conteo=4.
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,si,No,si,No,No,Negro,Negro: ejecuta una baja irreversible con borrado de datos (criterio c) sin revision por caso (P5=Si) y alto impacto; conteo=4.
 val,VAR-FG-N16,"Nombre de la iniciativa: VAR-FG-N16
 Tipo de intent: Negocio
 Declaracion del intent: Agente que perfila automaticamente a mas del 10% de la base de clientes por su comportamiento y aplica ofertas vinculantes con un LLM externo por homologar, sin revision por caso.
@@ -735,7 +735,7 @@ Impacto en personas: Mas del 10% de la base perfilada con ofertas vinculantes ap
 Supuesto de riesgo inicial: LLM externo por homologar; profiling a escala (criterios a y e) con accion autonoma vinculante.
 Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,si,si,,,,,,,,,Negro,Negro: perfila a mas del 10% de la base (criterios a y e) y aplica ofertas vinculantes con LLM externo por homologar sin revision (P5=Si); conteo=5.
+Datos requeridos: personales",si,si,si,si,si,si,No,No,si,No,No,No,No,si,Negro,Negro: perfila a mas del 10% de la base (criterios a y e) y aplica ofertas vinculantes con LLM externo por homologar sin revision (P5=Si); conteo=5.
 val,VAR-FG-N17,"Nombre de la iniciativa: VAR-FG-N17
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que aprueba y desembolsa automaticamente adelantos de efectivo a clientes segun un score, sin revision por caso; el desembolso no esta acotado a un tope predefinido.
@@ -746,7 +746,7 @@ Impacto en personas: Clientes con desembolsos financieros autonomos sin tope. Cr
 Supuesto de riesgo inicial: Decision financiera no acotada (criterio b) ejecutada sin revision por caso.
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,Negro: desembolsa adelantos financieros no acotados (criterio b) sin revision por caso (P5=Si) y alto impacto; conteo=4.
+Datos requeridos: personales",si,si,No,si,si,si,No,No,No,No,si,No,No,No,Negro,Negro: desembolsa adelantos financieros no acotados (criterio b) sin revision por caso (P5=Si) y alto impacto; conteo=4.
 val,VAR-FG-N18,"Nombre de la iniciativa: VAR-FG-N18
 Tipo de intent: Negocio
 Declaracion del intent: Agente que ejecuta automaticamente reportes regulatorios de operaciones sospechosas a la autoridad usando un proveedor externo por homologar, sin revision por caso; un reporte erroneo expone a sancion directa.
@@ -757,7 +757,7 @@ Impacto en personas: Clientes reportados a la autoridad de forma autonoma. Criti
 Supuesto de riesgo inicial: Proveedor externo por homologar; exposicion a sancion regulatoria directa (criterio d) sin revision por caso.
 Restricciones explicitas: Cumplimiento UIF y Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,si,si,,,,,,,,,Negro,Negro: ejecuta reportes regulatorios con exposicion a sancion directa (criterio d) y proveedor externo por homologar sin revision (P5=Si); conteo=5.
+Datos requeridos: personales",si,si,si,si,si,si,No,No,No,No,No,No,si,No,Negro,Negro: ejecuta reportes regulatorios con exposicion a sancion directa (criterio d) y proveedor externo por homologar sin revision (P5=Si); conteo=5.
 val,VAR-FG-R19,"Nombre de la iniciativa: VAR-FG-R19
 Tipo de intent: Negocio
 Declaracion del intent: Sistema de scoring que condiciona el acceso al credito de clientes perfilando su riesgo con una API externa por homologar; un analista revisa y aprueba cada decision antes de notificar al cliente.
@@ -768,7 +768,7 @@ Impacto en personas: Clientes solicitantes; el score condiciona el acceso al cre
 Supuesto de riesgo inicial: API externa por homologar; decision financiera con profiling, pero el analista valida cada caso (P5=No).
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.326; el analista decide cada solicitud.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,si,,,,,,,,,Rojo,"Rojo: condiciona el acceso al credito perfilando al cliente (alto_impacto=Si por naturaleza financiera y profiling) con API externa por homologar, pero el analista valida cada caso (P5=No), por lo que no es Negro; conteo=4."
+Datos requeridos: personales",si,si,si,si,No,si,No,No,No,No,si,No,No,si,Rojo,"Rojo: condiciona el acceso al credito perfilando al cliente (alto_impacto=Si por naturaleza financiera y profiling) con API externa por homologar, pero el analista valida cada caso (P5=No), por lo que no es Negro; conteo=4."
 val,VAR-FG-R21,"Nombre de la iniciativa: VAR-FG-R21
 Tipo de intent: Operativo
 Declaracion del intent: Analizador que condiciona acciones legales sobre clientes con un modelo externo por homologar y riesgo legal si falla; el abogado valida cada hallazgo antes de actuar.
@@ -779,7 +779,7 @@ Impacto en personas: El analisis condiciona acciones legales sobre clientes. Cri
 Supuesto de riesgo inicial: Modelo externo por homologar; el abogado valida cada hallazgo (P5=No).
 Restricciones explicitas: Confidencialidad contractual; el abogado decide cada caso.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: confidenciales",si,si,si,si,No,No,,,,,,,,,Rojo,"Rojo: datos confidenciales, condiciona acciones legales, modelo externo por homologar y riesgo legal (4 en Si), pero el abogado valida cada caso (P5=No) y la accion no es de alto impacto autonomo; conteo=4."
+Datos requeridos: confidenciales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,"Rojo: datos confidenciales, condiciona acciones legales, modelo externo por homologar y riesgo legal (4 en Si), pero el abogado valida cada caso (P5=No) y la accion no es de alto impacto autonomo; conteo=4."
 val,VAR-FG-R22,"Nombre de la iniciativa: VAR-FG-R22
 Tipo de intent: Negocio
 Declaracion del intent: Asistente de diagnostico que influye en la decision clinica con un modelo externo por homologar y riesgo legal; el medico revisa y decide cada paciente.
@@ -790,7 +790,7 @@ Impacto en personas: Pacientes; el sistema influye en el diagnostico. Criticidad
 Supuesto de riesgo inicial: Modelo externo por homologar; el medico decide cada caso (P5=No).
 Restricciones explicitas: Datos de salud; cumplimiento regulatorio; el medico decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,"Rojo: influye en el diagnostico clinico con modelo externo por homologar y riesgo legal (4 en Si), pero el medico decide cada caso (P5=No); conteo=4."
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,"Rojo: influye en el diagnostico clinico con modelo externo por homologar y riesgo legal (4 en Si), pero el medico decide cada caso (P5=No); conteo=4."
 val,VAR-FG-A24,"Nombre de la iniciativa: VAR-FG-A24
 Tipo de intent: Negocio
 Declaracion del intent: Recomendador que condiciona ofertas financieras a clientes perfilando su comportamiento, con framework interno certificado y riesgo legal si falla; el representante aprueba cada oferta antes de presentarla.
@@ -801,7 +801,7 @@ Impacto en personas: Clientes; perfilamiento que condiciona la oferta (alto_impa
 Supuesto de riesgo inicial: Framework interno certificado; profiling, pero el representante aprueba cada oferta (P5=No).
 Restricciones explicitas: Cumplimiento Ley 25.326 y Defensa del Consumidor; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,si,,,,,,,,,Amarillo,"Amarillo: perfila al cliente condicionando ofertas financieras (alto_impacto=Si), pero con framework interno certificado (P3=No) y el representante aprueba cada oferta (P5=No); conteo=3."
+Datos requeridos: personales",si,si,No,si,No,si,No,No,No,No,No,No,No,si,Amarillo,"Amarillo: perfila al cliente condicionando ofertas financieras (alto_impacto=Si), pero con framework interno certificado (P3=No) y el representante aprueba cada oferta (P5=No); conteo=3."
 val,VAR-FG-A18,"Nombre de la iniciativa: VAR-FG-A18
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que perfila a mas de 100.000 clientes por su comportamiento de consumo para definir a quienes se ofrecen beneficios, con framework interno certificado; el equipo de marketing decide cada campania y sin riesgo legal directo.
@@ -812,7 +812,7 @@ Impacto en personas: Mas de 100.000 clientes perfilados (alto_impacto por escala
 Supuesto de riesgo inicial: Framework interno certificado; profiling a escala, pero el equipo decide (P5=No).
 Restricciones explicitas: Cumplimiento Ley 25.326; el equipo decide cada campania.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,No,No,si,,,,,,,,,Amarillo,"Amarillo: perfila a mas de 100.000 clientes (alto_impacto=Si por escala) con framework interno certificado, pero el equipo decide cada accion (P5=No) y sin proveedor externo ni riesgo legal; conteo=2."
+Datos requeridos: personales",si,si,No,No,No,si,No,No,si,No,No,No,No,si,Amarillo,"Amarillo: perfila a mas de 100.000 clientes (alto_impacto=Si por escala) con framework interno certificado, pero el equipo decide cada accion (P5=No) y sin proveedor externo ni riesgo legal; conteo=2."
 val,VAR-FG-A19,"Nombre de la iniciativa: VAR-FG-A19
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que perfila a mas del 10% de la base con un LLM externo por homologar para priorizar acciones comerciales; el responsable decide cada accion y sin riesgo legal directo.
@@ -823,7 +823,7 @@ Impacto en personas: Mas del 10% de la base perfilada (alto_impacto por escala),
 Supuesto de riesgo inicial: LLM externo por homologar; profiling a escala, pero el responsable decide (P5=No).
 Restricciones explicitas: Cumplimiento Ley 25.326; el responsable decide cada accion.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,No,No,si,,,,,,,,,Amarillo,"Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada accion (P5=No) y sin riesgo legal directo; conteo=3."
+Datos requeridos: personales",si,si,si,No,No,si,No,No,si,No,No,No,No,si,Amarillo,"Amarillo: perfila a mas del 10% de la base (alto_impacto=Si) con LLM externo por homologar, pero el responsable decide cada accion (P5=No) y sin riesgo legal directo; conteo=3."
 val,VAR-FG-V16,"Nombre de la iniciativa: VAR-FG-V16
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que muestra al empleado un resumen informativo de su propio historial de desempeño a partir de sus datos; no decide nada ni se comparte con terceros.
@@ -834,7 +834,7 @@ Impacto en personas: Empleado como unico usuario de su propio resumen; no decide
 Supuesto de riesgo inicial: Uso informativo de datos personales del propio empleado; sin automatizacion.
 Restricciones explicitas: Sin decisiones automaticas; el empleado consume su propio dato.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,No,No,No,No,,,,,,,,,Verde,"Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar; conteo=1."
+Datos requeridos: personales",si,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: usa datos personales del propio empleado (P1) de forma informativa, sin decidir ni automatizar; conteo=1."
 val,VAR-FG-V17,"Nombre de la iniciativa: VAR-FG-V17
 Tipo de intent: Capacidad de Equipo
 Declaracion del intent: Asistente que traduce documentacion tecnica interna usando un LLM externo por homologar; sin datos personales, el autor revisa antes de usar.
@@ -845,7 +845,7 @@ Impacto en personas: Empleados como usuarios; sin datos personales ni decision s
 Supuesto de riesgo inicial: LLM externo por homologar, pero sin datos sensibles ni decisiones; el autor revisa.
 Restricciones explicitas: Sin datos personales; revision humana previa.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: ninguno sensible",No,No,si,No,No,No,,,,,,,,,Verde,"Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones, con revision humana; conteo=1."
+Datos requeridos: ninguno sensible",No,No,si,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: usa un LLM externo por homologar (P3) pero sin datos personales ni decisiones, con revision humana; conteo=1."
 val,VAR-FG-V18,"Nombre de la iniciativa: VAR-FG-V18
 Tipo de intent: Operativo
 Declaracion del intent: Tablero que muestra al gerente datos de contacto de clientes de forma informativa; no influye en decisiones ni automatiza ninguna accion.
@@ -856,7 +856,7 @@ Impacto en personas: Gerente como consumidor de un tablero informativo; no decid
 Supuesto de riesgo inicial: Uso informativo de datos personales; sin automatizacion ni decision.
 Restricciones explicitas: Solo lectura; sin acciones automaticas.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,No,No,No,No,,,,,,,,,Verde,"Verde: muestra datos personales de forma informativa (P1), sin influir en decisiones ni automatizar; conteo=1."
+Datos requeridos: personales",si,No,No,No,No,No,No,No,No,No,No,No,No,No,Verde,"Verde: muestra datos personales de forma informativa (P1), sin influir en decisiones ni automatizar; conteo=1."
 val,VAR-FG-A20,"Nombre de la iniciativa: VAR-FG-A20
 Tipo de intent: Operativo
 Declaracion del intent: Asistente que resume historiales de clientes a partir de sus datos usando un LLM externo por homologar; es informativo, el representante decide y sin riesgo legal.
@@ -867,7 +867,7 @@ Impacto en personas: Representantes como usuarios de un resumen informativo. Cri
 Supuesto de riesgo inicial: LLM externo por homologar sobre datos personales; informativo, el representante decide.
 Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,si,No,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1) y LLM externo por homologar (P3), informativo y el representante decide; conteo=2."
+Datos requeridos: personales",si,No,si,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) y LLM externo por homologar (P3), informativo y el representante decide; conteo=2."
 val,VAR-FG-A21,"Nombre de la iniciativa: VAR-FG-A21
 Tipo de intent: Negocio
 Declaracion del intent: Recomendador que sugiere al representante una accion para el cliente segun sus datos; el representante decide, con plataforma interna homologada y sin riesgo legal directo.
@@ -878,7 +878,7 @@ Impacto en personas: Clientes via representante; influye en la oferta pero el re
 Supuesto de riesgo inicial: Plataforma interna homologada; el representante decide cada accion.
 Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,No,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1) e influye en la oferta (P2), pero el representante decide y plataforma interna homologada; conteo=2."
+Datos requeridos: personales",si,si,No,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1) e influye en la oferta (P2), pero el representante decide y plataforma interna homologada; conteo=2."
 val,VAR-FG-A22,"Nombre de la iniciativa: VAR-FG-A22
 Tipo de intent: Negocio
 Declaracion del intent: Generador de comunicaciones a clientes a partir de sus datos que condicionan su decision, con riesgo reputacional si fallan; el responsable aprueba antes de enviar, con plataforma interna homologada.
@@ -889,7 +889,7 @@ Impacto en personas: Clientes que reciben comunicaciones que condicionan su deci
 Supuesto de riesgo inicial: Plataforma interna homologada; el responsable aprueba antes de enviar.
 Restricciones explicitas: Cumplimiento Defensa del Consumidor; revision previa del responsable.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1), influye en la decision del cliente (P2) y riesgo reputacional (P4), mitigado por revision previa y plataforma interna; conteo=3."
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1), influye en la decision del cliente (P2) y riesgo reputacional (P4), mitigado por revision previa y plataforma interna; conteo=3."
 val,VAR-FG-A23,"Nombre de la iniciativa: VAR-FG-A23
 Tipo de intent: Negocio
 Declaracion del intent: Asistente que analiza datos de clientes e influye en la oferta que se les presenta, con un LLM externo por homologar; el representante decide y sin riesgo legal directo.
@@ -900,7 +900,7 @@ Impacto en personas: Clientes via representante; influye en la oferta. Criticida
 Supuesto de riesgo inicial: LLM externo por homologar; el representante decide cada oferta.
 Restricciones explicitas: Cumplimiento Ley 25.326; el representante decide.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,si,No,No,No,,,,,,,,,Amarillo,"Amarillo: datos personales (P1), influye en la oferta (P2) y LLM externo por homologar (P3), el representante decide y sin riesgo legal; conteo=3."
+Datos requeridos: personales",si,si,si,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: datos personales (P1), influye en la oferta (P2) y LLM externo por homologar (P3), el representante decide y sin riesgo legal; conteo=3."
 val,VAR-FG-N19,"Nombre de la iniciativa: VAR-FG-N19
 Tipo de intent: Operativo
 Declaracion del intent: Agente que restringe automaticamente el acceso de empleados a sistemas criticos ante señales de riesgo, sin revision por caso; la restriccion limita derechos de acceso hasta una intervencion posterior.
@@ -911,7 +911,7 @@ Impacto en personas: Empleados con acceso restringido sin revision por caso; res
 Supuesto de riesgo inicial: Restriccion de acceso autonoma (criterio b) sin revision por caso; supervision solo ex-post.
 Restricciones explicitas: Cumplimiento normativa laboral y Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,No,si,si,,,,,,,,,Negro,"Negro: restringe el acceso de empleados (restriccion de derechos, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro domina aunque el conteo sea 3."
+Datos requeridos: personales",si,si,No,No,si,si,No,No,No,si,No,No,No,No,Negro,"Negro: restringe el acceso de empleados (restriccion de derechos, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro domina aunque el conteo sea 3."
 val,VAR-FG-N20,"Nombre de la iniciativa: VAR-FG-N20
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que ejecuta automaticamente el bloqueo de los pagos de un cliente ante un score de fraude, sin revision por caso; el bloqueo corta el acceso a sus fondos.
@@ -922,7 +922,7 @@ Impacto en personas: Clientes con pagos bloqueados sin revision por caso; corte 
 Supuesto de riesgo inicial: Bloqueo autonomo (denegacion de acceso, criterio b) sin revision por caso.
 Restricciones explicitas: Cumplimiento BCRA y Ley 25.326.
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,No,No,No,si,si,,,,,,,,,Negro,"Negro: bloquea los fondos del cliente (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro aplica aunque el conteo sea 2."
+Datos requeridos: personales",si,No,No,No,si,si,No,No,No,si,No,No,No,No,Negro,"Negro: bloquea los fondos del cliente (denegacion de acceso, criterio b) de forma autonoma sin revision por caso (P5=Si); el override Negro aplica aunque el conteo sea 2."
 val,VAR-FG-T01,"Nombre de la iniciativa: Evaluador de Calidad de Atencion
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que analiza las transcripciones de las llamadas de cada agente de call center y calcula un score mensual de calidad de atencion (claridad, resolucion, tono), publicandolo en un ranking que el supervisor consulta para planificar el coaching y el feedback de su equipo.
@@ -933,7 +933,7 @@ Impacto en personas: Empleados (140 agentes) cuyas llamadas se puntuan mensualme
 Supuesto de riesgo inicial: El score se calcula sobre transcripciones completas y el supervisor lo usa como insumo; framework interno homologado; el agente puede pedir revision de su score.
 Restricciones explicitas: El sistema no toma decisiones sobre el agente; solo publica el score; cumplimiento Ley 25.326; el supervisor valida; presupuesto maximo USD 35.000
 Sponsor: Lucia Fernandez - Gerente de Contact Center
-Datos requeridos: personales",si,si,No,No,No,No,,,,,,,,,Amarillo,
+Datos requeridos: personales",si,si,No,No,No,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-T02,"Nombre de la iniciativa: Modelo Predictivo de Mora
 Tipo de intent: Negocio
 Declaracion del intent: Modelo que estima diariamente la probabilidad de mora de cada cliente pospago en los proximos 30 dias y publica el score en el CRM para consulta del equipo de cobranzas, que decide a que clientes contactar y con que plan de pago ofrecer. El sistema no actua sobre el cliente.
@@ -944,7 +944,7 @@ Impacto en personas: Clientes (~90.000 pospago) cuyo score se calcula a diario. 
 Supuesto de riesgo inicial: El score es un insumo para el gestor, que decide cada contacto; framework MLOps interno certificado y vigente.
 Restricciones explicitas: El sistema no actua sobre el cliente; solo publica scores; cumplimiento BCRA y Ley 25.326; sin variables que generen sesgo; presupuesto maximo USD 80.000
 Sponsor: Martin Rios - Director de Cobranzas
-Datos requeridos: personales",si,si,No,si,No,No,,,,,,,,,Amarillo,
+Datos requeridos: personales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-T03,"Nombre de la iniciativa: Analizador de Clausulas Contractuales
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que revisa los contratos de clientes corporativos e identifica clausulas de riesgo (penalidades, renovacion automatica, exclusividad), generando un informe de hallazgos para el equipo legal. El abogado responsable valida el informe y decide si negociar, escalar o aceptar.
@@ -955,7 +955,7 @@ Impacto en personas: El analisis condiciona las posiciones legales sobre los con
 Supuesto de riesgo inicial: El informe es un insumo; el abogado valida cada hallazgo antes de actuar; los documentos estan digitalizados; sin proveedores externos.
 Restricciones explicitas: El sistema no propone posiciones de negociacion; solo identifica clausulas; confidencialidad contractual y secreto profesional; el abogado valida; presupuesto maximo USD 70.000
 Sponsor: Ignacio Vera - Director Legal
-Datos requeridos: confidenciales",si,si,No,si,No,No,,,,,,,,,Amarillo,
+Datos requeridos: confidenciales",si,si,No,si,No,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-T04,"Nombre de la iniciativa: Reportes Automaticos de Exposicion
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que genera y envia automaticamente, al cierre de cada dia habil, los reportes de exposicion de riesgo a la gerencia de Riesgo, sin revision previa. El equipo de riesgo revisa el reporte consolidado a la manana siguiente.
@@ -966,7 +966,7 @@ Impacto en personas: Empleados (10 gerentes y analistas de Riesgo) como destinat
 Supuesto de riesgo inicial: Los datos de cierre estan consolidados antes del proceso nocturno; el envio es automatico y la revision del equipo es a la manana siguiente.
 Restricciones explicitas: Reportes de uso exclusivo de la gerencia de Riesgo; no se distribuyen fuera del perimetro; cumplimiento BCRA; sin proveedores externos; presupuesto maximo USD 20.000
 Sponsor: Fernando Aguirre - Director de Riesgo
-Datos requeridos: confidenciales",si,No,No,No,si,No,,,,,,,,,Amarillo,
+Datos requeridos: confidenciales",si,No,No,No,si,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-T05,"Nombre de la iniciativa: Ruteo Automatico de Emails de Clientes
 Tipo de intent: Operativo
 Declaracion del intent: Herramienta que clasifica automaticamente los emails entrantes de clientes por tipo y urgencia y los rutea a las colas de atencion correspondientes sin revision previa. Un supervisor audita una muestra del ruteo al final de cada dia.
@@ -977,7 +977,7 @@ Impacto en personas: Clientes cuyos emails se clasifican y rutean automaticament
 Supuesto de riesgo inicial: El ruteo es automatico sin revision previa; el supervisor audita una muestra a posteriori; framework interno homologado.
 Restricciones explicitas: Cumplimiento Ley 25.326; los emails se conservan segun la politica de retencion; sin proveedores externos; presupuesto maximo USD 22.000
 Sponsor: Carla Mendez - Gerente de Atencion
-Datos requeridos: personales",si,No,No,No,si,No,,,,,,,,,Amarillo,
+Datos requeridos: personales",si,No,No,No,si,No,No,No,No,No,No,No,No,No,Amarillo,
 val,VAR-FG-T06,"Nombre de la iniciativa: Ajuste Automatico de Cupo de Compra
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que analiza mensualmente el comportamiento de pago de cada cliente pospago y ajusta automaticamente su cupo de compra dentro de las bandas definidas por la politica de credito vigente, sin discrecionalidad fuera de esos limites ni intervencion por caso. Genera un log mensual revisable por el equipo de credito a las 48 horas; el cliente puede solicitar revision.
@@ -988,7 +988,7 @@ Impacto en personas: Clientes (~80.000 pospago) que reciben ajustes automaticos 
 Supuesto de riesgo inicial: Los parametros de politica estan vigentes; el log mensual se revisa a las 48 horas; el cliente puede pedir revision humana de cualquier ajuste.
 Restricciones explicitas: Los ajustes no superan los limites de la politica aprobada; cumplimiento BCRA y Ley 25.326; el cliente puede solicitar revision; presupuesto maximo USD 100.000
 Sponsor: Fernando Aguirre - Director de Credito
-Datos requeridos: personales",si,si,No,si,si,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,No,si,si,No,si,si,No,No,No,No,No,No,Rojo,
 val,VAR-FG-T07,"Nombre de la iniciativa: Resolucion Automatica de Reclamos
 Tipo de intent: Negocio
 Declaracion del intent: Agente que recibe reclamos de clientes via API, los clasifica con un LLM de un proveedor externo aun no homologado y aplica automaticamente compensaciones acotadas al catalogo aprobado por policy (credito de factura, ajuste de plan menor), cerrando el caso. Escala a un agente humano solo cuando el reclamo no encaja en ninguna categoria del catalogo. Las resoluciones son reversibles.
@@ -999,7 +999,7 @@ Impacto en personas: Clientes (~7.000 con reclamos por mes) cuyos casos se resue
 Supuesto de riesgo inicial: El LLM externo clasifica el tipo de reclamo; las resoluciones estan dentro del catalogo aprobado y son reversibles; el proveedor externo aun no esta homologado.
 Restricciones explicitas: El agente no aplica compensaciones fuera del catalogo; escalada obligatoria cuando no encaja; cumplimiento Defensa del Consumidor; el LLM externo debe homologarse; presupuesto maximo USD 130.000
 Sponsor: Tomas Elizondo - Gerente de Operaciones de Reclamos
-Datos requeridos: personales",si,si,si,si,si,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,si,si,si,No,si,si,No,No,No,No,No,No,Rojo,
 val,VAR-FG-T08,"Nombre de la iniciativa: Ejecucion Autonoma de Cambios de Plan
 Tipo de intent: Negocio
 Declaracion del intent: Modulo del canal digital que ejecuta de forma autonoma los cambios de plan solicitados por el cliente: verifica la disponibilidad del upgrade en el catalogo vigente, ejecuta el cambio en el sistema de facturacion y lo confirma, sin intervencion de un agente humano. El cambio es reversible por el cliente dentro de las 24 horas.
@@ -1010,7 +1010,7 @@ Impacto en personas: Clientes (~25.000 por mes) cuyos cambios de plan se ejecuta
 Supuesto de riesgo inicial: El modulo opera solo sobre upgrades del catalogo vigente; el cambio es reversible por el cliente dentro de 24 horas; las condiciones no estandar se escalan.
 Restricciones explicitas: Solo upgrades del catalogo aprobado; las condiciones no estandar requieren agente humano; cumplimiento Defensa del Consumidor y ENACOM; reversible 24hs; presupuesto maximo USD 65.000
 Sponsor: Gabriela Moreno - Directora de Canales Digitales
-Datos requeridos: personales",si,si,No,si,si,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,No,si,si,No,si,si,No,No,No,No,No,No,Rojo,
 val,VAR-FG-T09,"Nombre de la iniciativa: Alta Automatica de Clientes
 Tipo de intent: Operativo
 Declaracion del intent: Agente que verifica el cumplimiento de los criterios de alta estandar y ejecuta automaticamente el registro del cliente en el CRM y en facturacion, sin intervencion del operador por caso, confirmando el alta al cliente por email. Los casos con documentacion incompleta o fuera de los criterios estandar se derivan a revision manual.
@@ -1021,7 +1021,7 @@ Impacto en personas: Clientes (~5.000 nuevos por mes) cuya alta se ejecuta de fo
 Supuesto de riesgo inicial: Los criterios de alta estan definidos y vigentes; los casos fuera de criterio van a revision manual; el alta es una accion favorable solicitada por el cliente.
 Restricciones explicitas: Los casos fuera de los criterios estandar requieren revision manual; cumplimiento Ley 25.326; presupuesto maximo USD 40.000
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,No,si,si,No,si,si,No,No,No,No,No,No,Rojo,
 val,VAR-FG-T10,"Nombre de la iniciativa: Pricing Dinamico por Segmento
 Tipo de intent: Negocio
 Declaracion del intent: Agente que ajusta automaticamente precios y descuentos de los planes de unos 300.000 clientes activos, segmentados, en funcion de parametros de mercado y comportamiento de consumo en tiempo real. Los ajustes se aplican dentro de bandas predefinidas por el area comercial sin requerir aprobacion individual.
@@ -1032,7 +1032,7 @@ Impacto en personas: Clientes (~300.000 activos en 8 segmentos) cuyos precios y 
 Supuesto de riesgo inicial: Las bandas tarifarias estan dentro de los limites regulatorios vigentes; el area comercial revisa las bandas antes de cada ciclo; los ajustes se aplican sin aprobacion individual.
 Restricciones explicitas: Los ajustes no superan las bandas aprobadas; cumplimiento ENACOM y Defensa del Consumidor; los cambios de bandas requieren aprobacion de Gestion Comercial; presupuesto maximo USD 250.000
 Sponsor: Sebastian Castro - Director Comercial
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,si,No,si,No,si,No,No,No,Negro,
 val,VAR-FG-T11,"Nombre de la iniciativa: Recalculo Automatico de Tarifas
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que recalcula y aplica automaticamente la tarifa de mas del 10% de la base de clientes segun su patron de consumo mensual, dentro de las bandas aprobadas por el area comercial, sin revision por caso.
@@ -1043,7 +1043,7 @@ Impacto en personas: Clientes (mas del 10% de la base activa) cuyas tarifas se r
 Supuesto de riesgo inicial: Las bandas estan dentro de los limites regulatorios; el area revisa las bandas antes de cada ciclo; el recalculo se aplica sin revision por caso.
 Restricciones explicitas: Los recalculos no superan las bandas aprobadas; cumplimiento ENACOM y Defensa del Consumidor; presupuesto maximo USD 180.000
 Sponsor: Sebastian Castro - Director Comercial
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,si,No,si,No,si,No,No,No,Negro,
 val,VAR-FG-T12,"Nombre de la iniciativa: Bloqueo Automatico Antifraude
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que analiza cada transaccion en tiempo real y bloquea automaticamente las que superan el umbral de riesgo definido, sin revision por caso. El equipo de fraude recibe alertas y puede revertir el bloqueo dentro de las 2 horas siguientes.
@@ -1054,7 +1054,7 @@ Impacto en personas: Clientes (~120.000 transacciones por dia) cuyas operaciones
 Supuesto de riesgo inicial: El bloqueo es a nivel de transaccion individual; el equipo de fraude puede revertirlo dentro de 2 horas; el modelo de scoring esta en evaluacion.
 Restricciones explicitas: El bloqueo es solo de la transaccion, no de la cuenta; reversible por el equipo en 2 horas; cumplimiento BCRA; presupuesto maximo USD 200.000
 Sponsor: Diego Carrasco - Gerente de Prevencion de Fraude
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,No,si,No,si,No,No,No,No,Negro,
 val,VAR-FG-T13,"Nombre de la iniciativa: Suspension Automatica de Acceso
 Tipo de intent: Operativo
 Declaracion del intent: Agente que suspende automaticamente el acceso de un cliente a la plataforma de autogestion ante senales de riesgo de seguridad (patrones de acceso anomalos, indicios de cuenta comprometida), sin revision previa por caso. El area de soporte puede restituir el acceso a pedido del cliente.
@@ -1065,7 +1065,7 @@ Impacto en personas: Clientes cuyo acceso a la plataforma se suspende de forma a
 Supuesto de riesgo inicial: La suspension es automatica ante senales de riesgo; soporte restituye a pedido; las senales pueden tener falsos positivos.
 Restricciones explicitas: La suspension se aplica sin revision previa; soporte restituye a pedido del cliente; cumplimiento Ley 25.326 y Defensa del Consumidor; presupuesto maximo USD 50.000
 Sponsor: Gerente de Area (persona accountable)
-Datos requeridos: personales",si,si,No,si,si,si,,,,,,,,,Negro,
+Datos requeridos: personales",si,si,No,si,si,si,No,si,No,si,No,No,No,No,Negro,
 val,VAR-FG-T14,"Nombre de la iniciativa: Motor de Scoring Crediticio Asistido
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que procesa los datos financieros y de comportamiento del cliente, llama a una API externa de scoring aun no homologada y devuelve al analista de credito una recomendacion de aprobacion o rechazo de plan pospago. El analista valida la recomendacion y registra la decision final en cada caso.
@@ -1076,7 +1076,7 @@ Impacto en personas: Clientes (~5.000 solicitantes por mes). El score condiciona
 Supuesto de riesgo inicial: La API externa sera homologada antes de produccion; el analista valida y registra la decision en cada caso.
 Restricciones explicitas: El sistema no toma la decision; el analista registra la aprobacion o rechazo; cumplimiento BCRA, Ley 25.326 y Ley 25.065; sin variables discriminatorias; presupuesto maximo USD 150.000
 Sponsor: Fernando Aguirre - Director de Credito
-Datos requeridos: personales",si,si,si,si,No,No,,,,,,,,,Rojo,
+Datos requeridos: personales",si,si,si,si,No,No,No,No,No,No,No,No,No,No,Rojo,
 train,VAR-FG-D01,"Nombre de la iniciativa: Indice de Propension de Compra
 Tipo de intent: Negocio
 Declaracion del intent: Sistema que calcula un indice de propension de compra de cada cliente y lo publica en el CRM; el ejecutivo comercial usa ese indice para decidir a quien ofrecer un upgrade y en que condiciones. El sistema no contacta al cliente.
@@ -1087,7 +1087,7 @@ Impacto en personas: Clientes (~60.000) cuyo indice se calcula. El ejecutivo dec
 Supuesto de riesgo inicial: El indice es un insumo; el ejecutivo decide cada oferta; framework interno homologado.
 Restricciones explicitas: El sistema no contacta ni decide; solo publica el indice; cumplimiento Ley 25.326.
 Sponsor: Sebastian Castro - Director Comercial
-Datos requeridos: personales",si,si,No,No,No,No,,,,,,,,,Amarillo,"Amarillo: usa datos personales (P1=Si) y, aunque el ejecutivo toma la decision final, el sistema produce un indice que CONDICIONA esa decision sobre el cliente -> influye (P2=Si). Sin proveedor externo (P3=No), sin riesgo legal directo (P4=No) y sin ejecucion autonoma (P5=No); conteo=2 -> Amarillo."
+Datos requeridos: personales",si,si,No,No,No,No,No,No,No,No,No,No,No,No,Amarillo,"Amarillo: usa datos personales (P1=Si) y, aunque el ejecutivo toma la decision final, el sistema produce un indice que CONDICIONA esa decision sobre el cliente -> influye (P2=Si). Sin proveedor externo (P3=No), sin riesgo legal directo (P4=No) y sin ejecucion autonoma (P5=No); conteo=2 -> Amarillo."
 train,VAR-FG-D02,"Nombre de la iniciativa: Asignacion Automatica de Casos
 Tipo de intent: Operativo
 Declaracion del intent: Sistema que asigna automaticamente cada caso entrante a un equipo de atencion segun su contenido, sin revision previa; un coordinador audita el resultado del dia a la manana siguiente y reasigna lo que haga falta.
