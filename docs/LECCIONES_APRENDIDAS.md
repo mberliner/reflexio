@@ -837,7 +837,42 @@ precedencia), exactamente como predice la sección 8 y [[gpt5mini_clasificacion_
 Confirma que invertir en fast_gate vía prompt/GEPA/modelo no tiene retorno; la única
 palanca con sentido es data-centric / arquitectónica (descomponer el juicio).
 
+**Descomponer `alto_impacto` lo hace AUDITABLE pero NO rompe el techo (2026-06-20, D-015a).**
+Se ejecutó la única palanca que quedaba (la que anticipa la lección de "suma cero"):
+sacar la **precedencia** del prompt y meterla en código, un nivel más profundo que D-013.
+Arquitectura `rule_derived_alto`: el LLM responde 8 **sub-hechos objetivos** (acotado,
+reversible, escala_masiva, naturaleza_restrictiva, decision_financiera,
+irreversible_sin_intervencion, exposicion_regulatoria, profiling) y `derive_alto_impacto`
+aplica la precedencia del Marco; luego `derive_color` deriva el color. Dos derivaciones
+puras en cadena.
+- **Pilot go/no-go (zero-shot, gpt-5.4-mini, N=3 sobre TEST P5=Sí):** alto_impacto derivado
+  **79,5%** (31/39) vs baseline directo few-shot 87,2%. El diagnóstico por-caso fue lo
+  valioso: **los errores son SUB-HECHOS mal marcados, no la precedencia.** El modelo marca
+  `reversible=Sí` en un pricing que no es reversible por transacción, y
+  `exposicion_regulatoria=Sí` en un mero reporte interno. Donde los sub-hechos salen bien,
+  la regla deriva bien. La precedencia (el código) funciona; el cuello se trasladó a la
+  calidad de los sub-hechos objetivos.
+- **Baseline few-shot vs few-shot (N=3 sobre TEST):** color **83,3%** (75/90), alto_impacto
+  82,1%. Comparable al `rule_derived` directo (81-82% con gpt-5.4-mini): **no-inferior,
+  dentro del ruido (±3-5 pp).** El few-shot curado (11 demos que cubren acotado+reversible
+  → No aunque financiera; escala/profiling/restrictiva → Sí) calibró parcialmente los
+  sub-hechos, pero introdujo algún error nuevo de p2/p4 → el techo no se mueve.
+- **Lección.** Descomponer un juicio de precedencia en sub-hechos objetivos + función pura
+  **convierte un juicio opaco en uno determinista y AUDITABLE** (el color sale de 8 hechos
+  trazables, no de un salto), y es **no-inferior** en accuracy. Pero **no rompe un techo
+  estructural de la TAREA**: el juicio subjetivo se desplaza del "todo" (alto_impacto) a las
+  "partes" (qué sub-hechos son ciertos), y las partes ambiguas (¿"reversible"? ¿"regulatorio"?)
+  siguen teniendo techo de modelo. **La descomposición compra trazabilidad, no precisión.**
+  Es la arquitectura recomendada cuando se requiere auditar el juicio de alto impacto; no es
+  la palanca que sube el número (no existe por esta vía — cierra la línea de alto_impacto y
+  el ciclo de las 4+1 palancas: VAL, GEPA, modelo, demos, descomposición).
+- Nota operativa: el regex de detección de reasoning models (`shared/llm/config.py`) no
+  cubría `gpt-5.4`(-mini) — el `.` del minor no matcheaba el patrón `gpt-5(?:-.*)?`, así que
+  no forzaba `temperature=1.0` y litellm rechazaba la corrida. Corregido a `gpt-5(?:[.-].*)?`.
+
 ### Archivos relacionados
+
+- Descomposición de alto_impacto (D-015a): `dspy_gepa_poc/flujo_intents/fast_gate_rule.py` (`derive_alto_impacto`), `dspy_gepa_poc/dynamic_factory.py` (`create_rule_derived_alto_impacto_module`), config `dspy_gepa_poc/configs/flujo_intents_fast_gate_descompuesto_v1.yaml`, demos curados `_FG_SUBHECHOS` en `make_variations.py`, modo `--pilot` en `diagnose_rule_baseline.py`
 
 - Config (prompt pilot, sin GEPA en producción): `dspy_gepa_poc/configs/flujo_intents_fast_gate_fewshot_rico_prompt_v1.yaml`
 - Dataset y generador: `dspy_gepa_poc/datasets/flujo_intents_fast_gate.csv`, `dspy_gepa_poc/flujo_intents/make_variations.py`
