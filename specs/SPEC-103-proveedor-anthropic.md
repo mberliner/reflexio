@@ -289,21 +289,21 @@ Notas de la matriz:
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | tabla de familias en `shared/llm/config.py`; `tests/test_shared_llm.py` (pendiente) |
-| FR-002 | `LLMConfig.to_kwargs` y restricciones por familia; usado por `get_dspy_lm`, `get_lm_function`, `gepa_standalone/core/llm_factory.py::call_llm`, `gepa_standalone/adapters/simple_rag_adapter.py::_call_llm_with_retry` (pendiente) |
-| FR-003 | idem FR-002; test parametrizado por modelo (pendiente) |
-| FR-004 | `LLMConfig.from_env` (`LLM_EFFORT_<ROL>`) + validacion; test (pendiente) |
-| FR-005 | `LLMConfig.from_env` (`LLM_THINKING_<ROL>`) + validacion; test (pendiente) |
-| FR-006 | idem FR-002; test (pendiente) |
-| FR-007 | `LLMConfig.to_kwargs`, `LLMConfig.validate`, `LLMConfig.validate_connection`; test (pendiente) |
-| FR-008 | `LLMConfig.from_env` + validacion; test (pendiente) |
+| FR-001 | tabla de familias en `shared/llm/config.py`; `tests/test_anthropic_matrix.py` (vigente) |
+| FR-002 | `LLMConfig.to_kwargs` y restricciones por familia; usado por `get_dspy_lm`, `get_lm_function`, `gepa_standalone/core/llm_factory.py::call_llm`, `gepa_standalone/adapters/simple_rag_adapter.py::_call_llm_with_retry` (vigente en `get_dspy_lm`, `get_lm_function` y `call_llm` con `tests/test_anthropic_matrix.py`; RAG pendiente, subfase 2a) |
+| FR-003 | idem FR-002; `tests/test_anthropic_matrix.py` (vigente) |
+| FR-004 | `LLMConfig.from_env` (`LLM_EFFORT_<ROL>`) + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
+| FR-005 | `LLMConfig.from_env` (`LLM_THINKING_<ROL>`) + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
+| FR-006 | idem FR-002; `tests/test_anthropic_matrix.py` (vigente) |
+| FR-007 | `LLMConfig.to_kwargs`, `LLMConfig.validate`, `LLMConfig.validate_connection`; `tests/test_anthropic_matrix.py` (vigente) |
+| FR-008 | `LLMConfig.from_env` + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-009 | `get_lm_function`, `get_dspy_lm` (LM de reflexion para `dspy.GEPA`), `call_llm`, `gepa_standalone/adapters/` (classifier, sql, rag, extractor), metricas DSPy (`dspy_gepa_poc/metrics.py`), `docs/GEPA_MANEJO_ERRORES.md`; test (pendiente) |
 | FR-010 | `LLMConfig.describe`, `gepa_standalone/universal_optimizer.py` (reporte por adapter); test (pendiente) |
 | FR-011 | `shared/analysis/roi_calculator.py` (`DEFAULT_PRICING`, `normalize_model`, `get_model_pricing`), `shared/llm/usage.py`, `docs/ANALISIS_UTILIDADES.md`; `tests/test_shared_analysis.py` (pendiente) |
 | FR-012 | `shared/logging/metadata.py`, `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py` (`save_results`), `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md` (pendiente) |
 | FR-013 | `docs/LLM_CONFIG.md` (pendiente) |
 | SC-001 | `tests/test_litellm_regression.py` (vigente: header `anthropic-version`, `temperature` por modelo con `drop_params`, pase de `output_config` y `thinking` a nivel LiteLLM); falta el test sobre los cuatro caminos de `LLMConfig` (pendiente) |
-| SC-002 | test parametrizado sobre las combinaciones invalidas (pendiente) |
+| SC-002 | `tests/test_anthropic_matrix.py::TestValidateCombinations` (vigente) |
 | SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (pendiente) |
 | SC-004 | conteo sobre las predicciones volcadas de las corridas de SC-003 (pendiente) |
 | SC-005 | `run.json` / CSV de las corridas de SC-003 (pendiente) |

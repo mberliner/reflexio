@@ -14,6 +14,8 @@ class LLMConnectionError(Exception):
     Provides structured error information with actionable suggestions.
     """
 
+    title = "LLM CONNECTION ERROR"
+
     def __init__(
         self,
         message: str,
@@ -51,7 +53,7 @@ class LLMConnectionError(Exception):
         lines = [
             "",
             "=" * 60,
-            "LLM CONNECTION ERROR",
+            self.title,
             "=" * 60,
             "",
             f"Message: {self.message}",
@@ -100,3 +102,32 @@ class LLMConnectionError(Exception):
 
         lines.extend(["", "=" * 60, ""])
         return "\n".join(lines)
+
+
+class LLMConfigError(LLMConnectionError):
+    """
+    Combinacion invalida de parametros de configuracion del LLM (SPEC-103, FR-005/FR-008).
+
+    Hereda de LLMConnectionError para que los entry points que ya la atrapan sigan
+    funcionando. El mensaje nombra modelo, rol, parametro y valores aceptados.
+    """
+
+    title = "LLM CONFIGURATION ERROR"
+
+    def __init__(
+        self,
+        message: str,
+        model: str,
+        parameter: str,
+        accepted: list[str] | tuple[str, ...] | None = None,
+    ):
+        self.parameter = parameter
+        self.accepted = list(accepted) if accepted else []
+        provider = model.split("/")[0] if "/" in model else "unknown"
+        suggestions = [f"Set {parameter} to one of: {', '.join(self.accepted)}"] if accepted else []
+        super().__init__(
+            message=message,
+            provider=provider,
+            model=model,
+            suggestions=suggestions,
+        )

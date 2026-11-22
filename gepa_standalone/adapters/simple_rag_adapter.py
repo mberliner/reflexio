@@ -94,7 +94,7 @@ class SimpleRAGAdapter(BaseAdapter):
         litellm.drop_params = True
         call_kwargs = config.to_kwargs()
         call_kwargs["max_tokens"] = max_tokens
-        call_kwargs = config.apply_reasoning_constraints(call_kwargs)
+        call_kwargs = config.apply_constraints(call_kwargs)
         model_key = call_kwargs.pop("model")
 
         for attempt in range(max_retries):

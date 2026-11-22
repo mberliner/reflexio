@@ -26,7 +26,6 @@ REQUESTED_MAX_TOKENS = 100
 REQUESTED_TEMPERATURE = 0.1
 ALL_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
-RED_CORE = pytest.mark.xfail(strict=True, reason="SPEC-103 1c")
 RED_RAG = pytest.mark.xfail(strict=True, reason="SPEC-103 2a")
 
 # (alias, envia temperature, efforts aceptados o None, razonamiento por defecto)
@@ -139,7 +138,6 @@ def _assert_default_body(body: dict, sends_temp: bool, efforts, reasoning: str) 
 
 
 class TestMatrixGetLmFunction:
-    @RED_CORE
     @pytest.mark.parametrize(("alias", "sends_temp", "efforts", "reasoning"), MATRIX)
     def test_default_values(self, capture_anthropic_post, alias, sends_temp, efforts, reasoning):
         assert _cfg(alias).get_lm_function(role="task")("hi") == "ok"
@@ -147,7 +145,6 @@ class TestMatrixGetLmFunction:
         _assert_common_wire(capture_anthropic_post, alias)
         _assert_default_body(capture_anthropic_post["body"], sends_temp, efforts, reasoning)
 
-    @RED_CORE
     @pytest.mark.parametrize(
         ("alias", "efforts"), [(row[0], row[2]) for row in MATRIX if row[2] is not None]
     )
@@ -162,7 +159,6 @@ class TestMatrixGetLmFunction:
         assert "thinking" not in body
         assert "reasoning_effort" not in body
 
-    @RED_CORE
     @pytest.mark.parametrize(("alias", "expected_thinking"), OFF_CASES)
     def test_thinking_off_per_mechanism(self, capture_anthropic_post, alias, expected_thinking):
         _cfg(alias, thinking="off").get_lm_function(role="task")("hi")
@@ -174,7 +170,6 @@ class TestMatrixGetLmFunction:
             assert body["thinking"] == expected_thinking
         assert body["max_tokens"] == REQUESTED_MAX_TOKENS
 
-    @RED_CORE
     def test_off_with_high_effort_allowed_where_cap_is_high(self, capture_anthropic_post):
         _cfg("claude-haiku-5-5", thinking="off", effort="high").get_lm_function(role="task")("hi")
 
@@ -182,7 +177,6 @@ class TestMatrixGetLmFunction:
         assert body["thinking"] == {"type": "disabled"}
         assert body["output_config"] == {"effort": "high"}
 
-    @RED_CORE
     def test_azure_leftovers_never_sent(self, capture_anthropic_post):
         config = _cfg(
             "claude-opus-5-5",
@@ -199,7 +193,6 @@ class TestMatrixGetLmFunction:
 
 
 class TestMatrixCallLlm:
-    @RED_CORE
     @pytest.mark.parametrize(
         ("alias", "sends_temp", "efforts", "reasoning"),
         [row for row in MATRIX if row[0] in ("claude-sonnet-4-6", "claude-opus-5-5")],
@@ -220,7 +213,6 @@ class TestMatrixCallLlm:
         assert "thinking" not in body
         assert body["max_tokens"] == (50 if reasoning == "off" else 16000)
 
-    @RED_CORE
     def test_call_llm_reads_effort_from_env(
         self, capture_anthropic_post, anthropic_env, monkeypatch
     ):
@@ -234,7 +226,6 @@ class TestMatrixCallLlm:
 
 
 class TestMatrixGetDspyLm:
-    @RED_CORE
     @pytest.mark.parametrize(
         ("alias", "sends_temp", "efforts", "reasoning"),
         [row for row in MATRIX if row[0] in ("claude-sonnet-4-6", "claude-opus-5-5")],
@@ -286,7 +277,6 @@ class TestMatrixSimpleRagAdapter:
 
 
 class TestValidateConnection:
-    @RED_CORE
     def test_probe_respects_reasoning_minimum(self, capture_anthropic_post):
         assert _cfg("claude-opus-5-5").validate_connection() is True
 
@@ -295,7 +285,6 @@ class TestValidateConnection:
         assert "temperature" not in body
         assert body["output_config"] == {"effort": "medium"}
 
-    @RED_CORE
     def test_probe_keeps_small_max_tokens_when_reasoning_off(self, capture_anthropic_post):
         assert _cfg("claude-haiku-5-5", thinking="off").validate_connection() is True
 
@@ -308,7 +297,6 @@ class TestValidateConnection:
 
 
 class TestResolveAnthropicFamily:
-    @RED_CORE
     @pytest.mark.parametrize("alias", ALL_ALIASES)
     def test_alias_snapshot_and_prefix_resolve_to_same_family(self, alias):
         from shared.llm.config import resolve_anthropic_family
@@ -318,7 +306,6 @@ class TestResolveAnthropicFamily:
         assert resolve_anthropic_family(alias) is family
         assert resolve_anthropic_family(f"anthropic/{alias}-20260514") is family
 
-    @RED_CORE
     def test_no_partial_prefix_matching(self):
         from shared.llm.config import resolve_anthropic_family
 
@@ -330,7 +317,6 @@ class TestResolveAnthropicFamily:
         assert resolve_anthropic_family("anthropic/claude-opus-5-5-preview") is None
         assert resolve_anthropic_family("anthropic/claude-opus-5-5-2026") is None
 
-    @RED_CORE
     @pytest.mark.parametrize(
         "model",
         ["anthropic/claude-sonnet-4-5", "anthropic/claude-future-9", "azure/gpt-4o", "gpt-4o"],
@@ -340,7 +326,6 @@ class TestResolveAnthropicFamily:
 
         assert resolve_anthropic_family(model) is None
 
-    @RED_CORE
     def test_snapshot_gets_alias_constraints_without_warning(self, capture_anthropic_post, caplog):
         from shared.llm.config import resolve_anthropic_family
 
@@ -364,7 +349,6 @@ class TestResolveAnthropicFamily:
 
 
 class TestApplyConstraints:
-    @RED_CORE
     def test_returns_new_dict_without_mutating_input(self):
         config = _cfg("claude-opus-5-5")
         original = {
@@ -386,7 +370,6 @@ class TestApplyConstraints:
         assert result["max_tokens"] == 16000
         assert result["output_config"] == {"effort": "medium"}
 
-    @RED_CORE
     def test_per_call_temperature_override_is_removed_when_not_sent(self):
         result = _cfg("claude-opus-4-7").apply_constraints(
             {"model": "anthropic/claude-opus-4-7", "temperature": 0.0, "max_tokens": 50}
@@ -394,7 +377,6 @@ class TestApplyConstraints:
 
         assert "temperature" not in result
 
-    @RED_CORE
     def test_per_call_temperature_override_is_kept_when_sent(self):
         result = _cfg("claude-haiku-4-5").apply_constraints(
             {"model": "anthropic/claude-haiku-4-5", "temperature": 0.0, "max_tokens": 50}
@@ -404,7 +386,6 @@ class TestApplyConstraints:
         assert result["max_tokens"] == 50
         assert "output_config" not in result
 
-    @RED_CORE
     def test_thinking_off_does_not_raise_max_tokens(self):
         result = _cfg("claude-sonnet-5-5", thinking="off").apply_constraints(
             {"model": "anthropic/claude-sonnet-5-5", "max_tokens": 50}
@@ -418,7 +399,6 @@ class TestApplyConstraints:
 
 
 class TestEffectiveParams:
-    @RED_CORE
     def test_omitted_temperature_and_raised_max_tokens_are_reported(self):
         params = _cfg("claude-opus-5-5", max_tokens=400).effective_params()
 
@@ -429,7 +409,6 @@ class TestEffectiveParams:
         assert params["max_tokens"] == 16000
         assert params["max_tokens_requested"] == 400
 
-    @RED_CORE
     def test_per_call_max_tokens_is_reported(self):
         params = _cfg("claude-haiku-4-5").effective_params(max_tokens=50)
 
@@ -474,7 +453,6 @@ VALID_COMBINATIONS = [
 
 
 class TestValidateCombinations:
-    @RED_CORE
     @pytest.mark.parametrize(("alias", "effort", "thinking", "parameter"), INVALID_COMBINATIONS)
     def test_invalid_combination_fails_naming_model_and_parameter(
         self, alias, effort, thinking, parameter
@@ -489,7 +467,6 @@ class TestValidateCombinations:
         assert parameter in message
         assert "TASK" in message
 
-    @RED_CORE
     @pytest.mark.parametrize(
         ("alias", "effort", "valid_values"),
         [
@@ -505,7 +482,6 @@ class TestValidateCombinations:
         for value in valid_values:
             assert value in message
 
-    @RED_CORE
     def test_unknown_thinking_error_lists_allowed_values(self):
         with pytest.raises(_config_error()) as exc_info:
             _cfg("claude-sonnet-5-5", thinking="maybe").validate()
@@ -514,25 +490,21 @@ class TestValidateCombinations:
         assert "default" in message
         assert "off" in message
 
-    @RED_CORE
     def test_error_names_the_role(self):
         with pytest.raises(_config_error()) as exc_info:
             _cfg("claude-opus-5-5", thinking="off", role="reflection").validate()
 
         assert "REFLECTION" in str(exc_info.value)
 
-    @RED_CORE
     def test_config_error_is_a_connection_error(self):
         from shared.llm.errors import LLMConnectionError
 
         assert issubclass(_config_error(), LLMConnectionError)
 
-    @RED_CORE
     @pytest.mark.parametrize(("alias", "effort", "thinking"), VALID_COMBINATIONS)
     def test_valid_combination_passes(self, alias, effort, thinking):
         _cfg(alias, effort=effort, thinking=thinking).validate()
 
-    @RED_CORE
     def test_unknown_values_are_not_rejected_before_validate(self, anthropic_env, monkeypatch):
         anthropic_env("claude-sonnet-5-5")
         monkeypatch.setenv("LLM_EFFORT_TASK", "banana")
@@ -550,7 +522,6 @@ class TestValidateCombinations:
 
 
 class TestEnvParsing:
-    @RED_CORE
     @pytest.mark.parametrize("role", ["task", "reflection"])
     def test_effort_and_thinking_ignore_case_and_spaces(self, anthropic_env, monkeypatch, role):
         anthropic_env("claude-sonnet-5-5")
@@ -563,7 +534,6 @@ class TestEnvParsing:
         assert config.effort == "xhigh"
         assert config.thinking == "off"
 
-    @RED_CORE
     def test_other_role_variables_do_not_leak(self, anthropic_env, monkeypatch):
         anthropic_env("claude-sonnet-5-5")
         monkeypatch.setenv("LLM_EFFORT_REFLECTION", "max")
@@ -574,7 +544,6 @@ class TestEnvParsing:
         assert config.effort is None
         assert config.thinking == "default"
 
-    @RED_CORE
     @pytest.mark.parametrize("blank", ["", "   "])
     def test_blank_values_mean_not_configured(self, anthropic_env, monkeypatch, blank):
         anthropic_env("claude-sonnet-5-5")
@@ -586,7 +555,6 @@ class TestEnvParsing:
         assert config.effort is None
         assert config.thinking == "default"
 
-    @RED_CORE
     def test_unset_variables_default(self, anthropic_env):
         anthropic_env("claude-sonnet-5-5")
 
@@ -601,7 +569,6 @@ class TestEnvParsing:
 
 
 class TestStartupWarnings:
-    @RED_CORE
     @pytest.mark.parametrize(
         "model", ["claude-sonnet-4-5", "claude-future-9", "claude-opus-5-5-preview"]
     )
@@ -621,14 +588,12 @@ class TestStartupWarnings:
         assert "output_config" not in body
         assert "thinking" not in body
 
-    @RED_CORE
     def test_matrix_model_does_not_warn(self, caplog):
         with caplog.at_level(logging.WARNING):
             _cfg("claude-opus-5-5").validate()
 
         assert "claude-opus-5-5" not in caplog.text
 
-    @RED_CORE
     def test_leftover_api_base_warns_and_is_not_sent(self, capture_anthropic_post, caplog):
         config = _cfg("claude-haiku-4-5", api_base="https://x.openai.azure.com")
         with caplog.at_level(logging.WARNING):

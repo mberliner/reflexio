@@ -34,7 +34,7 @@ modelos bajo prueba de la matriz de la spec.
 |---|---|---|---|---|
 | 1 Nucleo (`shared/llm/config.py`) | 1a Tests sin red: matriz, combinaciones invalidas, regresion Azure/OpenAI (RED) | SC-001, SC-002, SC-006 | Sonnet 5.5 | hecho (22156c2) |
 | | 1b Diseno: tabla de familias, resolucion de alias/snapshot, campos de `LLMConfig`, `apply_constraints`, `effective_params` | FR-001, FR-002 | Opus 5.5 | hecho (cc57b22) |
-| | 1c Implementacion de `from_env`, `apply_constraints`, `to_kwargs`, `validate`, `validate_connection` (GREEN) | FR-003, FR-004, FR-005, FR-006, FR-007, FR-008 | Sonnet 5.5 | pendiente |
+| | 1c Implementacion de `from_env`, `apply_constraints`, `to_kwargs`, `validate`, `validate_connection` (GREEN) | FR-003, FR-004, FR-005, FR-006, FR-007, FR-008 | Sonnet 5.5 | hecho (hash en el commit siguiente) |
 | | 1d Revision de regresion silenciosa en `azure/` y `openai/` | SC-006 | Opus 5.5 | pendiente |
 | 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | pendiente |
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | pendiente |
@@ -286,6 +286,21 @@ ignorados con aviso fuera de la matriz, claves extra de `effective_params`.
 - Quitar la marca `xfail` de los tests de 1a (salvo el de RAG, que la quita 2a).
 - Cierre: tests de 1a en verde (salvo el de RAG) y `ci_local.sh` verde.
   `config.py` por debajo de 800 lineas.
+
+Resultado de 1c: implementado segun "Fijado en 1b", sin desvios de diseno. Tests
+de 1a en verde (109 passed) salvo el de RAG (xfail 2a); suite 696 passed, 1
+xfailed; `ci_local.sh` verde; `config.py` 685 lineas. Notas para 1d:
+
+- `apply_reasoning_constraints` borrada; sus usos en `llm_factory.py` y
+  `simple_rag_adapter.py` pasan a `apply_constraints`.
+- `validate_connection` arma la sonda (`_base_kwargs` + `max_tokens=5` +
+  `apply_constraints`) fuera del `try`: un `LLMConfigError` sale sin envolverse
+  como falla de red.
+- `describe()` lee de `effective_params()` (temperature omitida: "not sent");
+  el formato completo sigue siendo de 4a.
+- `LLMConnectionError.title` (atributo de clase) usado por `format_error`.
+- `_check_params` tambien valida valores desconocidos de effort/thinking para
+  OpenAI/Azure (FR-008, "todo proveedor").
 
 ### 1d Revision — Opus 5.5
 

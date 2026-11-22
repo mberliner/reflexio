@@ -6,11 +6,14 @@ Provides a unified configuration dataclass that works with both:
 - litellm.completion (for gepa_standalone)
 """
 
+import logging
 import os
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
+
+logger = logging.getLogger(__name__)
 
 # Same regex DSPy uses internally to detect reasoning models (o1/3/4/5, gpt-5 family).
 # El sufijo de la familia gpt-5 admite tanto '-' (gpt-5-mini) como '.' para versiones
@@ -105,7 +108,7 @@ def _is_anthropic(model: str) -> bool:
     activan solo con este prefijo; IDs `claude-*` sin prefijo no se tratan como
     Anthropic en el armado de kwargs (FR-001 habla de `anthropic/<id>`).
     """
-    raise NotImplementedError("SPEC-103 1c")
+    return model.startswith(_ANTHROPIC_PREFIX)
 
 
 def resolve_anthropic_family(model: str) -> AnthropicFamily | None:
@@ -124,7 +127,15 @@ def resolve_anthropic_family(model: str) -> AnthropicFamily | None:
         La instancia de `ANTHROPIC_FAMILIES` (misma identidad para alias,
         alias compartidos y snapshots de una fila) o None fuera de la matriz.
     """
-    raise NotImplementedError("SPEC-103 1c")
+    if model.startswith(_ANTHROPIC_PREFIX):
+        model = model[len(_ANTHROPIC_PREFIX) :]
+    if "/" in model:
+        return None
+    model = _SNAPSHOT_SUFFIX.sub("", model)
+    for family in ANTHROPIC_FAMILIES:
+        if model in family.aliases:
+            return family
+    return None
 
 
 @dataclass
@@ -152,31 +163,118 @@ class LLMConfig:
     # (gpt-5-mini/gpt-5), que ocasionalmente no devuelven respuesta (D-016). None = sin
     # limite. Default alto (600s): no corta requests legitimas, solo cuelgues reales.
     timeout: float | None = 600.0
+    # SPEC-103: rol (variables LLM_EFFORT_<ROL>/LLM_THINKING_<ROL>), effort y modo de
+    # razonamiento ("default" | "off"). La validez se decide en validate() (D3).
+    role: str = "task"
+    effort: str | None = None
+    thinking: str = "default"
+    # Aviso de arranque una sola vez por config (D5).
+    _warned: bool = field(default=False, init=False, repr=False, compare=False)
 
     @property
     def is_reasoning_model(self) -> bool:
         """True when the model requires temperature=1.0 and max_tokens>=16000."""
         return _is_reasoning(self.model)
 
-    def apply_reasoning_constraints(self, kwargs: dict) -> dict:
-        """
-        Enforce reasoning model parameter requirements on an already-built kwargs dict.
+    def _param_names(self) -> tuple[str, str]:
+        suffix = self.role.upper()
+        return f"LLM_EFFORT_{suffix}", f"LLM_THINKING_{suffix}"
 
-        Safe to call on non-reasoning models (returns kwargs unchanged).
-        Used by to_kwargs() and call_llm() to re-apply after manual overrides.
+    def _check_params(self) -> None:
         """
-        if not self.is_reasoning_model:
-            return kwargs
-        kwargs["temperature"] = _REASONING_TEMPERATURE
-        if (kwargs.get("max_tokens") or 0) < _REASONING_MIN_MAX_TOKENS:
-            kwargs["max_tokens"] = _REASONING_MIN_MAX_TOKENS
-        return kwargs
+        Reglas de validez de effort/thinking (D5), sin avisos.
+
+        El orden de chequeo define que parametro nombra el error.
+
+        Raises:
+            LLMConfigError: combinacion invalida para el modelo.
+        """
+        from .errors import LLMConfigError
+
+        effort_var, thinking_var = self._param_names()
+        if self.effort is not None and self.effort not in _EFFORTS:
+            raise LLMConfigError(
+                f"{effort_var}={self.effort!r} is not valid for {self.model} "
+                f"(role {self.role}). Accepted: {', '.join(_EFFORTS)}",
+                self.model,
+                effort_var,
+                _EFFORTS,
+            )
+        if self.thinking not in _THINKING_VALUES:
+            raise LLMConfigError(
+                f"{thinking_var}={self.thinking!r} is not valid for {self.model} "
+                f"(role {self.role}). Accepted: {', '.join(_THINKING_VALUES)}",
+                self.model,
+                thinking_var,
+                _THINKING_VALUES,
+            )
+        family = resolve_anthropic_family(self.model) if _is_anthropic(self.model) else None
+        if family is None:
+            return
+
+        if self.effort is not None and family.efforts is None:
+            raise LLMConfigError(
+                f"{effort_var} is set but {self.model} (role {self.role}) does not accept effort",
+                self.model,
+                effort_var,
+            )
+        if self.effort is not None and family.efforts is not None:
+            if self.effort not in family.efforts:
+                accepted = [e for e in _EFFORTS if e in family.efforts]
+                raise LLMConfigError(
+                    f"{effort_var}={self.effort!r} is not accepted by {self.model} "
+                    f"(role {self.role}). Accepted: {', '.join(accepted)}",
+                    self.model,
+                    effort_var,
+                    accepted,
+                )
+        if self.thinking == "off":
+            if family.off_mechanism is None:
+                raise LLMConfigError(
+                    f"{thinking_var}=off is not supported by {self.model} "
+                    f"(role {self.role}): reasoning cannot be turned off",
+                    self.model,
+                    thinking_var,
+                    ["default"],
+                )
+            if family.off_max_effort is not None:
+                effective = self.effort or _DEFAULT_EFFORT
+                if _EFFORTS.index(effective) > _EFFORTS.index(family.off_max_effort):
+                    allowed = list(_EFFORTS[: _EFFORTS.index(family.off_max_effort) + 1])
+                    raise LLMConfigError(
+                        f"{thinking_var}=off with effort {effective!r} is not supported by "
+                        f"{self.model} (role {self.role}): with thinking off, "
+                        f"{effort_var} must be one of {', '.join(allowed)}",
+                        self.model,
+                        thinking_var,
+                        ["default"],
+                    )
+
+    def _warn_once(self) -> None:
+        """Avisos de arranque (D5): ID fuera de la matriz y LLM_API_BASE ignorado."""
+        if self._warned or not _is_anthropic(self.model):
+            return
+        self._warned = True
+        effort_var, thinking_var = self._param_names()
+        if resolve_anthropic_family(self.model) is None:
+            logger.warning(
+                "Model %s is not in the SPEC-103 support matrix: sent without "
+                "restrictions (temperature, max_tokens as configured); %s and %s are "
+                "not sent.",
+                self.model,
+                effort_var,
+                thinking_var,
+            )
+        if self.api_base:
+            logger.warning(
+                "LLM_API_BASE is ignored for %s (Anthropic provider uses its own endpoint).",
+                self.model,
+            )
 
     def apply_constraints(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """
         Punto unico de restricciones por modelo (SPEC-103 D4, FR-002 a FR-007).
 
-        Reemplaza a `apply_reasoning_constraints` (1c renombra sus usos y la borra).
         Devuelve un dict NUEVO; nunca muta `kwargs`. Es idempotente:
         `apply_constraints(apply_constraints(k)) == apply_constraints(k)`, asi los
         llamadores pueden partir de `to_kwargs()`, aplicar overrides por llamada
@@ -204,7 +302,31 @@ class LLMConfig:
         Raises:
             LLMConfigError: si effort/thinking son invalidos para el modelo.
         """
-        raise NotImplementedError("SPEC-103 1c")
+        self._check_params()
+        result = dict(kwargs)
+
+        if not _is_anthropic(self.model):
+            if self.is_reasoning_model:
+                result["temperature"] = _REASONING_TEMPERATURE
+                if (result.get("max_tokens") or 0) < _REASONING_MIN_MAX_TOKENS:
+                    result["max_tokens"] = _REASONING_MIN_MAX_TOKENS
+            return result
+
+        result.pop("api_base", None)
+        result.pop("api_version", None)
+        family = resolve_anthropic_family(self.model)
+        if family is None:
+            return result
+
+        if not family.sends_temperature:
+            result.pop("temperature", None)
+        if family.efforts is not None:
+            result["output_config"] = {"effort": self.effort or _DEFAULT_EFFORT}
+        if self.thinking == "off" and family.off_mechanism in ("disabled", "between_tools"):
+            result["thinking"] = {"type": family.off_mechanism}
+        if family.default_reasoning != "off" and self.thinking != "off":
+            result["max_tokens"] = max(result.get("max_tokens") or 0, _REASONING_MIN_MAX_TOKENS)
+        return result
 
     def effective_params(self, max_tokens: int | None = None) -> dict[str, Any]:
         """
@@ -228,7 +350,33 @@ class LLMConfig:
             - max_tokens: valor enviado (tras FR-006).
             - max_tokens_requested: `max_tokens` del argumento o, si es None, de config.
         """
-        raise NotImplementedError("SPEC-103 1c")
+        base = self._base_kwargs()
+        requested = self.max_tokens if max_tokens is None else max_tokens
+        base["max_tokens"] = requested
+        sent = self.apply_constraints(base)
+
+        mode: str | None = None
+        if _is_anthropic(self.model):
+            family = resolve_anthropic_family(self.model)
+            if family is not None:
+                if self.thinking == "off":
+                    mode = "off"
+                else:
+                    mode = family.default_reasoning
+        elif self.is_reasoning_model:
+            mode = "always"
+
+        return {
+            "model": self.model,
+            "temperature": sent.get("temperature"),
+            "temperature_requested": self.temperature,
+            "temperature_omitted": "temperature" not in sent,
+            "effort": (sent.get("output_config") or {}).get("effort"),
+            "thinking": mode,
+            "thinking_param": sent.get("thinking"),
+            "max_tokens": sent.get("max_tokens"),
+            "max_tokens_requested": requested,
+        }
 
     def describe(self) -> str:
         """
@@ -237,12 +385,14 @@ class LLMConfig:
         Shows model name, reasoning model flag, and effective temperature/max_tokens
         with override notes when reasoning constraints changed the requested values.
         """
-        effective = self.to_kwargs()
+        effective = self.effective_params()
         tag = " [reasoning model]" if self.is_reasoning_model else ""
         lines = [f"{self.model}{tag}"]
 
         temp_eff = effective["temperature"]
-        if self.is_reasoning_model and self.temperature != temp_eff:
+        if effective["temperature_omitted"]:
+            lines.append(f"    temperature: not sent ({self.temperature} in config is ignored)")
+        elif self.is_reasoning_model and self.temperature != temp_eff:
             lines.append(
                 f"    temperature: {self.temperature} (config) -> {temp_eff} (reasoning override)"
             )
@@ -250,7 +400,9 @@ class LLMConfig:
             lines.append(f"    temperature: {temp_eff}")
 
         tok_eff = effective["max_tokens"]
-        if self.is_reasoning_model and self.max_tokens != tok_eff:
+        if (self.is_reasoning_model or effective["thinking"] in ("adaptive", "always")) and (
+            self.max_tokens != tok_eff
+        ):
             lines.append(
                 f"    max_tokens:  {self.max_tokens} (config) -> {tok_eff} (reasoning override)"
             )
@@ -302,11 +454,15 @@ class LLMConfig:
 
         model_var = f"LLM_MODEL_{model_name.upper()}"
 
+        suffix = model_name.upper()
         config = cls(
             model=os.getenv(model_var, "azure/gpt-4.1-mini"),
             api_key=os.getenv("LLM_API_KEY"),
             api_base=os.getenv("LLM_API_BASE"),
             api_version=os.getenv("LLM_API_VERSION", "2024-02-15-preview"),
+            role=model_name.lower(),
+            effort=os.getenv(f"LLM_EFFORT_{suffix}", "").strip().lower() or None,
+            thinking=os.getenv(f"LLM_THINKING_{suffix}", "").strip().lower() or "default",
         )
         config.cache = os.getenv("LLM_CACHE", "false").lower() == "true"
         # Timeout por request (segundos). LLM_TIMEOUT=0 (o invalido) -> sin limite (None).
@@ -327,14 +483,18 @@ class LLMConfig:
         """
         Convert config to kwargs dict for LLM calls.
 
-        Reasoning model constraints (temperature=1.0, max_tokens>=16000) are applied
-        automatically when the model matches the reasoning model pattern.
+        Model constraints (reasoning models, Anthropic matrix) are applied through
+        `apply_constraints`.
 
         Returns:
             Dictionary with non-None values suitable for litellm.completion.
             DSPy-specific params (cache) are added in get_dspy_lm().
         """
-        kwargs = {
+        return self.apply_constraints(self._base_kwargs())
+
+    def _base_kwargs(self) -> dict[str, Any]:
+        """Kwargs de la config tal cual, sin restricciones por modelo."""
+        kwargs: dict[str, Any] = {
             "model": self.model,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
@@ -349,7 +509,7 @@ class LLMConfig:
         if self.timeout:
             kwargs["timeout"] = self.timeout
 
-        return self.apply_reasoning_constraints(kwargs)
+        return kwargs
 
     def get_dspy_lm(self):
         """
@@ -398,7 +558,8 @@ class LLMConfig:
         Validate that required configuration is present.
 
         Raises:
-            ValueError: If required configuration is missing.
+            LLMConnectionError: If required configuration is missing.
+            LLMConfigError: If effort/thinking are invalid for the model (SPEC-103).
         """
         from .errors import LLMConnectionError
 
@@ -422,6 +583,9 @@ class LLMConfig:
                 suggestions=[f"Set {var} in your .env file" for var in missing],
             )
 
+        self._check_params()
+        self._warn_once()
+
     def validate_connection(self) -> bool:
         """
         Test the LLM connection with a minimal request.
@@ -436,12 +600,15 @@ class LLMConfig:
 
         from .errors import LLMConnectionError
 
+        # Config invalida: LLMConfigError sale tal cual, no se envuelve como falla de red.
+        # La sonda fija max_tokens=5 y apply_constraints eleva a 16000 si hay razonamiento.
+        base = self._base_kwargs()
+        base["max_tokens"] = 5
+        kwargs = self.apply_constraints(base)
+
         try:
-            # Usar to_kwargs para evitar pasar parámetros None que rompen el logger de litellm
+            # Usar kwargs sin None para evitar romper el logger de litellm
             litellm.drop_params = True
-            kwargs = self.to_kwargs()
-            # Use small max_tokens for the probe; reasoning models require >= 16000
-            kwargs["max_tokens"] = _REASONING_MIN_MAX_TOKENS if self.is_reasoning_model else 5
 
             litellm.completion(
                 messages=[{"role": "user", "content": "Respond only 'OK'"}], **kwargs
