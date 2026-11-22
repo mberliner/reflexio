@@ -17,7 +17,9 @@ modelos bajo prueba de la matriz de la spec.
 
 ## Reglas de ejecucion
 
-- Tests primero (RED) y luego implementacion (GREEN).
+- Tests primero (RED) y luego implementacion (GREEN). Los tests RED se marcan
+  `@pytest.mark.xfail(strict=True, reason="SPEC-103 <subfase que los cierra>")`
+  para que `ci_local.sh` quede verde; la subfase GREEN quita la marca.
 - Cada fase cierra con `./shared/utils/ci_local.sh` y un commit.
 - La fase 6 gasta API real: va en una sesion aparte y respeta el tope de SC-003.
 - Al cerrar una subfase: actualizar su estado aca (`pendiente` -> `hecho`, con
@@ -122,13 +124,22 @@ corrida. 2c verifica las dos conductas contra dspy 3.2.1 y GEPA 0.0.27.
 - Mover los fixtures `capture_anthropic_post` y `capture_azure_post` de
   `tests/test_litellm_regression.py` a `tests/conftest.py`.
 - Nuevo `tests/test_anthropic_matrix.py` (no crecer `test_shared_llm.py`):
-  - SC-001: parametrizado por fila de la matriz x {alias, alias-20260101} x
-    combinaciones validas de effort/thinking, sobre el cuerpo HTTP interceptado
-    en `get_lm_function`, `call_llm` (env por `monkeypatch`) y `get_dspy_lm`
-    (llamada `lm("hi")` con `cache=False`, sin `drop_params`). Afirma
-    temperature presente/ausente, `output_config`, `thinking`, `max_tokens >=
-    16000` cuando corresponde, ausencia de `api_base`/`api_version` y el header
-    `anthropic-version`. El camino RAG va en un test marcado para 2a.
+  - SC-001: un caso por conducta distinta, no el producto cartesiano. Los tres
+    caminos comparten `apply_constraints` y los alias de una misma fila se
+    comportan igual. Sobre el cuerpo HTTP interceptado:
+    - `get_lm_function`: cada fila de la matriz con valores por defecto (12),
+      un effort explicito por fila que lo acepta (~11) y `thinking=off` una vez
+      por mecanismo (`disabled`, `between_tools`, no-op) (~4).
+    - `call_llm` (env por `monkeypatch`) y `get_dspy_lm` (llamada `lm("hi")`
+      con `cache=False`, sin `drop_params`): 2 filas cada uno (Haiku 4.5 y
+      Opus 5.5).
+    - Un solo alias por fila; la resolucion de snapshot y de alias compartido
+      se prueba aparte, contra `resolve_anthropic_family`.
+    - Tope: unos 30 casos para el test de matriz y unos 90 en todo el archivo.
+    Afirma temperature presente/ausente, `output_config`, `thinking`,
+    `max_tokens >= 16000` cuando corresponde, ausencia de
+    `api_base`/`api_version` y el header `anthropic-version`. El camino RAG va
+    en un test marcado para 2a.
   - SC-002: parametrizado sobre las combinaciones invalidas; `validate()` lanza
     `LLMConfigError` con modelo y parametro en el mensaje.
   - FR-008: mayusculas/espacios, vacio, valores desconocidos.
@@ -140,8 +151,11 @@ corrida. 2c verifica las dos conductas contra dspy 3.2.1 y GEPA 0.0.27.
   `openai/gpt-4o-mini`. Pasan en verde desde el inicio y quedan como guardia.
 - Riesgo a resolver aca: si `dspy.LM` no pasa por `HTTPHandler.post`, ajustar
   el fixture (o interceptar `litellm.completion`) y anotarlo.
-- Cierre: los tests nuevos fallan por falta de implementacion (no por errores
-  del test), y los de SC-006 pasan.
+- Cierre: los tests nuevos estan marcados `xfail(strict=True)` y fallan por
+  falta de implementacion, no por errores del test: verificarlo con
+  `.venv/bin/python -m pytest tests/test_anthropic_matrix.py -rx` y revisar los
+  motivos. Los de SC-006 y `tests/test_litellm_regression.py` pasan sin marca.
+  `ci_local.sh` verde.
 
 ### 1b Diseno — Opus 5.5
 
@@ -158,6 +172,7 @@ corrida. 2c verifica las dos conductas contra dspy 3.2.1 y GEPA 0.0.27.
   `validate_connection` (la sonda fija `max_tokens=5` y despues aplica
   `apply_constraints`, asi los modelos con razonamiento reciben 16000).
 - Renombrar los usos de `apply_reasoning_constraints`.
+- Quitar la marca `xfail` de los tests de 1a (salvo el de RAG, que la quita 2a).
 - Cierre: tests de 1a en verde (salvo el de RAG) y `ci_local.sh` verde.
   `config.py` por debajo de 800 lineas.
 
@@ -282,7 +297,7 @@ Sesion no interactiva: si algo exige decision del usuario, no improvisar; \
 registrarlo en el plan como bloqueo, no commitear y terminar." \
   --model claude-sonnet-5-5 \
   --permission-mode acceptEdits \
-  --allowedTools "Bash(./shared/utils/ci_local.sh) Bash(python -m pytest:*) Bash(git status) Bash(git diff:*) Bash(git add:*) Bash(git commit:*)" \
+  --allowedTools "Bash(./shared/utils/ci_local.sh) Bash(.venv/bin/python -m pytest:*) Bash(git status) Bash(git diff:*) Bash(git add:*) Bash(git commit:*)" \
   | tee "$HOME/spec103_logs/$SUB.log"
 ```
 
