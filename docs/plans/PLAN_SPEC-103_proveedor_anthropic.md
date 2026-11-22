@@ -36,7 +36,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 1b Diseno: tabla de familias, resolucion de alias/snapshot, campos de `LLMConfig`, `apply_constraints`, `effective_params` | FR-001, FR-002 | Opus 5.5 | hecho (cc57b22) |
 | | 1c Implementacion de `from_env`, `apply_constraints`, `to_kwargs`, `validate`, `validate_connection` (GREEN) | FR-003, FR-004, FR-005, FR-006, FR-007, FR-008 | Sonnet 5.5 | hecho (395fbff) |
 | | 1d Revision de regresion silenciosa en `azure/` y `openai/` | SC-006 | Opus 5.5 | hecho (aa1291f) |
-| 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | pendiente |
+| 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | hecho (7466c02) |
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | pendiente |
 | | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (tarea: log; reflexion: excepcion) y verificacion contra `dspy.GEPA` | FR-009 | Opus 5.5 | pendiente |
 | 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | pendiente |
@@ -362,6 +362,16 @@ fase 5, sin aviso nuevo ni cambio de spec.
 - Revisar que `BaseAdapter.call_model` pase `temperature` del constructor como
   override, y que `apply_constraints` lo quite en las familias "no se envia".
 - Cierre: test RAG de 1a en verde (tarea y juez).
+
+Resultado de 2a: `call_llm` y RAG ya usaban `apply_constraints` desde 1c; faltaba
+que la llamada de tarea de RAG pasara la temperatura del adapter como override.
+`_call_llm_with_retry` la pasa ahora solo en la llamada de tarea (no juez ni
+reflexion), igual que `BaseAdapter.call_model`; `apply_constraints` la quita en
+las familias "no se envia". Marca xfail del test RAG quitada. Suite 709 passed;
+`ci_local.sh` verde. Nota: en RAG con Azure/OpenAI la tarea usa ahora la
+temperatura del adapter (la del YAML, ya volcada al env por
+`universal_optimizer`) y no la de `LLMConfig.from_env`; coincide con los demas
+adapters.
 
 ### 2b Respuesta sin texto en `gepa_standalone` — Sonnet 5.5
 
