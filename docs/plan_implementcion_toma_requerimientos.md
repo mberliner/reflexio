@@ -300,9 +300,7 @@ REQUIREMENT_FIELDS = [
 ]
 
 
-def requirements_completeness_metric(
-    gold, pred, trace=None, pred_name=None, pred_trace=None
-):
+def requirements_completeness_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
     """
     Evalua la calidad de extraccion de requerimientos.
 
@@ -418,13 +416,9 @@ def _generate_feedback(total_score: float, field_details: dict) -> str:
         if gold_c > 0 and pred_c == 0:
             issues.append(f"{field}: campo vacio (esperados {gold_c} items)")
         elif gold_c > pred_c:
-            issues.append(
-                f"{field}: faltan items ({pred_c}/{gold_c} extraidos)"
-            )
+            issues.append(f"{field}: faltan items ({pred_c}/{gold_c} extraidos)")
         elif pred_c > gold_c * 2:
-            issues.append(
-                f"{field}: demasiados items ({pred_c} vs {gold_c} esperados)"
-            )
+            issues.append(f"{field}: demasiados items ({pred_c} vs {gold_c} esperados)")
 
     if issues:
         return "Problemas: " + "; ".join(issues)
@@ -487,16 +481,10 @@ def create_module_and_metric(self):
         # 1. Create Module from YAML (existente, sin cambios)
         sig_config = self.config.raw_config.get("signature")
         if not sig_config:
-            raise ValueError(
-                "Module type is 'dynamic' but no 'signature' section found in config."
-            )
+            raise ValueError("Module type is 'dynamic' but no 'signature' section found in config.")
 
-        predictor_type = self.config.raw_config.get("optimization", {}).get(
-            "predictor_type", "cot"
-        )
-        self.student = DynamicModuleFactory.create_module(
-            sig_config, predictor_type=predictor_type
-        )
+        predictor_type = self.config.raw_config.get("optimization", {}).get("predictor_type", "cot")
+        self.student = DynamicModuleFactory.create_module(sig_config, predictor_type=predictor_type)
 
         # 2. Create Metric
         opt_config = self.config.raw_config.get("optimization", {})
@@ -504,6 +492,7 @@ def create_module_and_metric(self):
         # NUEVO: Soporte para metricas custom desde modulos externos
         if "metric_module" in opt_config and "metric_function" in opt_config:
             import importlib
+
             module_name = opt_config["metric_module"]
             function_name = opt_config["metric_function"]
 
@@ -524,7 +513,9 @@ def create_module_and_metric(self):
             match_mode = opt_config.get("match_mode", "exact")
             fuzzy_threshold = opt_config.get("fuzzy_threshold", 0.85)
 
-            print(f"Evaluating fields: {eval_fields} (Ignored: {ignore_fields}, Match: {match_mode})")
+            print(
+                f"Evaluating fields: {eval_fields} (Ignored: {ignore_fields}, Match: {match_mode})"
+            )
 
             self.metric = create_dynamic_metric(
                 eval_fields, match_mode=match_mode, fuzzy_threshold=fuzzy_threshold

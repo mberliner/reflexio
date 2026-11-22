@@ -184,6 +184,7 @@ dspy.configure(lm=lm)
 
 # O usar variable de entorno OPENAI_API_KEY
 import os
+
 os.environ["OPENAI_API_KEY"] = "sk-..."
 lm = dspy.LM("openai/gpt-4o")
 dspy.configure(lm=lm)
@@ -284,15 +285,9 @@ class MiModulo(dspy.Module):
         context = self.retrieve(question).passages
 
         # Generar respuesta
-        resultado = self.generate(
-            context="\n".join(context),
-            question=question
-        )
+        resultado = self.generate(context="\n".join(context), question=question)
 
-        return dspy.Prediction(
-            context=context,
-            answer=resultado.answer
-        )
+        return dspy.Prediction(context=context, answer=resultado.answer)
 ```
 
 ### 3. Optimizers (Optimizadores)
@@ -317,6 +312,7 @@ Los Optimizers mejoran automaticamente el rendimiento usando datos de entrenamie
 def metric(example, prediction):
     return prediction.answer.lower() == example.answer.lower()
 
+
 # 2. Preparar datos
 trainset = [
     dspy.Example(question="...", answer="...").with_inputs("question"),
@@ -324,18 +320,11 @@ trainset = [
 ]
 
 # 3. Crear optimizador
-optimizer = dspy.BootstrapFewShot(
-    metric=metric,
-    max_bootstrapped_demos=4,
-    max_labeled_demos=16
-)
+optimizer = dspy.BootstrapFewShot(metric=metric, max_bootstrapped_demos=4, max_labeled_demos=16)
 
 # 4. Compilar programa
 programa_original = MiModulo()
-programa_optimizado = optimizer.compile(
-    programa_original,
-    trainset=trainset
-)
+programa_optimizado = optimizer.compile(programa_original, trainset=trainset)
 
 # 5. El programa optimizado tiene mejores demos/prompts
 resultado = programa_optimizado(question="...")
@@ -346,10 +335,10 @@ resultado = programa_optimizado(question="...")
 ```python
 # Crear evaluador
 evaluator = dspy.Evaluate(
-    devset=devset,           # Datos de validacion
-    metric=metric,           # Funcion de metrica
-    num_threads=4,           # Paralelismo
-    display_progress=True    # Mostrar progreso
+    devset=devset,  # Datos de validacion
+    metric=metric,  # Funcion de metrica
+    num_threads=4,  # Paralelismo
+    display_progress=True,  # Mostrar progreso
 )
 
 # Evaluar programa
@@ -462,21 +451,27 @@ dspy.configure(lm=lm)
 # 2. DEFINIR SIGNATURES
 # ============================================
 
+
 class GenerateSearchQuery(dspy.Signature):
     """Genera una consulta de busqueda para responder la pregunta."""
+
     context: str = dspy.InputField(desc="contexto actual")
     question: str = dspy.InputField(desc="pregunta a responder")
     query: str = dspy.OutputField(desc="consulta de busqueda")
 
+
 class GenerateAnswer(dspy.Signature):
     """Responde la pregunta basandose en el contexto."""
+
     context: str = dspy.InputField(desc="hechos relevantes")
     question: str = dspy.InputField(desc="pregunta del usuario")
     answer: str = dspy.OutputField(desc="respuesta en 1-5 palabras")
 
+
 # ============================================
 # 3. CREAR MODULO
 # ============================================
+
 
 class MultiHopRAG(dspy.Module):
     """RAG con multiples saltos de razonamiento."""
@@ -485,10 +480,7 @@ class MultiHopRAG(dspy.Module):
         super().__init__()
         self.max_hops = max_hops
         self.retrieve = dspy.Retrieve(k=passages_per_hop)
-        self.generate_query = [
-            dspy.ChainOfThought(GenerateSearchQuery)
-            for _ in range(max_hops)
-        ]
+        self.generate_query = [dspy.ChainOfThought(GenerateSearchQuery) for _ in range(max_hops)]
         self.generate_answer = dspy.ChainOfThought(GenerateAnswer)
 
     def forward(self, question):
@@ -496,10 +488,7 @@ class MultiHopRAG(dspy.Module):
 
         for hop in range(self.max_hops):
             # Generar query de busqueda
-            query_result = self.generate_query[hop](
-                context=context,
-                question=question
-            )
+            query_result = self.generate_query[hop](context=context, question=question)
 
             # Recuperar pasajes
             passages = self.retrieve(query_result.query).passages
@@ -508,15 +497,10 @@ class MultiHopRAG(dspy.Module):
             context = list(set(context + passages))
 
         # Generar respuesta final
-        answer_result = self.generate_answer(
-            context="\n".join(context),
-            question=question
-        )
+        answer_result = self.generate_answer(context="\n".join(context), question=question)
 
-        return dspy.Prediction(
-            context=context,
-            answer=answer_result.answer
-        )
+        return dspy.Prediction(context=context, answer=answer_result.answer)
+
 
 # ============================================
 # 4. CARGAR DATOS
@@ -530,13 +514,14 @@ devset = [x.with_inputs("question") for x in dataset.dev[:50]]
 # 5. DEFINIR METRICA
 # ============================================
 
+
 def validate_answer(example, pred, trace=None):
     """Metrica: respuesta correcta y fundamentada."""
     # Verificar respuesta correcta
     answer_match = dspy.evaluate.answer_exact_match(example, pred)
 
     # Verificar que la respuesta esta en el contexto
-    if hasattr(pred, 'context') and pred.context:
+    if hasattr(pred, "context") and pred.context:
         context_text = " ".join(pred.context).lower()
         grounded = pred.answer.lower() in context_text
     else:
@@ -544,17 +529,14 @@ def validate_answer(example, pred, trace=None):
 
     return answer_match and grounded
 
+
 # ============================================
 # 6. EVALUAR ZERO-SHOT
 # ============================================
 
 rag = MultiHopRAG()
 
-evaluator = dspy.Evaluate(
-    devset=devset,
-    metric=validate_answer,
-    num_threads=4
-)
+evaluator = dspy.Evaluate(devset=devset, metric=validate_answer, num_threads=4)
 
 baseline_score = evaluator(rag)
 print(f"Baseline (zero-shot): {baseline_score:.2%}")
@@ -564,9 +546,7 @@ print(f"Baseline (zero-shot): {baseline_score:.2%}")
 # ============================================
 
 optimizer = dspy.BootstrapFewShot(
-    metric=validate_answer,
-    max_bootstrapped_demos=4,
-    max_labeled_demos=16
+    metric=validate_answer, max_bootstrapped_demos=4, max_labeled_demos=16
 )
 
 rag_optimized = optimizer.compile(rag, trainset=trainset)
@@ -599,8 +579,10 @@ rag_loaded.load("rag_optimized.json")
 ```python
 class SentimentClassifier(dspy.Signature):
     """Clasifica el sentimiento del texto."""
+
     text: str = dspy.InputField()
     sentiment: Literal["positive", "negative", "neutral"] = dspy.OutputField()
+
 
 classifier = dspy.Predict(SentimentClassifier)
 result = classifier(text="Me encanta este producto!")
@@ -612,10 +594,12 @@ print(result.sentiment)  # "positive"
 ```python
 class EntityExtractor(dspy.Signature):
     """Extrae entidades del texto."""
+
     text: str = dspy.InputField()
     personas: list[str] = dspy.OutputField(desc="nombres de personas")
     lugares: list[str] = dspy.OutputField(desc="nombres de lugares")
     fechas: list[str] = dspy.OutputField(desc="fechas mencionadas")
+
 
 extractor = dspy.Predict(EntityExtractor)
 result = extractor(text="Juan viajo a Paris el 15 de marzo de 2024")
@@ -626,8 +610,10 @@ result = extractor(text="Juan viajo a Paris el 15 de marzo de 2024")
 ```python
 class CodeGenerator(dspy.Signature):
     """Genera codigo Python."""
+
     task: str = dspy.InputField(desc="descripcion de la tarea")
     code: str = dspy.OutputField(desc="codigo Python funcional")
+
 
 generator = dspy.ChainOfThought(CodeGenerator)
 result = generator(task="funcion que calcule el factorial de un numero")
@@ -640,16 +626,14 @@ def calculator(expression: str) -> str:
     """Evalua una expresion matematica."""
     return str(eval(expression))
 
+
 def search(query: str) -> str:
     """Busca informacion."""
     # Implementar busqueda real
     return f"Resultado de busqueda para: {query}"
 
-agent = dspy.ReAct(
-    "question -> answer",
-    tools=[calculator, search],
-    max_iters=5
-)
+
+agent = dspy.ReAct("question -> answer", tools=[calculator, search], max_iters=5)
 
 result = agent(question="Cuanto es 15% de 200 mas 50?")
 ```
@@ -659,9 +643,11 @@ result = agent(question="Cuanto es 15% de 200 mas 50?")
 ```python
 class Summarizer(dspy.Signature):
     """Resume el documento."""
+
     document: str = dspy.InputField()
     summary: str = dspy.OutputField(desc="resumen en 2-3 oraciones")
     key_points: list[str] = dspy.OutputField(desc="puntos clave")
+
 
 summarizer = dspy.ChainOfThought(Summarizer)
 ```
@@ -706,18 +692,17 @@ with dspy.streaming():
 ```python
 import asyncio
 
+
 # Ejecucion asincrona
 async def procesar_batch(preguntas):
     tasks = [predict.acall(question=q) for q in preguntas]
     return await asyncio.gather(*tasks)
 
+
 # Ejecucion paralela
 from dspy.predict import Parallel
 
-parallel = Parallel(
-    [dspy.Predict(sig1), dspy.Predict(sig2)],
-    reduce_fn=lambda results: results
-)
+parallel = Parallel([dspy.Predict(sig1), dspy.Predict(sig2)], reduce_fn=lambda results: results)
 ```
 
 ### Observabilidad
@@ -727,6 +712,7 @@ parallel = Parallel(
 def mi_callback(call_info):
     print(f"Modelo: {call_info['model']}")
     print(f"Tokens: {call_info['usage']}")
+
 
 lm = dspy.LM("openai/gpt-4o", callbacks=[mi_callback])
 
@@ -796,11 +782,7 @@ lm = dspy.LM("anthropic/claude-3-opus-20240229", api_key="...")
 lm = dspy.LM("ollama/llama2", api_base="http://localhost:11434")
 
 # Azure
-lm = dspy.LM(
-    "azure/gpt-4",
-    api_key="...",
-    api_base="https://xxx.openai.azure.com"
-)
+lm = dspy.LM("azure/gpt-4", api_key="...", api_base="https://xxx.openai.azure.com")
 ```
 
 ---

@@ -124,10 +124,7 @@ mgr.ensure_environment()
 mgr.ensure_experiment(
     experiment_name="email_urgency",
     dataset_path=Path("datasets/email_urgency.csv"),
-    base_config={
-        "module_type": "dynamic",
-        "optimization": {...}
-    }
+    base_config={"module_type": "dynamic", "optimization": {...}},
 )
 
 # Nivel 3: Run
@@ -135,7 +132,7 @@ mgr.create_run(
     run_dir=Path("results/runs/email_urgency_20260208_143022"),
     experiment_name="email_urgency",
     seed=seed,
-    models=collect_model_info(task_config, reflection_config)
+    models=collect_model_info(task_config, reflection_config),
 )
 ```
 

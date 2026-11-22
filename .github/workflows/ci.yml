@@ -28,7 +28,7 @@ jobs:
       - name: Install ruff
         run: |
           uv venv
-          uv pip install ruff
+          uv pip install ruff==0.17.6
 
       - name: Check linting
         run: .venv/bin/ruff check .

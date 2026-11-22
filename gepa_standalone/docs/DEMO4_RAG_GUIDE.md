@@ -187,8 +187,8 @@ response = client.chat.completions.create(
     model="gpt-4o-mini",
     messages=[
         {"role": "system", "content": SYSTEM_PROMPT_OPTIMIZADO},  # <--- TU RESULTADO
-        {"role": "user", "content": f"Contexto: {docs}\nPregunta: {query}"}
-    ]
+        {"role": "user", "content": f"Contexto: {docs}\nPregunta: {query}"},
+    ],
 )
 ```
 

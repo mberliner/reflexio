@@ -37,11 +37,14 @@ predictor = dspy.Predict("question -> answer")
 resultado = predictor(question="Capital de Francia?")
 print(resultado.answer)  # "Paris"
 
+
 # Forma con clase Signature
 class Clasificador(dspy.Signature):
     """Clasifica el texto."""
+
     texto: str = dspy.InputField()
     categoria: str = dspy.OutputField()
+
 
 predictor = dspy.Predict(Clasificador)
 resultado = predictor(texto="Oferta de trabajo remoto")
@@ -82,13 +85,16 @@ import dspy
 cot = dspy.ChainOfThought("question -> answer")
 resultado = cot(question="Si tengo 3 manzanas y doy 1, cuantas quedan?")
 print(resultado.reasoning)  # "Empiezo con 3. Doy 1. 3 - 1 = 2"
-print(resultado.answer)     # "2"
+print(resultado.answer)  # "2"
+
 
 # Forma con Signature
 class Analisis(dspy.Signature):
     """Analiza el problema paso a paso."""
+
     problema: str = dspy.InputField()
     solucion: str = dspy.OutputField()
+
 
 cot = dspy.ChainOfThought(Analisis)
 resultado = cot(problema="...")
@@ -136,10 +142,7 @@ Input ──┬──> Candidato 1 ──┐
 import dspy
 
 # Con selector por defecto (el LLM elige)
-best_of_3 = dspy.BestOfN(
-    dspy.Predict("question -> answer"),
-    n=3
-)
+best_of_3 = dspy.BestOfN(dspy.Predict("question -> answer"), n=3)
 
 resultado = best_of_3(question="Explica la fotosintesis")
 print(resultado.answer)
@@ -150,27 +153,28 @@ print(resultado.answer)
 ```python
 import dspy
 
+
 # Selector: elegir respuesta mas larga
 def selector_mas_largo(candidatos):
     return max(candidatos, key=lambda c: len(c.answer))
+
 
 # Selector: elegir respuesta con mayor confianza
 def selector_confianza(candidatos):
     return max(candidatos, key=lambda c: float(c.confidence))
 
+
 # Selector: elegir por votacion mayoritaria
 def selector_votacion(candidatos):
     from collections import Counter
+
     votos = Counter(c.answer.lower().strip() for c in candidatos)
     respuesta_ganadora = votos.most_common(1)[0][0]
     return next(c for c in candidatos if c.answer.lower().strip() == respuesta_ganadora)
 
+
 # Uso
-best_of_5 = dspy.BestOfN(
-    dspy.ChainOfThought("question -> answer"),
-    n=5,
-    selector=selector_votacion
-)
+best_of_5 = dspy.BestOfN(dspy.ChainOfThought("question -> answer"), n=5, selector=selector_votacion)
 
 resultado = best_of_5(question="Cual es la capital de Australia?")
 ```
@@ -182,7 +186,7 @@ resultado = best_of_5(question="Cual es la capital de Australia?")
 best_cot = dspy.BestOfN(
     dspy.ChainOfThought("problema -> solucion"),
     n=3,
-    selector=lambda cs: max(cs, key=lambda c: len(c.reasoning))
+    selector=lambda cs: max(cs, key=lambda c: len(c.reasoning)),
 )
 ```
 
@@ -240,10 +244,7 @@ Input ──> Respuesta v1 ──> Critica ──> Respuesta v2 ──> Critica 
 ```python
 import dspy
 
-refiner = dspy.Refine(
-    dspy.Predict("topic -> explanation"),
-    max_iters=3
-)
+refiner = dspy.Refine(dspy.Predict("topic -> explanation"), max_iters=3)
 
 resultado = refiner(topic="Teoria de la relatividad")
 print(resultado.explanation)  # Version refinada
@@ -254,14 +255,14 @@ print(resultado.explanation)  # Version refinada
 ```python
 import dspy
 
+
 # Parar cuando la respuesta tenga mas de 200 palabras
 def esta_completa(respuesta):
     return len(respuesta.explanation.split()) > 200
 
+
 refiner = dspy.Refine(
-    dspy.ChainOfThought("topic -> explanation"),
-    max_iters=5,
-    stop_condition=esta_completa
+    dspy.ChainOfThought("topic -> explanation"), max_iters=5, stop_condition=esta_completa
 )
 
 resultado = refiner(topic="Mecanica cuantica")
@@ -303,18 +304,17 @@ Output v3 (ultima iteracion)
 ```python
 import dspy
 
+
 class MiCritico(dspy.Signature):
     """Evalua la calidad de la respuesta."""
+
     respuesta: str = dspy.InputField()
     es_completa: bool = dspy.OutputField()
     sugerencias: str = dspy.OutputField()
 
+
 # Refine usara este critico internamente
-refiner = dspy.Refine(
-    dspy.Predict("question -> answer"),
-    max_iters=3,
-    critic_signature=MiCritico
-)
+refiner = dspy.Refine(dspy.Predict("question -> answer"), max_iters=3, critic_signature=MiCritico)
 ```
 
 ### Ventajas
@@ -365,6 +365,7 @@ Input ──> Pensar ──> Actuar (tool) ──> Observar ──> Pensar ─�
 # Las herramientas son funciones Python con docstrings claros
 # El LLM usa el docstring para entender cuando usar cada tool
 
+
 def calculadora(expresion: str) -> str:
     """
     Evalua una expresion matematica.
@@ -377,16 +378,19 @@ def calculadora(expresion: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 
+
 def buscar_wikipedia(tema: str) -> str:
     """
     Busca informacion en Wikipedia sobre un tema.
     Usa esta herramienta cuando necesites datos factuales.
     """
     import wikipedia
+
     try:
         return wikipedia.summary(tema, sentences=3)
     except:
         return f"No se encontro informacion sobre: {tema}"
+
 
 def obtener_clima(ciudad: str) -> str:
     """
@@ -395,6 +399,7 @@ def obtener_clima(ciudad: str) -> str:
     """
     # Implementar con API real (ej: OpenWeatherMap)
     return f"Clima en {ciudad}: 22C, soleado"
+
 
 def buscar_web(query: str) -> str:
     """
@@ -414,7 +419,7 @@ import dspy
 agente = dspy.ReAct(
     signature="question -> answer",
     tools=[calculadora, buscar_wikipedia, obtener_clima],
-    max_iters=5
+    max_iters=5,
 )
 
 # Usar
@@ -454,6 +459,7 @@ Respuesta Final: "El 15% de 350 es 52.5. El clima en Madrid es
 import dspy
 from datetime import datetime
 
+
 # Definir herramientas
 def calculadora(expresion: str) -> str:
     """Evalua expresiones matematicas. Ej: calculadora('2+2')"""
@@ -462,9 +468,11 @@ def calculadora(expresion: str) -> str:
     except:
         return "Error en calculo"
 
+
 def fecha_actual() -> str:
     """Retorna la fecha y hora actual."""
     return datetime.now().strftime("%Y-%m-%d %H:%M")
+
 
 def convertir_moneda(cantidad: str, de: str, a: str) -> str:
     """
@@ -481,17 +489,14 @@ def convertir_moneda(cantidad: str, de: str, a: str) -> str:
     except:
         return "Error en conversion"
 
+
 # Crear agente
 agente = dspy.ReAct(
-    signature="question -> answer",
-    tools=[calculadora, fecha_actual, convertir_moneda],
-    max_iters=7
+    signature="question -> answer", tools=[calculadora, fecha_actual, convertir_moneda], max_iters=7
 )
 
 # Preguntas complejas
-resultado = agente(
-    question="Cuanto es 500 dolares en euros, y cuanto seria el 10% de eso?"
-)
+resultado = agente(question="Cuanto es 500 dolares en euros, y cuanto seria el 10% de eso?")
 print(resultado.answer)
 # El agente:
 # 1. Convierte 500 USD a EUR (425 EUR)
@@ -522,9 +527,9 @@ def tool_robusta(parametro: str) -> str:
 agente = dspy.ReAct(
     signature="context, question -> answer",
     tools=[tool1, tool2, tool3],
-    max_iters=10,           # Maximo pasos de razonamiento
-    backtrack=True,         # Permitir reconsiderar decisiones
-    verbose=True            # Mostrar pasos de razonamiento
+    max_iters=10,  # Maximo pasos de razonamiento
+    backtrack=True,  # Permitir reconsiderar decisiones
+    verbose=True,  # Mostrar pasos de razonamiento
 )
 ```
 
@@ -560,14 +565,10 @@ ReAct puede optimizarse con GEPA habilitando `enable_tool_optimization`:
 optimizer = dspy.GEPA(
     metric=mi_metrica,
     reflection_lm=reflection_lm,
-    enable_tool_optimization=True  # Optimiza uso de herramientas
+    enable_tool_optimization=True,  # Optimiza uso de herramientas
 )
 
-agente_optimizado = optimizer.compile(
-    student=agente,
-    trainset=trainset,
-    valset=valset
-)
+agente_optimizado = optimizer.compile(student=agente, trainset=trainset, valset=valset)
 ```
 
 ---
@@ -638,31 +639,21 @@ print(resultado.answer)  # "12600"
 
 ```python
 # Multiples razonamientos, elige el mejor
-best_cot = dspy.BestOfN(
-    dspy.ChainOfThought("question -> answer"),
-    n=3
-)
+best_cot = dspy.BestOfN(dspy.ChainOfThought("question -> answer"), n=3)
 ```
 
 ### Refine + ChainOfThought
 
 ```python
 # Razonamiento que se mejora iterativamente
-refined_cot = dspy.Refine(
-    dspy.ChainOfThought("question -> answer"),
-    max_iters=2
-)
+refined_cot = dspy.Refine(dspy.ChainOfThought("question -> answer"), max_iters=2)
 ```
 
 ### ReAct con ChainOfThought interno
 
 ```python
 # Agente que razona antes de cada accion
-agente = dspy.ReAct(
-    signature="question -> answer",
-    tools=[...],
-    predictor=dspy.ChainOfThought
-)
+agente = dspy.ReAct(signature="question -> answer", tools=[...], predictor=dspy.ChainOfThought)
 ```
 
 ---
@@ -691,15 +682,9 @@ class SentimentAnalyzer(dspy.Module):
         elif mode == "cot":
             self.predictor = dspy.ChainOfThought(SentimentClassification)
         elif mode == "best_of_n":
-            self.predictor = dspy.BestOfN(
-                dspy.Predict(SentimentClassification),
-                n=n
-            )
+            self.predictor = dspy.BestOfN(dspy.Predict(SentimentClassification), n=n)
         elif mode == "refine":
-            self.predictor = dspy.Refine(
-                dspy.Predict(SentimentClassification),
-                max_iters=max_iters
-            )
+            self.predictor = dspy.Refine(dspy.Predict(SentimentClassification), max_iters=max_iters)
         else:
             raise ValueError(f"Modo no soportado: {mode}")
 

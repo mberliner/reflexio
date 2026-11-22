@@ -63,7 +63,7 @@ except Exception as e:
         "batch_idx": idx,
         "text_preview": user_text[:100],
         "error": str(e),
-        "error_type": type(e).__name__
+        "error_type": type(e).__name__,
     }
     errors_log.append(error_info)
     print(f"[WARNING] Error técnico en ejemplo {idx}, descartando de estadísticas: {e}")
@@ -186,7 +186,7 @@ from unittest.mock import patch
 adapter = SimpleClassifierAdapter(["urgent", "normal", "low"])
 
 # Mock para lanzar excepción
-with patch.object(adapter.client.chat.completions, 'create') as mock_create:
+with patch.object(adapter.client.chat.completions, "create") as mock_create:
     mock_create.side_effect = Exception("API timeout")
 
     batch = [{"text": "Test email", "urgency": "urgent"}]

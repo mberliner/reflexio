@@ -119,9 +119,9 @@ task_config = LLMConfig.from_env("task")
 reflection_config = LLMConfig.from_env("reflection")
 
 # Acceder a valores
-print(task_config.model)      # "azure/gpt-4.1-mini"
-print(task_config.api_key)    # "tu-api-key"
-print(task_config.api_base)   # "https://..."
+print(task_config.model)  # "azure/gpt-4.1-mini"
+print(task_config.api_key)  # "tu-api-key"
+print(task_config.api_base)  # "https://..."
 ```
 
 ### Para DSPy (dspy_gepa_poc)

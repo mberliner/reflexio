@@ -165,12 +165,13 @@ ajusta los prompts de todas las etapas a la vez.
 class MiPipeline(dspy.Module):
     def __init__(self):
         self.clasificar = dspy.ChainOfThought(ClasificarSig)
-        self.extraer    = dspy.ChainOfThought(ExtraerSig)
+        self.extraer = dspy.ChainOfThought(ExtraerSig)
 
     def forward(self, doc):
         c = self.clasificar(doc=doc)
         e = self.extraer(doc=doc, categoria=c.categoria)
         return e
+
 
 # UNA corrida: optimiza ambas etapas juntas contra la métrica final
 optimizer.compile(MiPipeline(), trainset=trainset, metric=metrica_final)

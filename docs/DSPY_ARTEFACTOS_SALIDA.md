@@ -37,8 +37,8 @@ Para inspeccionar un módulo (ej: `analyzer`):
 
 ```python
 result = programa(question="¿Cual es la capital de Francia?")
-print(result.answer)      # Acceso por atributo
-print(result.reasoning)   # Si usa ChainOfThought
+print(result.answer)  # Acceso por atributo
+print(result.reasoning)  # Si usa ChainOfThought
 dict_result = result.toDict()
 ```
 
@@ -104,8 +104,8 @@ evaluator = dspy.Evaluate(devset=devset, metric=metric, save_as_csv="eval.csv")
 
 ### Historial de Llamadas
 ```python
-print(lm.history) # Ver prompts y respuestas crudas
-dspy.inspect_history(n=3) # Ver últimas 3 llamadas formateadas
+print(lm.history)  # Ver prompts y respuestas crudas
+dspy.inspect_history(n=3)  # Ver últimas 3 llamadas formateadas
 ```
 
 ### Cache de Respuestas
