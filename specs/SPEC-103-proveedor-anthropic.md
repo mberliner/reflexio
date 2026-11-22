@@ -1,8 +1,10 @@
 # SPEC-103-proveedor-anthropic — Anthropic como proveedor verificado
 
 Estado: draft
-Iteracion: 1 (rev. 2026-11-22)
-Relacionada con: [[SPEC-104-roles-intercambiables]], docs/LLM_CONFIG.md
+Iteracion: 2 (rev. 2026-11-22)
+Relacionada con: [[SPEC-104-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
+[[SPEC-101-triaje-casos-nseeds]], docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md,
+docs/ANALISIS_UTILIDADES.md, docs/GEPA_MANEJO_ERRORES.md, docs/PROTOCOLO_N_SEEDS.md
 
 ## User Story (prioridad)
 
@@ -11,37 +13,51 @@ Claude de la matriz de soporte (desde Haiku 4.5 hasta Opus 5.5 y Fable) como
 estudiante o como profesor en cualquiera de los dos subproyectos
 (`dspy_gepa_poc` y `gepa_standalone`) solo cambiando el `.env`, para comparar su
 rendimiento real contra los modelos actuales sin tocar codigo ni recibir errores
-de la API.
+de la API. El juez de `gepa_standalone` (caso RAG) usa la configuracion del
+profesor, por lo que tambien queda cubierto.
 Prioridad: P1
 
-## Contexto (estado al 2026-11-22)
+## Contexto (estado al 2026-11-22, LiteLLM 1.108.5)
 
-El formato `anthropic/<id>` ya esta documentado y LiteLLM 1.81.7 reconoce los
-IDs, pero hoy no funciona con los modelos recientes:
+El formato `anthropic/<id>` ya esta documentado y LiteLLM reconoce los IDs, pero
+hoy no funciona con los modelos recientes. Comportamiento de LiteLLM 1.108.5
+(fijado en `requirements.txt`) verificado sin red en
+`tests/test_litellm_regression.py`:
 
-- `temperature` siempre se envia. `drop_params` no la quita porque LiteLLM la
-  declara soportada para todos los Claude.
-- Los modelos que razonan por defecto consumen `max_tokens` en ese razonamiento,
-  y algunos adapters piden 50-200.
-- El parametro `reasoning_effort` de LiteLLM se traduce a
-  `thinking.budget_tokens`, que los modelos 4.7+ y 5.x rechazan con 400. En
-  cambio, `output_config={"effort": ...}` pasado directo a `litellm.completion`
-  llega intacto a la API (verificado interceptando el pedido HTTP, sin red).
+- `temperature`: con `drop_params=True` LiteLLM la elimina en los modelos que no
+  la aceptan (Opus 4.7 en adelante); con `drop_params=False` lanza
+  `UnsupportedParamsError`. `get_lm_function`, `call_llm` y `SimpleRAGAdapter`
+  activan `drop_params`; `get_dspy_lm` no. Ademas, `LLMConfig` siempre incluye
+  `temperature` en `to_kwargs()`, y `describe()`/metadata no saben si se envio.
+  `dspy.LM` (3.2.1) no inyecta un default: si la clave no viene, el pedido sale
+  sin `temperature` (verificado sin red).
+- `max_tokens`: los modelos que razonan por defecto lo consumen en ese
+  razonamiento, y algunos adapters piden 50-400.
+- `reasoning_effort` de LiteLLM se traduce a `output_config.effort` mas
+  `thinking={"type": "adaptive", "display": "summarized"}`. Esa inyeccion
+  implicita de `thinking` choca con apagar el razonamiento y lo enciende en
+  modelos donde viene apagado. En cambio, `output_config={"effort": ...}` pasado
+  directo a `litellm.completion` llega intacto sin agregar `thinking`.
   `extra_body` NO sirve: LiteLLM lo envia literal como campo del cuerpo.
 - LiteLLM envia `anthropic-version: 2023-06-01`, por lo que la regla de la API
   `2026-10-21` (rechazo de `temperature` en todos los modelos) no aplica todavia.
+  `api_version` (de Azure) no altera el pedido a Anthropic.
 
 ## Alcance
 
 Incluye: API directa de Anthropic via LiteLLM, en ambos subproyectos, para los
-roles tarea, reflexion y juez.
+roles tarea, reflexion y juez (este ultimo hereda la configuracion de reflexion
+hasta que [[SPEC-104-roles-intercambiables]] lo haga configurable; no existen
+`LLM_EFFORT_JUDGE` ni `LLM_THINKING_JUDGE` en esta spec).
 
 Excluye: Bedrock, Vertex AI y Foundry; SDK nativo de Anthropic (el proyecto se
 mantiene sobre LiteLLM por arquitectura, ver `docs/ARCHITECTURE.md`); prompt
 caching, batches, tools y structured outputs nativos; Mythos (requiere
 organizacion verificada); `claude-sonnet-4-5` (deprecado, se retira el
-2026-11-30); mezclar proveedores entre roles (eso es
-[[SPEC-104-roles-intercambiables]]).
+2026-11-30: se trata como ID fuera de la matriz, FR-001); mezclar proveedores
+entre roles (eso es [[SPEC-104-roles-intercambiables]]); configurar effort o
+razonamiento desde el YAML (ver Decisiones); modificar el criterio de
+comparabilidad de [[SPEC-100-veredicto-senal-ruido]] (ver FR-011).
 
 ## Matriz de soporte
 
@@ -57,84 +73,171 @@ lugar (FR-002) y `docs/LLM_CONFIG.md` la referencia, sin copiarla.
 | `claude-opus-4-7`, `claude-opus-4-8` | no se envia | low..max | apagado | no-op | sin red |
 | `claude-sonnet-5` | no se envia | low..max | adaptativo | `disabled` | real |
 | `claude-opus-5` | no se envia | low..max | adaptativo | `disabled`, solo con effort <= high | sin red |
-| `claude-haiku-5-5` | no se envia (solo admite el default) | low..max | adaptativo | `disabled`, solo con effort <= high | real |
-| `claude-sonnet-5-5` | no se envia (solo admite el default) | low..max | adaptativo | `between_tools`, solo con effort <= high | real |
+| `claude-haiku-5-5` | no se envia | low..max | adaptativo | `disabled`, solo con effort <= high | real |
+| `claude-sonnet-5-5` | no se envia | low..max | adaptativo | `between_tools`, solo con effort <= high | real |
 | `claude-opus-5-5` | no se envia | low..max | adaptativo | no permitido | sin red |
 | `claude-fable-5`, `claude-fable-5-1`, `claude-fable-5-2` | no se envia | low..max | siempre activo | no permitido | sin red |
 
-`low..max` = low, medium, high, xhigh, max. "real" = verificado con API real
-(acceso disponible hasta Sonnet 5.5); "sin red" = verificado solo por tests que
-construyen el pedido sin llamar a la API.
+Notas de la matriz:
+
+- `low..max` = low, medium, high, xhigh, max.
+- "no se envia": la API de Haiku 5.5 y Sonnet 5.5 admite solo el valor por
+  defecto; para el sistema es igual que el resto (FR-003: se omite siempre,
+  cualquiera sea el valor configurado).
+- Mecanismo de apagado en el pedido: `disabled` = `thinking={"type": "disabled"}`;
+  `between_tools` = `thinking={"type": "between_tools"}`. En ambos casos sin otros
+  campos de `thinking`. "no-op" = `LLM_THINKING_<ROL>=off` es valido y no envia
+  `thinking`.
+- Cada fila cubre el alias y sus snapshots con fecha (`<alias>-YYYYMMDD`).
+- "real" = verificado con API real (acceso disponible hasta Sonnet 5.5); "sin
+  red" = verificado solo por tests que construyen el pedido sin llamar a la API.
 
 ## Requisitos funcionales
 
 - FR-001 El sistema MUST aceptar `anthropic/<id>` en cualquier
-  `LLM_MODEL_<ROL>` para todos los modelos de la matriz de soporte. Un ID
-  `anthropic/` fuera de la matriz SHOULD funcionar sin restricciones aplicadas y
-  MUST emitir un aviso al arrancar.
+  `LLM_MODEL_<ROL>` para todos los modelos de la matriz de soporte. Un `<id>`
+  que sea un alias de la matriz seguido de `-YYYYMMDD` MUST recibir las
+  restricciones de ese alias. Un ID `anthropic/` fuera de la matriz (incluido
+  `claude-sonnet-4-5`) SHOULD funcionar sin restricciones aplicadas y MUST emitir
+  un aviso al arrancar que nombre el ID.
 - FR-002 Las restricciones de la matriz MUST resolverse en un unico punto
-  (`shared/llm/config.py`) y aplicarse igual en los tres caminos de llamada:
-  `get_dspy_lm`, `get_lm_function` y `call_llm`. Ningun subproyecto MUST
-  reimplementarlas.
-- FR-003 El sistema MUST NOT enviar `temperature` ni `top_p` a los modelos
-  marcados "no se envia", aunque vengan del `.env`, del YAML
-  (`models.temperature`) o de un adapter.
+  (`shared/llm/config.py`) y aplicarse igual en los cuatro caminos de llamada:
+  `get_dspy_lm`, `get_lm_function`, `call_llm` y
+  `SimpleRAGAdapter._call_llm_with_retry` (tarea y juez). Los subproyectos MUST
+  NOT reimplementarlas. Un adapter que fije su propio `max_tokens` por llamada
+  MUST hacerlo antes de aplicar las restricciones, para que FR-006 lo eleve.
+- FR-003 El sistema MUST NOT enviar `temperature` a los modelos marcados "no se
+  envia", venga del default de `LLMConfig`, del YAML (`models.temperature`), de
+  un override de `from_env` o del constructor de un adapter. La omision MUST
+  hacerse quitando la clave de los kwargs (no confiar en `drop_params`, que
+  `get_dspy_lm` no activa).
 - FR-004 El esfuerzo MUST configurarse por rol con `LLM_EFFORT_<ROL>` y enviarse
-  como `output_config.effort` (nunca como `reasoning_effort`). Si no se configura,
-  MUST enviarse `medium` a los modelos que aceptan effort, y nada a los que no.
-  Un valor que el modelo no acepta (por ejemplo `xhigh` en Opus 4.5) MUST
-  producir un error de configuracion al validar.
+  como `output_config={"effort": <valor>}` (MUST NOT usarse `reasoning_effort`,
+  porque LiteLLM inyecta `thinking` adaptativo). Si no se configura, MUST
+  enviarse `medium` a los modelos que aceptan effort, y nada a los que no. Un
+  valor que el modelo no acepta (por ejemplo `xhigh` en Opus 4.5, o cualquier
+  valor en Haiku 4.5) MUST producir un error de configuracion al validar que
+  liste los valores aceptados.
 - FR-005 El razonamiento MUST poder apagarse por rol con `LLM_THINKING_<ROL>=off`
   (valor por defecto: `default`, que no envia nada). Con `off` el sistema MUST
-  enviar el mecanismo de apagado de la matriz para ese modelo, y MUST producir un
-  error de configuracion al validar cuando el modelo no lo permite o cuando la
-  combinacion con el effort es invalida.
+  enviar el mecanismo de apagado de la matriz para ese modelo (nada en los
+  no-op), y MUST producir un error de configuracion al validar cuando el modelo
+  no lo permite o cuando la combinacion con el effort es invalida.
 - FR-006 Para los modelos cuyo razonamiento queda activo (adaptativo o siempre
   activo, y `LLM_THINKING_<ROL>` distinto de `off`), `max_tokens` MUST elevarse a
   un minimo de 16000, el mismo tope que ya usan los reasoning models de OpenAI
   (`_REASONING_MIN_MAX_TOKENS`). Los tokens no usados no se cobran.
-- FR-007 `validate()` MUST NOT exigir `LLM_API_BASE` ni `LLM_API_VERSION` para
-  `anthropic/`, y `validate_connection()` MUST funcionar con todos los modelos
-  de la matriz (la prueba de conexion respeta FR-003 a FR-006).
-- FR-008 Una respuesta sin texto (rechazo por politica, salida vacia o cortada
-  por `max_tokens`) MUST registrarse como prediccion fallida con su causa en el
-  log, y MUST NOT interrumpir la corrida ni descartarse en silencio.
-- FR-009 `describe()` MUST mostrar los parametros efectivos enviados:
+- FR-007 Para `anthropic/`, `validate()` MUST NOT exigir `LLM_API_BASE` ni
+  `LLM_API_VERSION`; `api_version` MUST NOT enviarse; y un `LLM_API_BASE`
+  presente en el `.env` MUST NOT enviarse y MUST producir un aviso al arrancar
+  (evita redirigir el pedido al endpoint Azure que quedo en un `.env` editado).
+  [NEEDS CLARIFICATION: si hace falta un `api_base` propio para Anthropic (proxy,
+  gateway), el mecanismo se define en [[SPEC-104-roles-intercambiables]] FR-003
+  (`LLM_API_BASE_<ROL>`); en esta spec no hay override.]
+  `validate_connection()` MUST funcionar con todos los modelos de la matriz (la
+  prueba de conexion respeta FR-003 a FR-006).
+- FR-008 Variables `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>`: el parseo MUST
+  ignorar mayusculas y espacios; una variable vacia MUST equivaler a no
+  configurada; un valor fuera de los permitidos (effort: low..max; thinking:
+  `default`, `off`) MUST producir un error de configuracion al validar que liste
+  los valores permitidos.
+- FR-009 Respuesta sin texto (contenido `None` o vacio: rechazo por politica,
+  salida vacia o cortada por `max_tokens`). No es un error tecnico en el sentido
+  de `docs/GEPA_MANEJO_ERRORES.md` y MUST NOT descartarse en silencio ni
+  interrumpir la corrida. Su causa (`stop_reason` / `finish_reason`) MUST
+  registrarse en el log. Por rol:
+  - tarea: MUST contar como prediccion fallida con score 0.0, en todos los
+    adapters de `gepa_standalone/adapters/` y en la metrica DSPy (mismo patron que
+    ya usa `simple_extractor_adapter.py`, que preserva `len(outputs)`).
+  - juez: MUST contar como fallo de evaluacion del caso (score 0.0), con causa
+    que distinga que el fallo fue del juez.
+  - reflexion: un texto vacio (tras `strip()`) MUST NOT usarse como prompt
+    candidato. El LM de reflexion MUST lanzar una excepcion con la causa en lugar
+    de devolverlo, en ambos subproyectos: en `get_lm_function(role="reflection")`
+    para `gepa_standalone`, y en el LM que `get_dspy_lm` entrega como
+    `reflection_lm` a `dspy.GEPA` en `dspy_gepa_poc`. MUST NOT devolverse el
+    prompt actual como sustituto (crearia un candidato duplicado que gasta
+    evaluaciones). Motivo (GEPA 0.0.27 + dspy 3.2.1, verificado en el codigo):
+    `ReflectiveMutationProposer.propose` atrapa cualquier excepcion de la
+    propuesta, la registra en el log de GEPA y saltea la iteracion conservando el
+    candidato vigente; en cambio un texto vacio pasa por
+    `InstructionProposalSignature.output_extractor` como instruccion `""` y se
+    evalua como candidato nuevo. Hoy un contenido `None` ya cae en ese `except`
+    por accidente (`.strip()` sobre `None` en GEPA, `TypeError` en
+    `DspyAdapter.stripped_lm_call`), pero sin causa legible. Si D-018 actualiza
+    GEPA/DSPy, este comportamiento MUST reverificarse.
+- FR-010 `describe()` MUST mostrar los parametros efectivos enviados:
   `temperature` enviada u omitida, effort, modo de razonamiento y `max_tokens`
-  final, indicando cuando un valor de config fue ignorado o elevado.
-- FR-010 El calculo de costo (`shared/analysis/roi_calculator.py`) MUST tener
-  precio para cada modelo de la matriz y MUST reconocer el prefijo `anthropic/`
-  (hoy `normalize_model` solo quita `azure/`). Los tokens de razonamiento MUST
-  contarse como tokens de salida.
-- FR-011 El registro de cada corrida MUST guardar los parametros efectivos de
-  cada rol (temperatura enviada u omitida, effort, modo de razonamiento,
-  `max_tokens`), para que el criterio de comparabilidad de
-  [[SPEC-100-veredicto-senal-ruido]] no trate como equivalentes corridas con
-  configuraciones distintas.
-- FR-012 `docs/LLM_CONFIG.md` MUST documentar el formato, las variables
-  `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>` con IDs vigentes, y MUST enlazar a la
-  matriz de esta spec en lugar de copiarla.
+  final, indicando cuando un valor de config fue ignorado o elevado. Cuando un
+  adapter fija `max_tokens` por llamada, lo reportado MUST ser el valor efectivo
+  de esas llamadas, no el de `LLMConfig`.
+- FR-011 El calculo de costo (`shared/analysis/roi_calculator.py`) MUST tener
+  precio para cada modelo de la matriz (snapshots incluidos via FR-001). La
+  fuente de los precios MUST ser la pagina oficial de precios de Anthropic, con
+  la fecha de consulta registrada junto a la tabla sincronizada de
+  `docs/ANALISIS_UTILIDADES.md` (los valores no se copian en esta spec).
+  `get_model_pricing` MUST usar `normalize_model`, y `normalize_model` MUST
+  quitar los prefijos `azure/`, `openai/` y `anthropic/`. Los tokens de
+  razonamiento MUST contarse como tokens de salida en ambos engines
+  (`shared/llm/usage.py`).
+- FR-012 El registro de cada corrida MUST guardar en `run.json` los parametros
+  efectivos de cada rol (temperatura enviada u omitida, effort, modo de
+  razonamiento, `max_tokens`), tomados de las configuraciones realmente usadas
+  (no recreadas con defaults al guardar). MUST NOT alterarse el formato de
+  `metricas_optimizacion.csv` ([[SPEC-100-veredicto-senal-ruido]] FR-007).
+  [NEEDS CLARIFICATION: el criterio de comparabilidad de SPEC-100 (FR-008, hoy
+  solo el par de modelos) y de [[SPEC-101-triaje-casos-nseeds]] no ve estos
+  parametros. Extenderlo (leer `run.json` desde `seed_protocol.py` /
+  `seed_triage.py`, o migrar el CSV) es un cambio a SPEC-100 que conviene hacer
+  junto con D-018 (a). Hasta entonces, `docs/PROTOCOLO_N_SEEDS.md` MUST advertir
+  que corridas Claude con distinto effort/razonamiento no deben mezclarse en un
+  mismo lote de referencia.]
+- FR-013 `docs/LLM_CONFIG.md` MUST documentar el formato, las variables
+  `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>` con IDs vigentes y el tratamiento de
+  `LLM_API_BASE` para `anthropic/`, y MUST enlazar a la matriz de esta spec en
+  lugar de copiarla.
+
+## Decisiones
+
+- Effort y razonamiento van en `.env` y no en el YAML: su validez depende del
+  modelo y del rol, que ya viven en `.env`, y la User Story pide comparar modelos
+  cambiando solo el `.env`. Esto se aparta de `docs/LECCIONES_APRENDIDAS.md` §4
+  (parametros de comportamiento en YAML); la reproducibilidad se cubre
+  registrando los valores efectivos en `run.json` (FR-012).
+  [NEEDS CLARIFICATION: si en una iteracion futura `models:` del YAML puede
+  sobreescribirlos, y si `dspy_gepa_poc/run_inference.py` debe reconstruirlos
+  desde `run.json` en lugar del `.env` vigente.]
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 
-- SC-001 Para el 100% de los modelos de la matriz y para cada combinacion
-  valida de effort y razonamiento, los parametros construidos por los tres
-  caminos de llamada coinciden con la matriz y no contienen ningun parametro que
-  ese modelo rechace (verificado sin llamar a la API).
-- SC-002 Para el 100% de las combinaciones invalidas de la matriz (apagar en
-  Opus 5.5 o Fable, effort no aceptado, apagar con effort xhigh/max donde no se
-  permite), la validacion falla antes de la primera llamada con un mensaje que
-  nombra modelo y parametro.
-- SC-003 El caso Email Urgency corre de punta a punta en cada subproyecto con API
-  real para cada modelo "real" de la matriz (Haiku 4.5, Sonnet 4.6, Sonnet 5,
-  Haiku 5.5, Sonnet 5.5) como estudiante y profesor a la vez, mas una corrida con
-  `LLM_THINKING_TASK=off` en Haiku 5.5 y en Sonnet 5.5, con 0 errores 4xx de la
-  API. El gasto total de esta verificacion MUST NOT superar USD 10.
+- SC-001 Para el 100% de los modelos de la matriz (alias y un snapshot con fecha)
+  y para cada combinacion valida de effort y razonamiento, los parametros
+  construidos por los cuatro caminos de llamada coinciden con la matriz y no
+  contienen ningun parametro que ese modelo rechace, verificado sobre el cuerpo
+  HTTP interceptado (sin llamar a la API), incluido `get_dspy_lm` sin
+  `drop_params`. El mismo conjunto de tests MUST fijar el header
+  `anthropic-version` esperado, para que un cambio de LiteLLM no pase
+  inadvertido.
+- SC-002 Para el 100% de las combinaciones invalidas (apagar en Opus 5.5 o
+  Fable, effort no aceptado, apagar con effort xhigh/max donde no se permite,
+  valores no reconocidos en `LLM_EFFORT_<ROL>` / `LLM_THINKING_<ROL>`), la
+  validacion falla antes de la primera llamada con un mensaje que nombra modelo
+  y parametro.
+- SC-003 El caso Email Urgency corre de punta a punta con API real en ambos
+  subproyectos para cada modelo "real" de la matriz (Haiku 4.5, Sonnet 4.6,
+  Sonnet 5, Haiku 5.5, Sonnet 5.5) como estudiante y profesor a la vez (10
+  corridas), mas una corrida por subproyecto con `LLM_THINKING_TASK=off` en
+  Haiku 5.5 y en Sonnet 5.5 con el mismo modelo como profesor (4 corridas), con
+  0 errores 4xx de la API. El gasto total MUST NOT superar USD 10: antes de
+  lanzar se estima el costo con los YAML del caso (`max_metric_calls: 50`); si la
+  estimacion supera el tope, se MAY usar un YAML de verificacion con menor
+  `max_metric_calls`, registrado en `historial/sdd.md`.
 - SC-004 En esas corridas, menos del 1% de las predicciones terminan sin texto o
   cortadas por `max_tokens`, y todas las que ocurren aparecen en el log con su
   causa.
-- SC-005 El costo reportado por cada corrida de SC-003 sale del uso real medido y
-  de precios de la tabla, sin el aviso de "modelo sin precio configurado".
+- SC-005 El costo reportado por cada corrida de SC-003 sale del uso real medido
+  (con tokens de razonamiento como salida) y de precios de la tabla, sin el aviso
+  de "modelo sin precio configurado".
 - SC-006 Un `.env` existente con modelos Azure/OpenAI produce exactamente los
   mismos parametros enviados que antes del cambio (sin regresion).
 
@@ -150,44 +253,57 @@ construyen el pedido sin llamar a la API.
   When se construyen los parametros, Then se envia
   `thinking={"type": "between_tools"}` sin otros campos de thinking, y no se
   eleva `max_tokens`.
+- Given `LLM_MODEL_TASK=anthropic/claude-haiku-5-5` y `LLM_THINKING_TASK=off`,
+  When se construyen los parametros, Then se envia `thinking={"type": "disabled"}`.
+- Given `LLM_MODEL_TASK=anthropic/claude-sonnet-4-6` y `LLM_THINKING_TASK=off`,
+  When se valida, Then no hay error y no se envia `thinking`.
 - Given `LLM_MODEL_REFLECTION=anthropic/claude-opus-5-5` y
   `LLM_THINKING_REFLECTION=off`, When arranca la corrida, Then la validacion falla
   indicando que ese modelo no permite apagar el razonamiento.
 - Given `LLM_MODEL_TASK=anthropic/claude-opus-4-5` y `LLM_EFFORT_TASK=xhigh`, When
   arranca la corrida, Then la validacion falla indicando los valores aceptados.
+- Given `LLM_MODEL_TASK=anthropic/claude-sonnet-5-5-20260514`, When se
+  construyen los parametros, Then se aplican las restricciones de
+  `claude-sonnet-5-5` y no se emite aviso de modelo fuera de la matriz.
 - Given un `.env` con `LLM_MODEL_*=anthropic/...` y sin `LLM_API_BASE`, When se
   ejecuta `validate()`, Then no hay error de configuracion.
-- Given el modelo rechaza responder un caso por politica, When se evalua ese
-  caso, Then cuenta como fallo, queda en el log con la causa y la corrida sigue.
+- Given un `.env` Azure editado solo en `LLM_MODEL_*=anthropic/...` (queda
+  `LLM_API_BASE` de Azure), When se construyen los parametros, Then no se envian
+  `api_base` ni `api_version` y se emite un aviso al arrancar.
+- Given el modelo de tarea rechaza responder un caso por politica, When se evalua
+  ese caso, Then cuenta como fallo con score 0.0, queda en el log con la causa y
+  la corrida sigue.
 
 ## Riesgos
 
 - Si una version futura de LiteLLM pasa a enviar `anthropic-version: 2026-10-21`,
-  Haiku 4.5, Opus 4.5 y los 4.6 tambien rechazaran `temperature`. SC-001 MUST
-  incluir un test que fije el header esperado, para que el cambio no pase
-  inadvertido al actualizar LiteLLM.
+  Haiku 4.5, Opus 4.5 y los 4.6 tambien rechazaran `temperature` (lo detecta
+  SC-001).
 - Los modelos con temperatura no fija hacen mas ruidosas las comparaciones:
   medir con N seeds segun `docs/PROTOCOLO_N_SEEDS.md`.
+- Los precios de los modelos "sin red" no se validan contra uso real; un error
+  en la tabla solo se detecta comparando con la facturacion.
 
 ## Coverage mapping (requisito -> derivado)
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
 | FR-001 | tabla de familias en `shared/llm/config.py`; `tests/test_shared_llm.py` (pendiente) |
-| FR-002 | `LLMConfig.to_kwargs` y restricciones por familia; usado por `get_dspy_lm`, `get_lm_function`, `gepa_standalone/core/llm_factory.py::call_llm` (pendiente) |
+| FR-002 | `LLMConfig.to_kwargs` y restricciones por familia; usado por `get_dspy_lm`, `get_lm_function`, `gepa_standalone/core/llm_factory.py::call_llm`, `gepa_standalone/adapters/simple_rag_adapter.py::_call_llm_with_retry` (pendiente) |
 | FR-003 | idem FR-002; test parametrizado por modelo (pendiente) |
 | FR-004 | `LLMConfig.from_env` (`LLM_EFFORT_<ROL>`) + validacion; test (pendiente) |
 | FR-005 | `LLMConfig.from_env` (`LLM_THINKING_<ROL>`) + validacion; test (pendiente) |
 | FR-006 | idem FR-002; test (pendiente) |
-| FR-007 | `LLMConfig.validate`, `LLMConfig.validate_connection`; test (pendiente) |
-| FR-008 | `get_lm_function`, `call_llm`, metricas DSPy (`dspy_gepa_poc/metrics.py`); test (pendiente) |
-| FR-009 | `LLMConfig.describe`; test (pendiente) |
-| FR-010 | `shared/analysis/roi_calculator.py` (`DEFAULT_PRICING`, `normalize_model`); `tests/test_shared_analysis.py` (pendiente) |
-| FR-011 | `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py`, `shared/logging/csv_writer.py` (pendiente) |
-| FR-012 | `docs/LLM_CONFIG.md` (pendiente) |
-| SC-001 | test parametrizado sobre la matriz completa, sin red, incluido el header `anthropic-version` (pendiente) |
+| FR-007 | `LLMConfig.to_kwargs`, `LLMConfig.validate`, `LLMConfig.validate_connection`; test (pendiente) |
+| FR-008 | `LLMConfig.from_env` + validacion; test (pendiente) |
+| FR-009 | `get_lm_function`, `get_dspy_lm` (LM de reflexion para `dspy.GEPA`), `call_llm`, `gepa_standalone/adapters/` (classifier, sql, rag, extractor), metricas DSPy (`dspy_gepa_poc/metrics.py`), `docs/GEPA_MANEJO_ERRORES.md`; test (pendiente) |
+| FR-010 | `LLMConfig.describe`, `gepa_standalone/universal_optimizer.py` (reporte por adapter); test (pendiente) |
+| FR-011 | `shared/analysis/roi_calculator.py` (`DEFAULT_PRICING`, `normalize_model`, `get_model_pricing`), `shared/llm/usage.py`, `docs/ANALISIS_UTILIDADES.md`; `tests/test_shared_analysis.py` (pendiente) |
+| FR-012 | `shared/logging/metadata.py`, `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py` (`save_results`), `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md` (pendiente) |
+| FR-013 | `docs/LLM_CONFIG.md` (pendiente) |
+| SC-001 | `tests/test_litellm_regression.py` (vigente: header `anthropic-version`, `temperature` por modelo con `drop_params`, pase de `output_config` y `thinking` a nivel LiteLLM); falta el test sobre los cuatro caminos de `LLMConfig` (pendiente) |
 | SC-002 | test parametrizado sobre las combinaciones invalidas (pendiente) |
 | SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (pendiente) |
 | SC-004 | conteo sobre las predicciones volcadas de las corridas de SC-003 (pendiente) |
 | SC-005 | `run.json` / CSV de las corridas de SC-003 (pendiente) |
-| SC-006 | test de regresion con modelos `azure/` y `openai/` (pendiente) |
+| SC-006 | `tests/test_litellm_regression.py::TestAzureOpenAIWireRegression` (vigente, parcial); test de regresion de `LLMConfig` con modelos `azure/` y `openai/` (pendiente) |
