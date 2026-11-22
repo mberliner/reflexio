@@ -111,6 +111,70 @@ tras `strip()`. Lo usan `get_lm_function`, `call_llm` y `_call_llm_with_retry`.
 Los adapters ya convierten la excepcion en score 0.0; el juez la reporta como
 "Error del Juez"; GEPA la atrapa en reflexion y saltea la iteracion.
 
+Fijado en 1b (confirma D1 a D6 con estas precisiones; 1c las implementa tal cual):
+
+- D1 confirmado. La tabla ya esta en `config.py` (`ANTHROPIC_FAMILIES`, 11
+  filas). Constantes: `_EFFORTS` (orden canonico low..max, para listar valores y
+  comparar con `off_max_effort`), `_DEFAULT_EFFORT`, `_THINKING_VALUES`,
+  `_SNAPSHOT_SUFFIX`. Los no-op (`haiku-4-5` a `opus-4-7/4-8`) usan
+  `off_mechanism="noop"`; `off_max_effort="high"` en Opus 5, Haiku 5.5 y Sonnet
+  5.5; Sonnet 5 sin tope.
+- D2 confirmado. `resolve_anthropic_family` acepta el ID con o sin `anthropic/`;
+  cualquier otro prefijo (`azure/...`) da None. Helper `_is_anthropic(model)`:
+  la rama Anthropic de `apply_constraints` y los avisos se activan solo con el
+  prefijo `anthropic/`.
+- D3 confirmado con un ajuste de orden: los campos `role`, `effort`, `thinking` y
+  un `_warned: bool = field(default=False, init=False, repr=False,
+  compare=False)` (aviso una vez por config) los agrega 1c, no 1b. Motivo:
+  agregarlos solos hace XPASS (strict) tests de 1a (`test_default_values
+  [claude-haiku-4-5]`, `test_unset_variables_default`, entre otros) y rompe
+  `ci_local.sh`. `from_env` fija `role=model_name.lower()`; un override
+  `role=` gana.
+- D4 confirmado y ampliado:
+  - Verificado sin red en LiteLLM 1.108.5 (sonda temporal, borrada):
+    `thinking={"type": "disabled"|"between_tools"}` y `output_config` llegan
+    intactos al cuerpo con `drop_params` True y False, en `litellm.completion` y
+    en `dspy.LM`; no se agregan otros campos de `thinking`.
+  - `apply_constraints` es idempotente; asi `call_llm` y RAG pueden seguir
+    partiendo de `to_kwargs()`, aplicar overrides y volver a llamarla.
+  - 1c separa `_base_kwargs()` (lo que hoy arma `to_kwargs`, sin restricciones);
+    `to_kwargs() = apply_constraints(_base_kwargs())`. `effective_params` y
+    `validate_connection` parten de `_base_kwargs()`.
+  - `apply_constraints` llama a `_check_params()` (las reglas de validez de D5
+    sin avisos ni chequeo de claves faltantes) y lanza `LLMConfigError`: ningun
+    camino envia una combinacion invalida aunque el entry point no llame a
+    `validate()` (hoy `run_inference.py`, `call_llm` y varios scripts no la
+    llaman). Esto refuerza SC-002 sin tocar entry points.
+  - `anthropic/` fuera de la matriz con effort/thinking configurados: no se
+    envian (FR-001, sin restricciones) y el aviso de arranque lo dice.
+  - OpenAI/Azure: effort/thinking nunca se envian; la rama queda identica a la
+    actual salvo devolver un dict nuevo (SC-006).
+- D5 confirmado. Orden de chequeo en `_check_params` (define que parametro nombra
+  el error): (1) effort fuera de `_EFFORTS` -> `LLM_EFFORT_<ROL>` con low..max;
+  thinking fuera de `_THINKING_VALUES` -> `LLM_THINKING_<ROL>` con `default,
+  off` (aplica a todo proveedor, FR-008); si no hay familia, termina; (2)
+  `efforts is None` y effort configurado -> `LLM_EFFORT_<ROL>` "no acepta
+  effort"; (3) effort fuera de `family.efforts` -> `LLM_EFFORT_<ROL>` con los
+  aceptados en orden canonico; (4) `off` y `off_mechanism is None` ->
+  `LLM_THINKING_<ROL>`; (5) `off` y effort efectivo (`effort or "medium"`) por
+  encima de `off_max_effort` -> `LLM_THINKING_<ROL>` (menciona tambien
+  `LLM_EFFORT_<ROL>` y los effort permitidos). `<ROL>` = `role.upper()`.
+  `LLMConfigError(message, model, parameter, accepted=None)` llama a
+  `LLMConnectionError.__init__` con `provider` del prefijo y `suggestions` con
+  los valores aceptados; titulo propio "LLM CONFIGURATION ERROR" (1c agrega un
+  atributo de clase `title` en `LLMConnectionError` usado por `format_error`).
+  Exportarla en `shared/llm/__init__.py`. Logger:
+  `logging.getLogger(__name__)` (propaga a root, como `shared/logging/*`).
+- D6 confirmado con dos claves mas: `temperature_requested` y `thinking_param`
+  (contrato completo en el docstring de `effective_params`). `thinking` es el
+  modo efectivo: `adaptive`, `always`, `off` o None (desconocido); OpenAI
+  reasoning models reportan `always`.
+- Para 1c: `describe()` hoy lee `to_kwargs()["temperature"]`, que deja de existir
+  en las familias "no se envia". 1c debe evitar el `KeyError` (leer de
+  `effective_params()`); el formato completo es de 4a.
+- `get_lm_function(role=...)` conserva su parametro (bucket de uso y rol de D7);
+  no se cambia el default a `self.role` en esta fase.
+
 D8. Respuesta sin texto (DSPy). `get_dspy_lm()` devuelve una subclase de
 `dspy.LM` que revisa cada salida. Rol `reflection`: lanza
 `EmptyResponseError`. Rol `task`: solo registra la causa y deja que DSPy
@@ -198,6 +262,17 @@ strict, 9 guardias en verde; suite completa 596 passed, 100 xfailed):
   que 1c sea implementacion pura.
 - Cierre: decisiones fijadas aca; los tests de 1a siguen en rojo por las razones
   previstas.
+
+Resultado de 1b: decisiones en "Fijado en 1b" (seccion Decisiones). En
+`config.py`: `AnthropicFamily`, `ANTHROPIC_FAMILIES` y constantes definitivas;
+`_is_anthropic`, `resolve_anthropic_family`, `LLMConfig.apply_constraints` y
+`LLMConfig.effective_params` con firma y docstring, cuerpo `NotImplementedError`.
+Campos de `LLMConfig` y `LLMConfigError` quedan para 1c (ver D3). Tests de 1a:
+9 passed, 101 xfailed; con `--runxfail` fallan por `TypeError` de campos
+ausentes (66), `NotImplementedError` (19), atributos/clase ausentes (12),
+`KeyError` (3) y la temperatura del test RAG (1). Decisiones nuevas a aprobar
+por el usuario: validacion dentro de `apply_constraints`, effort/thinking
+ignorados con aviso fuera de la matriz, claves extra de `effective_params`.
 
 ### 1c Implementacion (GREEN) — Sonnet 5.5
 

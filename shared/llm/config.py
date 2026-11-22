@@ -10,7 +10,7 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 # Same regex DSPy uses internally to detect reasoning models (o1/3/4/5, gpt-5 family).
 # El sufijo de la familia gpt-5 admite tanto '-' (gpt-5-mini) como '.' para versiones
@@ -24,6 +24,107 @@ _REASONING_MIN_MAX_TOKENS = 16000
 
 def _is_reasoning(model: str) -> bool:
     return bool(_REASONING_MODEL_PATTERN.match(model.split("/")[-1].lower()))
+
+
+# ==================== SPEC-103: matriz de soporte Anthropic (FR-001, FR-002) ====================
+# Unico lugar del codigo que implementa la matriz de specs/SPEC-103-proveedor-anthropic.md.
+# Esqueleto de la subfase 1b: la tabla es definitiva; las funciones las implementa 1c.
+
+_ANTHROPIC_PREFIX = "anthropic/"
+# Orden canonico de effort: se usa para listar valores aceptados y comparar contra
+# off_max_effort. Los frozenset de la tabla no tienen orden.
+_EFFORTS: tuple[str, ...] = ("low", "medium", "high", "xhigh", "max")
+_DEFAULT_EFFORT = "medium"
+_THINKING_VALUES: tuple[str, ...] = ("default", "off")
+_SNAPSHOT_SUFFIX = re.compile(r"-\d{8}$")
+
+ReasoningDefault = Literal["off", "adaptive", "always"]
+OffMechanism = Literal["noop", "disabled", "between_tools"]
+
+
+@dataclass(frozen=True)
+class AnthropicFamily:
+    """
+    Una fila de la matriz de soporte de SPEC-103.
+
+    Attributes:
+        aliases: IDs sin prefijo `anthropic/` ni sufijo de snapshot que comparten fila.
+        sends_temperature: False = `temperature` se quita de los kwargs (FR-003).
+        efforts: Valores de `output_config.effort` aceptados; None = el modelo no
+            acepta effort y no se envia nada (FR-004).
+        default_reasoning: Razonamiento si no se configura: "off" (apagado),
+            "adaptive" o "always" (siempre activo). Con "adaptive"/"always" y
+            thinking != "off" se eleva `max_tokens` (FR-006).
+        off_mechanism: Que envia `LLM_THINKING_<ROL>=off`: "noop" (nada),
+            "disabled" / "between_tools" (`thinking={"type": <valor>}`); None = no
+            se permite apagar (error al validar, FR-005).
+        off_max_effort: Tope de effort cuando thinking == "off" (comparado con
+            `_EFFORTS`); None = sin tope. Solo tiene sentido si off_mechanism no es None.
+    """
+
+    aliases: tuple[str, ...]
+    sends_temperature: bool
+    efforts: frozenset[str] | None
+    default_reasoning: ReasoningDefault
+    off_mechanism: OffMechanism | None
+    off_max_effort: str | None = None
+
+
+_EFFORTS_LOW_HIGH = frozenset({"low", "medium", "high"})
+_EFFORTS_LOW_MAX_NO_XHIGH = frozenset({"low", "medium", "high", "max"})
+_EFFORTS_ALL = frozenset(_EFFORTS)
+
+ANTHROPIC_FAMILIES: tuple[AnthropicFamily, ...] = (
+    AnthropicFamily(("claude-haiku-4-5",), True, None, "off", "noop"),
+    AnthropicFamily(("claude-opus-4-5",), True, _EFFORTS_LOW_HIGH, "off", "noop"),
+    AnthropicFamily(("claude-sonnet-4-6",), True, _EFFORTS_LOW_MAX_NO_XHIGH, "off", "noop"),
+    AnthropicFamily(("claude-opus-4-6",), True, _EFFORTS_LOW_MAX_NO_XHIGH, "off", "noop"),
+    AnthropicFamily(("claude-opus-4-7", "claude-opus-4-8"), False, _EFFORTS_ALL, "off", "noop"),
+    AnthropicFamily(("claude-sonnet-5",), False, _EFFORTS_ALL, "adaptive", "disabled"),
+    AnthropicFamily(("claude-opus-5",), False, _EFFORTS_ALL, "adaptive", "disabled", "high"),
+    AnthropicFamily(("claude-haiku-5-5",), False, _EFFORTS_ALL, "adaptive", "disabled", "high"),
+    AnthropicFamily(
+        ("claude-sonnet-5-5",), False, _EFFORTS_ALL, "adaptive", "between_tools", "high"
+    ),
+    AnthropicFamily(("claude-opus-5-5",), False, _EFFORTS_ALL, "adaptive", None),
+    AnthropicFamily(
+        ("claude-fable-5", "claude-fable-5-1", "claude-fable-5-2"),
+        False,
+        _EFFORTS_ALL,
+        "always",
+        None,
+    ),
+)
+
+
+def _is_anthropic(model: str) -> bool:
+    """
+    True si `model` usa el proveedor Anthropic directo (prefijo `anthropic/`).
+
+    La rama Anthropic de `apply_constraints` y los avisos de `validate()` se
+    activan solo con este prefijo; IDs `claude-*` sin prefijo no se tratan como
+    Anthropic en el armado de kwargs (FR-001 habla de `anthropic/<id>`).
+    """
+    raise NotImplementedError("SPEC-103 1c")
+
+
+def resolve_anthropic_family(model: str) -> AnthropicFamily | None:
+    """
+    Resuelve un ID de modelo a su fila de la matriz (D2).
+
+    Pasos: quitar el prefijo `anthropic/` si esta; si queda otro prefijo con "/"
+    (p. ej. `azure/...`) devolver None; quitar un sufijo de snapshot `-YYYYMMDD`
+    (`_SNAPSHOT_SUFFIX`, exactamente 8 digitos al final); buscar coincidencia
+    exacta en `AnthropicFamily.aliases`. Sin prefijos parciales:
+    `claude-opus-5` no resuelve `claude-opus-5-5`, y `claude-opus-5-5-preview` o
+    `claude-opus-5-5-2026` devuelven None. Acepta IDs sin prefijo (lo usa
+    `normalize_model` en 3b para precios).
+
+    Returns:
+        La instancia de `ANTHROPIC_FAMILIES` (misma identidad para alias,
+        alias compartidos y snapshots de una fila) o None fuera de la matriz.
+    """
+    raise NotImplementedError("SPEC-103 1c")
 
 
 @dataclass
@@ -70,6 +171,64 @@ class LLMConfig:
         if (kwargs.get("max_tokens") or 0) < _REASONING_MIN_MAX_TOKENS:
             kwargs["max_tokens"] = _REASONING_MIN_MAX_TOKENS
         return kwargs
+
+    def apply_constraints(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """
+        Punto unico de restricciones por modelo (SPEC-103 D4, FR-002 a FR-007).
+
+        Reemplaza a `apply_reasoning_constraints` (1c renombra sus usos y la borra).
+        Devuelve un dict NUEVO; nunca muta `kwargs`. Es idempotente:
+        `apply_constraints(apply_constraints(k)) == apply_constraints(k)`, asi los
+        llamadores pueden partir de `to_kwargs()`, aplicar overrides por llamada
+        (`temperature`, `max_tokens`) y volver a llamarla.
+
+        Antes de transformar llama a `_check_params()` (misma regla que
+        `validate()`, sin avisos): ningun camino envia una combinacion invalida
+        aunque el entry point no haya llamado a `validate()`.
+
+        - Rama OpenAI/Azure (no `anthropic/`): conducta actual de reasoning models
+          (temperature=1.0, max_tokens>=16000); el resto intacto (SC-006). effort y
+          thinking no se envian.
+        - Rama `anthropic/` (siempre): quita `api_base` y `api_version` (FR-007).
+        - Rama `anthropic/` en la matriz (familia resuelta):
+          1. quita `temperature` si `not family.sends_temperature` (FR-003);
+          2. si `family.efforts` no es None: `output_config={"effort": effort or
+             "medium"}` (FR-004; nunca `reasoning_effort`);
+          3. si thinking == "off" y off_mechanism es "disabled"/"between_tools":
+             `thinking={"type": off_mechanism}` (FR-005; "noop" no envia nada);
+          4. si default_reasoning != "off" y thinking != "off": `max_tokens =
+             max(max_tokens or 0, _REASONING_MIN_MAX_TOKENS)` (FR-006).
+        - Rama `anthropic/` fuera de la matriz: solo lo de FR-007 (sin restricciones,
+          effort/thinking no se envian; FR-001).
+
+        Raises:
+            LLMConfigError: si effort/thinking son invalidos para el modelo.
+        """
+        raise NotImplementedError("SPEC-103 1c")
+
+    def effective_params(self, max_tokens: int | None = None) -> dict[str, Any]:
+        """
+        Parametros efectivos que se envian (SPEC-103 D6, FR-010, FR-012).
+
+        Arma los kwargs base (sin restricciones), aplica `max_tokens` por llamada si
+        viene (valor del adapter, FR-010) y despues `apply_constraints`. Lo usan
+        `describe()` (4a) y `collect_model_info` (4b).
+
+        Returns:
+            Dict con claves fijas:
+            - model: ID tal cual se configuro.
+            - temperature: valor enviado; None si se omite.
+            - temperature_requested: valor de config.
+            - temperature_omitted: True si la familia no la envia.
+            - effort: valor de `output_config.effort` enviado; None si no se envia.
+            - thinking: modo de razonamiento efectivo: "adaptive", "always" u "off";
+              None si no se sabe (OpenAI/Azure no reasoning o `anthropic/` fuera de
+              la matriz). Para OpenAI reasoning models: "always".
+            - thinking_param: dict `thinking` enviado o None.
+            - max_tokens: valor enviado (tras FR-006).
+            - max_tokens_requested: `max_tokens` del argumento o, si es None, de config.
+        """
+        raise NotImplementedError("SPEC-103 1c")
 
     def describe(self) -> str:
         """
