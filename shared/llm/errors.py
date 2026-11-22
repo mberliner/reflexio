@@ -131,3 +131,18 @@ class LLMConfigError(LLMConnectionError):
             model=model,
             suggestions=suggestions,
         )
+
+
+class EmptyResponseError(Exception):
+    """
+    Respuesta del LLM sin texto (SPEC-103, FR-009).
+
+    Se lanza cuando el contenido es None o vacio (p. ej. `finish_reason`
+    `max_tokens` o `refusal`). No hereda de LLMConnectionError: los adapters
+    la tratan como fallo del ejemplo, no como corte de la corrida.
+    """
+
+    def __init__(self, role: str, finish_reason: str | None = None):
+        self.role = role
+        self.finish_reason = finish_reason
+        super().__init__(f"Respuesta sin texto del LLM (rol={role}, finish_reason={finish_reason})")

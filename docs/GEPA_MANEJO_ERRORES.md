@@ -162,6 +162,26 @@ Cualquier `Exception` capturada durante la llamada al LLM:
 - `ServiceUnavailableError`
 - Etc.
 
+### Respuesta sin texto (SPEC-103, FR-009)
+
+Una respuesta LiteLLM con contenido `None` o vacio (por ejemplo `finish_reason`
+`max_tokens` o `refusal`) no es un error de red ni un content filter. El helper
+`shared.llm.response_text` registra la causa (rol y `finish_reason`, nivel
+WARNING) y lanza `EmptyResponseError`, que NO hereda de `LLMConnectionError`:
+nunca corta la corrida. Lo usan `get_lm_function`, `call_llm` y
+`SimpleRAGAdapter._call_llm_with_retry`.
+
+| Rol | Conducta |
+|---|---|
+| Tarea (clasificador, SQL) | El adapter la atrapa como cualquier `Exception`: ejemplo descartado, con la causa en log y consola |
+| Tarea (extractor, RAG) | Score 0.0 y la causa queda en `outputs` (RAG ya no la rotula como content filter) |
+| Juez (RAG) | Score 0.0 con feedback "Error del Juez: ..."; la causa dice `rol=juez` |
+| Reflexion | `get_lm_function(role="reflection")` lanza la excepcion; GEPA la atrapa y saltea la iteracion |
+
+En el juez de RAG, un `LLMConnectionError` (incluido `LLMConfigError`) se
+propaga y corta la corrida, igual que en los demas adapters. El camino DSPy
+(`get_dspy_lm`) es subfase 2c.
+
 ### ¿Y los errores de parsing JSON?
 
 En el extractor, los errores de **parsing JSON** NO causan descarte. El adaptador intenta:

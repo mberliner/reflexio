@@ -15,7 +15,7 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
-from shared.llm import LLMConnectionError
+from shared.llm import EmptyResponseError, LLMConnectionError, response_text
 from shared.llm.usage import record_usage
 
 
@@ -90,6 +90,7 @@ class SimpleRAGAdapter(BaseAdapter):
         # (optimization-only cost); plain task generation counts as "task".
         is_judge = model == self.judge_model
         usage_role = "reflection" if (is_judge or is_reflection) else "task"
+        cause_role = "juez" if is_judge else usage_role
 
         litellm.drop_params = True
         call_kwargs = config.to_kwargs()
@@ -108,7 +109,10 @@ class SimpleRAGAdapter(BaseAdapter):
                     **call_kwargs,
                 )
                 record_usage(usage_role, response)
-                return response.choices[0].message.content
+                return response_text(response, cause_role)
+            except EmptyResponseError:
+                # Respuesta sin texto: no es content filter, se propaga con su causa
+                raise
             except Exception as e:
                 error_str = str(e)
 
@@ -281,6 +285,9 @@ class SimpleRAGAdapter(BaseAdapter):
 
             return score, reason
 
+        except LLMConnectionError:
+            # Config invalida o falla de conexion del juez: corta la corrida
+            raise
         except Exception as e:
             return 0.0, f"Error del Juez: {str(e)}"
 

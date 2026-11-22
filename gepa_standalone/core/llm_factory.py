@@ -7,7 +7,7 @@ Usa el modulo compartido shared.llm con LiteLLM.
 
 from collections.abc import Callable
 
-from shared.llm import LLMConfig
+from shared.llm import LLMConfig, response_text
 
 
 def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
@@ -161,4 +161,4 @@ def call_llm(
 
     response = litellm.completion(model=model, messages=messages, **kwargs)
     record_usage(model_name, response)
-    return response.choices[0].message.content
+    return response_text(response, model_name)

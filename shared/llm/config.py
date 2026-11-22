@@ -25,6 +25,31 @@ _REASONING_TEMPERATURE = 1.0
 _REASONING_MIN_MAX_TOKENS = 16000
 
 
+def response_text(response: Any, role: str) -> str:
+    """
+    Extrae el texto de una respuesta de LiteLLM (SPEC-103, FR-009 / D7).
+
+    Si el contenido es None o queda vacio tras `strip()`, registra la causa
+    (`finish_reason`) y lanza `EmptyResponseError`. Devuelve el texto original
+    (sin strip) cuando hay contenido.
+
+    Args:
+        response: Respuesta de `litellm.completion`.
+        role: Rol que hizo la llamada ("task", "reflection", "juez").
+    """
+    from .errors import EmptyResponseError
+
+    choice = response.choices[0]
+    content = choice.message.content
+    if content is None or not str(content).strip():
+        finish_reason = getattr(choice, "finish_reason", None)
+        logger.warning(
+            "Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason
+        )
+        raise EmptyResponseError(role, finish_reason)
+    return content
+
+
 def _is_reasoning(model: str) -> bool:
     return bool(_REASONING_MODEL_PATTERN.match(model.split("/")[-1].lower()))
 
@@ -549,7 +574,7 @@ class LLMConfig:
             """Call LLM with prompt and return response text."""
             response = litellm.completion(messages=[{"role": "user", "content": prompt}], **kwargs)
             record_usage(role, response)
-            return response.choices[0].message.content
+            return response_text(response, role)
 
         return lm_func
 
