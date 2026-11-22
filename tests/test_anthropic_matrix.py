@@ -34,8 +34,8 @@ RED_RAG = pytest.mark.xfail(strict=True, reason="SPEC-103 2a")
 MATRIX = [
     ("claude-haiku-4-5", True, None, "off"),
     ("claude-opus-4-5", True, ("low", "medium", "high"), "off"),
-    ("claude-sonnet-4-6", True, ALL_EFFORTS[:4] + ("max",), "off"),
-    ("claude-opus-4-6", True, ALL_EFFORTS, "off"),
+    ("claude-sonnet-4-6", True, ("low", "medium", "high", "max"), "off"),
+    ("claude-opus-4-6", True, ("low", "medium", "high", "max"), "off"),
     ("claude-opus-4-7", False, ALL_EFFORTS, "off"),
     ("claude-sonnet-5", False, ALL_EFFORTS, "adaptive"),
     ("claude-opus-5", False, ALL_EFFORTS, "adaptive"),
@@ -449,6 +449,7 @@ INVALID_COMBINATIONS = [
     ("claude-fable-5-2", None, "off", "LLM_THINKING"),
     ("claude-opus-4-5", "xhigh", "default", "LLM_EFFORT"),
     ("claude-opus-4-5", "max", "default", "LLM_EFFORT"),
+    ("claude-sonnet-4-6", "xhigh", "default", "LLM_EFFORT"),
     ("claude-haiku-4-5", "low", "default", "LLM_EFFORT"),
     ("claude-haiku-4-5", "medium", "default", "LLM_EFFORT"),
     ("claude-haiku-5-5", "xhigh", "off", "LLM_THINKING"),
