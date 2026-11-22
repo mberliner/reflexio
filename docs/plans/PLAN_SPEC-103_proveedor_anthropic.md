@@ -352,6 +352,9 @@ indican):
   (esto ya pasaba antes), `_warned` y los campos nuevos. Hoy no recibe
   configs; `run.json` debe salir de `effective_params()` (D6).
 
+Nucleo aprobado por el usuario el 2026-11-22. O1 y O2: solo documentar en la
+fase 5, sin aviso nuevo ni cambio de spec.
+
 ### 2a Punto unico en RAG y `call_llm` — Sonnet 5.5
 
 - `SimpleRAGAdapter._call_llm_with_retry` y `call_llm`: override por llamada y
