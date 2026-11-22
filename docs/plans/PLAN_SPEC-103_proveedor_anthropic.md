@@ -35,7 +35,7 @@ modelos bajo prueba de la matriz de la spec.
 | 1 Nucleo (`shared/llm/config.py`) | 1a Tests sin red: matriz, combinaciones invalidas, regresion Azure/OpenAI (RED) | SC-001, SC-002, SC-006 | Sonnet 5.5 | hecho (22156c2) |
 | | 1b Diseno: tabla de familias, resolucion de alias/snapshot, campos de `LLMConfig`, `apply_constraints`, `effective_params` | FR-001, FR-002 | Opus 5.5 | hecho (cc57b22) |
 | | 1c Implementacion de `from_env`, `apply_constraints`, `to_kwargs`, `validate`, `validate_connection` (GREEN) | FR-003, FR-004, FR-005, FR-006, FR-007, FR-008 | Sonnet 5.5 | hecho (395fbff) |
-| | 1d Revision de regresion silenciosa en `azure/` y `openai/` | SC-006 | Opus 5.5 | pendiente |
+| | 1d Revision de regresion silenciosa en `azure/` y `openai/` | SC-006 | Opus 5.5 | hecho |
 | 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | pendiente |
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | pendiente |
 | | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (tarea: log; reflexion: excepcion) y verificacion contra `dspy.GEPA` | FR-009 | Opus 5.5 | pendiente |
@@ -308,6 +308,49 @@ xfailed; `ci_local.sh` verde; `config.py` 685 lineas. Notas para 1d:
   `openai/`: orden de aplicacion, mutaciones, `drop_params` y kwargs nuevos que
   pudieran filtrarse a Azure.
 - Cierre: SC-006 en verde y hallazgos resueltos o anotados aca.
+
+Resultado de 1d: sin regresion en `azure/` ni `openai/`. Revisado el diff de
+`config.py`, `errors.py`, `llm_factory.py` y `simple_rag_adapter.py` desde
+6ab172b. Suite 708 passed, 1 xfailed (RAG, 2a); `ci_local.sh` verde.
+
+- Orden de aplicacion: `call_llm` y RAG aplican los overrides (`temperature`,
+  `max_tokens`) y despues `apply_constraints`, como antes. La sonda de
+  `validate_connection` da el mismo pedido que antes (5, o 16000 con
+  temperature 1.0 en reasoning models).
+- Mutaciones: `apply_reasoning_constraints` mutaba el dict de entrada;
+  `apply_constraints` devuelve uno nuevo. Los tres llamadores reasignan el
+  resultado, asi que la conducta no cambia. `get_lm_function` sigue armando los
+  kwargs una sola vez, al crear la funcion.
+- `drop_params`: sin cambios (`get_lm_function`, `call_llm`, RAG y
+  `validate_connection` lo activan; `get_dspy_lm` no).
+- Kwargs nuevos: fuera de `anthropic/` nunca se agregan `output_config`,
+  `thinking` ni `reasoning_effort`, aunque `LLM_EFFORT_<ROL>` o
+  `LLM_THINKING_<ROL>` esten configurados. Los `.env` de los dos subproyectos
+  no definen esas variables, asi que ninguna config existente cambia de
+  conducta ni puede caer en `LLMConfigError`.
+- Guardia nueva `tests/test_sc006_azure_openai_paths.py` (12 tests) para los
+  caminos que no cubria `TestAzureOpenAIConfigRegression`: `call_llm` con
+  overrides (cuerpo HTTP), `get_dspy_lm` (kwargs y cuerpo HTTP), sonda de
+  `validate_connection`, effort/thinking configurados en Azure/OpenAI (no se
+  envian y no hay aviso), no mutacion y `describe()`.
+
+Observaciones (no son regresiones ni bloquean; quedan para las fases que se
+indican):
+
+- O1 (fase 5): en Azure/OpenAI un `LLM_EFFORT_<ROL>` valido se ignora sin
+  aviso (1b: "nunca se envian"). `docs/LLM_CONFIG.md` debe decirlo. Si se
+  quiere un aviso de arranque, hay que agregarlo a la spec (FR-001 solo cubre
+  `anthropic/` fuera de la matriz).
+- O2 (fase 5): valores de effort que OpenAI acepta pero estan fuera de
+  low..max (`minimal`, `none`) fallan en Azure por FR-008 ("todo proveedor").
+  Coincide con la spec; documentarlo en `docs/LLM_CONFIG.md`.
+- O3 (menor): `from_env(..., role=X)` lee las variables con el sufijo de
+  `model_name`, pero el error nombra `LLM_*_<X>`. Hoy ningun llamador pasa
+  `role=`; no se toca.
+- O4 (4b): `shared/logging/run_artifacts.py::_to_serializable` usa
+  `__dict__`. Si alguna vez serializara un `LLMConfig`, incluiria `api_key`
+  (esto ya pasaba antes), `_warned` y los campos nuevos. Hoy no recibe
+  configs; `run.json` debe salir de `effective_params()` (D6).
 
 ### 2a Punto unico en RAG y `call_llm` — Sonnet 5.5
 

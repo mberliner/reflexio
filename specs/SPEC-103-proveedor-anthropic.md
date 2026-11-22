@@ -307,4 +307,4 @@ Notas de la matriz:
 | SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (pendiente) |
 | SC-004 | conteo sobre las predicciones volcadas de las corridas de SC-003 (pendiente) |
 | SC-005 | `run.json` / CSV de las corridas de SC-003 (pendiente) |
-| SC-006 | `tests/test_litellm_regression.py::TestAzureOpenAIWireRegression` y `tests/test_anthropic_matrix.py::TestAzureOpenAIConfigRegression` (vigente: `to_kwargs()` y cuerpo HTTP de `azure/gpt-4.1-mini`, `azure/gpt-5.4-mini`, `azure/gpt-4o` y `openai/gpt-4o-mini`; la subfase 1d revisa la regresion silenciosa) |
+| SC-006 | `tests/test_litellm_regression.py::TestAzureOpenAIWireRegression` y `tests/test_anthropic_matrix.py::TestAzureOpenAIConfigRegression` (vigente: `to_kwargs()` y cuerpo HTTP de `azure/gpt-4.1-mini`, `azure/gpt-5.4-mini`, `azure/gpt-4o` y `openai/gpt-4o-mini`) y `tests/test_sc006_azure_openai_paths.py` (vigente: `call_llm`, `get_dspy_lm`, `validate_connection` y effort/thinking ignorados fuera de `anthropic/`) |
