@@ -290,7 +290,7 @@ Notas de la matriz:
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
 | FR-001 | tabla de familias en `shared/llm/config.py`; `tests/test_anthropic_matrix.py` (vigente) |
-| FR-002 | `LLMConfig.to_kwargs` y restricciones por familia; usado por `get_dspy_lm`, `get_lm_function`, `gepa_standalone/core/llm_factory.py::call_llm`, `gepa_standalone/adapters/simple_rag_adapter.py::_call_llm_with_retry` (vigente en `get_dspy_lm`, `get_lm_function` y `call_llm` con `tests/test_anthropic_matrix.py`; RAG pendiente, subfase 2a) |
+| FR-002 | `LLMConfig.to_kwargs` y restricciones por familia; usado por `get_dspy_lm`, `get_lm_function`, `gepa_standalone/core/llm_factory.py::call_llm`, `gepa_standalone/adapters/simple_rag_adapter.py::_call_llm_with_retry` (vigente en los cuatro caminos, tarea y juez en RAG, con `tests/test_anthropic_matrix.py`) |
 | FR-003 | idem FR-002; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-004 | `LLMConfig.from_env` (`LLM_EFFORT_<ROL>`) + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-005 | `LLMConfig.from_env` (`LLM_THINKING_<ROL>`) + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
