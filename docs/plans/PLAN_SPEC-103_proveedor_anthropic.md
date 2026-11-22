@@ -275,13 +275,14 @@ acepta los mismos flags.
 
 ```bash
 SUB=1a   # subfase a ejecutar
+mkdir -p "$HOME/spec103_logs"   # logs fuera del repo
 claude-e -p "Implementar SPEC-103 subfase $SUB segun docs/plans/PLAN_SPEC-103_proveedor_anthropic.md. \
 Sesion no interactiva: si algo exige decision del usuario, no improvisar; \
 registrarlo en el plan como bloqueo, no commitear y terminar." \
   --model claude-sonnet-5-5 \
   --permission-mode acceptEdits \
   --allowedTools "Bash(./shared/utils/ci_local.sh) Bash(python -m pytest:*) Bash(git status) Bash(git diff:*) Bash(git add:*) Bash(git commit:*)" \
-  | tee "spec103_$SUB.log"
+  | tee "$HOME/spec103_logs/$SUB.log"
 ```
 
 Reglas:
@@ -295,3 +296,41 @@ Reglas:
   relanza.
 - La fase 6 (API real con tope de USD 10) y el Cierre van en sesion interactiva,
   no en `-p`.
+
+## Seguimiento
+
+Una sesion interactiva de Opus 5.5 supervisa las fases 1 a 5. No implementa ni
+guarda estado propio: el estado es la columna Estado de este plan. Si la
+sesion se corta, otra retoma leyendo el plan.
+
+Arranque: "Supervisar SPEC-103 segun la seccion Seguimiento de
+docs/plans/PLAN_SPEC-103_proveedor_anthropic.md".
+
+Ciclo por subfase:
+
+1. Tomar la primera subfase `pendiente` cuyas dependencias esten `hecho`.
+2. Lanzarla con el comando de "Lanzamiento por CLI" en segundo plano, con el
+   modelo de la tabla, y esperar el aviso de fin (sin polling).
+3. Aplicar el control de salida. Si pasa, volver a 1. Si falla, detenerse e
+   informar al usuario: no relanzar ni corregir por cuenta propia.
+
+Control de salida (todos deben cumplirse):
+
+- Hay un commit nuevo (`git log -1`) y el arbol queda limpio (`git status`).
+- `./shared/utils/ci_local.sh` pasa.
+- La subfase figura como `hecho` en la tabla, con el hash del commit.
+- No quedo un bloqueo anotado en este plan.
+- El diff (`git diff --stat HEAD~1`) toca solo los archivos previstos en el
+  detalle de la subfase.
+- Si la subfase implementa lo decidido en D1 a D8, el diff lo respeta. Se
+  revisa el diff completo solo en las subfases de la fase 1 o cuando un punto
+  anterior falla.
+
+Paradas obligatorias (la sesion se detiene y espera al usuario):
+
+- Despues de 1b: el usuario aprueba las decisiones de diseno.
+- Despues de 1d: el usuario aprueba el nucleo antes de abrir las fases 2 a 4.
+- Al terminar la fase 5: la fase 6 gasta API real y va en otra sesion.
+
+Contexto: de cada log leer solo el final (`tail -n 40`); entrar al log completo
+o al diff solo cuando un control falla.
