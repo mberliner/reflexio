@@ -271,12 +271,13 @@ tabla. `claude-e` es el mismo CLI con el perfil de empresa (API key propia), y
 acepta los mismos flags.
 
 - Subfases Opus 5.5: `claude -p ... --model claude-opus-5-5`
-- Subfases Sonnet 5.5: `claude-e -p ... --model claude-sonnet-5-5`
+- Subfases Sonnet 5.5: `claude -p ... --model claude-sonnet-5-5` (se dejo de
+  usar `claude-e` por falta de credito en la API key de empresa, 2026-11-22)
 
 ```bash
 SUB=1a   # subfase a ejecutar
 mkdir -p "$HOME/spec103_logs"   # logs fuera del repo
-claude-e -p "Implementar SPEC-103 subfase $SUB segun docs/plans/PLAN_SPEC-103_proveedor_anthropic.md. \
+claude -p "Implementar SPEC-103 subfase $SUB segun docs/plans/PLAN_SPEC-103_proveedor_anthropic.md. \
 Sesion no interactiva: si algo exige decision del usuario, no improvisar; \
 registrarlo en el plan como bloqueo, no commitear y terminar." \
   --model claude-sonnet-5-5 \
