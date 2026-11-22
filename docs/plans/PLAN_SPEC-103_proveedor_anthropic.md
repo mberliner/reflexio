@@ -32,7 +32,7 @@ modelos bajo prueba de la matriz de la spec.
 
 | Fase | Subfase | Requisitos | Modelo | Estado |
 |---|---|---|---|---|
-| 1 Nucleo (`shared/llm/config.py`) | 1a Tests sin red: matriz, combinaciones invalidas, regresion Azure/OpenAI (RED) | SC-001, SC-002, SC-006 | Sonnet 5.5 | pendiente |
+| 1 Nucleo (`shared/llm/config.py`) | 1a Tests sin red: matriz, combinaciones invalidas, regresion Azure/OpenAI (RED) | SC-001, SC-002, SC-006 | Sonnet 5.5 | hecho (HASH_1A) |
 | | 1b Diseno: tabla de familias, resolucion de alias/snapshot, campos de `LLMConfig`, `apply_constraints`, `effective_params` | FR-001, FR-002 | Opus 5.5 | pendiente |
 | | 1c Implementacion de `from_env`, `apply_constraints`, `to_kwargs`, `validate`, `validate_connection` (GREEN) | FR-003, FR-004, FR-005, FR-006, FR-007, FR-008 | Sonnet 5.5 | pendiente |
 | | 1d Revision de regresion silenciosa en `azure/` y `openai/` | SC-006 | Opus 5.5 | pendiente |
@@ -156,6 +156,39 @@ corrida. 2c verifica las dos conductas contra dspy 3.2.1 y GEPA 0.0.27.
   `.venv/bin/python -m pytest tests/test_anthropic_matrix.py -rx` y revisar los
   motivos. Los de SC-006 y `tests/test_litellm_regression.py` pasan sin marca.
   `ci_local.sh` verde.
+
+Resultado de 1a (109 tests en `tests/test_anthropic_matrix.py`: 100 xfail
+strict, 9 guardias en verde; suite completa 596 passed, 100 xfailed):
+
+- Riesgo resuelto: `dspy.LM` (3.2.1) SI pasa por `HTTPHandler.post`; el fixture
+  `capture_anthropic_post` sirve sin cambios (verificado con un test temporal,
+  ya borrado).
+- Motivos de fallo verificados con `--runxfail`: `LLMConfig` sin `role`,
+  `effort`, `thinking`; falta `resolve_anthropic_family`,
+  `LLMConfigError`, `apply_constraints`, `effective_params`; y en `call_llm`,
+  `validate_connection` y RAG, `output_config` ausente / `max_tokens` sin elevar.
+- Desvios respecto del detalle de arriba, para que 1b/1c los conozcan:
+  - La matriz tiene 11 filas (no 12): Opus 4.7/4.8 y Fable 5/5.1/5.2 comparten
+    fila. `claude-opus-4-8`, `claude-fable-5-1` y `claude-fable-5-2` se prueban
+    solo en la resolucion de alias.
+  - Filas de `call_llm` y `get_dspy_lm`: Sonnet 4.6 y Opus 5.5 (no Haiku 4.5 y
+    Opus 5.5). Haiku 4.5 con valores por defecto ya produce hoy el pedido
+    esperado y su `xfail(strict=True)` daria XPASS (falla). Haiku 4.5 queda
+    cubierto en `get_lm_function`.
+  - Tests ya en verde sin marca (guardia): `validate()` sin `LLM_API_BASE` en
+    `anthropic/` y los 8 de regresion Azure/OpenAI (`to_kwargs()` literal y
+    cuerpo HTTP Azure).
+  - Los tests usan la API de D1 a D8 tal cual (`role`, `effort`, `thinking`,
+    `LLMConfigError`, `resolve_anthropic_family`, `apply_constraints`,
+    `effective_params`); si 1b corrige nombres, hay que ajustar los tests.
+  - Test RAG (marcado 2a): hoy falla ya en la temperatura de la llamada de tarea
+    (`BaseAdapter` no la pasa como override), lo que coincide con la revision
+    prevista en 2a; las aserciones del juez no se llegan a evaluar hasta
+    entonces.
+  - Los avisos (FR-001/FR-007) se prueban con `caplog` sobre cualquier logger
+    (nivel WARNING); D5 debe usar un logger que propague a root.
+  - `ruff` no esta permitido en sesiones `-p`: el formato se ajusto a mano
+    guiado por `ci_local.sh`.
 
 ### 1b Diseno — Opus 5.5
 

@@ -3,9 +3,14 @@ Shared fixtures for all tests.
 """
 
 import csv
+import json
 from unittest.mock import MagicMock
 
+import openai._base_client as openai_base_client
 import pytest
+from litellm.llms.azure.common_utils import BaseAzureLLM
+from litellm.llms.custom_httpx.http_handler import HTTPHandler
+from openai.types.chat import ChatCompletion
 
 LLM_ENV_VARS = [
     "LLM_MODEL_TASK",
@@ -134,3 +139,87 @@ def mock_matplotlib(monkeypatch):
     mock_plt = MagicMock()
     monkeypatch.setattr("matplotlib.pyplot", mock_plt)
     return mock_plt
+
+
+# ==================== Intercepcion HTTP sin red (LiteLLM) ====================
+
+
+class _FakeAnthropicHTTPResponse:
+    status_code = 200
+    headers: dict[str, str] = {}
+    text = "{}"
+
+    def json(self) -> dict:
+        return {
+            "id": "msg_test",
+            "type": "message",
+            "role": "assistant",
+            "model": "m",
+            "content": [{"type": "text", "text": "ok"}],
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 1, "output_tokens": 1},
+        }
+
+
+class _FakeAzureRawResponse:
+    headers: dict[str, str] = {}
+
+    def parse(self) -> ChatCompletion:
+        return ChatCompletion.model_validate(
+            {
+                "id": "chatcmpl-test",
+                "object": "chat.completion",
+                "created": 1,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "ok"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 1,
+                    "completion_tokens": 1,
+                    "total_tokens": 2,
+                },
+            }
+        )
+
+
+@pytest.fixture
+def capture_anthropic_post(monkeypatch):
+    """Intercept HTTPHandler.post for Anthropic calls without touching the network."""
+    captured: dict = {}
+
+    def fake_post(self, url, *args, **kwargs):
+        raw_data = kwargs.get("data")
+        body = json.loads(raw_data) if raw_data is not None else dict(kwargs.get("json") or {})
+        headers = {k.lower(): v for k, v in (kwargs.get("headers") or {}).items()}
+        captured["url"] = url
+        captured["body"] = body
+        captured["headers"] = headers
+        return _FakeAnthropicHTTPResponse()
+
+    monkeypatch.setattr(HTTPHandler, "post", fake_post)
+    return captured
+
+
+@pytest.fixture
+def capture_azure_post(monkeypatch):
+    """Intercept SyncAPIClient.post for Azure OpenAI calls without touching the network."""
+    captured: dict = {}
+
+    def fake_post(self, path, *, cast_to=None, body=None, **kwargs):
+        captured["path"] = path
+        captured["body"] = dict(body or {})
+        captured["base_url"] = str(self.base_url)
+        captured["query"] = dict(self._custom_query)
+        return _FakeAzureRawResponse()
+
+    # SyncAPIResource binds client.post at AzureOpenAI.__init__ time, so bypass
+    # LiteLLM's in-memory client cache to ensure each test binds its own fake_post.
+    monkeypatch.setattr(BaseAzureLLM, "get_cached_openai_client", lambda *a, **kw: None)
+    monkeypatch.setattr(BaseAzureLLM, "set_cached_openai_client", lambda *a, **kw: None)
+    monkeypatch.setattr(openai_base_client.SyncAPIClient, "post", fake_post)
+    return captured
