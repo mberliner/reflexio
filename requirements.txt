@@ -2,9 +2,8 @@
 dspy==3.2.1
 gepa>=0.0.27
 
-# LLM APIs and Unified Interface
-litellm>=1.80.10
-openai>=2.14.0
+# Unified LLM Interface (transporte openai/httpx resuelto transitivamente por litellm)
+litellm==1.108.5
 
 # Configuration and Environment
 python-dotenv>=1.2.1
