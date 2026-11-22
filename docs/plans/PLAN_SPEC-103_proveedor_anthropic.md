@@ -38,6 +38,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 1d Revision de regresion silenciosa en `azure/` y `openai/` | SC-006 | Opus 5.5 | hecho (aa1291f) |
 | 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | hecho (7466c02) |
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | hecho (75a51bf) |
+| | 2b-fix Respuesta sin texto en clasificador y SQL: score 0.0, `len(outputs)` intacto | FR-009 | Sonnet 5.5 | pendiente |
 | | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (tarea: log; reflexion: excepcion) y verificacion contra `dspy.GEPA` | FR-009 | Opus 5.5 | pendiente |
 | 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | pendiente |
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | pendiente |
@@ -397,10 +398,30 @@ content filter (esta queda solo para excepciones reales); la tarea la convierte
 en score 0.0 con la causa en `outputs`, el juez en "Error del Juez" con
 `rol=juez` en el log. `_evaluate_with_judge` propaga `LLMConnectionError`.
 Precision sobre el detalle: clasificador y SQL descartan el ejemplo (no suman
-score 0.0), extractor y RAG puntuan 0.0; es la conducta previa de cada adapter y
-no se cambio. Tests en `tests/test_empty_response.py` (25); suite 734 passed;
+score 0.0), extractor y RAG puntuan 0.0. Esto NO cumple FR-009 ("MUST contar como
+prediccion fallida con score 0.0, en todos los adapters"); lo corrige 2b-fix. Tests en `tests/test_empty_response.py` (25); suite 734 passed;
 `ci_local.sh` verde. Fila FR-009 del Coverage mapping: vigente solo en LiteLLM
 hasta 2c.
+
+### 2b-fix Respuesta sin texto en clasificador y SQL — Sonnet 5.5
+
+Origen: control de salida de 2b (supervision, 2026-11-22). Alcance (a) aprobado
+por el usuario.
+
+- `SimpleClassifierAdapter.evaluate` y `SimpleSQLAdapter.evaluate`: atrapar
+  `EmptyResponseError` antes del `except Exception` y registrar el ejemplo como
+  prediccion fallida: score 0.0, una entrada en `outputs` con la causa (rol y
+  `finish_reason`) y, si `capture_traces`, su trayectoria. Mismo patron que
+  `simple_extractor_adapter.py`.
+- Fuera de alcance: el `except Exception` (error tecnico) sigue descartando el
+  ejemplo como hoy. Es deuda D-019 en `historial/sdd.md`; no tocarlo.
+- Tests en `tests/test_empty_response.py`: en clasificador y SQL, contenido
+  `None`/`""` con `finish_reason` `max_tokens`/`refusal` -> score 0.0,
+  `len(outputs) == len(scores) == len(batch)` y causa en el log. Un test de
+  guardia fija que un error tecnico sigue descartandose (para que el cambio de
+  D-019 sea explicito).
+- Al cerrar: corregir la fila FR-009 del Coverage mapping (vigente en los
+  caminos LiteLLM, en todos los adapters; DSPy pendiente 2c).
 
 ### 2c Respuesta sin texto en DSPy — Opus 5.5
 
