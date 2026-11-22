@@ -94,6 +94,7 @@ Separacion de alcance (clave para no duplicar SSOTs):
 
 - **Capacidades** (funcionalidad/contrato de software) -> `specs/SPEC-NNN-slug.md`, registradas en `specs/SPECS_REGISTRY.md`.
 - **Docs** (arquitectura, guias, conceptos) -> `docs/*.md`, gobernados por el Mapa de SSOTs de `00-INDEX.md`. NO entran al registro.
+- **Planes de implementacion** (fases, orden, estado de ejecucion de una spec o iniciativa) -> `docs/plans/*.md`, indexados en `00-INDEX.md`. La spec enlaza a su plan; el plan no repite requisitos.
 - El `00-INDEX.md` es el indice maestro: une ambos (una fila apunta al registro de capacidades, las demas a los docs).
 
 Cuando crear la primera spec: recien cuando aparezca una capacidad nueva donde

@@ -83,4 +83,5 @@ Cada archivo de `docs/` actua como SSOT (single source of truth) para su dominio
 |---|---|
 | Cuando aplicar el enfoque y casos de uso reales (criterio de aplicabilidad) | `docs/CUANDO_APLICAR_Y_CASOS_DE_USO.md` |
 | Optimizar prompts con base de conocimiento (archivo de reglas) | `docs/GUIA_CASO_USO_BASE_CONOCIMIENTO.md` |
-| Plan: extraccion de requerimientos desde transcripciones | `docs/plan_implementcion_toma_requerimientos.md` |
+| Plan: extraccion de requerimientos desde transcripciones | `docs/plans/plan_implementacion_toma_requerimientos.md` |
+| Plan: implementacion de SPEC-103 (fases, modelo de agente, estado) | `docs/plans/PLAN_SPEC-103_proveedor_anthropic.md` |

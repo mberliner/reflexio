@@ -5,6 +5,7 @@ Iteracion: 2 (rev. 2026-11-22)
 Relacionada con: [[SPEC-104-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
 [[SPEC-101-triaje-casos-nseeds]], docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md,
 docs/ANALISIS_UTILIDADES.md, docs/GEPA_MANEJO_ERRORES.md, docs/PROTOCOLO_N_SEEDS.md
+Plan de implementacion: docs/plans/PLAN_SPEC-103_proveedor_anthropic.md
 
 ## User Story (prioridad)
 
