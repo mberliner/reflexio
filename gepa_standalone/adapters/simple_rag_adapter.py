@@ -94,6 +94,9 @@ class SimpleRAGAdapter(BaseAdapter):
         litellm.drop_params = True
         call_kwargs = config.to_kwargs()
         call_kwargs["max_tokens"] = max_tokens
+        if not (is_judge or is_reflection):
+            # Task generation uses the adapter temperature, like BaseAdapter.call_model.
+            call_kwargs["temperature"] = self.temperature
         call_kwargs = config.apply_constraints(call_kwargs)
         model_key = call_kwargs.pop("model")
 

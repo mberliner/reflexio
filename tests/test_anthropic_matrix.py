@@ -26,8 +26,6 @@ REQUESTED_MAX_TOKENS = 100
 REQUESTED_TEMPERATURE = 0.1
 ALL_EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
-RED_RAG = pytest.mark.xfail(strict=True, reason="SPEC-103 2a")
-
 # (alias, envia temperature, efforts aceptados o None, razonamiento por defecto)
 # Una fila por fila de la matriz de la spec.
 MATRIX = [
@@ -247,7 +245,6 @@ class TestMatrixGetDspyLm:
 
 
 class TestMatrixSimpleRagAdapter:
-    @RED_RAG
     def test_rag_task_and_judge_share_constraints(
         self, capture_anthropic_post, anthropic_env, monkeypatch
     ):
