@@ -111,7 +111,10 @@ tras `strip()`. Lo usan `get_lm_function`, `call_llm` y `_call_llm_with_retry`.
 Los adapters ya convierten la excepcion en score 0.0; el juez la reporta como
 "Error del Juez"; GEPA la atrapa en reflexion y saltea la iteracion.
 
-Fijado en 1b (confirma D1 a D6 con estas precisiones; 1c las implementa tal cual):
+Fijado en 1b (confirma D1 a D6 con estas precisiones; 1c las implementa tal cual).
+Aprobado por el usuario el 2026-11-22, incluidas las decisiones nuevas
+(validacion dentro de `apply_constraints`, IDs fuera de la matriz, claves extra
+de `effective_params`, orden de chequeos):
 
 - D1 confirmado. La tabla ya esta en `config.py` (`ANTHROPIC_FAMILIES`, 11
   filas). Constantes: `_EFFORTS` (orden canonico low..max, para listar valores y
@@ -307,6 +310,12 @@ ignorados con aviso fuera de la matriz, claves extra de `effective_params`.
   `max_tokens`/`refusal`, en cada adapter (score 0.0, `len(outputs)` intacto,
   causa en el log), en el juez (causa "juez") y en la reflexion de
   `get_lm_function` (lanza la excepcion).
+- Juez de RAG (`SimpleRAGAdapter`, evaluacion con juez): agregar
+  `except LLMConnectionError: raise` antes del `except Exception`, como los
+  demas adapters, para que un `LLMConfigError` (que hereda de
+  `LLMConnectionError`, D5) corte la corrida en vez de dar 0.0 "Error del Juez".
+  Test: config de juez invalida -> la excepcion se propaga desde `evaluate`.
+  (Aprobado por el usuario al cerrar 1b, 2026-11-22.)
 - `docs/GEPA_MANEJO_ERRORES.md`: seccion de respuesta sin texto por rol.
 
 ### 2c Respuesta sin texto en DSPy — Opus 5.5
