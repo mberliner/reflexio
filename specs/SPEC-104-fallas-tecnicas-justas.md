@@ -494,7 +494,7 @@ se diga otra cosa.
 | FR-012 | pendiente |
 | FR-013 | pendiente |
 | FR-014 | pendiente |
-| FR-015 | `tests/litellm_failure_payloads.py`, `tests/test_litellm_failure_mapping.py` (evidencia del comportamiento de LiteLLM, vigente); falta el test del clasificador |
+| FR-015 | `tests/litellm_failure_payloads.py`, `tests/test_litellm_failure_mapping.py` (evidencia del comportamiento de LiteLLM, vigente); `shared/llm/failures.py`, `tests/test_failures.py` (clasificador, vigente) |
 | FR-016 | pendiente |
 | SC-001 | pendiente |
 | SC-002 | pendiente |
@@ -504,4 +504,4 @@ se diga otra cosa.
 | SC-006 | pendiente |
 | SC-007 | pendiente |
 | SC-008 | pendiente |
-| SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); falta el test del clasificador que los consuma |
+| SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); `tests/test_failures.py` (clasificador sobre los 102 payloads, vigente) |

@@ -35,7 +35,7 @@ aca solo se ajusta la referencia.
 |---|---|---|---|---|
 | 1 Nucleo de fallas (`shared/llm`) | 1a Tests sin red del clasificador de capa 1 sobre los 102 payloads y del contador (RED) | FR-001, FR-006, FR-015, SC-009 | Sonnet 5.5 | hecho (2e75a29) |
 | | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | hecho (147f5ab) |
-| | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | pendiente |
+| | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | hecho (6e9617a) |
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Sonnet 5.5 | pendiente |
 | | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente |
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | pendiente |
@@ -350,7 +350,11 @@ anota como bloqueo y no commitea.
 - 1c. Implementa D1 a D4 y quita los `xfail` de 1a. Archivos:
   `shared/llm/failures.py` (nuevo), el modulo de la llamada comun que fije 1b
   (nuevo, en `shared/llm/`), `shared/llm/errors.py`, `shared/llm/__init__.py`,
-  tests de 1a.
+  tests de 1a. Resultado: `checked_completion` ya fuerza `num_retries=0`;
+  `CheckedLM` con `num_retries=0` (`dspy_lm.py`) queda para 2a, como fija D3 y
+  la lista de archivos de 1c. Mismo caso: la fila FR-001/FR-006/FR-007/FR-011
+  del Coverage mapping sigue `pendiente` hasta que los caminos de llamada usen
+  el nucleo; solo FR-015 y SC-009 pasan a vigente.
 - 2a. Ver la fila de la tabla y D3. Archivos: `shared/llm/config.py`,
   `shared/llm/dspy_lm.py`, `gepa_standalone/core/llm_factory.py`,
   `gepa_standalone/adapters/simple_rag_adapter.py`,
