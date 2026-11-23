@@ -46,7 +46,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | hecho (4fc3328) |
 | 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | hecho (c01c5dd) |
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | hecho (869fb92) |
-| | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | pendiente |
+| | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | hecho (este commit) |
 | | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | pendiente |
 | Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | pendiente |
 
@@ -720,6 +720,28 @@ verde (816 passed).
       en `historial/sdd.md`).
 - 6b: 10 corridas (5 modelos "real" x 2 subproyectos) mas 4 con
   `LLM_THINKING_TASK=off` (Haiku 5.5 y Sonnet 5.5 x 2 subproyectos).
+  - Resultado de 6b (2026-11-23, API real, sin YAML de verificacion,
+    `max_metric_calls: 50`): las 14 corridas terminaron con exit 0, sin errores
+    4xx ni tracebacks en los logs y sin aviso de precio. Gasto total USD 1.14
+    (tope USD 10; estimacion tipica de 6a USD 6.3, el costo real fue ~5 veces
+    menor). Ninguna regla de corte se activo. Modelo = estudiante y profesor.
+    Costo por corrida en USD (standalone / DSPy): Haiku 5.5 0.0077 / 0.0131;
+    Haiku 4.5 0.0342 / 0.0501; Sonnet 5 0.1138 / 0.1481; Sonnet 5.5 0.1045 /
+    0.1564; Sonnet 4.6 0.0432 / 0.1503. Con `LLM_THINKING_TASK=off`: Haiku 5.5
+    0.0083 / 0.0078; Sonnet 5.5 0.1493 / 0.1519. Orden real: Haiku 5.5, Haiku
+    4.5, Sonnet 5, Sonnet 5.5, `off`, Sonnet 4.6. Haiku 5.5 standalone se
+    corrio a mano antes del script (run 2026-11-23_125407_5ab447fa).
+    Logs en `~/spec103_logs/6b_*.log` y `6b_summary.txt` (con la ruta de cada
+    `run.json`). Pendiente para 6c: conteo de predicciones sin texto o cortadas
+    (SC-004) y cotejo de `usage.cost_usd` con la tabla (SC-005).
+    Observacion: los logs muestran `max_tokens` elevado a 16000 por razonamiento.
+  - Control de la supervision (2026-11-23): logs sin 4xx, tracebacks, rate
+    limits ni aviso de precio; `run.json` de las corridas `off` muestra
+    `thinking: off` en tarea y `adaptive` en reflexion. Para 6c (no bloquean):
+    Sonnet 5.5 standalone costo mas con `off` (0.149) que con razonamiento
+    (0.104), y Sonnet 4.6 costo 3.5 veces mas en DSPy (0.150) que en
+    standalone (0.043). Revisar si lo explica el numero de llamadas de GEPA
+    antes de atribuirlo a precios (cotejo de SC-005).
 - 6c: 0 errores 4xx, menos de 1% sin texto con causa en el log, costo sin aviso
   de precio y registro en `historial/sdd.md`.
 
@@ -817,7 +839,7 @@ o al diff solo cuando un control falla.
 
 ## Proxima sesion
 
-Estado al 2026-11-23: fases 1 a 5 y 6a `hecho`; quedan 6b, 6c y Cierre.
+Estado al 2026-11-23: fases 1 a 5, 6a y 6b `hecho`; quedan 6c y Cierre.
 6a estimo USD 6.3 (peor caso USD 79) sin YAML de verificacion.
 
 - Antes de arrancar: renovar el login de `claude` (`claude auth login`; la
