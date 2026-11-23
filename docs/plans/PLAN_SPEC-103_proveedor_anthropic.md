@@ -767,3 +767,20 @@ Paradas obligatorias (la sesion se detiene y espera al usuario):
 
 Contexto: de cada log leer solo el final (`tail -n 40`); entrar al log completo
 o al diff solo cuando un control falla.
+
+## Proxima sesion
+
+Estado al 2026-11-22: fases 1 a 5 `hecho`; quedan 6a, 6b, 6c y Cierre. La
+supervision termino tras la fase 5 (parada obligatoria).
+
+- Antes de arrancar: renovar el login de `claude` (`claude auth login`; la
+  sesion actual vence entre el 2026-11-24 y el 2026-11-27).
+- Fase 6, sesion interactiva Sonnet 5.5 (gasta API real, tope USD 10 de
+  SC-003): "Implementar SPEC-103 subfase 6a segun
+  docs/plans/PLAN_SPEC-103_proveedor_anthropic.md". Para estimar el costo,
+  contar que en DSPy cada respuesta de tarea sin texto cuesta 3 llamadas
+  (ver Resultado de 2c) y revisar a mano los precios cargados en 3a (Haiku 5.5
+  a 0.10/0.50 es el valor menos esperado).
+- 6c y Cierre: Opus 5.5, interactivo. El Cierre arranca por los puntos
+  anotados en su seccion.
+- Deudas abiertas por esta spec: D-019 y D-020 (`historial/sdd.md`).
