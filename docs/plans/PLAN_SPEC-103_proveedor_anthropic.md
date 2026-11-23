@@ -44,7 +44,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | hecho (e1ca3a3) |
 | 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | hecho (efd8b96) |
 | | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | hecho (4fc3328) |
-| 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | pendiente |
+| 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | hecho (c01c5dd) |
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | pendiente |
 | | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | pendiente |
 | | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | pendiente |
@@ -659,6 +659,14 @@ verde.
 - `docs/METADATA_REPRODUCIBILIDAD.md`: campos nuevos de `run.json`.
 - `docs/PROTOCOLO_N_SEEDS.md`: advertencia de FR-012 sobre no mezclar effort ni
   razonamiento en un lote.
+
+Resultado de 5: `docs/LLM_CONFIG.md` (seccion Anthropic: IDs vigentes, enlace a
+la matriz, `LLM_API_BASE` ignorado con aviso, tabla de `LLM_EFFORT_<ROL>` y
+`LLM_THINKING_<ROL>`); `docs/METADATA_REPRODUCIBILIDAD.md` (claves de
+`effective_params` en `run.json`, firma de `collect_model_info`);
+`docs/PROTOCOLO_N_SEEDS.md` (advertencia de no mezclar effort/razonamiento).
+Coverage mapping de FR-012 y FR-013 en la spec pasa a vigente. `ci_local.sh`
+verde (816 passed).
 
 ### 6 Verificacion real — sesion aparte
 
