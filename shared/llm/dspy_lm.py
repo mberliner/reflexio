@@ -10,6 +10,10 @@ tipo de excepcion separa la respuesta sin texto de un error de formato real
 - `reflection`: en `dspy.GEPA` (GEPA 0.0.27, dspy 3.2.1) la excepcion sale de
   `DspyAdapter.propose_new_texts`, la atrapa `ReflectiveMutationProposer.propose`
   y la iteracion se saltea sin crear un candidato con instruccion vacia.
+  SPEC-104 (2b, FR-005): en este rol `__call__` pasa por `ReflectionGuard`
+  (`reflection.py`): cuenta un intento por propuesta, registra la falla de capa
+  1 y descarta tambien la propuesta sin bloque de instruccion (`formato`). El
+  log de respuesta sin texto de este rol va a DEBUG (FR-007).
 - `task`: el programa DSPy debe envolverse con
   `dspy_gepa_poc.empty_response.tolerate_empty_responses`, que convierte la
   excepcion en una prediccion fallida con score 0.0. Sin envoltorio, la
@@ -47,6 +51,7 @@ from .call import call_with_infra_retry, raise_for_response
 from .config import log_empty_response
 from .errors import EmptyResponseError
 from .failures import FailureClass, LLMCallFailure, LLMFailure
+from .reflection import ReflectionGuard
 
 
 class DspyLLMCallFailure(LLMCallFailure, ContextWindowExceededError):  # noqa: N818 - como D1
@@ -86,6 +91,11 @@ def _cut_adapter_fallback(exc: LLMCallFailure, model: str) -> LLMCallFailure:
     return DspyLLMCallFailure(exc.failure, str(exc), model)
 
 
+def _output_texts(outputs: list) -> list[str]:
+    """Textos de las salidas de `dspy.LM` (str, o dict con "text", como `stripped_lm_call`)."""
+    return [(o.get("text") or "") if isinstance(o, dict) else str(o) for o in outputs]
+
+
 class CheckedLM(dspy.LM):
     """`dspy.LM` con llamada comun de SPEC-104: sin reintento de LiteLLM y con falla clasificada."""
 
@@ -100,6 +110,25 @@ class CheckedLM(dspy.LM):
         super().__init__(model, **kwargs)
         self.role = role
         self.infra_retries = infra_retries
+        self._reflection_guard = ReflectionGuard()
+
+    def __call__(self, prompt: str | None = None, messages: list | None = None, **kwargs: Any):
+        parent = super().__call__
+        if self.role != "reflection":
+            return parent(prompt, messages, **kwargs)
+        try:
+            return self._reflection_guard.run(
+                lambda: parent(prompt, messages, **kwargs), _output_texts
+            )
+        except LLMCallFailure as exc:
+            cut = _cut_adapter_fallback(exc, self.model)
+            if cut is exc:
+                raise
+            raise cut from exc
+
+    def on_proposal_start(self, event: Any) -> None:
+        """Callback de GEPA (`gepa_kwargs={"callbacks": [lm]}` en `dspy.GEPA`)."""
+        self._reflection_guard.on_proposal_start(event)
 
     def forward(self, prompt: str | None = None, messages: list | None = None, **kwargs: Any):
         try:
@@ -121,7 +150,7 @@ class CheckedLM(dspy.LM):
         try:
             raise_for_response(response, self.role)
         except EmptyResponseError as exc:
-            log_empty_response(self.role, exc.finish_reason)
+            log_empty_response(self.role, exc.finish_reason, call_layer=True)
             raise _cut_adapter_fallback(exc, self.model) from exc
         except LLMCallFailure as exc:
             raise _cut_adapter_fallback(exc, self.model) from exc

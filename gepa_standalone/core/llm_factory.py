@@ -9,6 +9,7 @@ from collections.abc import Callable
 
 from shared.llm import LLMConfig
 from shared.llm.config import complete_text
+from shared.llm.reflection import ReflectionGuard
 
 
 def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
@@ -59,7 +60,9 @@ def create_reflection_lm_function(
             y se ignoran temperature, max_tokens y cache.
 
     Returns:
-        Funcion que toma un prompt y retorna la respuesta.
+        `ReflectionLM`: callable que toma un prompt y retorna la respuesta, y
+        descarta (lanzando) la propuesta con falla de capa 1 o `formato`
+        (SPEC-104 FR-005; ver `shared.llm.reflection.ReflectionGuard`).
     """
     if config is None:
         config = LLMConfig.from_env("reflection", max_tokens=2000)
@@ -72,7 +75,7 @@ def create_reflection_lm_function(
     base_func = config.get_lm_function(role="reflection")
 
     if not verbose:
-        return base_func
+        return ReflectionLM(base_func)
 
     def lm_func(prompt: str) -> str:
         content = base_func(prompt)
@@ -83,7 +86,26 @@ def create_reflection_lm_function(
         print("=" * 80 + "\n")
         return content
 
-    return lm_func
+    return ReflectionLM(lm_func)
+
+
+class ReflectionLM:
+    """
+    `reflection_lm` de `gepa.optimize` con el envoltorio de SPEC-104 FR-005.
+
+    Tambien es un callback de GEPA (`on_proposal_start`): pasado en `callbacks`
+    de `gepa.optimize`, el `case_id` de la falla es la iteracion de GEPA.
+    """
+
+    def __init__(self, fn: Callable[[str], str]):
+        self._fn = fn
+        self._guard = ReflectionGuard()
+
+    def __call__(self, prompt: str) -> str:
+        return self._guard.run(lambda: self._fn(prompt), lambda text: [text])
+
+    def on_proposal_start(self, event) -> None:
+        self._guard.on_proposal_start(event)
 
 
 def validate_llm_connection() -> bool:

@@ -484,9 +484,9 @@ se diga otra cosa.
 | FR-002 | pendiente |
 | FR-003 | pendiente |
 | FR-004 | pendiente |
-| FR-005 | pendiente |
+| FR-005 | `shared/llm/reflection.py` (`ReflectionGuard`, `reflection_format_failure`), `gepa_standalone/core/llm_factory.py` (`ReflectionLM`), `shared/llm/dspy_lm.py` (`CheckedLM` rol `reflection`); `tests/test_reflection_guard.py` (verificado contra `gepa==0.0.27` y `dspy==3.2.1`, vigente); `case_id` = iteracion de GEPA via callback, cableado en los orquestadores pendiente (4b) |
 | FR-006 | pendiente |
-| FR-007 | pendiente |
+| FR-007 | parcial: rol `reflection` (un WARNING por propuesta desde `FailureTracker.record`, log de la capa de llamada a DEBUG; `shared/llm/config.py`, `tests/test_reflection_guard.py`, `tests/test_empty_response_dspy.py`, vigente); tarea y juez pendiente (3c, 3e) |
 | FR-008 | pendiente |
 | FR-009 | pendiente |
 | FR-010 | pendiente |
@@ -498,7 +498,7 @@ se diga otra cosa.
 | FR-016 | pendiente |
 | SC-001 | pendiente |
 | SC-002 | pendiente |
-| SC-003 | pendiente |
+| SC-003 | `tests/test_reflection_guard.py` (`gepa.optimize` y `dspy.GEPA` reales: propuesta con respuesta 200 `presupuesto`, `filtro_salida`, `sin_texto` o `formato` (y `configuracion` en `gepa.optimize`) no crea ni evalua candidato; las 99 fallas de capa 1 se lanzan desde el envoltorio en ambos subproyectos, vigente) |
 | SC-004 | pendiente |
 | SC-005 | pendiente |
 | SC-006 | pendiente |

@@ -12,6 +12,9 @@ contra dspy 3.2.1 y GEPA 0.0.27, interceptando `litellm_completion` de
   en las dos rutas de `DspyAdapter.evaluate`, en `dspy.GEPA` y en `Evaluate`
   (sin "Execution cancelled" con mas de `max_errors` vacios), mientras un error
   tecnico real sigue contando para `max_errors`.
+- SPEC-104 (2b): en reflexion la propuesta sin bloque de instruccion es
+  `formato` y la respuesta sin texto deja un unico WARNING (el de
+  `FailureTracker.record`); el detalle esta en `tests/test_reflection_guard.py`.
 """
 
 import logging
@@ -29,7 +32,13 @@ from dspy_gepa_poc.empty_response import (
     zero_on_empty_response,
 )
 from dspy_gepa_poc.metrics import create_dynamic_metric, create_dynamic_metric_with_feedback
-from shared.llm import EmptyResponseError, LLMConfig
+from shared.llm import (
+    EmptyResponseError,
+    FailureClass,
+    LLMCallFailure,
+    LLMConfig,
+    get_failure_tracker,
+)
 from shared.llm.dspy_lm import CheckedLM
 
 TASK_MODEL = "openai/gpt-4o-mini"
@@ -161,18 +170,42 @@ class TestCheckedLM:
         assert _lm(REFLECTION_MODEL, "reflection").copy(rollout_id=1).role == "reflection"
 
     def test_text_passes_through(self, monkeypatch):
-        _patch_dspy_completion(monkeypatch, lambda r: ("ok", "stop"), lambda r: ("ok", "stop"))
-        assert _lm(REFLECTION_MODEL, "reflection")("hola") == ["ok"]
+        """SPEC-104 FR-005: en reflexion pasa la propuesta con bloque de
+        instruccion; el texto sin bloque se descarta como `formato`."""
+        proposal = f"```\n{VALID_INSTRUCTION}\n```"
+        _patch_dspy_completion(monkeypatch, None, lambda r: (proposal, "stop"))
+        assert _lm(REFLECTION_MODEL, "reflection")("hola") == [proposal]
+
+    def test_reflection_without_block_is_format_failure(self, monkeypatch):
+        _patch_dspy_completion(monkeypatch, None, lambda r: ("ok", "stop"))
+        with pytest.raises(LLMCallFailure) as exc_info:
+            _lm(REFLECTION_MODEL, "reflection")("hola")
+        assert exc_info.value.failure.clase == FailureClass.formato
+        assert get_failure_tracker().snapshot()["counts"]["formato"]["reflection"] == 1
+
+    def test_task_text_without_block_passes_through(self, monkeypatch):
+        """El descarte por `formato` es solo de reflexion: en tarea "ok" pasa."""
+        _patch_dspy_completion(monkeypatch, lambda r: ("ok", "stop"), None)
+        assert _lm(TASK_MODEL, "task")("hola") == ["ok"]
 
     @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
     def test_reflection_raises_with_cause(self, monkeypatch, caplog, content, reason):
+        """SPEC-104 FR-007: un unico WARNING por falla de reflexion (el de
+        `FailureTracker.record`); el log de la capa de llamada va a DEBUG."""
         _patch_dspy_completion(monkeypatch, None, lambda r: (content, reason))
         lm = _lm(REFLECTION_MODEL, "reflection")
-        with caplog.at_level(logging.WARNING), pytest.raises(EmptyResponseError) as exc_info:
+        with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
             lm("hola")
         assert exc_info.value.role == "reflection"
         assert exc_info.value.finish_reason == reason
-        assert f"rol=reflection, finish_reason={reason}" in caplog.text
+        call_layer = [r for r in caplog.records if "rol=reflection, finish_reason=" in r.message]
+        assert [(r.levelno, r.message) for r in call_layer] == [
+            (logging.DEBUG, f"Respuesta sin texto del LLM (rol=reflection, finish_reason={reason})")
+        ]
+        warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1
+        assert "rol=reflection" in warnings[0].message
+        assert f"finish_reason={reason}" in warnings[0].message
         # La llamada queda en history: su uso de tokens se sigue contando.
         assert len(lm.history) == 1
 
@@ -316,7 +349,15 @@ class TestReflectionInGepa:
         # Ningun candidato nuevo: ni aceptado ni evaluado en el minibatch.
         assert _instructions(result) == [SEED_INSTRUCTION]
         assert task.non_seed_calls == 0
-        assert "rol=reflection, finish_reason=content_filter" in caplog.text
+        # SPEC-104 FR-007: la causa queda en el WARNING de `record`, uno por propuesta.
+        recorded = [
+            r.message
+            for r in caplog.records
+            if r.levelno == logging.WARNING and r.message.startswith("Falla de LLM: rol=reflection")
+        ]
+        assert recorded
+        assert all("finish_reason=content_filter" in m for m in recorded)
+        assert "Respuesta sin texto del LLM (rol=reflection" not in caplog.text
 
     def test_guard_plain_lm_evaluates_empty_candidate(self, monkeypatch, task_lm_context):
         """Guardia de GEPA sin CheckedLM: el texto vacio se evalua como candidato.

@@ -63,7 +63,7 @@ def complete_text(kwargs: dict[str, Any], messages: list[dict[str, Any]], role: 
     try:
         return checked_completion(kwargs, messages, role)
     except EmptyResponseError as exc:
-        log_empty_response(role, exc.finish_reason)
+        log_empty_response(role, exc.finish_reason, call_layer=True)
         raise
 
 
@@ -72,9 +72,19 @@ def is_empty_text(content: Any) -> bool:
     return content is None or not str(content).strip()
 
 
-def log_empty_response(role: str, finish_reason: Any) -> None:
-    """Registra la causa de una respuesta sin texto (FR-009), comun a LiteLLM y DSPy."""
-    logger.warning("Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
+def log_empty_response(role: str, finish_reason: Any, *, call_layer: bool = False) -> None:
+    """
+    Registra la causa de una respuesta sin texto (FR-009), comun a LiteLLM y DSPy.
+
+    Con `call_layer=True` (`complete_text` y `CheckedLM`) el rol `reflection`
+    va a DEBUG (SPEC-104 FR-007, 2b): el unico WARNING por falla es el de
+    `FailureTracker.record`, que hace el envoltorio de reflexion
+    (`shared.llm.reflection.ReflectionGuard`). Tarea y juez siguen en WARNING
+    hasta que sus envoltorios cuenten (3c, 3e).
+    """
+    counted = call_layer and role == "reflection"
+    level = logging.DEBUG if counted else logging.WARNING
+    logger.log(level, "Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
 
 
 def _is_reasoning(model: str) -> bool:

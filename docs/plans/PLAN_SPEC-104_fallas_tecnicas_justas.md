@@ -37,7 +37,7 @@ aca solo se ajusta la referencia.
 | | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | hecho (147f5ab) |
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | hecho (6e9617a) |
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | hecho (d61de1c) |
-| | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente (relanzar; ver "Primer intento de 2b") |
+| | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 (relanzada) | hecho |
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | pendiente |
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | pendiente |
 | | 3c Adapters de `gepa_standalone`: resultado por caso (evaluado / NE / score 0 por clase), atribucion, `make_reflective_dataset` sin NE, `formato` por adapter | FR-002, FR-004, FR-010, FR-011, FR-012, SC-001, SC-008 | Sonnet 5.5 | pendiente |
@@ -472,6 +472,25 @@ anota como bloqueo y no commitea.
      de 800 lineas.
   4. Cableado del callback de GEPA (`case_id` = iteracion) en 4b;
      `dspy_gepa_poc/optimizer.py` entra en la lista de Archivos de 4b.
+- Cierre de 2b (relanzamiento Opus 5.5, 2026-11-23). Se continuo sobre el arbol
+  del primer intento y se aplicaron los 4 puntos de la Resolucion:
+  1. `test_text_passes_through` pasa una propuesta con bloque; nuevos
+     `test_reflection_without_block_is_format_failure` (`"ok"` en reflexion es
+     `formato` y cuenta) y `test_task_text_without_block_passes_through`.
+  2. `log_empty_response(..., call_layer=True)` (desde `complete_text` y
+     `CheckedLM`) va a DEBUG en rol `reflection`; queda un unico WARNING por
+     falla, el de `record`. `response_text` (sin usos en produccion) no pasa
+     `call_layer` y conserva el WARNING, asi `tests/test_empty_response.py`
+     (fuera de la lista) no cambia; el Cierre lo elimina. Tests:
+     `test_reflection_raises_with_cause` y `test_empty_reflection_skips_iteration`
+     verifican el nivel; `_assert_single_warning` en `test_reflection_guard.py`
+     lo verifica en ambos subproyectos.
+  3. `reflection_format_failure` y `ReflectionGuard` en `shared/llm/reflection.py`
+     (nuevo); `shared/llm/config.py` queda en 755 lineas.
+  4. Sin cambios en 2b (ya registrado en Archivos de 4b).
+  Coverage mapping de la spec: FR-005 y SC-003 vigentes; FR-007 parcial (rol
+  `reflection`). La spec no esta en la lista de Archivos de 2b: se edito solo
+  esa tabla, por pedido explicito del usuario en el lanzamiento.
 - Primer intento de 2b (sesion `-p` Opus 5.5, 2026-11-23; sin commit, arbol sin
   commitear para relanzar sobre el). Implementado:
   - Verificacion contra `gepa==0.0.27` / `dspy==3.2.1`: ambos caminos
