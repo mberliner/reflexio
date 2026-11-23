@@ -136,12 +136,27 @@ antes que `configuracion`. `exc.body` MUST leerse en forma defensiva (puede ser
 
 | # | Clase | Regla |
 |---|---|---|
-| 1 | `entrada` | `ContentPolicyViolationError` o `ContextWindowExceededError`; o `BadRequestError` con `body["code"]` en {`content_filter`, `content_policy_violation`, `context_length_exceeded`} o `body["innererror"]["code"] == "ResponsibleAIPolicyViolation"`; o `request_too_large` en el mensaje (HTTP 413 de Anthropic) |
-| 2 | `infraestructura` | `RateLimitError`, `Timeout`, `APIConnectionError`, `InternalServerError`, `ServiceUnavailableError`, `BadGatewayError`; o `APIError` con `status_code` en {408, 409, 429} o `>= 500` (cubre 529 y el 409 de Azure/OpenAI) |
+| 1 | `entrada` | `ContentPolicyViolationError` o `ContextWindowExceededError` (de LiteLLM, o el de DSPy que lo envuelve, ver abajo); o `BadRequestError` con `body["code"]` en {`content_filter`, `content_policy_violation`, `context_length_exceeded`} o `body["innererror"]["code"] == "ResponsibleAIPolicyViolation"`; o `request_too_large` en el mensaje (HTTP 413 de Anthropic) |
+| 2 | `infraestructura` | `RateLimitError`, `Timeout`, `APIConnectionError`, `InternalServerError`, `ServiceUnavailableError`, `BadGatewayError`; o `APIError` de cualquier subclase (incluido `BadRequestError`) con `status_code` en {408, 409, 429} o `>= 500` (cubre 529, el 409 de Azure/OpenAI como `APIError` y el de Anthropic como `BadRequestError(409)`) |
 | 3 | `configuracion` | `AuthenticationError`, `PermissionDeniedError`, `NotFoundError`, `UnsupportedParamsError`, `UnprocessableEntityError`, `BadRequestError` restante; `APIError` con `400 <= status_code < 500` restante (cubre el 403 de Azure/OpenAI); `litellm.completion` que devuelve `None` (bug de 422 con `openai/` y `drop_params`); cualquier excepcion de la llamada no clasificada por las reglas anteriores, con su tipo y mensaje en el error |
-| 4 | `filtro_salida` | HTTP 200 con `finish_reason == "content_filter"` o `bool(getattr(message, "refusal", None))`, con o sin texto. `refusal` MUST leerse con `getattr` (en Anthropic el atributo no existe; en Azure/OpenAI existe con `None` en respuestas normales) |
+| 4 | `filtro_salida` | HTTP 200 con `finish_reason == "content_filter"` o `bool(getattr(message, "refusal", None))`, con o sin texto. `refusal` MUST leerse con `getattr` (el atributo puede no existir: siempre en Anthropic, y en OpenAI cuando el JSON omite la clave; cuando existe vale `None` en respuestas normales) |
 | 5 | `presupuesto` | HTTP 200 con `finish_reason == "length"`, con texto parcial o sin texto |
 | 6 | `sin_texto` | HTTP 200 con contenido `None` o vacio tras `strip()` |
+
+Notas de la verificacion (detalle en `tests/test_litellm_failure_mapping.py`):
+
+- `exc.body` no es una fuente uniforme: `ContextWindowExceededError` llega con
+  `body=None` (LiteLLM no lo pasa), y en el `ContentPolicyViolationError` de
+  Azure LiteLLM simplifica `body` y mueve `innererror` a
+  `exc.provider_specific_fields`. Por eso la regla 1 chequea primero la clase y
+  usa `body` solo para los `BadRequestError` genericos, donde si se preserva.
+- `dspy==3.2.1` atrapa `litellm.ContextWindowExceededError` en `dspy.LM.forward`
+  y relanza `dspy.utils.exceptions.ContextWindowExceededError`, que no hereda de
+  `openai.APIError` y conserva el original en `__cause__`. En `dspy_gepa_poc` el
+  clasificador MUST reconocer esa excepcion (o recorrer `__cause__`) antes de la
+  regla 3; si no, caeria en "excepcion no clasificada" y abortaria la corrida.
+  `shared/` mantiene diferido el import de `dspy` (`docs/ARCHITECTURE.md`): el
+  chequeo vive en `shared/llm/dspy_lm.py` o se hace por `__cause__`.
 
 Sin falla en la capa 1, la respuesta pasa a la capa 2. La deteccion MUST
 aplicarse sobre el objeto de respuesta completo en ambos subproyectos: en
@@ -322,7 +337,16 @@ actualizacion de LiteLLM o del SDK (SC-009, D-023).
   `configuracion`: aborta la corrida en vez de quedar como `entrada`. Es
   conservador y visible (el error muestra el mensaje original).
 - Con `openai/` y `drop_params=True`, un HTTP 422 hace que `litellm.completion`
-  devuelva `None` en vez de lanzar: se clasifica como `configuracion`.
+  devuelva `None` en vez de lanzar: se clasifica como `configuracion`. Con
+  `drop_params=False` (CheckedLM por defecto) lanza `BadRequestError(422)`, que
+  tambien es `configuracion`. `litellm.drop_params` es global y lo activan
+  `get_lm_function` y `LLMConfig.validate()`, asi que tras `validate()` el bug
+  puede alcanzar tambien a `dspy_gepa_poc` en el mismo proceso; en ambos casos
+  la clase es la misma.
+- Un HTTP 413 generico (sin `request_too_large` en el cuerpo) se mapea distinto
+  por proveedor: `RateLimitError(429)` en OpenAI (cae en `infraestructura`, se
+  reintenta y queda NE), `APIError(413)` en Azure y `BadRequestError(400)` en
+  Anthropic (ambos `configuracion`, abortan). No se corrige por frase (FR-015).
 
 ## Decisiones de diseno
 
@@ -465,7 +489,7 @@ se diga otra cosa.
 | FR-012 | pendiente |
 | FR-013 | pendiente |
 | FR-014 | pendiente |
-| FR-015 | pendiente |
+| FR-015 | `tests/litellm_failure_payloads.py`, `tests/test_litellm_failure_mapping.py` (evidencia del comportamiento de LiteLLM, vigente); falta el test del clasificador |
 | FR-016 | pendiente |
 | SC-001 | pendiente |
 | SC-002 | pendiente |
@@ -475,4 +499,4 @@ se diga otra cosa.
 | SC-006 | pendiente |
 | SC-007 | pendiente |
 | SC-008 | pendiente |
-| SC-009 | pendiente |
+| SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); falta el test del clasificador que los consuma |
