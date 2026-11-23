@@ -492,7 +492,7 @@ se diga otra cosa.
 | FR-010 | pendiente |
 | FR-011 | parcial: `shared/llm/call.py`, `shared/llm/dspy_lm.py` (`num_retries=0` y reintento propio solo de `infraestructura`, vigente); `tests/test_failure_call.py`, `tests/test_single_call_point.py`; reintentos desde el YAML pendiente (4c) |
 | FR-012 | pendiente |
-| FR-013 | pendiente |
+| FR-013 | `gepa_standalone/data/data_loader.py`, `dspy_gepa_poc/data_loader.py` (`case_id` del CSV o `<split>:<fila>`, vigente); `tests/test_case_id_loaders.py`; el uso como `case_id` de las fallas en adapters y envoltorios queda en 3c y 3e |
 | FR-014 | pendiente |
 | FR-015 | `tests/litellm_failure_payloads.py`, `tests/test_litellm_failure_mapping.py` (evidencia del comportamiento de LiteLLM, vigente); `shared/llm/failures.py`, `tests/test_failures.py` (clasificador, vigente) |
 | FR-016 | pendiente |

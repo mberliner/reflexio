@@ -49,6 +49,7 @@ class CSVDataLoader:
         trainset = []
         valset = []
         testset = []
+        split_rows: dict[str, int] = {}
 
         with open(filepath, encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -64,6 +65,12 @@ class CSVDataLoader:
                 clean_row = {
                     str(k).strip(): (v or "").strip() for k, v in row.items() if k is not None
                 }
+
+                # FR-013: case_id del CSV, o "<split>:<fila>" (fila 0-based en el split)
+                row_in_split = split_rows.get(split, 0)
+                split_rows[split] = row_in_split + 1
+                if not clean_row.get("case_id"):
+                    clean_row["case_id"] = f"{split}:{row_in_split}"
 
                 # 3. Create dspy.Example
                 try:

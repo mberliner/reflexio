@@ -71,25 +71,37 @@ def load_gepa_data(
     # Determinar columnas de salida si no se especificaron
     if output_columns is None:
         all_columns = rows[0].keys()
-        output_columns = [col for col in all_columns if col not in ["split", input_column]]
+        output_columns = [
+            col for col in all_columns if col not in ["split", "case_id", input_column]
+        ]
 
     # Separar por split y convertir al formato esperado
     trainset = []
     valset = []
     testset = []
+    split_rows: dict[str, int] = {}
 
     for row in rows:
         split = row["split"].strip().lower()
+        # FR-013: case_id del CSV, o "<split>:<fila>" (fila 0-based dentro del split)
+        row_in_split = split_rows.get(split, 0)
+        split_rows[split] = row_in_split + 1
+        case_id = (row.get("case_id") or "").strip() or f"{split}:{row_in_split}"
 
         # Crear ejemplo en formato GEPA
         if len(output_columns) == 1:
             # Clasificación simple: una sola columna de salida
-            example = {input_column: row[input_column], output_columns[0]: row[output_columns[0]]}
+            example = {
+                input_column: row[input_column],
+                output_columns[0]: row[output_columns[0]],
+                "case_id": case_id,
+            }
         else:
             # Extracción múltiple: diccionario 'extracted' con todos los campos
             example = {
                 input_column: row[input_column],
                 "extracted": {col: row[col] for col in output_columns},
+                "case_id": case_id,
             }
 
         # Agregar al split correspondiente
