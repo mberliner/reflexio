@@ -38,7 +38,7 @@ aca solo se ajusta la referencia.
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | hecho (6e9617a) |
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | hecho (d61de1c) |
 | | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 (relanzada) | hecho (bf346c1) |
-| 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | pendiente |
+| 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | hecho (60b1ba2) |
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | pendiente |
 | | 3c Adapters de `gepa_standalone`: resultado por caso (evaluado / NE / score 0 por clase), atribucion, `make_reflective_dataset` sin NE, `formato` por adapter | FR-002, FR-004, FR-010, FR-011, FR-012, SC-001, SC-008 | Sonnet 5.5 | pendiente |
 | | 3d Juez de RAG con JSON en el prompt, validacion de rango y reintentos | FR-009 | Sonnet 5.5 | pendiente |
@@ -554,6 +554,14 @@ anota como bloqueo y no commitea.
   produccion), lo devuelve bajo el tope.
 - 3a. Archivos: `gepa_standalone/data/data_loader.py`,
   `dspy_gepa_poc/data_loader.py`, tests de loaders (existentes o uno nuevo).
+- Cierre de 3a (Sonnet 5.5, 2026-11-23, 60b1ba2). `case_id` en cada ejemplo:
+  clave `case_id` en el dict de `gepa_standalone` (excluida de las columnas de
+  salida por defecto) y campo `case_id` del `dspy.Example` (label, no input).
+  Valor: el del CSV (sin espacios) o `<split>:<fila>` si falta o esta vacio;
+  la fila cuenta por split y no consume indice en filas descartadas (sin
+  split). Tests: `tests/test_case_id_loaders.py`. Coverage mapping: FR-013
+  vigente. Sin decisiones pendientes; ids duplicados en un CSV no se validan
+  (la spec no lo pide).
 - 3b. Sin codigo de produccion: fija D5 y D6 (donde vive el probe, como se
   reconoce el baseline, forma del resultado por caso en ambos subproyectos, como
   sobrevive a las copias de `dspy.GEPA`). Archivos: este plan.
