@@ -682,6 +682,13 @@ verde (816 passed).
 
 - Code review integral del diff de la spec, `[SDD-Check]`, Coverage mapping sin
   `pendiente`, spec a `active` y `specs/SPECS_REGISTRY.md` actualizado.
+- Puntos anotados por la supervision para la revision: `universal_optimizer`
+  lee `self.adapter._judge_config` (atributo privado, 4a);
+  `UniversalOptimizer.build_llm_configs` muta `task_config.temperature` tras
+  `get_task_config()` (4b); `tolerate_empty_responses` cambia `__class__` de la
+  copia del programa (2c, decision documentada en su docstring).
+- Supervision (2026-11-22): fases 1 a 5 cerradas. O1/O2 y la fila SC-001 los
+  completo la supervision tras el control de la fase 5.
 
 ## Arranque de cada sesion
 

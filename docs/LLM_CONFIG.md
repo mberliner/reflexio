@@ -145,6 +145,11 @@ Se configuran por rol (`TASK`, `REFLECTION`, ...) en el `.env`, no en el YAML.
 - Con razonamiento activo, `max_tokens` se eleva a un minimo de 16000.
 - `describe()` y `run.json` muestran los valores efectivos enviados
   (ver `docs/METADATA_REPRODUCIBILIDAD.md`).
+- Con modelos `azure/` u `openai/`, `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>`
+  no se envian: un valor valido se ignora sin aviso. Solo un valor fuera de la
+  lista de la tabla produce error.
+- La lista de effort es la misma para todo proveedor: `minimal` y `none`, que
+  la API de OpenAI acepta, se rechazan tambien en `azure/` y `openai/`.
 
 ## Uso en Codigo
 

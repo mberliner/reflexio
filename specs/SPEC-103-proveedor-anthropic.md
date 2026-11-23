@@ -310,7 +310,7 @@ Notas de la matriz:
 | FR-011 | `shared/analysis/roi_calculator.py` (`DEFAULT_PRICING`, `normalize_model`, `get_model_pricing`), `shared/llm/usage.py`, `docs/ANALISIS_UTILIDADES.md`; `tests/test_shared_analysis.py`, `tests/test_shared_usage.py` |
 | FR-012 | `shared/logging/metadata.py`, `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py` (`save_results`), `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md` (vigente en codigo: `run.json` con `effective_params` por rol, 4b; docs vigentes, fase 5) |
 | FR-013 | `docs/LLM_CONFIG.md` (vigente, fase 5) |
-| SC-001 | `tests/test_litellm_regression.py` (vigente: header `anthropic-version`, `temperature` por modelo con `drop_params`, pase de `output_config` y `thinking` a nivel LiteLLM); falta el test sobre los cuatro caminos de `LLMConfig` (pendiente) |
+| SC-001 | `tests/test_litellm_regression.py` (vigente: header `anthropic-version`, `temperature` por modelo con `drop_params`, pase de `output_config` y `thinking` a nivel LiteLLM); y `tests/test_anthropic_matrix.py` sobre los cuatro caminos de `LLMConfig` (vigente tras 1c y 2a) |
 | SC-002 | `tests/test_anthropic_matrix.py::TestValidateCombinations` (vigente) |
 | SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (pendiente) |
 | SC-004 | conteo sobre las predicciones volcadas de las corridas de SC-003 (pendiente) |
