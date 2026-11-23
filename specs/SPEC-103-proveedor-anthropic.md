@@ -312,7 +312,7 @@ Notas de la matriz:
 | FR-013 | `docs/LLM_CONFIG.md` (vigente, fase 5) |
 | SC-001 | `tests/test_litellm_regression.py` (vigente: header `anthropic-version`, `temperature` por modelo con `drop_params`, pase de `output_config` y `thinking` a nivel LiteLLM); y `tests/test_anthropic_matrix.py` sobre los cuatro caminos de `LLMConfig` (vigente tras 1c y 2a) |
 | SC-002 | `tests/test_anthropic_matrix.py::TestValidateCombinations` (vigente) |
-| SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (pendiente) |
-| SC-004 | conteo sobre las predicciones volcadas de las corridas de SC-003 (pendiente) |
-| SC-005 | `run.json` / CSV de las corridas de SC-003 (pendiente) |
+| SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (vigente: 14/14 sin 4xx, USD 1.14, 2026-11-23) |
+| SC-004 | conteo de `Respuesta sin texto del LLM` en los logs de las corridas de SC-003 (vigente: 0 sobre 1134 llamadas de tarea y 34 de reflexion; `run.json` no vuelca predicciones por ejemplo) |
+| SC-005 | `run.json` de las corridas de SC-003 (vigente: `usage.cost_usd` = tokens x `DEFAULT_PRICING` en las 14, sin aviso de precio) |
 | SC-006 | `tests/test_litellm_regression.py::TestAzureOpenAIWireRegression` y `tests/test_anthropic_matrix.py::TestAzureOpenAIConfigRegression` (vigente: `to_kwargs()` y cuerpo HTTP de `azure/gpt-4.1-mini`, `azure/gpt-5.4-mini`, `azure/gpt-4o` y `openai/gpt-4o-mini`) y `tests/test_sc006_azure_openai_paths.py` (vigente: `call_llm`, `get_dspy_lm`, `validate_connection` y effort/thinking ignorados fuera de `anthropic/`) |

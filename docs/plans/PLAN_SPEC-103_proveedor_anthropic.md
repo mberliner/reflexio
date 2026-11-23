@@ -47,7 +47,7 @@ modelos bajo prueba de la matriz de la spec.
 | 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | hecho (c01c5dd) |
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | hecho (869fb92) |
 | | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | hecho (2a15cde) |
-| | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | pendiente |
+| | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | hecho (HASH6C) |
 | Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | pendiente |
 
 ## Dependencias
@@ -744,6 +744,17 @@ verde (816 passed).
     antes de atribuirlo a precios (cotejo de SC-005).
 - 6c: 0 errores 4xx, menos de 1% sin texto con causa en el log, costo sin aviso
   de precio y registro en `historial/sdd.md`.
+  - Resultado de 6c (2026-11-23, sin gasto de API): SC-003, SC-004 y SC-005
+    cumplidos; registro en `historial/sdd.md` (entrada "SPEC-103 verificacion
+    real"), que tiene el detalle. SC-004: 0 respuestas sin texto en 1134
+    llamadas de tarea y 34 de reflexion (conteo del WARNING en los logs, que se
+    verifico sin red que llega al log). SC-005: `usage.cost_usd` igual a tokens
+    x `DEFAULT_PRICING` en las 14 corridas (diferencia 0), sin aviso de precio.
+    Las dos observaciones del control de 6b son de tokens, no de precios: la
+    trayectoria de GEPA (Sonnet 5.5 `off`) y el prompt sin cambios en
+    standalone frente al formato de `ChatAdapter` (Sonnet 4.6).
+    Para el Cierre: una respuesta cortada por `max_tokens` con texto parcial no
+    entra en FR-009 y no se registra (aca no hay indicio de que ocurriera).
 
 ### Cierre — Opus 5.5
 
@@ -839,12 +850,12 @@ o al diff solo cuando un control falla.
 
 ## Proxima sesion
 
-Estado al 2026-11-23: fases 1 a 5, 6a y 6b `hecho`; quedan 6c y Cierre.
-6b gasto USD 1.14 en las 14 corridas, sin errores 4xx. 6c arranca por las
-observaciones del control de 6b.
+Estado al 2026-11-23: fases 1 a 6 `hecho`; queda el Cierre.
+6b gasto USD 1.14 en las 14 corridas, sin errores 4xx; 6c verifico SC-003 a
+SC-005.
 
 - Antes de arrancar: renovar el login de `claude` (`claude auth login`; la
   sesion actual vence entre el 2026-11-24 y el 2026-11-27).
-- 6c y Cierre: Opus 5.5, interactivo. El Cierre arranca por los puntos
+- Cierre: Opus 5.5, interactivo. El Cierre arranca por los puntos
   anotados en su seccion.
 - Deudas abiertas por esta spec: D-019 y D-020 (`historial/sdd.md`).

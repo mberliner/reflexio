@@ -48,6 +48,59 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-23 — SPEC-103 verificacion real (SC-003, SC-004, SC-005)
+
+Caso Email Urgency con API real de Anthropic, `max_metric_calls: 50` (YAML del
+caso, sin YAML de verificacion: la estimacion de 6a fue USD 6.3). 14 corridas:
+5 modelos "real" x 2 subproyectos, mas `LLM_THINKING_TASK=off` en Haiku 5.5 y
+Sonnet 5.5 x 2 subproyectos; mismo modelo como tarea y reflexion. Logs en
+`~/spec103_logs/6b_*.log`, rutas de `run.json` en `6b_summary.txt` (fuera del
+repo). Detalle por corrida en `docs/plans/PLAN_SPEC-103_proveedor_anthropic.md`
+(6b y 6c).
+
+- SC-003: 14/14 con exit 0, 0 errores 4xx, sin tracebacks ni rate limits.
+  Gasto total USD 1.14 (tope USD 10).
+- SC-004: 0 respuestas sin texto sobre 1134 llamadas de tarea y 34 de
+  reflexion (0 lineas `Respuesta sin texto del LLM` en los logs). Se verifico
+  sin red que ese WARNING llega al stderr volcado en el log con los imports de
+  ambos entry points (no hay handler que lo silencie). Ningun `run.json`
+  vuelca predicciones por ejemplo, asi que el conteo sale del log. Salida
+  media por llamada de tarea de 4 a 77 tokens, lejos de `max_tokens` (50 sin
+  razonamiento en standalone, 16000 con razonamiento).
+- SC-005: `usage.cost_usd` de cada corrida coincide exactamente (diferencia 0)
+  con tokens de `run.json` x precios de `DEFAULT_PRICING`; 0 avisos de "Modelo
+  sin precio configurado" (verificado que ese aviso tambien llega al log).
+- Observaciones de la supervision de 6b, explicadas por tokens y no por
+  precios: Sonnet 5.5 standalone costo mas con `off` (0.149) que con
+  razonamiento (0.104) porque la trayectoria de GEPA difirio (742 vs 576
+  tokens de entrada por llamada, 2 vs 1 reflexiones); la salida de tarea fue
+  de ~4 tokens en ambas, es decir, con `adaptive` Sonnet 5.5 no razono en esta
+  tarea. Sonnet 4.6 costo 3.5 veces mas en DSPy que en standalone porque en
+  standalone el prompt no cambio (107 caracteres, 119 tokens por llamada)
+  mientras DSPy envia el formato de `ChatAdapter` (432 de entrada y 21 de
+  salida por llamada). Haiku 5.5 si razono con `adaptive` (72 a 77 tokens de
+  salida por llamada).
+
+[SDD-Check]
+- Spec leida: `specs/SPEC-103-proveedor-anthropic.md` (SC-003 a SC-005, FR-009,
+  FR-011) y su plan.
+- Incluye/Excluye verificado: incluye conteo de respuestas sin texto y cotejo de
+  costo de las 14 corridas; excluye el Cierre (code review integral, spec a
+  `active`).
+- Validaciones aplicadas: grep de 4xx/traceback/rate limit/aviso de precio y de
+  respuesta sin texto en los 14 logs; recalculo de costo con
+  `get_model_pricing`; prueba sin red de que ambos WARNING llegan al log;
+  `./shared/utils/ci_local.sh`.
+- SSOT afectado: `historial/sdd.md`, plan de SPEC-103, Coverage mapping de la
+  spec (SC-003 a SC-005 vigentes).
+- Derivados a revisar: ninguno.
+- Deuda arrastrada: ninguna nueva (siguen D-019 y D-020).
+- Riesgos/reservas: una respuesta cortada por `max_tokens` con texto parcial no
+  entra en FR-009 (solo contenido vacio) y no se registra en el log; aca no hay
+  indicio de que haya ocurrido (salidas medias muy por debajo del limite). El
+  costo con razonamiento depende de si el modelo decide razonar: no extrapolar
+  estos costos a tareas mas complejas.
+
 ### 2026-11-23 — Unificacion de entry files en AGENTS.md
 
 Se elimina la triplicacion de entry files (`AGENTS.md` / `CLAUDE.md` / `GEMINI.md`)
