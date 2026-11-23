@@ -39,7 +39,7 @@ modelos bajo prueba de la matriz de la spec.
 | 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | hecho (7466c02) |
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | hecho (75a51bf) |
 | | 2b-fix Respuesta sin texto en clasificador y SQL: score 0.0, `len(outputs)` intacto | FR-009 | Sonnet 5.5 | hecho (12d7f66) |
-| | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (excepcion en tarea y reflexion, B-2c-1), envoltorio de programa/metrica en `dspy_gepa_poc` y verificacion contra `dspy.GEPA` y `Evaluate` | FR-009 | Opus 5.5 | HASH |
+| | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (excepcion en tarea y reflexion, B-2c-1), envoltorio de programa/metrica en `dspy_gepa_poc` y verificacion contra `dspy.GEPA` y `Evaluate` | FR-009 | Opus 5.5 | hecho (7627c0f) |
 | 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | pendiente |
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | pendiente |
 | 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | pendiente |
