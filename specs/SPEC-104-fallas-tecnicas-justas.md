@@ -480,7 +480,7 @@ se diga otra cosa.
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | pendiente |
+| FR-001 | parcial: `shared/llm/failures.py`, `shared/llm/call.py` (clasificador y contador, vigente); `tests/test_single_call_point.py` (punto unico de llamada, vigente); conteo por los envoltorios pendiente (3c, 3e) |
 | FR-002 | pendiente |
 | FR-003 | pendiente |
 | FR-004 | pendiente |
@@ -490,7 +490,7 @@ se diga otra cosa.
 | FR-008 | pendiente |
 | FR-009 | pendiente |
 | FR-010 | pendiente |
-| FR-011 | pendiente |
+| FR-011 | parcial: `shared/llm/call.py`, `shared/llm/dspy_lm.py` (`num_retries=0` y reintento propio solo de `infraestructura`, vigente); `tests/test_failure_call.py`, `tests/test_single_call_point.py`; reintentos desde el YAML pendiente (4c) |
 | FR-012 | pendiente |
 | FR-013 | pendiente |
 | FR-014 | pendiente |
@@ -504,4 +504,4 @@ se diga otra cosa.
 | SC-006 | pendiente |
 | SC-007 | pendiente |
 | SC-008 | pendiente |
-| SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); `tests/test_failures.py` (clasificador sobre los 102 payloads, vigente) |
+| SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); `tests/test_failures.py` (clasificador sobre los 102 payloads, vigente); `tests/test_single_call_point.py` (1 llamada HTTP por caso via `dspy.Predict`, 1 + reintentos si es `infraestructura`, vigente) |
