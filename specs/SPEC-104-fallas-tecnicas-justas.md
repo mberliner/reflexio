@@ -219,7 +219,8 @@ excluyen siempre.
   del baseline, el sistema MUST evaluar el prompt baseline sobre ese caso con
   los mismos parametros (mismo `max_tokens`; una sola llamada, cacheada por caso
   para toda la corrida, compartida por ambas clases y valida en cualquier
-  split) y atribuir:
+  split; un resultado `infraestructura` no se cachea y se vuelve a consultar la
+  proxima vez que el caso lo necesite) y atribuir:
   - `entrada`: `entrada_dato` si el baseline tambien es rechazado,
     `entrada_candidato` si no.
   - `presupuesto`: `presupuesto` si el baseline tambien termina con

@@ -238,8 +238,9 @@ D5. Atribucion contra el baseline (FR-004). Nucleo comun en
   falla). `outcome(case_id, case) -> BaselineOutcome` cachea por `case_id` para
   toda la corrida y hace una sola ejecucion por caso aun con hilos concurrentes
   (`threading.Lock` por `case_id`; `Evaluate` de DSPy usa `num_threads`). Se
-  cachea todo resultado, incluido `infraestructura` (la spec pide una sola
-  llamada por caso; con el reintento propio de D3 ya es persistente).
+  cachea todo resultado salvo `infraestructura`, que deja el caso NE esa vez y
+  se vuelve a consultar la proxima vez que el caso lo necesite (decision del
+  usuario en la parada de 3b, FR-004 ajustado).
   `RunAborted` se propaga y no se cachea. Cualquier otra excepcion se propaga
   (es un error de programacion, no una falla de LLM).
 - `attribute_failure(failure, outcome) -> LLMFailure` (pura) y
@@ -297,8 +298,8 @@ D5. Atribucion contra el baseline (FR-004). Nucleo comun en
 - `baseline_only.py` evalua solo el baseline: siempre `externa`, sin probe.
 - Limite conocido (ya en la spec): con temperatura > 0 o reasoning la
   atribucion tiene ruido; queda registrada con ambos `finish_reason`. Un
-  `infraestructura` del probe deja el caso NE como `infraestructura` cada vez
-  que ese caso se vuelva a atribuir en la corrida (cache).
+  `infraestructura` del probe deja el caso NE solo en esa evaluacion (no se
+  cachea).
 
 D6. Resultado por caso, comun a ambos subproyectos: cada caso evaluado expone
 `case_id` (FR-013), `score` (0.0 tecnico si es NE), `evaluated` (bool,
@@ -715,9 +716,9 @@ anota como bloqueo y no commitea.
     sin WARNING (aun no cuenta); 3e lo cierra.
   - 3e pasa a depender de 3c (Dependencias) y las listas de Archivos de 3c y
     3e se amplian (abajo).
-  Decisiones de diseno tomadas en 3b sin texto explicito en la spec (el
-  usuario las confirma o corrige en la parada): `infraestructura` del probe se
-  cachea como cualquier resultado; en un programa DSPy de varios predictores el
+  Parada de 3b (usuario, 2026-11-23): diseno y correcciones aprobados;
+  `infraestructura` del probe NO se cachea (opcion b, FR-004 ajustado). Resto
+  de decisiones aprobadas tal cual: en un programa DSPy de varios predictores el
   baseline del caso es el programa completo; `case_id` faltante es
   `ValueError`; sin baseline fijado, `entrada`/`presupuesto` de tarea en
   `gepa_standalone` es `RuntimeError`; un `formato` de DSPy
