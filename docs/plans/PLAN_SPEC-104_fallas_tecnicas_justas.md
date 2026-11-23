@@ -55,8 +55,10 @@ aca solo se ajusta la referencia.
 
 - 1a -> 1b -> 1c. Todo lo demas requiere la fase 1.
 - 2a requiere 1c. 2b requiere 2a.
-- 3a es independiente de la fase 2. 3b requiere 2a y 3a. 3c y 3e requieren 3b;
-  3c y 3e son independientes entre si. 3d requiere 3c.
+- 3a es independiente de la fase 2. 3b requiere 2a y 3a. 3c requiere 3b. 3e
+  requiere 3c (fijado en 3b: 3c implementa el nucleo comun
+  `shared/llm/attribution.py` y baja a DEBUG el log de la capa de llamada que
+  3e reutiliza). 3d requiere 3c.
 - 4a puede ir en paralelo con la fase 3 (solo depende de la forma del
   resultado por caso fijada en 3b). 4b requiere 3c, 3e y 4a. 4c requiere 4b.
 - 5a requiere 4c. 5b va despues de 4c. La fase 6 requiere 5a.
@@ -219,21 +221,145 @@ llamada (no cuenta, solo corta), porque `Evaluate` y GEPA pueden tragarse la
 excepcion; el envoltorio que conoce el caso la registra con `record` como
 cualquier otra falla. `RunAborted` nunca se registra como falla.
 
-D5. Atribucion contra el baseline (FR-004): un `BaselineProbe` por corrida, con
-cache `case_id -> resultado de la llamada baseline` (clase de capa 1 o "ok" y
-`finish_reason`). Lo crea el orquestador con el prompt/programa baseline y se lo
-pasa al adapter o al envoltorio DSPy. Un prompt es "el baseline" si su texto (o
-el snapshot de instrucciones en DSPy) es igual al inicial. 3b define donde vive
-el probe (shared o por subproyecto) y como evitar que la llamada de atribucion
-cuente como intento del candidato.
+D5 y D6 confirmadas o corregidas en 3b (2026-11-23) contra los adapters de
+`gepa_standalone`, `dspy_gepa_poc` y el fuente de `dspy==3.2.1` /
+`gepa==0.0.27` (ver "Cierre de 3b").
 
-D6. Resultado por caso. `gepa_standalone`: cada elemento de `outputs` lleva
-`failure` (dict del `LLMFailure` o None); el score es 0.0 tecnico si el caso es
-NE. `dspy_gepa_poc`: una `FailedCallPrediction` (generaliza
-`EmptyResponsePrediction`) que lleva el `LLMFailure`; la metrica puntua 0.0
-tecnico y devuelve feedback de falla externa (FR-012). En ambos, la agregacion
-de 4a lee el flag NE de cada caso desde `outputs` o desde
-`EvaluationResult.results`; no recalcula llamando al modelo.
+D5. Atribucion contra el baseline (FR-004). Nucleo comun en
+`shared/llm/attribution.py` (nuevo; sin importar `dspy`, `gepa_standalone` ni
+`dspy_gepa_poc`), mas una forma de llamar al baseline por subproyecto:
+- `BaselineOutcome` (dataclass `frozen`): `clase` (`FailureClass` de capa 1 o
+  None = la llamada respondio sin falla de capa 1), `causa`, `finish_reason`.
+  Un `formato` del baseline (capa 2) es None: la capa 2 no interviene en la
+  atribucion.
+- `BaselineProbe(call_baseline)`: `call_baseline(case)` ejecuta el baseline
+  sobre el caso con los mismos parametros que la tarea y lanza
+  `LLMCallFailure` ante una falla de capa 1 (cualquier otro retorno = sin
+  falla). `outcome(case_id, case) -> BaselineOutcome` cachea por `case_id` para
+  toda la corrida y hace una sola ejecucion por caso aun con hilos concurrentes
+  (`threading.Lock` por `case_id`; `Evaluate` de DSPy usa `num_threads`). Se
+  cachea todo resultado, incluido `infraestructura` (la spec pide una sola
+  llamada por caso; con el reintento propio de D3 ya es persistente).
+  `RunAborted` se propaga y no se cachea. Cualquier otra excepcion se propaga
+  (es un error de programacion, no una falla de LLM).
+- `attribute_failure(failure, outcome) -> LLMFailure` (pura) y
+  `BaselineProbe.attribute(failure, case_id, case, *, is_baseline) ->
+  LLMFailure`: solo `entrada` y `presupuesto` del rol `task` se atribuyen; las
+  demas clases y roles salen con `case_id` y sin atribucion. Con `is_baseline`
+  la atribucion es `externa` sin llamar. Si no: `outcome.clase` None ->
+  `candidato` (misma clase); `outcome.clase` igual a la del candidato ->
+  `externa`; otra clase -> la falla del caso pasa a ser la del baseline
+  (`clase` y `causa` del outcome, `externa` si es `entrada`/`presupuesto`, sin
+  atribucion si no), NE por la tabla (FR-004, "falla por otra clase"); si es
+  `configuracion`, la capa de llamada ya fijo el aborto. En todos los casos
+  atribuidos queda el `finish_reason` de ambas llamadas.
+- `LLMFailure` gana el campo `baseline_finish_reason: str | None = None`
+  (`failures.py`), y `FailureTracker.record` lo agrega a su linea de log
+  cuando no es None (FR-004 "registrar el `finish_reason` de ambas llamadas";
+  FR-007).
+- `is_evaluated(failure: LLMFailure | None) -> bool` (misma tabla de
+  tratamiento, en `attribution.py`): None -> True; rol `task` con clave de
+  conteo `entrada_candidato`, `presupuesto_candidato` o `formato` -> True
+  (score 0 del candidato); el resto -> False (NE). `failure_to_dict(failure)`:
+  dict serializable con todos los campos, `clase` como texto y `clave`
+  (`count_key`).
+- Por que la llamada de atribucion no cuenta como intento ni como falla: por D4
+  solo cuentan el bucle de casos del adapter y la llamada de puntaje de la
+  metrica DSPy (abajo); el probe llama directo a la capa de llamada, que nunca
+  cuenta. Sus tokens si se registran en `usage` (rol `task`): son gasto real.
+  La falla que se registra es una sola por caso: la del candidato ya atribuida.
+- Reconocimiento del baseline: igualdad de texto del `system_prompt`
+  (`gepa_standalone`) o del snapshot de instrucciones `{predictor:
+  instructions}` (`dspy_gepa_poc`; `dspy.GEPA` solo cambia instrucciones en
+  `build_program`, no demos) con el inicial.
+- `gepa_standalone`: cada adapter expone `_task_call(system_prompt, example) ->
+  str`, el mismo metodo que usa `evaluate` para la tarea (`call_model` o
+  `_complete` en RAG, con `task_max_tokens`), asi el probe usa los mismos
+  parametros. `BaseAdapter.set_baseline(system_prompt)` guarda el texto y crea
+  el probe con `lambda example: self._task_call(system_prompt, example)`. El
+  orquestador lo llama una vez tras `load_prompt()` (una linea en
+  `universal_optimizer.py`, en 3c). Sin baseline fijado, una falla `entrada` o
+  `presupuesto` de tarea es `RuntimeError` con mensaje claro (no se adivina la
+  atribucion); las demas clases no lo necesitan.
+- `dspy_gepa_poc`: el probe vive en el cierre de la metrica envuelta (D6), que
+  `dspy.GEPA` guarda por referencia y no copia. Lo crea
+  `create_module_and_metric` con una `deepcopy` del programa sin envolver y el
+  snapshot de instrucciones, tomados antes de GEPA (`build_program` copia el
+  `student` y nunca lo modifica). `call_baseline(example)` corre ese programa
+  con `example.inputs()` dentro de `dspy.context(trace=[])` (no ensucia trazas)
+  y con el LM configurado (mismo `CheckedLM`, mismo `max_tokens`);
+  `AdapterParseError` del baseline es "sin falla de capa 1". En un programa de
+  varios predictores ("pipeline", hoy sin configs) el baseline sobre el caso es
+  el programa baseline completo: "el baseline tambien falla" si cualquier
+  predictor suyo falla con esa clase; ejecutar solo el predictor que fallo no
+  es cacheable por caso (sus entradas dependen de los predictores previos del
+  candidato). Cuesta una ejecucion del programa por caso, no una llamada.
+- `baseline_only.py` evalua solo el baseline: siempre `externa`, sin probe.
+- Limite conocido (ya en la spec): con temperatura > 0 o reasoning la
+  atribucion tiene ruido; queda registrada con ambos `finish_reason`. Un
+  `infraestructura` del probe deja el caso NE como `infraestructura` cada vez
+  que ese caso se vuelva a atribuir en la corrida (cache).
+
+D6. Resultado por caso, comun a ambos subproyectos: cada caso evaluado expone
+`case_id` (FR-013), `score` (0.0 tecnico si es NE), `evaluated` (bool,
+`is_evaluated`) y `failure` (None o el `LLMFailure` ya atribuido). La agregacion
+de 4a recibe una lista de `(case_id, score, evaluated)` por repeticion y no
+llama al modelo; cada orquestador (4b) la extrae de su resultado:
+- `gepa_standalone`: cada elemento de `outputs` (y de `trajectories` si hay)
+  lleva las claves propias del adapter mas `case_id`, `evaluated` y `failure`
+  (`failure_to_dict` o None); `len(outputs) == len(batch)` siempre (FR-002).
+  Por caso: `record_attempt("task", case_id)`; `_task_call`; ante
+  `LLMCallFailure`, `attribute` (D5), `record` y salida NE o score 0 segun
+  `is_evaluated`. `formato` de capa 2 (FR-010: clasificador, respuesta que no
+  normaliza a una de `valid_classes`; extractor, JSON no parseable) se registra
+  con `record` y puntua 0. RAG: si la tarea respondio,
+  `record_attempt("judge", case_id)` y la falla de capa 1 del juez deja el caso
+  NE con rol `judge` (el `formato` del juez es de 3d). `RunAborted` y cualquier
+  excepcion que no sea `LLMCallFailure` se propagan: se eliminan el `except
+  Exception` que descarta el ejemplo (clasificador, SQL) o puntua 0 (extractor,
+  RAG) y el `RuntimeError` de "todos los ejemplos fallaron" (un lote todo NE
+  lo resuelven 4a, "sin casos evaluados", y los umbrales). `case_id` faltante
+  en un ejemplo es `ValueError` (los loaders lo garantizan desde 3a; sin el no
+  hay cache del probe ni casos unicos de `entrada_dato`).
+  `make_reflective_dataset` decide por `outputs[i]["evaluated"]`: un NE no
+  entra nunca (FR-012, SC-008); `entrada_candidato`, `presupuesto_candidato` y
+  `formato` entran como ejemplo negativo con un feedback que nombra la causa
+  (es error del prompt).
+- `dspy_gepa_poc` (reemplaza `empty_response.py`):
+  - `FailedCallPrediction(dspy.Prediction)` (generaliza
+    `EmptyResponsePrediction`): campos de salida en None; atributos privados
+    (prefijo `_`, que `dspy.Example.__setattr__` no mete en el store)
+    `failure` (`LLMFailure`), `instructions` (snapshot del programa que la
+    produjo) y `attributed`; propiedad `evaluated`.
+  - El mixin de `forward` (mismo mecanismo de subclase dinamica, que sobrevive a
+    la `deepcopy` de `build_program` y a `bootstrap_trace_data`) atrapa
+    `LLMCallFailure` (incluida `EmptyResponseError`) y `AdapterParseError`
+    (`formato` de FR-010, tras el fallback de adapters) y devuelve la
+    `FailedCallPrediction` con la falla sin `case_id` y el snapshot de `self`.
+    No cuenta: `forward` no conoce el caso (`Evaluate` llama
+    `program(**example.inputs())` y `case_id` es label). `RunAborted` se
+    propaga. Efecto en la reflexion: con `add_format_failure_as_feedback=False`
+    (default, el repo no lo cambia) el `FailedPrediction` de formato ya se
+    excluia del dataset reflexivo; con la `FailedCallPrediction` sigue
+    excluido en programas de un predictor (sin traza del predictor que fallo).
+  - La metrica envuelta (reemplaza `zero_on_empty_response`) distingue la
+    llamada de puntaje de la de feedback. Verificado en `dspy==3.2.1`: por
+    caso evaluado hay exactamente una llamada sin `pred_name` (`Evaluate`
+    `metric(example, pred)`, `bootstrap_trace_data` `metric(example, pred,
+    trace)`), y `DspyAdapter.make_reflective_dataset` vuelve a llamar a la
+    metrica con `pred_name`/`pred_trace` una vez por predictor y trayectoria
+    (`feedback_fn` de `dspy.GEPA.compile`) sobre la misma prediccion. Por eso
+    solo la llamada de puntaje cuenta: `record_attempt("task",
+    example.case_id)` y, si es `FailedCallPrediction` no atribuida,
+    `probe.attribute(..., is_baseline=pred.instructions ==
+    snapshot_inicial)`, guarda la falla atribuida en la prediccion
+    (`attributed`), `record` y devuelve 0.0. Las llamadas de feedback no
+    cuentan y, para una `FailedCallPrediction`, devuelven `{"score": 0.0,
+    "feedback": ...}`: si `evaluated` es False, que fue una falla externa (rol,
+    clase, causa) y no un error del prompt (FR-012); si es True, la causa como
+    error del prompt. Las predicciones normales pasan a la metrica original.
+  - 4a/4b leen `EvaluationResult.results` (`example.case_id`, score, y
+    `evaluated` de la `FailedCallPrediction` o True).
 
 D7. Seccion YAML (4c), comun a ambos subproyectos y opcional:
 `failures: {infra_retries, min_attempts: {<rol>: int}, thresholds: {<clave>:
@@ -565,10 +691,52 @@ anota como bloqueo y no commitea.
 - 3b. Sin codigo de produccion: fija D5 y D6 (donde vive el probe, como se
   reconoce el baseline, forma del resultado por caso en ambos subproyectos, como
   sobrevive a las copias de `dspy.GEPA`). Archivos: este plan.
-- 3c. Archivos: `gepa_standalone/adapters/*.py`, `tests/test_gepa_adapters.py`,
-  tests nuevos de adapters.
+- Cierre de 3b (Opus 5.5, 2026-11-23). D5 y D6 reescritas arriba; sin codigo.
+  Verificado leyendo el fuente de `dspy==3.2.1` (`/datum1/dev/venvs/reflexio`):
+  `Evaluate` llama `program(**example.inputs())` y despues `metric(example,
+  prediction)` (`evaluate.py`), asi que `forward` no ve `case_id` y la metrica
+  si; `bootstrap_trace_data` envuelve el `forward` de instancia y llama a la
+  metrica una vez con `trace`; `DspyAdapter.build_program` hace `deepcopy` del
+  `student` y cambia solo instrucciones; `make_reflective_dataset` llama a
+  `feedback_fn` (metrica con `pred_name`) por predictor y trayectoria y saltea
+  la trayectoria sin traza del predictor; `metric_fn` se guarda por referencia.
+  `dspy.Example.__setattr__` deja fuera del store los atributos con `_`.
+  Correcciones al plan que salen del diseno (a aprobar en la parada de 3b):
+  - El probe lo crea el adapter (`set_baseline`) o la fabrica de la metrica
+    DSPy, no el orquestador: solo ellos saben llamar a la tarea con los mismos
+    parametros. El orquestador de `gepa_standalone` solo pasa el texto
+    baseline.
+  - `LLMFailure` gana `baseline_finish_reason` y `record` lo loguea: toca
+    `shared/llm/failures.py`.
+  - El log de respuesta sin texto de la capa de llamada
+    (`log_empty_response(..., call_layer=True)`, desde `complete_text` y
+    `CheckedLM`) pasa a DEBUG en todos los roles en 3c (nota de 2a): un unico
+    WARNING por falla, el de `record`. Entre 3c y 3e la tarea de DSPy queda
+    sin WARNING (aun no cuenta); 3e lo cierra.
+  - 3e pasa a depender de 3c (Dependencias) y las listas de Archivos de 3c y
+    3e se amplian (abajo).
+  Decisiones de diseno tomadas en 3b sin texto explicito en la spec (el
+  usuario las confirma o corrige en la parada): `infraestructura` del probe se
+  cachea como cualquier resultado; en un programa DSPy de varios predictores el
+  baseline del caso es el programa completo; `case_id` faltante es
+  `ValueError`; sin baseline fijado, `entrada`/`presupuesto` de tarea en
+  `gepa_standalone` es `RuntimeError`; un `formato` de DSPy
+  (`AdapterParseError`) pasa a `FailedCallPrediction` y deja de contar para
+  `max_errors` de `Evaluate`.
+- 3c. Ver D5 y D6. Archivos: `gepa_standalone/adapters/*.py`,
+  `shared/llm/attribution.py` (nuevo), `shared/llm/failures.py`
+  (`baseline_finish_reason` y su log), `shared/llm/__init__.py`,
+  `shared/llm/config.py` (solo `log_empty_response` de la capa de llamada a
+  DEBUG), `gepa_standalone/universal_optimizer.py` (solo la llamada a
+  `adapter.set_baseline(...)` tras `load_prompt()`), `tests/test_gepa_adapters.py`,
+  `tests/test_empty_response.py` (SPEC-103 score 0 -> NE, `case_id`),
+  `tests/test_empty_response_dspy.py` (solo los tests que miran el nivel del log
+  de la capa de llamada), `tests/test_functional_gepa.py` (`case_id` en los
+  lotes), `tests/test_failures.py` (si cambia la linea de log), tests nuevos
+  (`tests/test_attribution.py` y de adapters).
 - 3d. Archivos: `gepa_standalone/adapters/simple_rag_adapter.py`, tests de RAG.
-- 3e. Archivos: `dspy_gepa_poc/empty_response.py` (o el modulo que lo
+- 3e. Ver D5 y D6 (reutiliza `shared/llm/attribution.py` de 3c sin
+  cambiarlo). Archivos: `dspy_gepa_poc/empty_response.py` (o el modulo que lo
   reemplace, segun D6), `dspy_gepa_poc/metrics.py`,
   `dspy_gepa_poc/reflexio_declarativa.py` (solo el armado de programa y
   metrica), `tests/test_empty_response_dspy.py`,
