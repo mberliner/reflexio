@@ -48,7 +48,7 @@ modelos bajo prueba de la matriz de la spec.
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | hecho (869fb92) |
 | | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | hecho (2a15cde) |
 | | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | hecho (3587ffb) |
-| Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | hecho (este commit) |
+| Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | hecho (05e3923) |
 
 ## Dependencias
 
