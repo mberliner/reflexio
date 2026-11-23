@@ -173,14 +173,17 @@ nunca corta la corrida. Lo usan `get_lm_function`, `call_llm` y
 
 | Rol | Conducta |
 |---|---|
-| Tarea (clasificador, SQL) | El adapter la atrapa como cualquier `Exception`: ejemplo descartado, con la causa en log y consola |
-| Tarea (extractor, RAG) | Score 0.0 y la causa queda en `outputs` (RAG ya no la rotula como content filter) |
+| Tarea (clasificador, SQL, extractor, RAG) | Prediccion fallida: score 0.0, la causa queda en `outputs` (clave `error`) y en log, y `len(outputs)` se mantiene (RAG ya no la rotula como content filter) |
 | Juez (RAG) | Score 0.0 con feedback "Error del Juez: ..."; la causa dice `rol=juez` |
 | Reflexion | `get_lm_function(role="reflection")` lanza la excepcion; GEPA la atrapa y saltea la iteracion |
 
 En el juez de RAG, un `LLMConnectionError` (incluido `LLMConfigError`) se
 propaga y corta la corrida, igual que en los demas adapters. El camino DSPy
 (`get_dspy_lm`) es subfase 2c.
+
+Nota: un error tecnico distinto (`except Exception`) en clasificador y SQL sigue
+descartando el ejemplo (deuda D-019 en `historial/sdd.md`); solo la respuesta
+sin texto puntua 0.0.
 
 ### ¿Y los errores de parsing JSON?
 

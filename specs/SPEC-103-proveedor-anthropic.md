@@ -297,7 +297,7 @@ Notas de la matriz:
 | FR-006 | idem FR-002; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-007 | `LLMConfig.to_kwargs`, `LLMConfig.validate`, `LLMConfig.validate_connection`; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-008 | `LLMConfig.from_env` + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
-| FR-009 | `get_lm_function`, `get_dspy_lm` (LM de reflexion para `dspy.GEPA`), `call_llm`, `gepa_standalone/adapters/` (classifier, sql, rag, extractor), metricas DSPy (`dspy_gepa_poc/metrics.py`), `docs/GEPA_MANEJO_ERRORES.md`; test `tests/test_empty_response.py` (vigente en caminos LiteLLM tras 2b; camino DSPy pendiente 2c) |
+| FR-009 | `get_lm_function`, `get_dspy_lm` (LM de reflexion para `dspy.GEPA`), `call_llm`, `gepa_standalone/adapters/` (classifier, sql, rag, extractor), metricas DSPy (`dspy_gepa_poc/metrics.py`), `docs/GEPA_MANEJO_ERRORES.md`; test `tests/test_empty_response.py` (vigente en los caminos LiteLLM, en todos los adapters, tras 2b-fix; camino DSPy pendiente 2c) |
 | FR-010 | `LLMConfig.describe`, `gepa_standalone/universal_optimizer.py` (reporte por adapter); test (pendiente) |
 | FR-011 | `shared/analysis/roi_calculator.py` (`DEFAULT_PRICING`, `normalize_model`, `get_model_pricing`), `shared/llm/usage.py`, `docs/ANALISIS_UTILIDADES.md`; `tests/test_shared_analysis.py` (pendiente) |
 | FR-012 | `shared/logging/metadata.py`, `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py` (`save_results`), `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md` (pendiente) |

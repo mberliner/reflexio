@@ -11,7 +11,7 @@ from typing import Any
 from gepa import EvaluationBatch
 
 from gepa_standalone.adapters.base_adapter import BaseAdapter
-from shared.llm import LLMConnectionError
+from shared.llm import EmptyResponseError, LLMConnectionError
 
 
 class SimpleSQLAdapter(BaseAdapter):
@@ -66,6 +66,29 @@ class SimpleSQLAdapter(BaseAdapter):
             except LLMConnectionError:
                 # Connection-level failure: abort optimization
                 raise
+            except EmptyResponseError as e:
+                # SPEC-103 FR-009: respuesta sin texto = prediccion fallida (score 0.0).
+                # La causa ya fue registrada por response_text; se mantiene len(outputs).
+                print(f"[WARNING] Respuesta sin texto en ejemplo {idx}, score=0: {e}")
+                outputs.append(
+                    {
+                        "predicted": "",
+                        "expected": expected_sql,
+                        "question": question,
+                        "error": str(e),
+                    }
+                )
+                scores.append(0.0)
+                if capture_traces:
+                    trajectories.append(
+                        {
+                            "input": f"Esquema: {schema}\nPregunta: {question}",
+                            "expected": expected_sql,
+                            "predicted": "",
+                            "correct": False,
+                            "error": str(e),
+                        }
+                    )
             except Exception as e:
                 print(f"[WARNING] Error técnico en ejemplo {idx}, descartando: {e}")
 

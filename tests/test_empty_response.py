@@ -79,8 +79,9 @@ class TestLmFunctions:
 
 class TestAdapters:
     @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
-    def test_classifier_does_not_abort_and_logs_cause(
-        self, mock_env, monkeypatch, capsys, caplog, content, reason
+    @pytest.mark.parametrize("traces", [False, True])
+    def test_classifier_scores_zero_and_logs_cause(
+        self, mock_env, monkeypatch, capsys, caplog, content, reason, traces
     ):
         calls = iter([_response(content, reason), _response("greeting")])
         monkeypatch.setattr("litellm.completion", lambda *a, **k: next(calls))
@@ -88,20 +89,70 @@ class TestAdapters:
         batch = [{"text": "x", "label": "greeting"}, {"text": "hi", "label": "greeting"}]
 
         with caplog.at_level(logging.WARNING):
-            result = adapter.evaluate(batch, {"system_prompt": "p"})
+            result = adapter.evaluate(batch, {"system_prompt": "p"}, capture_traces=traces)
 
+        assert result.scores == [0.0, 1.0]
+        assert len(result.outputs) == len(result.scores) == len(batch)
+        assert "rol=task" in capsys.readouterr().out + caplog.text
+        assert reason in caplog.text
+        if traces:
+            assert len(result.trajectories) == len(batch)
+
+    def test_classifier_technical_error_still_discarded(self, mock_env, monkeypatch):
+        calls = iter([RuntimeError("boom"), _response("greeting")])
+
+        def fake(*a, **k):
+            item = next(calls)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        monkeypatch.setattr("litellm.completion", fake)
+        adapter = SimpleClassifierAdapter(valid_classes=["greeting"])
+        batch = [{"text": "x", "label": "greeting"}, {"text": "hi", "label": "greeting"}]
+
+        result = adapter.evaluate(batch, {"system_prompt": "p"})
+
+        # D-019: el error tecnico descarta el ejemplo (len(outputs) != len(batch)).
         assert result.scores == [1.0]
-        assert reason in capsys.readouterr().out + caplog.text
 
-    def test_sql_does_not_abort(self, mock_env, monkeypatch):
-        calls = iter([_response(None, "max_tokens"), _response("SELECT 1")])
+    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
+    @pytest.mark.parametrize("traces", [False, True])
+    def test_sql_scores_zero_and_logs_cause(
+        self, mock_env, monkeypatch, caplog, content, reason, traces
+    ):
+        calls = iter([_response(content, reason), _response("SELECT 1")])
         monkeypatch.setattr("litellm.completion", lambda *a, **k: next(calls))
+        adapter = SimpleSQLAdapter()
+        ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
+        batch = [{"question": "a", "extracted": ex}, {"question": "b", "extracted": ex}]
+
+        with caplog.at_level(logging.WARNING):
+            result = adapter.evaluate(batch, {"system_prompt": "p"}, capture_traces=traces)
+
+        assert result.scores == [0.0, 1.0]
+        assert len(result.outputs) == len(result.scores) == len(batch)
+        assert reason in caplog.text
+        if traces:
+            assert len(result.trajectories) == len(batch)
+
+    def test_sql_technical_error_still_discarded(self, mock_env, monkeypatch):
+        calls = iter([RuntimeError("boom"), _response("SELECT 1")])
+
+        def fake(*a, **k):
+            item = next(calls)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        monkeypatch.setattr("litellm.completion", fake)
         adapter = SimpleSQLAdapter()
         ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
         batch = [{"question": "a", "extracted": ex}, {"question": "b", "extracted": ex}]
 
         result = adapter.evaluate(batch, {"system_prompt": "p"})
 
+        # D-019: el error tecnico descarta el ejemplo.
         assert result.scores == [1.0]
 
     def test_extractor_scores_zero(self, mock_env, monkeypatch):
