@@ -39,7 +39,7 @@ aca solo se ajusta la referencia.
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | hecho (d61de1c) |
 | | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 (relanzada) | hecho (bf346c1) |
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | hecho (60b1ba2) |
-| | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | pendiente |
+| | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | hecho (6d2dec1) |
 | | 3c Adapters de `gepa_standalone`: resultado por caso (evaluado / NE / score 0 por clase), atribucion, `make_reflective_dataset` sin NE, `formato` por adapter | FR-002, FR-004, FR-010, FR-011, FR-012, SC-001, SC-008 | Sonnet 5.5 | pendiente |
 | | 3d Juez de RAG con JSON en el prompt, validacion de rango y reintentos | FR-009 | Sonnet 5.5 | pendiente |
 | | 3e `dspy_gepa_poc`: generaliza `empty_response.py` a fallas clasificadas, atribucion, feedback de falla externa, conteo una vez por caso pese al fallback de adapters | FR-002, FR-004, FR-007, FR-010, FR-012, SC-001, SC-008 | Opus 5.5 | pendiente |
@@ -691,7 +691,7 @@ anota como bloqueo y no commitea.
 - 3b. Sin codigo de produccion: fija D5 y D6 (donde vive el probe, como se
   reconoce el baseline, forma del resultado por caso en ambos subproyectos, como
   sobrevive a las copias de `dspy.GEPA`). Archivos: este plan.
-- Cierre de 3b (Opus 5.5, 2026-11-23). D5 y D6 reescritas arriba; sin codigo.
+- Cierre de 3b (Opus 5.5, 2026-11-23, 6d2dec1). D5 y D6 reescritas arriba; sin codigo.
   Verificado leyendo el fuente de `dspy==3.2.1` (`/datum1/dev/venvs/reflexio`):
   `Evaluate` llama `program(**example.inputs())` y despues `metric(example,
   prediction)` (`evaluate.py`), asi que `forward` no ve `case_id` y la metrica
