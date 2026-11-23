@@ -255,14 +255,14 @@ class TestMatrixSimpleRagAdapter:
         adapter = SimpleRAGAdapter(temperature=REQUESTED_TEMPERATURE)
         messages = [{"role": "user", "content": "hi"}]
 
-        adapter._call_llm_with_retry(messages, max_tokens=400)
+        adapter._complete(messages, max_tokens=400)
         task_body = capture_anthropic_post["body"]
         assert task_body["model"] == "claude-sonnet-4-6"
         assert task_body["temperature"] == REQUESTED_TEMPERATURE
         assert task_body["max_tokens"] == 400
         assert task_body["output_config"] == {"effort": "medium"}
 
-        adapter._call_llm_with_retry(messages, max_tokens=200, model=adapter.judge_model)
+        adapter._complete(messages, max_tokens=200, is_judge=True)
         judge_body = capture_anthropic_post["body"]
         assert judge_body["model"] == "claude-opus-5-5"
         assert "temperature" not in judge_body

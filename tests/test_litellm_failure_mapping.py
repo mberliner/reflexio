@@ -19,9 +19,12 @@ Verifica:
 - Normalizacion de respuestas HTTP 200: `finish_reason`, `content`, `refusal` y
   `provider_specific_fields` (tabla 3 + `model_context_window_exceeded`).
 - Conteo exacto de llamadas HTTP bajo `default` (sin `num_retries`),
-  `num_retries=0`, `num_retries=3` y `dspy.LM` por defecto (tabla 4).
+  `num_retries=0`, `num_retries=3` y `dspy.LM` por defecto (tabla 4), y el de
+  `CheckedLM` tras SPEC-104 2a (1 llamada, o 1 + reintentos si es
+  `infraestructura`).
 - Que `CheckedLM._process_lm_response` recibe el objeto de respuesta completo
-  con `finish_reason` y `message` intactos.
+  con `finish_reason` y `message` intactos y rechaza las respuestas 200 con
+  falla de capa 1 con su clase.
 
 Referencias:
 - `specs/SPEC-104-fallas-tecnicas-justas.md` ("Reglas de deteccion de la capa 1",
@@ -52,6 +55,7 @@ from litellm.llms.openai.openai import OpenAIChatCompletion
 from shared.llm.config import LLMConfig, is_empty_text
 from shared.llm.dspy_lm import CheckedLM
 from shared.llm.errors import EmptyResponseError
+from shared.llm.failures import DEFAULT_INFRA_RETRIES, LLMCallFailure, root_exception
 from tests.litellm_failure_payloads import (
     ALL_FAILURE_CASES,
     ALL_HTTP_200_CASES,
@@ -408,12 +412,12 @@ class TestRetryHTTPCounts:
 
     @pytest.mark.parametrize("case", RETRY_CASES, ids=lambda c: c.id)
     def test_retry_counts_dspy_lm_default(self, case: FailurePayloadCase) -> None:
-        # Comportamiento actual de LiteLLM 1.108.5, no deseado: ver D-023
+        # Comportamiento actual de dspy.LM (no de CheckedLM), no deseado: ver D-023
         # dspy.LM usa num_retries=3 por defecto (drop_params=False): repite 4 veces
         # un 401/400/422/filtro y 7 veces un 429/5xx/red en Azure/OpenAI.
+        # CheckedLM lo reemplaza (SPEC-104 FR-011): ver test_retry_counts_checked_lm.
         assert case.expected_http_calls is not None
-        cfg = LLMConfig(**{**PROVIDER_KWARGS[case.provider], "role": "task", "cache": False})
-        lm = cfg.get_dspy_lm()
+        lm = dspy.LM(**{**PROVIDER_KWARGS[case.provider], "cache": False})
         # dspy==3.2.1 (dspy/clients/lm.py:191-192) envuelve litellm.ContextWindowExceededError
         # en dspy.utils.exceptions.ContextWindowExceededError (original en __cause__).
         if case.expected_exception == "ContextWindowExceededError":
@@ -427,6 +431,28 @@ class TestRetryHTTPCounts:
             with intercept_httpx(case) as calls, pytest.raises(litellm.openai.APIError):
                 lm("hello")
         assert len(calls) == case.expected_http_calls["dspy_default"]
+
+    @pytest.mark.parametrize("case", RETRY_CASES, ids=lambda c: c.id)
+    def test_retry_counts_checked_lm(self, case: FailurePayloadCase) -> None:
+        # SPEC-104 FR-011 / SC-009: CheckedLM con num_retries=0 y reintento propio
+        # solo de infraestructura (default 3): 1 llamada, o 1 + 3 si es infraestructura.
+        cfg = LLMConfig(**{**PROVIDER_KWARGS[case.provider], "role": "task", "cache": False})
+        lm = cfg.get_dspy_lm()
+        assert lm.num_retries == 0
+        with intercept_httpx(case) as calls, pytest.raises(LLMCallFailure) as exc_info:
+            lm("hello")
+        exc = exc_info.value
+        expected_calls = 1 + DEFAULT_INFRA_RETRIES if case.spec104_class == "infraestructura" else 1
+        assert len(calls) == expected_calls
+        assert exc.failure.clase.value == case.spec104_class
+        assert exc.failure.rol == "task"
+        # Corta el fallback ChatAdapter -> JSONAdapter (ver shared/llm/dspy_lm.py)
+        assert isinstance(exc, dspy.utils.exceptions.ContextWindowExceededError)
+        # El tipo original de LiteLLM queda en la cadena __cause__ (regla 3 de D1).
+        # El 422 de OpenAI que con drop_params=True devuelve None, en CheckedLM
+        # (drop_params=False) lanza BadRequestError (limite conocido de la spec).
+        expected = "BadRequestError" if case.returns_none else case.expected_exception
+        assert type(root_exception(exc)).__name__ == expected
 
 
 # ================== (d) CheckedLM._process_lm_response (shared/llm/dspy_lm.py) ==================
@@ -453,14 +479,24 @@ class TestCheckedLMProcessResponse:
         monkeypatch.setattr(CheckedLM, "_process_lm_response", spy_process)
 
         with intercept_httpx(case) as calls:
-            if is_empty_text(case.expected_content):
-                with pytest.raises(EmptyResponseError) as exc_info:
-                    lm("hello")
-                assert exc_info.value.role == "task"
-                assert exc_info.value.finish_reason == case.expected_finish_reason
-            else:
+            if case.spec104_class == "ok":
                 outputs = lm("hello")
                 assert outputs == [case.expected_content]
+            else:
+                # SPEC-104 (2a): la respuesta 200 con falla de capa 1 se rechaza con su clase;
+                # sin texto sale como EmptyResponseError (D1), con texto como LLMCallFailure.
+                with pytest.raises(LLMCallFailure) as exc_info:
+                    lm("hello")
+                failure = exc_info.value.failure
+                assert failure.clase.value == case.spec104_class
+                assert failure.rol == "task"
+                assert failure.finish_reason == case.expected_finish_reason
+                assert isinstance(exc_info.value, EmptyResponseError) is is_empty_text(
+                    case.expected_content
+                )
+                if is_empty_text(case.expected_content):
+                    assert exc_info.value.role == "task"
+                    assert exc_info.value.finish_reason == case.expected_finish_reason
 
         assert len(calls) == 1
         assert len(captured_responses) == 1

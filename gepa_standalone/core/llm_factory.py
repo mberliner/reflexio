@@ -7,7 +7,8 @@ Usa el modulo compartido shared.llm con LiteLLM.
 
 from collections.abc import Callable
 
-from shared.llm import LLMConfig, response_text
+from shared.llm import LLMConfig
+from shared.llm.config import complete_text
 
 
 def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
@@ -128,7 +129,8 @@ def call_llm(
     max_tokens: int = None,
 ) -> str:
     """
-    Llamada directa al LLM usando LiteLLM.
+    Fachada de la llamada comun a LiteLLM (`shared.llm.config.complete_text`):
+    resuelve la config por rol y aplica los overrides.
 
     Args:
         prompt: El prompt del usuario.
@@ -141,8 +143,6 @@ def call_llm(
         Respuesta del modelo como string.
     """
     import litellm
-
-    from shared.llm.usage import record_usage
 
     litellm.drop_params = True
     config = LLMConfig.from_env(model_name)
@@ -160,9 +160,4 @@ def call_llm(
     # Re-apply after manual overrides: callers may pass unadjusted values from YAML
     kwargs = config.apply_constraints(kwargs)
 
-    # Remove model from kwargs since we pass it separately
-    model = kwargs.pop("model")
-
-    response = litellm.completion(model=model, messages=messages, **kwargs)
-    record_usage(model_name, response)
-    return response_text(response, model_name)
+    return complete_text(kwargs, messages, model_name)

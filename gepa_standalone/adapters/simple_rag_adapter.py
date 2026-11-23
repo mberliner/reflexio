@@ -6,7 +6,6 @@ Simula la fase de recuperacion leyendo el contexto directamente del dataset.
 Usa un LLM como juez para evaluar la calidad de la respuesta generada.
 """
 
-import time
 from typing import Any
 
 import litellm
@@ -15,8 +14,8 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
-from shared.llm import EmptyResponseError, LLMConnectionError, response_text
-from shared.llm.usage import record_usage
+from shared.llm import LLMConnectionError, RunAborted
+from shared.llm.config import complete_text
 
 
 class SimpleRAGAdapter(BaseAdapter):
@@ -66,81 +65,35 @@ class SimpleRAGAdapter(BaseAdapter):
 
         return sanitized
 
-    def _call_llm_with_retry(
+    def _complete(
         self,
         messages: list[dict[str, str]],
-        max_retries: int = 2,
-        is_reflection: bool = False,
         max_tokens: int = 300,
-        model: str | None = None,
-    ) -> str | None:
+        is_judge: bool = False,
+    ) -> str:
         """
-        Llama al LLM con manejo de errores y reintentos.
+        Llama al LLM por la llamada comun (SPEC-104, D3): sin reintento propio del
+        adapter. Una falla sale como `LLMCallFailure` (o `RunAborted`).
 
         Args:
-            messages: Lista de mensajes para el modelo
-            max_retries: Numero maximo de reintentos
-            is_reflection: True si es llamada al modelo de reflexion GEPA
-            max_tokens: Maximo de tokens para la respuesta
-            model: Modelo a usar (si None, usa self.model)
+            messages: Lista de mensajes para el modelo.
+            max_tokens: Maximo de tokens para la respuesta.
+            is_judge: True para el juez (modelo y config de reflexion, rol `judge`).
 
         Returns:
-            Contenido de la respuesta o None si fallo
+            Contenido de la respuesta.
         """
-        config = self._judge_config if model == self.judge_model else self._config
-
-        # Token bucket: judge and reflection both count as "reflection"
-        # (optimization-only cost); plain task generation counts as "task".
-        is_judge = model == self.judge_model
-        usage_role = "reflection" if (is_judge or is_reflection) else "task"
-        cause_role = "juez" if is_judge else usage_role
+        config = self._judge_config if is_judge else self._config
 
         litellm.drop_params = True
         call_kwargs = config.to_kwargs()
         call_kwargs["max_tokens"] = max_tokens
-        if not (is_judge or is_reflection):
+        if not is_judge:
             # Task generation uses the adapter temperature, like BaseAdapter.call_model.
             call_kwargs["temperature"] = self.temperature
         call_kwargs = config.apply_constraints(call_kwargs)
-        model_key = call_kwargs.pop("model")
 
-        for attempt in range(max_retries):
-            try:
-                response = litellm.completion(
-                    model=model_key,
-                    messages=messages,
-                    **call_kwargs,
-                )
-                record_usage(usage_role, response)
-                return response_text(response, cause_role)
-            except EmptyResponseError:
-                # Respuesta sin texto: no es content filter, se propaga con su causa
-                raise
-            except Exception as e:
-                error_str = str(e)
-
-                # Detectar errores de content_filter
-                if "content_filter" in error_str or "jailbreak" in error_str:
-                    role = "Reflection LM" if is_reflection else "Task/Judge LM"
-                    print(
-                        f"[WARNING] {role} bloqueado por content filter "
-                        f"(intento {attempt + 1}/{max_retries})"
-                    )
-
-                    if attempt < max_retries - 1:
-                        time.sleep(1)
-                        continue
-                    else:
-                        print(
-                            f"[ERROR] Fallo despues de {max_retries} intentos. "
-                            f"Saltando esta iteracion."
-                        )
-                        return None
-                else:
-                    # Error diferente, propagar
-                    raise
-
-        return None
+        return complete_text(call_kwargs, messages, "judge" if is_judge else "task")
 
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
@@ -165,16 +118,7 @@ class SimpleRAGAdapter(BaseAdapter):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ]
-                response_content = self._call_llm_with_retry(
-                    messages, max_tokens=self.task_max_tokens, is_reflection=False
-                )
-
-                if response_content is None:
-                    outputs.append({"error": "Content filter blocked request"})
-                    scores.append(0.0)
-                    if capture_traces:
-                        trajectories.append({"error": "Content filter blocked request"})
-                    continue
+                response_content = self._complete(messages, max_tokens=self.task_max_tokens)
 
                 generated_answer = response_content.strip()
 
@@ -205,8 +149,8 @@ class SimpleRAGAdapter(BaseAdapter):
                         }
                     )
 
-            except LLMConnectionError:
-                # Connection-level failure: abort optimization
+            except (LLMConnectionError, RunAborted):
+                # Connection-level failure or run aborted by state: abort optimization
                 raise
             except Exception as e:
                 print(f"[WARNING] Error en ejemplo {idx}: {e}")
@@ -261,18 +205,9 @@ class SimpleRAGAdapter(BaseAdapter):
                 {"role": "user", "content": user_content},
             ]
 
-            # Usar retry para manejar errores de content filter
-            content = self._call_llm_with_retry(
-                messages,
-                max_tokens=self.judge_max_tokens,
-                is_reflection=False,
-                model=self.judge_model,
-            )
-
-            if content is None:
-                return 0.0, "Juez bloqueado por content filter"
-
-            content = content.strip()
+            content = self._complete(
+                messages, max_tokens=self.judge_max_tokens, is_judge=True
+            ).strip()
 
             # Parsear respuesta
             score = 0.0
@@ -291,8 +226,8 @@ class SimpleRAGAdapter(BaseAdapter):
 
             return score, reason
 
-        except LLMConnectionError:
-            # Config invalida o falla de conexion del juez: corta la corrida
+        except (LLMConnectionError, RunAborted):
+            # Config invalida, falla de conexion del juez o corrida abortada: corta la corrida
             raise
         except Exception as e:
             return 0.0, f"Error del Juez: {str(e)}"

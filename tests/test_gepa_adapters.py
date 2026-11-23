@@ -20,6 +20,21 @@ from gepa_standalone.adapters.simple_classifier_adapter import SimpleClassifierA
 from gepa_standalone.adapters.simple_extractor_adapter import SimpleExtractorAdapter
 from gepa_standalone.adapters.simple_rag_adapter import SimpleRAGAdapter
 from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
+from shared.llm import (
+    FailureClass,
+    LLMCallFailure,
+    LLMFailure,
+    RunAborted,
+    get_failure_tracker,
+)
+from tests.conftest import make_completion_response
+from tests.litellm_failure_payloads import ALL_FAILURE_CASES, FailurePayloadCase
+from tests.test_litellm_failure_mapping import intercept_httpx
+
+
+def _payload(case_id: str) -> FailurePayloadCase:
+    return next(c for c in ALL_FAILURE_CASES if c.id == case_id)
+
 
 # ==================== Fixtures ====================
 
@@ -95,8 +110,7 @@ class TestSimpleClassifierAdapter:
         """All predictions correct → scores [1.0, 1.0, 1.0]."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             # Return label based on message content
             messages = kwargs.get("messages", [])
             user_msg = messages[-1]["content"] if messages else ""
@@ -122,8 +136,7 @@ class TestSimpleClassifierAdapter:
         """Mixed correct/incorrect → scores [1.0, 0.0, 1.0]."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             # Intentionally wrong for the second example
             messages = kwargs.get("messages", [])
             user_msg = messages[-1]["content"] if messages else ""
@@ -218,8 +231,7 @@ class TestSimpleClassifierAdapter:
         """Comparison is lowercased."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "GREETING"  # Uppercase
             return response
 
@@ -237,8 +249,7 @@ class TestSimpleClassifierAdapter:
         """capture_traces=True returns trajectories."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "greeting"
             return response
 
@@ -263,8 +274,7 @@ class TestSimpleExtractorAdapter:
         """Perfect extraction → score 1.0."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             # Return perfect JSON based on input
             messages = kwargs.get("messages", [])
             user_msg = messages[-1]["content"] if messages else ""
@@ -292,8 +302,7 @@ class TestSimpleExtractorAdapter:
         """2/3 fields correct → score 0.666..."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             # Return partial match
             response.choices[0].message.content = json.dumps(
                 {"name": "John Doe", "age": "35", "role": "WRONG"}  # 2/3 correct
@@ -319,8 +328,7 @@ class TestSimpleExtractorAdapter:
         """Invalid JSON → score 0.0 (fallback)."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "This is not JSON"
             return response
 
@@ -441,8 +449,7 @@ class TestSimpleExtractorAdapter:
         """Field comparison is case-insensitive."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = json.dumps({"name": "JOHN DOE"})  # Uppercase
             return response
 
@@ -460,8 +467,7 @@ class TestSimpleExtractorAdapter:
         """If expected field is missing → score 0.0 for that field."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = json.dumps({"other": "value"})
             return response
 
@@ -479,8 +485,7 @@ class TestSimpleExtractorAdapter:
         """capture_traces=True returns trajectories."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = json.dumps({"name": "John"})
             return response
 
@@ -505,8 +510,7 @@ class TestSimpleSQLAdapter:
         """Identical SQL → score 1.0."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             messages = kwargs.get("messages", [])
             user_msg = messages[-1]["content"] if messages else ""
             if "List all users" in user_msg:
@@ -528,8 +532,7 @@ class TestSimpleSQLAdapter:
         """SQL with different whitespace/case → score 1.0."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             # Different whitespace and case
             response.choices[0].message.content = "SELECT  *  FROM  users"
             return response
@@ -553,8 +556,7 @@ class TestSimpleSQLAdapter:
         """Different SQL → score 0.0."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "SELECT id FROM users"  # Different
             return response
 
@@ -584,8 +586,7 @@ class TestSimpleSQLAdapter:
         """Extracts SQL from ```sql ... ```."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "```sql\nSELECT * FROM users\n```"
             return response
 
@@ -635,8 +636,7 @@ class TestSimpleSQLAdapter:
         """capture_traces=True returns trajectories."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "SELECT * FROM users"
             return response
 
@@ -666,8 +666,7 @@ class TestSimpleRAGAdapter:
         """Generates answer and Judge gives score → score from Judge."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             messages = kwargs.get("messages", [])
             system_msg = messages[0]["content"] if messages else ""
 
@@ -689,69 +688,85 @@ class TestSimpleRAGAdapter:
         assert len(result.scores) == 1
         assert result.scores[0] == 0.8
 
-    def test_rag_call_llm_with_retry_success_first_try(self, mock_env, monkeypatch):
-        """No content_filter → returns output."""
-
-        def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
-            response.choices[0].message.content = "Success"
-            return response
-
+    def test_rag_complete_returns_text_with_num_retries_0(self, mock_env, monkeypatch):
+        """Respuesta sana → devuelve el texto; LiteLLM recibe num_retries=0 (FR-011)."""
+        mock_completion = MagicMock(return_value=make_completion_response("Success"))
         monkeypatch.setattr("litellm.completion", mock_completion)
 
         adapter = SimpleRAGAdapter()
         messages = [{"role": "user", "content": "test"}]
 
-        result = adapter._call_llm_with_retry(messages)
+        result = adapter._complete(messages)
 
         assert result == "Success"
+        assert mock_completion.call_count == 1
+        assert mock_completion.call_args.kwargs["num_retries"] == 0
 
-    def test_rag_call_llm_with_retry_content_filter(self, mock_env, monkeypatch):
-        """content_filter_error → retries → success."""
-        attempt = 0
-
-        def mock_completion(*args, **kwargs):
-            nonlocal attempt
-            attempt += 1
-            if attempt == 1:
-                raise Exception("content_filter error")
-            response = MagicMock()
-            response.choices = [MagicMock()]
-            response.choices[0].message.content = "Success after retry"
-            return response
-
-        monkeypatch.setattr("litellm.completion", mock_completion)
-
+    def test_rag_complete_input_filter_not_retried(self, mock_env):
+        """Filtro de entrada (HTTP 400) → 1 llamada HTTP, `entrada`, sin reintento (FR-011)."""
         adapter = SimpleRAGAdapter()
         messages = [{"role": "user", "content": "test"}]
 
-        result = adapter._call_llm_with_retry(messages, max_retries=2)
+        with intercept_httpx(_payload("azure_400_content_filter_canonico")) as calls:
+            with pytest.raises(LLMCallFailure) as exc_info:
+                adapter._complete(messages)
 
-        assert result == "Success after retry"
-        assert attempt == 2
+        assert len(calls) == 1
+        assert exc_info.value.failure.clase.value == "entrada"
+        assert exc_info.value.failure.rol == "task"
 
-    def test_rag_call_llm_with_retry_all_fail(self, mock_env, monkeypatch):
-        """3 retries all fail → returns None."""
-
-        def mock_completion(*args, **kwargs):
-            raise Exception("content_filter persistent error")
-
-        monkeypatch.setattr("litellm.completion", mock_completion)
-
+    def test_rag_complete_output_filter_not_retried(self, mock_env):
+        """Filtro de salida (HTTP 200 sin texto) → 1 llamada HTTP, `filtro_salida`."""
         adapter = SimpleRAGAdapter()
         messages = [{"role": "user", "content": "test"}]
 
-        result = adapter._call_llm_with_retry(messages, max_retries=2)
+        with intercept_httpx(_payload("azure_200_content_filter_vacio")) as calls:
+            with pytest.raises(LLMCallFailure) as exc_info:
+                adapter._complete(messages)
 
-        assert result is None
+        assert len(calls) == 1
+        assert exc_info.value.failure.clase.value == "filtro_salida"
+
+    def test_rag_judge_uses_judge_role(self, mock_env, monkeypatch):
+        """El juez llama con rol `judge` (D2), la tarea con rol `task`."""
+        roles = []
+
+        def fake_complete_text(kwargs, messages, role):
+            roles.append(role)
+            return "PUNTAJE: 1.0\nRAZON: ok" if role == "judge" else "Paris"
+
+        monkeypatch.setattr(
+            "gepa_standalone.adapters.simple_rag_adapter.complete_text", fake_complete_text
+        )
+
+        adapter = SimpleRAGAdapter()
+        result = adapter.evaluate(
+            [{"question": "q", "context": "c", "answer": "Paris"}], {"system_prompt": "..."}
+        )
+
+        assert roles == ["task", "judge"]
+        assert result.scores == [1.0]
+
+    def test_rag_evaluate_run_aborted_propagates_without_http(self, mock_env, monkeypatch):
+        """Contador abortado → `RunAborted` sale del adapter y no llama al LLM (FR-006)."""
+        mock_completion = MagicMock(return_value=make_completion_response("x"))
+        monkeypatch.setattr("litellm.completion", mock_completion)
+        tracker = get_failure_tracker()
+        tracker.abort(LLMFailure(FailureClass.configuracion, "task", "AuthenticationError"), "test")
+
+        adapter = SimpleRAGAdapter()
+        with pytest.raises(RunAborted):
+            adapter.evaluate(
+                [{"question": "q", "context": "c", "answer": "a"}], {"system_prompt": "..."}
+            )
+
+        assert mock_completion.call_count == 0
 
     def test_rag_evaluate_with_judge_valid_score(self, mock_env, monkeypatch):
         """Judge returns 'Score: 0.8\nReason: ...' → 0.8."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "PUNTAJE: 0.75\nRAZON: Good but missing detail"
             return response
 
@@ -767,8 +782,7 @@ class TestSimpleRAGAdapter:
         """Judge without 'Score:' → score 0.0."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = "This is wrong format"
             return response
 
@@ -780,18 +794,20 @@ class TestSimpleRAGAdapter:
         assert score == 0.0
 
     def test_rag_evaluate_with_judge_content_filtered(self, mock_env, monkeypatch):
-        """Judge blocked → score 0.0 with reason."""
-
-        def mock_completion(*args, **kwargs):
-            raise Exception("content_filter blocked judge")
-
-        monkeypatch.setattr("litellm.completion", mock_completion)
-
+        """Juez bloqueado por filtro de entrada → 1 llamada, sin reintento, falla `entrada`
+        del rol `judge` en la razon. Hasta 3d el juez sigue puntuando 0.0 (luego NE)."""
+        # El juez usa la config de reflexion: mismo proveedor que el payload (Azure)
+        monkeypatch.setenv("LLM_MODEL_REFLECTION", "azure/gpt-4.1-mini")
         adapter = SimpleRAGAdapter()
-        score, reason = adapter._evaluate_with_judge("q", "gt", "gen")
 
+        with intercept_httpx(_payload("azure_400_content_filter_canonico")) as calls:
+            score, reason = adapter._evaluate_with_judge("q", "gt", "gen")
+
+        assert len(calls) == 1
         assert score == 0.0
-        assert "Juez bloqueado" in reason
+        assert "Error del Juez" in reason
+        assert "rol=judge" in reason
+        assert "clase=entrada" in reason
 
     def test_rag_sanitize_for_reflection(self):
         """Replaces problematic terms with [REDACTED] or safe alternatives."""
@@ -923,8 +939,7 @@ class TestSimpleRAGAdapter:
         """capture_traces=True returns trajectories."""
 
         def mock_completion(*args, **kwargs):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             messages = kwargs.get("messages", [])
             system_msg = messages[0]["content"] if messages else ""
             if "evaluador" not in system_msg.lower():
@@ -951,45 +966,20 @@ class TestSimpleRAGAdapter:
         assert len(result.trajectories) == 1
         assert "judge_feedback" in result.trajectories[0]
 
-    def test_rag_none_scores_excluded(self, mock_env, monkeypatch):
-        """Scores None (content filter) not included in batch final."""
-        # This test verifies the current behavior where content-filtered
-        # examples get score 0.0, not None. The adapter always appends a score.
+    def test_rag_input_filtered_example_keeps_its_score_slot(self, mock_env):
+        """Tarea bloqueada por filtro de entrada → el ejemplo conserva su lugar con score
+        0.0 y 1 sola llamada HTTP (sin el reintento viejo por content_filter).
 
-        def mock_completion(*args, **kwargs):
-            raise Exception("content_filter error")
-
-        monkeypatch.setattr("litellm.completion", mock_completion)
-
-        adapter = SimpleRAGAdapter()
-        batch = [{"question": "q", "context": "c", "answer": "a"}]
-        candidate = {"system_prompt": "..."}
-
-        result = adapter.evaluate(batch, candidate)
-
-        # Content-filtered example gets score 0.0 (not None)
-        assert len(result.scores) == 1
-        assert result.scores[0] == 0.0
-
-    def test_rag_all_content_filtered_raises(self, mock_env, monkeypatch):
-        """If all examples → technical error → no scores → should not raise.
-
-        Note: Current implementation doesn't raise RuntimeError for RAG
-        when all fail technically because it appends 0.0 scores.
-        This test documents current behavior.
+        Comportamiento vigente hasta 3c, que lo convierte en NE / `entrada_candidato`.
         """
-
-        def mock_completion(*args, **kwargs):
-            raise Exception("content_filter error")
-
-        monkeypatch.setattr("litellm.completion", mock_completion)
-
         adapter = SimpleRAGAdapter()
         batch = [{"question": "q", "context": "c", "answer": "a"}]
         candidate = {"system_prompt": "..."}
 
-        # Should not raise because it appends score 0.0 for errors
-        result = adapter.evaluate(batch, candidate)
+        with intercept_httpx(_payload("azure_400_content_filter_canonico")) as calls:
+            result = adapter.evaluate(batch, candidate)
+
+        assert len(calls) == 1
         assert len(result.scores) == 1
         assert result.scores[0] == 0.0
 
@@ -1003,8 +993,7 @@ class TestExtractorFieldConfigs:
 
     def _adapter_returning(self, monkeypatch, payload, **kwargs):
         def mock_completion(*_a, **_k):
-            response = MagicMock()
-            response.choices = [MagicMock()]
+            response = make_completion_response()
             response.choices[0].message.content = json.dumps(payload)
             return response
 

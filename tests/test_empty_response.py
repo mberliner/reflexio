@@ -1,8 +1,10 @@
 """
-SPEC-103 FR-009 (2b): respuesta sin texto en los caminos LiteLLM.
+SPEC-103 FR-009 (2b) y SPEC-104 (2a): respuesta sin texto en los caminos LiteLLM.
 
 Cubre el helper `response_text`, `call_llm`, `get_lm_function` (tarea y
-reflexion), los adapters de gepa_standalone y el juez de RAG.
+reflexion), los adapters de gepa_standalone y el juez de RAG. Desde SPEC-104 2a
+la respuesta sin texto sale de la llamada comun como `EmptyResponseError` con la
+clase de capa 1 de su `finish_reason` normalizado por LiteLLM.
 """
 
 import logging
@@ -20,18 +22,21 @@ from shared.llm import (
     LLMConfig,
     LLMConfigError,
     LLMConnectionError,
+    get_failure_tracker,
     response_text,
 )
+from tests.conftest import make_completion_response
 
-EMPTY_CASES = [(None, "max_tokens"), ("", "refusal"), ("   \n", "max_tokens")]
+# (contenido, finish_reason normalizado, clase de capa 1 esperada)
+EMPTY_CASES = [
+    (None, "length", "presupuesto"),
+    ("", "stop", "sin_texto"),
+    ("   \n", "content_filter", "filtro_salida"),
+]
 
 
 def _response(content, finish_reason="stop"):
-    response = MagicMock()
-    response.choices = [MagicMock()]
-    response.choices[0].message.content = content
-    response.choices[0].finish_reason = finish_reason
-    return response
+    return make_completion_response(content, finish_reason)
 
 
 def _patch_completion(monkeypatch, content, finish_reason="stop"):
@@ -42,8 +47,8 @@ class TestResponseTextHelper:
     def test_returns_content_unchanged(self):
         assert response_text(_response(" hola "), "task") == " hola "
 
-    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
-    def test_empty_raises_with_cause(self, content, reason, caplog):
+    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
+    def test_empty_raises_with_cause(self, content, reason, clase, caplog):
         with caplog.at_level(logging.WARNING), pytest.raises(EmptyResponseError) as exc_info:
             response_text(_response(content, reason), "reflection")
         assert exc_info.value.role == "reflection"
@@ -57,20 +62,25 @@ class TestResponseTextHelper:
 
 class TestLmFunctions:
     @pytest.mark.parametrize("role", ["task", "reflection"])
-    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
-    def test_get_lm_function_raises(self, mock_env, monkeypatch, role, content, reason):
+    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
+    def test_get_lm_function_raises(self, mock_env, monkeypatch, role, content, reason, clase):
         _patch_completion(monkeypatch, content, reason)
         func = LLMConfig.from_env("task").get_lm_function(role=role)
         with pytest.raises(EmptyResponseError) as exc_info:
             func("hola")
         assert exc_info.value.role == role
         assert exc_info.value.finish_reason == reason
+        assert exc_info.value.failure.clase.value == clase
 
-    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
-    def test_call_llm_raises(self, mock_env, monkeypatch, content, reason):
+    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
+    def test_call_llm_raises(self, mock_env, monkeypatch, content, reason, clase, caplog):
         _patch_completion(monkeypatch, content, reason)
-        with pytest.raises(EmptyResponseError):
+        with caplog.at_level(logging.WARNING), pytest.raises(EmptyResponseError) as exc_info:
             call_llm("hola", model_name="task")
+        assert exc_info.value.failure.clase.value == clase
+        # SPEC-103 FR-009: la causa de la respuesta sin texto sigue registrada
+        assert "rol=task" in caplog.text
+        assert reason in caplog.text
 
     def test_call_llm_returns_text(self, mock_env, monkeypatch):
         _patch_completion(monkeypatch, "ok")
@@ -78,11 +88,12 @@ class TestLmFunctions:
 
 
 class TestAdapters:
-    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
+    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
     @pytest.mark.parametrize("traces", [False, True])
     def test_classifier_scores_zero_and_logs_cause(
-        self, mock_env, monkeypatch, capsys, caplog, content, reason, traces
+        self, mock_env, monkeypatch, capsys, caplog, content, reason, clase, traces
     ):
+        # Comportamiento vigente hasta 3c (SPEC-103 FR-009): score 0.0; 3c lo pasa a NE.
         calls = iter([_response(content, reason), _response("greeting")])
         monkeypatch.setattr("litellm.completion", lambda *a, **k: next(calls))
         adapter = SimpleClassifierAdapter(valid_classes=["greeting", "farewell"])
@@ -98,28 +109,25 @@ class TestAdapters:
         if traces:
             assert len(result.trajectories) == len(batch)
 
-    def test_classifier_technical_error_still_discarded(self, mock_env, monkeypatch):
-        calls = iter([RuntimeError("boom"), _response("greeting")])
-
-        def fake(*a, **k):
-            item = next(calls)
-            if isinstance(item, Exception):
-                raise item
-            return item
-
-        monkeypatch.setattr("litellm.completion", fake)
+    def test_classifier_unclassified_error_aborts_run(self, mock_env, monkeypatch):
+        # SPEC-104 regla 3: una excepcion no clasificada es `configuracion` y fija el
+        # aborto; la llamada siguiente no llega al LLM. Que el adapter descarte los
+        # ejemplos (D-019) en vez de propagar `RunAborted` lo corrigen 3c y 4b.
+        completion = MagicMock(side_effect=[RuntimeError("boom"), _response("greeting")])
+        monkeypatch.setattr("litellm.completion", completion)
         adapter = SimpleClassifierAdapter(valid_classes=["greeting"])
         batch = [{"text": "x", "label": "greeting"}, {"text": "hi", "label": "greeting"}]
 
-        result = adapter.evaluate(batch, {"system_prompt": "p"})
+        with pytest.raises(RuntimeError, match="Todos los ejemplos fallaron"):
+            adapter.evaluate(batch, {"system_prompt": "p"})
 
-        # D-019: el error tecnico descarta el ejemplo (len(outputs) != len(batch)).
-        assert result.scores == [1.0]
+        assert completion.call_count == 1
+        assert get_failure_tracker().aborted
 
-    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
+    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
     @pytest.mark.parametrize("traces", [False, True])
     def test_sql_scores_zero_and_logs_cause(
-        self, mock_env, monkeypatch, caplog, content, reason, traces
+        self, mock_env, monkeypatch, caplog, content, reason, clase, traces
     ):
         calls = iter([_response(content, reason), _response("SELECT 1")])
         monkeypatch.setattr("litellm.completion", lambda *a, **k: next(calls))
@@ -136,27 +144,22 @@ class TestAdapters:
         if traces:
             assert len(result.trajectories) == len(batch)
 
-    def test_sql_technical_error_still_discarded(self, mock_env, monkeypatch):
-        calls = iter([RuntimeError("boom"), _response("SELECT 1")])
-
-        def fake(*a, **k):
-            item = next(calls)
-            if isinstance(item, Exception):
-                raise item
-            return item
-
-        monkeypatch.setattr("litellm.completion", fake)
+    def test_sql_unclassified_error_aborts_run(self, mock_env, monkeypatch):
+        # Igual que en el clasificador: `configuracion` aborta (3c y 4b ajustan el adapter).
+        completion = MagicMock(side_effect=[RuntimeError("boom"), _response("SELECT 1")])
+        monkeypatch.setattr("litellm.completion", completion)
         adapter = SimpleSQLAdapter()
         ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
         batch = [{"question": "a", "extracted": ex}, {"question": "b", "extracted": ex}]
 
-        result = adapter.evaluate(batch, {"system_prompt": "p"})
+        with pytest.raises(RuntimeError, match="Todos los ejemplos fallaron"):
+            adapter.evaluate(batch, {"system_prompt": "p"})
 
-        # D-019: el error tecnico descarta el ejemplo.
-        assert result.scores == [1.0]
+        assert completion.call_count == 1
+        assert get_failure_tracker().aborted
 
     def test_extractor_scores_zero(self, mock_env, monkeypatch):
-        _patch_completion(monkeypatch, "", "refusal")
+        _patch_completion(monkeypatch, "", "stop")
         adapter = SimpleExtractorAdapter(required_fields=["name"])
         batch = [{"text": "x", "extracted": {"name": "Ana"}}]
 
@@ -165,9 +168,9 @@ class TestAdapters:
         assert result.scores == [0.0]
         assert len(result.outputs) == 1
 
-    @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
+    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
     def test_rag_task_empty_scores_zero_not_content_filter(
-        self, mock_env, monkeypatch, content, reason
+        self, mock_env, monkeypatch, content, reason, clase
     ):
         _patch_completion(monkeypatch, content, reason)
         adapter = SimpleRAGAdapter()
@@ -180,14 +183,16 @@ class TestAdapters:
         assert reason in str(result.outputs)
 
     def test_rag_judge_empty_names_judge(self, mock_env, monkeypatch, caplog):
-        _patch_completion(monkeypatch, None, "max_tokens")
+        _patch_completion(monkeypatch, None, "length")
         adapter = SimpleRAGAdapter()
         with caplog.at_level(logging.WARNING):
             score, feedback = adapter._evaluate_with_judge("q", "gt", "gen")
 
         assert score == 0.0
         assert "Error del Juez" in feedback
-        assert "rol=juez" in caplog.text
+        # Rol del contador (SPEC-104 D2): `judge`, no `juez`
+        assert "rol=judge" in caplog.text
+        assert "finish_reason=length" in caplog.text
 
     def test_rag_judge_config_error_propagates(self, mock_env, monkeypatch):
         adapter = SimpleRAGAdapter()
@@ -195,7 +200,7 @@ class TestAdapters:
         def raise_config_error(*args, **kwargs):
             raise LLMConfigError("invalida", "anthropic/claude-opus-5-5", "LLM_EFFORT_TASK")
 
-        monkeypatch.setattr(adapter, "_call_llm_with_retry", raise_config_error)
+        monkeypatch.setattr(adapter, "_complete", raise_config_error)
 
         with pytest.raises(LLMConfigError):
             adapter._evaluate_with_judge("q", "gt", "gen")

@@ -35,7 +35,7 @@ def response_text(response: Any, role: str) -> str:
 
     Args:
         response: Respuesta de `litellm.completion`.
-        role: Rol que hizo la llamada ("task", "reflection", "juez").
+        role: Rol que hizo la llamada ("task", "reflection", "judge").
     """
     from .errors import EmptyResponseError
 
@@ -46,6 +46,25 @@ def response_text(response: Any, role: str) -> str:
         log_empty_response(role, finish_reason)
         raise EmptyResponseError(role, finish_reason)
     return content
+
+
+def complete_text(kwargs: dict[str, Any], messages: list[dict[str, Any]], role: str) -> str:
+    """
+    Llamada comun a LiteLLM (SPEC-104, D3, FR-001): delega en `checked_completion`
+    (`num_retries=0`, reintento propio de infraestructura, clasificacion de la
+    respuesta) y registra la causa de una respuesta sin texto (SPEC-103, FR-009).
+
+    Es el camino de los tres lugares que llaman al LLM sin DSPy (`get_lm_function`,
+    `call_llm` y el adapter de RAG); recibe los kwargs ya restringidos.
+    """
+    from .call import checked_completion
+    from .errors import EmptyResponseError
+
+    try:
+        return checked_completion(kwargs, messages, role)
+    except EmptyResponseError as exc:
+        log_empty_response(role, exc.finish_reason)
+        raise
 
 
 def is_empty_text(content: Any) -> bool:
@@ -586,16 +605,12 @@ class LLMConfig:
         """
         import litellm
 
-        from .usage import record_usage
-
         litellm.drop_params = True
         kwargs = self.to_kwargs()
 
         def lm_func(prompt: str) -> str:
             """Call LLM with prompt and return response text."""
-            response = litellm.completion(messages=[{"role": "user", "content": prompt}], **kwargs)
-            record_usage(role, response)
-            return response_text(response, role)
+            return complete_text(kwargs, [{"role": "user", "content": prompt}], role)
 
         return lm_func
 

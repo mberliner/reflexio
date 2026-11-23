@@ -14,6 +14,7 @@ import pytest
 from gepa_standalone.config_schema import ConfigValidator
 from gepa_standalone.data.data_loader import load_gepa_data
 from shared.paths import get_paths
+from tests.conftest import make_completion_response
 
 # ==================== Fixtures ====================
 
@@ -154,10 +155,9 @@ class TestGEPAAdapterEvaluation:
         from gepa_standalone.adapters.simple_classifier_adapter import SimpleClassifierAdapter
 
         # Mock litellm to always return "greeting"
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "greeting"
-        monkeypatch.setattr("litellm.completion", MagicMock(return_value=mock_response))
+        monkeypatch.setattr(
+            "litellm.completion", MagicMock(return_value=make_completion_response("greeting"))
+        )
 
         adapter = SimpleClassifierAdapter(
             valid_classes=["greeting", "farewell"],
@@ -183,9 +183,7 @@ class TestGEPAAdapterEvaluation:
         call_count = {"n": 0}
 
         def mock_completion(**kwargs):
-            resp = MagicMock()
-            resp.choices = [MagicMock()]
-            resp.choices[0].message.content = responses[call_count["n"]]
+            resp = make_completion_response(responses[call_count["n"]])
             call_count["n"] += 1
             return resp
 
@@ -218,10 +216,9 @@ class TestGEPAEndToEnd:
         from gepa_standalone.adapters.simple_classifier_adapter import SimpleClassifierAdapter
 
         # Mock litellm
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "greeting"
-        monkeypatch.setattr("litellm.completion", MagicMock(return_value=mock_response))
+        monkeypatch.setattr(
+            "litellm.completion", MagicMock(return_value=make_completion_response("greeting"))
+        )
 
         # 1. Validate config
         errors = ConfigValidator.validate(gepa_config)

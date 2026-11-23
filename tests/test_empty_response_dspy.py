@@ -1,5 +1,5 @@
 """
-SPEC-103 FR-009 (2c): respuesta sin texto en el camino DSPy.
+SPEC-103 FR-009 (2c) y SPEC-104 (2a): respuesta sin texto en el camino DSPy.
 
 `LLMConfig.get_dspy_lm()` devuelve un `CheckedLM` (D8). Se verifica sin red,
 contra dspy 3.2.1 y GEPA 0.0.27, interceptando `litellm_completion` de
@@ -187,12 +187,14 @@ class TestCheckedLM:
         assert f"rol=task, finish_reason={reason}" in caplog.text
         assert len(lm.history) == 1
 
-    def test_task_empty_reaches_program_after_json_fallback(self, monkeypatch, task_lm_context):
-        """La excepcion llega intacta al programa; cuesta 3 llamadas (fallback JSONAdapter)."""
+    def test_task_empty_reaches_program_without_json_fallback(self, monkeypatch, task_lm_context):
+        """La excepcion llega intacta al programa con 1 sola llamada: la falla de
+        `CheckedLM` corta el fallback ChatAdapter -> JSONAdapter (SPEC-104 SC-009)."""
         calls = _patch_dspy_completion(monkeypatch, lambda r: (None, "length"), None)
-        with pytest.raises(EmptyResponseError):
+        with pytest.raises(EmptyResponseError) as exc_info:
             _plain_student()(question="q0")
-        assert calls["task"] == 3
+        assert calls["task"] == 1
+        assert exc_info.value.failure.clase.value == "presupuesto"
 
     def test_task_bad_format_is_still_parse_error(self, monkeypatch, task_lm_context):
         """Un error de formato real no se confunde con la respuesta sin texto."""

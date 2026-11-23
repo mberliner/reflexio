@@ -6,11 +6,14 @@ import csv
 import json
 from unittest.mock import MagicMock
 
+import litellm
 import openai._base_client as openai_base_client
 import pytest
 from litellm.llms.azure.common_utils import BaseAzureLLM
 from litellm.llms.custom_httpx.http_handler import HTTPHandler
 from openai.types.chat import ChatCompletion
+
+from shared.llm.failures import get_failure_tracker
 
 LLM_ENV_VARS = [
     "LLM_MODEL_TASK",
@@ -20,6 +23,50 @@ LLM_ENV_VARS = [
     "LLM_API_VERSION",
     "LLM_CACHE",
 ]
+
+
+def make_completion_response(
+    content: str | None = "OK",
+    finish_reason: str = "stop",
+    prompt_tokens: int = 10,
+    completion_tokens: int = 5,
+    model: str = "test-model",
+) -> litellm.ModelResponse:
+    """
+    Respuesta real de `litellm.completion` (SPEC-104, 2a): `litellm.ModelResponse`
+    con un choice, `finish_reason` y `usage`, sin `refusal`.
+
+    Los mocks de `litellm.completion` MUST usar este helper y no `MagicMock`: la
+    clasificacion de la capa 1 (`classify_response`) lee `finish_reason` y
+    `message.refusal`, y un `MagicMock` tiene ambos atributos truthy, lo que no
+    refleja ninguna respuesta real.
+    """
+    return litellm.ModelResponse(
+        model=model,
+        choices=[
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": finish_reason,
+            }
+        ],
+        usage={
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        },
+    )
+
+
+@pytest.fixture(autouse=True)
+def reset_failure_tracker():
+    """
+    Contador de fallas limpio en cada test (SPEC-104): es un singleton de modulo y
+    una falla `configuracion` de un test fija el aborto para los siguientes.
+    """
+    get_failure_tracker().reset()
+    yield
+    get_failure_tracker().reset()
 
 
 @pytest.fixture
@@ -72,12 +119,8 @@ def sample_csv_no_split(tmp_path):
 
 @pytest.fixture
 def mock_litellm(monkeypatch):
-    """Mock litellm.completion returning a response with content='OK'."""
-    mock_response = MagicMock()
-    mock_response.choices = [MagicMock()]
-    mock_response.choices[0].message.content = "OK"
-
-    mock_completion = MagicMock(return_value=mock_response)
+    """Mock litellm.completion returning a real response with content='OK'."""
+    mock_completion = MagicMock(return_value=make_completion_response("OK"))
     monkeypatch.setattr("litellm.completion", mock_completion)
     return mock_completion
 
