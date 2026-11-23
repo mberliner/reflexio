@@ -46,7 +46,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | hecho (4fc3328) |
 | 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | hecho (c01c5dd) |
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | hecho (869fb92) |
-| | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | hecho (este commit) |
+| | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | hecho (2a15cde) |
 | | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | pendiente |
 | Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | pendiente |
 
@@ -840,14 +840,11 @@ o al diff solo cuando un control falla.
 ## Proxima sesion
 
 Estado al 2026-11-23: fases 1 a 5, 6a y 6b `hecho`; quedan 6c y Cierre.
-6a estimo USD 6.3 (peor caso USD 79) sin YAML de verificacion.
+6b gasto USD 1.14 en las 14 corridas, sin errores 4xx. 6c arranca por las
+observaciones del control de 6b.
 
 - Antes de arrancar: renovar el login de `claude` (`claude auth login`; la
   sesion actual vence entre el 2026-11-24 y el 2026-11-27).
-- 6b, sesion interactiva Sonnet 5.5 (gasta API real, tope USD 10 de SC-003):
-  "Implementar SPEC-103 subfase 6b segun
-  docs/plans/PLAN_SPEC-103_proveedor_anthropic.md". Seguir el orden y las
-  reglas de corte del Resultado de 6a.
 - 6c y Cierre: Opus 5.5, interactivo. El Cierre arranca por los puntos
   anotados en su seccion.
 - Deudas abiertas por esta spec: D-019 y D-020 (`historial/sdd.md`).
