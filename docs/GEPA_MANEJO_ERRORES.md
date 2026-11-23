@@ -178,8 +178,25 @@ nunca corta la corrida. Lo usan `get_lm_function`, `call_llm` y
 | Reflexion | `get_lm_function(role="reflection")` lanza la excepcion; GEPA la atrapa y saltea la iteracion |
 
 En el juez de RAG, un `LLMConnectionError` (incluido `LLMConfigError`) se
-propaga y corta la corrida, igual que en los demas adapters. El camino DSPy
-(`get_dspy_lm`) es subfase 2c.
+propaga y corta la corrida, igual que en los demas adapters.
+
+En `dspy_gepa_poc`, `get_dspy_lm()` devuelve `CheckedLM`
+(`shared/llm/dspy_lm.py`), que registra la causa y lanza `EmptyResponseError`
+en todo rol. `ReflexioDeclarativa.create_module_and_metric` envuelve el
+programa y la metrica (`dspy_gepa_poc/empty_response.py`); lo usan `dspy.GEPA`,
+los `Evaluate` de `reflexio_declarativa.py` y `scripts/baseline_only.py`.
+
+| Rol (DSPy) | Conducta |
+|---|---|
+| Tarea | El `forward` envuelto devuelve una `EmptyResponsePrediction` (campos en None) y la metrica envuelta la puntua 0.0 (con la causa como feedback para la reflexion). No cuenta para `max_errors`: un `Evaluate` con mas de 10 respuestas sin texto no se cancela. Cuesta 3 llamadas (`ChatAdapter` reintenta con `JSONAdapter`) |
+| Reflexion | `dspy.GEPA` atrapa la excepcion y saltea la iteracion, sin candidato con instruccion vacia |
+
+Un error tecnico real (red, auth) o de formato (`AdapterParseError`) no se
+envuelve: sigue su curso como antes (cuenta para `max_errors` de `Evaluate`; en
+la ruta con trazas de `dspy.GEPA` el de formato se vuelve `FailedPrediction`). El envoltorio no queda en
+`optimized_program.json` (solo cambia la clase; el arbol de predictores es el
+mismo). La inferencia directa (`run_inference.py` y scripts sin `Evaluate`) no
+usa el envoltorio y corta ante una respuesta sin texto (deuda D-020).
 
 Nota: un error tecnico distinto (`except Exception`) en clasificador y SQL sigue
 descartando el ejemplo (deuda D-019 en `historial/sdd.md`); solo la respuesta

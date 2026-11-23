@@ -167,6 +167,14 @@ Notas de la matriz:
     por accidente (`.strip()` sobre `None` en GEPA, `TypeError` en
     `DspyAdapter.stripped_lm_call`), pero sin causa legible. Si D-018 actualiza
     GEPA/DSPy, este comportamiento MUST reverificarse.
+  - Nota de implementacion (2c, RESOLUCION B-2c-1): en `dspy_gepa_poc` la tarea
+    tambien lanza `EmptyResponseError` y el envoltorio del programa
+    (`dspy_gepa_poc/empty_response.py`) la convierte en prediccion fallida con
+    score 0.0 en `dspy.GEPA` y en los `Evaluate` de `reflexio_declarativa.py` y
+    `scripts/baseline_only.py`. Excepcion aceptada: la inferencia directa
+    (`run_inference.py` y scripts sin `Evaluate`) corta ante una respuesta sin
+    texto (deuda D-020). Costo: `ChatAdapter` reintenta con `JSONAdapter`, asi
+    que una respuesta de tarea sin texto cuesta 3 llamadas.
 - FR-010 `describe()` MUST mostrar los parametros efectivos enviados:
   `temperature` enviada u omitida, effort, modo de razonamiento y `max_tokens`
   final, indicando cuando un valor de config fue ignorado o elevado. Cuando un
@@ -297,7 +305,7 @@ Notas de la matriz:
 | FR-006 | idem FR-002; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-007 | `LLMConfig.to_kwargs`, `LLMConfig.validate`, `LLMConfig.validate_connection`; `tests/test_anthropic_matrix.py` (vigente) |
 | FR-008 | `LLMConfig.from_env` + `_check_params`; `tests/test_anthropic_matrix.py` (vigente) |
-| FR-009 | `get_lm_function`, `get_dspy_lm` (LM de reflexion para `dspy.GEPA`), `call_llm`, `gepa_standalone/adapters/` (classifier, sql, rag, extractor), metricas DSPy (`dspy_gepa_poc/metrics.py`), `docs/GEPA_MANEJO_ERRORES.md`; test `tests/test_empty_response.py` (vigente en los caminos LiteLLM, en todos los adapters, tras 2b-fix; camino DSPy pendiente 2c) |
+| FR-009 | `get_lm_function`, `get_dspy_lm` (`shared/llm/dspy_lm.py::CheckedLM`, tarea y reflexion), `call_llm`, `gepa_standalone/adapters/` (classifier, sql, rag, extractor), envoltorio de programa y metrica DSPy (`dspy_gepa_poc/empty_response.py`, aplicado en `ReflexioDeclarativa.create_module_and_metric`), `docs/GEPA_MANEJO_ERRORES.md`; tests `tests/test_empty_response.py` y `tests/test_empty_response_dspy.py` (vigente en LiteLLM y DSPy tras 2c; inferencia directa fuera, D-020) |
 | FR-010 | `LLMConfig.describe`, `gepa_standalone/universal_optimizer.py` (reporte por adapter); test (pendiente) |
 | FR-011 | `shared/analysis/roi_calculator.py` (`DEFAULT_PRICING`, `normalize_model`, `get_model_pricing`), `shared/llm/usage.py`, `docs/ANALISIS_UTILIDADES.md`; `tests/test_shared_analysis.py` (pendiente) |
 | FR-012 | `shared/logging/metadata.py`, `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py` (`save_results`), `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md` (pendiente) |

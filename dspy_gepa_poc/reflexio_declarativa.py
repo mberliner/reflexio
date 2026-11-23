@@ -8,6 +8,7 @@ from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc import AppConfig, CSVDataLoader, GEPAOptimizer, LLMConfig, LLMConnectionError
 from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
+from dspy_gepa_poc.empty_response import tolerate_empty_responses, zero_on_empty_response
 from dspy_gepa_poc.metrics import (
     create_dynamic_metric,
     create_dynamic_metric_with_feedback,
@@ -180,7 +181,17 @@ class ReflexioDeclarativa:
         )
 
     def create_module_and_metric(self):
-        """Factory method to instantiate the correct Module and Metric."""
+        """Factory method to instantiate the correct Module and Metric.
+
+        El programa y la metrica quedan envueltos para la respuesta sin texto
+        (SPEC-103 FR-009, `dspy_gepa_poc/empty_response.py`): asi la usan
+        `dspy.GEPA`, los `Evaluate` de `run()` y `scripts/baseline_only.py`.
+        """
+        self._build_module_and_metric()
+        self.student = tolerate_empty_responses(self.student)
+        self.metric = zero_on_empty_response(self.metric)
+
+    def _build_module_and_metric(self):
         module_type = self.config.raw_config["module"]["type"]
         log_info(f"Creating module for type: {module_type}")
 

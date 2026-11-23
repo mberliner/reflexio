@@ -300,37 +300,28 @@ class TestLLMConfigValidate:
 
 
 class TestLLMConfigGetDspyLM:
-    def test_creates_dspy_lm(self, monkeypatch):
-        import sys
-
-        mock_lm_class = MagicMock()
-        mock_dspy = MagicMock(LM=mock_lm_class)
-        monkeypatch.setitem(sys.modules, "dspy", mock_dspy)
+    def test_creates_dspy_lm(self):
+        import dspy
 
         config = LLMConfig(
             model="azure/gpt-4",
             api_key="key",
             api_base="https://base.com",
         )
-        config.get_dspy_lm()
+        lm = config.get_dspy_lm()
 
-        mock_lm_class.assert_called_once()
-        call_kwargs = mock_lm_class.call_args[1]
-        assert call_kwargs["model"] == "azure/gpt-4"
-        assert "cache" in call_kwargs
+        assert isinstance(lm, dspy.LM)
+        assert lm.model == "azure/gpt-4"
+        assert lm.kwargs["api_base"] == "https://base.com"
+        assert lm.role == "task"
 
-    def test_cache_passed_to_dspy(self, monkeypatch):
-        import sys
-
-        mock_lm_class = MagicMock()
-        mock_dspy = MagicMock(LM=mock_lm_class)
-        monkeypatch.setitem(sys.modules, "dspy", mock_dspy)
-
+    def test_cache_passed_to_dspy(self):
         config = LLMConfig(model="azure/gpt-4", cache=True)
-        config.get_dspy_lm()
+        assert config.get_dspy_lm().cache is True
 
-        call_kwargs = mock_lm_class.call_args[1]
-        assert call_kwargs["cache"] is True
+    def test_role_passed_to_dspy(self):
+        config = LLMConfig(model="azure/gpt-4", role="reflection")
+        assert config.get_dspy_lm().role == "reflection"
 
 
 # ==================== LLMConfig.get_lm_function ====================

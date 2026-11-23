@@ -41,13 +41,21 @@ def response_text(response: Any, role: str) -> str:
 
     choice = response.choices[0]
     content = choice.message.content
-    if content is None or not str(content).strip():
+    if is_empty_text(content):
         finish_reason = getattr(choice, "finish_reason", None)
-        logger.warning(
-            "Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason
-        )
+        log_empty_response(role, finish_reason)
         raise EmptyResponseError(role, finish_reason)
     return content
+
+
+def is_empty_text(content: Any) -> bool:
+    """True si el contenido de una respuesta es None o queda vacio tras `strip()`."""
+    return content is None or not str(content).strip()
+
+
+def log_empty_response(role: str, finish_reason: Any) -> None:
+    """Registra la causa de una respuesta sin texto (FR-009), comun a LiteLLM y DSPy."""
+    logger.warning("Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
 
 
 def _is_reasoning(model: str) -> bool:
@@ -543,13 +551,15 @@ class LLMConfig:
         For use in dspy_gepa_poc project.
 
         Returns:
-            dspy.LM instance configured with this config.
+            `CheckedLM` (subclase de dspy.LM) configurado con esta config. Revisa
+            las respuestas sin texto segun `self.role` (SPEC-103 FR-009 / D8; ver
+            `shared/llm/dspy_lm.py`).
         """
-        import dspy
+        from .dspy_lm import CheckedLM
 
         kwargs = self.to_kwargs()
         kwargs["cache"] = self.cache
-        return dspy.LM(**kwargs)
+        return CheckedLM(role=self.role, **kwargs)
 
     def get_lm_function(self, role: str = "task") -> Callable[[str], str]:
         """

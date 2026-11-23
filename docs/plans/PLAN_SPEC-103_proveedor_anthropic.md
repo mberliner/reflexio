@@ -39,7 +39,7 @@ modelos bajo prueba de la matriz de la spec.
 | 2 Caminos de llamada | 2a `SimpleRAGAdapter` y `call_llm` al punto unico (tarea y juez) | FR-002 | Sonnet 5.5 | hecho (7466c02) |
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | hecho (75a51bf) |
 | | 2b-fix Respuesta sin texto en clasificador y SQL: score 0.0, `len(outputs)` intacto | FR-009 | Sonnet 5.5 | hecho (12d7f66) |
-| | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (tarea: log; reflexion: excepcion) y verificacion contra `dspy.GEPA` | FR-009 | Opus 5.5 | pendiente |
+| | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (excepcion en tarea y reflexion, B-2c-1), envoltorio de programa/metrica en `dspy_gepa_poc` y verificacion contra `dspy.GEPA` y `Evaluate` | FR-009 | Opus 5.5 | HASH |
 | 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | pendiente |
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | pendiente |
 | 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | pendiente |
@@ -184,6 +184,8 @@ D8. Respuesta sin texto (DSPy). `get_dspy_lm()` devuelve una subclase de
 `EmptyResponseError`. Rol `task`: solo registra la causa y deja que DSPy
 falle el parseo, porque lanzar contaria para `max_errors` y podria cortar la
 corrida. 2c verifica las dos conductas contra dspy 3.2.1 y GEPA 0.0.27.
+Corregida en 2c por la RESOLUCION B-2c-1: la tarea tambien lanza y un
+envoltorio en `dspy_gepa_poc` la convierte en 0.0 (ver 2c).
 
 ## Detalle por subfase
 
@@ -440,6 +442,134 @@ Coverage mapping corregidos.
   `dspy_gepa_poc/metrics.py`.
 - Cierre: FR-009 completo; nota en la spec si alguna conducta de GEPA/DSPy
   difiere de lo que describe FR-009.
+
+Resultado de 2c (BLOQUEADO, sesion `-p` 2026-11-22; cambios en el arbol de
+trabajo, sin commit; `ci_local.sh` verde, suite 762 passed):
+
+- Implementado D8: `shared/llm/dspy_lm.py::CheckedLM` (subclase de `dspy.LM`);
+  `get_dspy_lm()` la devuelve con `role=self.role`. La revision va en
+  `_process_lm_response`, despues de que DSPy guarda la entrada en `history`,
+  para que `record_dspy_history` siga contando los tokens de la respuesta sin
+  texto (si se revisara en `forward`, la llamada se perderia del costo). Es un
+  metodo interno de dspy 3.2.1: revalidar si D-018 actualiza DSPy. Rol
+  `reflection`: log + `EmptyResponseError`; cualquier otro rol: solo log. Se
+  ignoran choices con `tool_calls`. `config.py`: `response_text` factoriza
+  `is_empty_text` y `log_empty_response` (mismo mensaje en LiteLLM y DSPy).
+- `tests/test_shared_llm.py`: los dos tests de `get_dspy_lm` mockeaban
+  `sys.modules["dspy"]`; ya no aplica (la subclase se arma sobre el dspy real).
+  Reescritos sobre el objeto devuelto, mas uno de `role`.
+- `tests/test_empty_response_dspy.py` (17, sin red, interceptando
+  `dspy.clients.lm.litellm_completion` y corriendo `dspy.GEPA` real):
+  - (a) se cumple: con `CheckedLM` la reflexion vacia saltea la iteracion, no hay
+    candidato nuevo ni evaluaciones de minibatch con otra instruccion. Guardia
+    con `dspy.LM` plano: el texto vacio SI se evalua como candidato (gasto que
+    FR-009 evita).
+  - (b) se cumple dentro de `dspy.GEPA`: la tarea vacia da `AdapterParseError`;
+    con trazas (`bootstrap_trace_data`) se vuelve `FailedPrediction` con 0.0;
+    sin trazas `Evaluate` usa `failure_score` 0.0 con `max_errors=len(batch)*100`.
+    `len(outputs)` intacto; una corrida con toda la tarea vacia termina.
+  - LiteLLM normaliza el `stop_reason` `refusal` de Anthropic a
+    `finish_reason="content_filter"`: es lo que va a aparecer en el log.
+- Hallazgo de costo (no bloquea, informar): cada respuesta de tarea sin texto
+  dispara 3 llamadas (ChatAdapter y luego los dos intentos de JSONAdapter por
+  `use_json_adapter_fallback`). Medido: 10 ejemplos vacios = 30 llamadas.
+
+BLOQUEO B-2c-1 (decision del usuario): fuera de `dspy.GEPA`, los `Evaluate` de
+`dspy_gepa_poc/reflexio_declarativa.py` (baseline sobre valset, test y
+`_eval_repeated`) usan `max_errors` por defecto (`dspy.settings.max_errors` =
+10). Medido sin red: 12 ejemplos con tarea vacia -> `Exception("Execution
+cancelled due to errors or interruption.")` al llegar a 10. Esto viola FR-009
+("MUST NOT ... interrumpir la corrida") y el remedio que preve este plan
+("ajustar la metrica en `dspy_gepa_poc/metrics.py`") no aplica: el
+`AdapterParseError` sale del programa antes de llamar a la metrica. Opciones:
+
+1. Pasar `max_errors` alto (p. ej. `len(devset) * 100`, como `DspyAdapter`) a
+   esos `Evaluate`. Simple, pero tambien deja de cortar ante errores tecnicos
+   reales (red, auth), que pasarian a puntuar 0.0: cruza con D-019.
+2. Atrapar en el modulo DSPy el `AdapterParseError` cuyo origen es una
+   respuesta sin texto y devolver una `Prediction` con campos None para que la
+   metrica puntue 0.0. No toca `max_errors`, pero hay que distinguir el vacio de
+   un error de formato real y cubrir los modulos de `flujo_intents`.
+3. Aceptar la conducta actual y anotar en FR-009 la excepcion para la
+   evaluacion fuera de GEPA (6c espera menos de 1% sin texto; con valsets de mas
+   de 1000 ejemplos el corte seria posible).
+
+Ademas, `dspy_gepa_poc/scripts/baseline_only.py` usa `Evaluate` con la misma
+conducta, y `run_inference.py` y los otros scripts llaman al programa directo
+(un `AdapterParseError` sale sin atrapar); definir si entran en el alcance.
+Al resolver: aplicar la opcion elegida, `docs/GEPA_MANEJO_ERRORES.md` (seccion
+DSPy), fila FR-009 del Coverage mapping, `ci_local.sh` y commit de 2c.
+
+RESOLUCION B-2c-1 (usuario, 2026-11-22): opcion 2, con esta correccion de D8.
+
+- D8 corregida: en rol `task` el LM envuelto tambien lanza `EmptyResponseError`
+  (con la causa en el log), en lugar de solo registrar. El tipo de excepcion
+  separa la respuesta sin texto de un error de formato real, sin heuristicas
+  sobre `AdapterParseError`.
+- Un envoltorio fino del programa DSPy (un solo lugar, en `dspy_gepa_poc`)
+  atrapa `EmptyResponseError` y devuelve una `Prediction` con los campos de
+  salida vacios/None, para que la metrica puntue 0.0. Se aplica al programa que
+  usan `dspy.GEPA` y los `Evaluate` de `reflexio_declarativa.py` (baseline,
+  test, `_eval_repeated`), asi cubre tambien los modulos de `flujo_intents`.
+  Cualquier otra excepcion sigue su curso (cuenta para `max_errors`).
+- `max_errors` no se toca.
+- Verificar de nuevo, sin red: (a) reflexion vacia sigue salteando la
+  iteracion; (b) tarea vacia = 0.0 dentro de `dspy.GEPA` y en `Evaluate` con
+  mas de 10 ejemplos vacios sin "Execution cancelled"; (c) un error tecnico
+  real sigue contando para `max_errors`. Confirmar que el envoltorio no rompe
+  `detailed_results` ni `EvaluationResult.results` (fix D-016) ni el guardado
+  del programa optimizado (el envoltorio no debe quedar en el artefacto, o
+  debe ser transparente al cargarlo).
+- Si `ChatAdapter` reintenta con `JSONAdapter` ante la excepcion (llamadas
+  extra), anotar el costo; no es bloqueante.
+- Alcance: entra `dspy_gepa_poc/scripts/baseline_only.py`. Quedan fuera
+  `run_inference.py` y los demas scripts de inferencia directa: deuda D-020 en
+  `historial/sdd.md` (ya registrada).
+- Partir de los cambios sin commitear que dejo la sesion bloqueada (no
+  descartarlos).
+
+Resultado de 2c (cierre, sesion `-p` 2026-11-22, sobre los cambios de la sesion
+bloqueada; suite 777 passed; `ci_local.sh` verde):
+
+- `CheckedLM` lanza `EmptyResponseError` en todo rol (se quito el caso "solo
+  log" de la tarea). La causa sigue en el log y la llamada en `history`.
+- Envoltorio en `dspy_gepa_poc/empty_response.py`, aplicado en un solo lugar:
+  `ReflexioDeclarativa.create_module_and_metric` (el cuerpo previo paso a
+  `_build_module_and_metric`). Asi lo usan `dspy.GEPA`, los `Evaluate` de
+  `run()` (baseline, test, `_eval_repeated`) y `scripts/baseline_only.py`, para
+  todo tipo de modulo (dynamic, rule_derived, pipeline de `flujo_intents`).
+  - `tolerate_empty_responses(program)`: copia del programa con la clase
+    cambiada a una subclase dinamica cuyo `forward` atrapa `EmptyResponseError`
+    y devuelve `EmptyResponsePrediction` (campos de salida de los predictores en
+    None). Se sobreescribe `forward` y no `__call__` porque
+    `bootstrap_trace_data` (ruta con trazas de GEPA) llama a `forward` directo.
+    Cambiar la clase (y no anidar el programa en otro modulo) conserva
+    `named_predictors`, las claves de candidatos (`candidates.json`) y el JSON
+    guardado; `deepcopy`/`reset_copy` conservan la clase.
+  - Precision sobre la RESOLUCION: los campos None no bastan para el 0.0.
+    `shared.scoring.score_field` trata None como "" (credito en campos con gold
+    vacio, p. ej. listas vacias) y la metrica simple compara `str(None)`; en
+    `rule_derived` el color derivado no es salida de un predictor. Por eso el
+    mismo modulo agrega `zero_on_empty_response(metric)`, aplicado en el mismo
+    lugar: puntua 0.0 la `EmptyResponsePrediction` sin llamar a la metrica (con
+    feedback de la causa si GEPA lo pide) y deja pasar el resto. No se toco
+    `metrics.py` ni `max_errors`.
+- Verificado sin red (`tests/test_empty_response_dspy.py`, 32):
+  (a) reflexion vacia saltea la iteracion, sin candidato ni evaluaciones
+  nuevas; (b) tarea vacia = 0.0 en `DspyAdapter.evaluate` (con y sin trazas,
+  `len(outputs)`/`trajectories` intactos), en `dspy.GEPA` con toda la tarea
+  vacia, y en `Evaluate` con 12 vacios y `max_errors` por defecto (10) sin
+  "Execution cancelled"; guardia: sin envoltorio, se cancela; (c) un error
+  tecnico (excepcion de la completion) sigue cancelando el `Evaluate`; un error
+  de formato sigue siendo `AdapterParseError`. `EvaluationResult.results` (D-016)
+  conserva una entrada por ejemplo; el programa guardado no contiene la clase
+  envuelta y se carga en el modulo sin envolver.
+- Costo (no bloquea): `ChatAdapter` atrapa la excepcion y reintenta con
+  `JSONAdapter` (dos intentos): 3 llamadas por respuesta de tarea sin texto,
+  igual que antes con el `AdapterParseError`.
+- Docs: seccion DSPy en `docs/GEPA_MANEJO_ERRORES.md`, nota de implementacion
+  en FR-009 y fila FR-009 del Coverage mapping de la spec. Fuera de alcance:
+  inferencia directa (D-020).
 
 ### 3a Precios — Sonnet 5.5
 
