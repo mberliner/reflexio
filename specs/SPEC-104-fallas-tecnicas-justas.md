@@ -320,7 +320,8 @@ Propuesta inicial, a recalibrar con la verificacion real del plan.
 | `presupuesto` | tarea, juez | 0.05 | 20 |
 | `presupuesto` | reflexion | 0.25 | 4 |
 | `infraestructura`, `sin_texto`, `filtro_salida` | tarea, juez | 0.10 | 20 |
-| `entrada_dato` | tarea | 0.10 de los casos unicos del split | 20 |
+| `entrada_dato` | tarea | 0.10 de los casos unicos intentados en tarea en la corrida | 20 casos unicos |
+| `entrada` | juez | 0.10 | 20 |
 | `formato` | juez | 0.10 | 20 |
 | cualquier clase sumada | reflexion | 0.50 | 4 |
 
@@ -423,7 +424,10 @@ se diga otra cosa.
   408/409/413/422/429/5xx/529 y errores de red; Azure, OpenAI y Anthropic)
   inyectados en el transporte HTTP, el 100% recibe la clase esperada en ambos
   subproyectos, y un error persistente produce exactamente 1 llamada HTTP si no
-  es `infraestructura` y 1 + reintentos configurados si lo es.
+  es `infraestructura` y 1 + reintentos configurados si lo es. Se mide por caso
+  evaluado, no por llamada al LM: en `dspy_gepa_poc` el fallback de adapters de
+  DSPy (`ChatAdapter` -> `JSONAdapter`) MUST NOT repetir la llamada ante una
+  falla ya clasificada.
 
 ## Escenarios (Given/When/Then)
 

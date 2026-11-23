@@ -134,7 +134,8 @@ D2. `FailureTracker` en `failures.py`, mismo patron que `shared/llm/usage.py`
   minimo). Defaults de la spec:
   `{"presupuesto": {"task": .05, "judge": .05, "reflection": .25},
   "infraestructura" | "sin_texto" | "filtro_salida": {"task": .10, "judge": .10},
-  "entrada_dato": {"task": .10}, "formato": {"judge": .10},
+  "entrada_dato": {"task": .10}, "entrada": {"judge": .10},
+  "formato": {"judge": .10},
   "total": {"reflection": .50}}`. `total` suma todas las claves del rol.
   Denominador: intentos del rol, salvo `entrada_dato`, cuyo denominador es la
   cantidad de `case_id` unicos intentados en `task` (ver "Nota de 1b", punto b).
@@ -303,7 +304,8 @@ anota como bloqueo y no commitea.
     unicos de la corrida son la union de los splits tocados. Consecuencia: un
     split chico (p. ej. test) no se evalua aislado. Si el usuario quiere tasa
     por split, hace falta pasar el split al contador desde el orquestador
-    (cambio de 3b/4b); no bloquea 1c. Tests de 1a ajustados
+    (cambio de 3b/4b); no bloquea 1c. Aprobado por el usuario el 2026-11-23:
+    casos unicos de la corrida, sin tasa por split (spec ajustada). Tests de 1a ajustados
     (`test_entrada_dato_threshold_uses_unique_cases`) y agregados
     (`test_entrada_dato_min_attempts_counts_unique_cases`,
     `test_count_keys_carry_task_attribution`).
@@ -327,16 +329,20 @@ anota como bloqueo y no commitea.
     `ContextWindowExceededError` de DSPy en `LLMCallFailure` pasaria de 1 a 3
     llamadas. El conteo no cambia (D4), pero SC-009 ("exactamente 1 llamada
     HTTP si no es `infraestructura`... en ambos subproyectos") solo se cumple a
-    nivel de `CheckedLM`, no por caso. [NEEDS CLARIFICATION: ¿SC-009 se mide
-    por llamada al LM o por caso de DSPy? Si es por caso, 2a debe hacer que
-    `CheckedLM` lance una excepcion que corte el fallback (p. ej. que
-    `LLMCallFailure` de `CheckedLM` herede del `ContextWindowExceededError` de
-    DSPy, o que el envoltorio de 3e memorice la falla del caso).] No bloquea
-    1c, que no toca `CheckedLM`; se decide en la parada posterior a 1b o en 2a.
+    nivel de `CheckedLM`, no por caso. Decidido por el usuario el 2026-11-23:
+    SC-009 se mide por caso (spec ajustada). 2a MUST hacer que la falla que
+    lanza `CheckedLM` corte el fallback: una subclase definida en
+    `shared/llm/dspy_lm.py` que herede de `LLMCallFailure` (o
+    `EmptyResponseError`) y de `dspy.utils.exceptions.ContextWindowExceededError`,
+    con un test que cuente 1 llamada HTTP por caso (1 + reintentos si es
+    `infraestructura`) a traves de `dspy.Predict`. 2a verifica por sonda que
+    ningun modulo usado en el repo trate esa excepcion de forma especial
+    (p. ej. truncado de trayectoria).
   - Hueco de la spec: la tabla de umbrales no lista `entrada` en juez (NE sin
     umbral), aunque la spec pide que todo NE quede acotado por umbrales. 1c
-    implementa la tabla tal cual. [NEEDS CLARIFICATION: ¿umbral para `entrada`
-    del juez (p. ej. 0.10 / 20 como las otras NE)?]
+    implementa la tabla tal cual. Decidido por el usuario el 2026-11-23:
+    `entrada` en juez con umbral 0.10 y minimo 20 (spec ajustada, default de D2
+    actualizado); 1c lo implementa.
 - 1b. Sin codigo de produccion: confirma o corrige D1 a D4 contra `shared/llm`,
   `dspy==3.2.1` (`dspy.LM.forward`, `_process_lm_response`) y los tests de 1a;
   fija nombres de modulo y funciones. Archivos: este plan; los tests de 1a solo
@@ -413,9 +419,10 @@ Reglas:
 - `--permission-mode acceptEdits` y `--allowedTools` son necesarios: sin ellos
   la sesion `-p` no puede editar ni correr `ci_local.sh`. No hay `python` en el
   PATH: siempre `.venv/bin/python`.
-- Las subfases que verifican internals de librerias (1b, 2b, 3b, 3e) pueden
-  necesitar leer `.venv/lib/...`; eso entra en las herramientas de lectura y no
-  requiere permisos extra.
+- Las subfases que verifican internals de librerias (2a, 2b, 3b, 3e) agregan
+  `--add-dir /datum1/dev/venvs/reflexio`: `.venv` es un symlink a ese
+  directorio, fuera del repo, y sin el flag la sesion `-p` no puede leer el
+  fuente de dspy, gepa ni litellm (paso en 1b). Alternativa: sondas con pytest.
 - Commits sin trailer `Co-Authored-By`, y sin mezclar `-n`/`-q` con
   `git commit` en el mismo comando (falso positivo del hook que bloquea saltear
   hooks).
