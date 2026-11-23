@@ -45,7 +45,7 @@ modelos bajo prueba de la matriz de la spec.
 | 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | hecho (efd8b96) |
 | | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | hecho (4fc3328) |
 | 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | hecho (c01c5dd) |
-| 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | pendiente |
+| 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | hecho (este commit) |
 | | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | pendiente |
 | | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | pendiente |
 | Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | pendiente |
@@ -673,6 +673,51 @@ verde (816 passed).
 - 6a: estimar el costo de las 14 corridas con precios de 3a y
   `max_metric_calls: 50`; si supera USD 10, crear un YAML de verificacion y
   registrarlo en `historial/sdd.md`.
+  - Corre con `claude-e -p` (Sonnet 5.5). No ejecuta corridas ni llama a la API
+    del proyecto: solo lee YAML, datasets, `shared/` y precios.
+  - Bloqueo (anotar aca y terminar) si la estimacion supera USD 10: proponer un
+    `max_metric_calls` para el YAML de verificacion sin crearlo; lo decide el
+    usuario.
+  - Bloqueo si un precio de 3a (en especial Haiku 5.5 a 0.10/0.50) no coincide
+    con la pagina oficial: anotar la diferencia sin tocar `usage.py` ni la tabla.
+  - No commitea: el supervisor commitea 6a junto con los cambios pendientes.
+  - Resultado: anotar aca la estimacion por corrida y total, con supuestos
+    (tokens por llamada, llamadas de reflexion, el factor 3 de DSPy de 2c).
+  - Resultado de 6a (2026-11-23, sin gasto de API; sin YAML de verificacion):
+    - Precios: los 5 modelos "real" (Haiku 4.5 1/5, Sonnet 4.6 3/15, Sonnet 5
+      2/10, Haiku 5.5 0.10/0.50, Sonnet 5.5 2/10 USD por MTok) coinciden con
+      la pagina oficial consultada hoy; Haiku 5.5 es correcto (0.50/2.50 solo
+      con prompts de mas de 100k tokens, que no ocurren aca). Sin diferencias.
+    - Insumos medidos: ambos YAML tienen `max_metric_calls: 50`, dataset de 30
+      filas (~96 caracteres por texto). Corridas previas de Email Urgency
+      (`run.json`): standalone 81 a 94 llamadas de tarea (~270 a 450 tokens de
+      entrada, 2 a 5 de salida) y 3 a 4 de reflexion (~450 de entrada, ~500 de
+      salida); DSPy 77 llamadas de tarea (~300 de entrada, ~16 de salida) y 3 de
+      reflexion. Costo previo con modelos Azure: USD 0.015 a 0.06 por corrida.
+    - Supuestos tipico: 100 llamadas de tarea (700 de entrada con margen del
+      30% del tokenizer nuevo, 300 de salida contando razonamiento), 5 de
+      reflexion (3000 entrada, 3000 salida). Por corrida: Haiku 4.5 0.31,
+      Sonnet 4.6 0.93, Sonnet 5 0.62, Haiku 5.5 0.03, Sonnet 5.5 0.62.
+      Total de las 14 corridas (2 subproyectos; 4 de Haiku 5.5/Sonnet 5.5 con
+      `off`): USD 6.3, por debajo del tope de USD 10.
+    - Supuestos peor caso: factor 3 de DSPy en toda la tarea (300 llamadas),
+      2000 tokens de salida por llamada de tarea, 8 reflexiones de 5000 de
+      entrada y 16000 de salida (`max_tokens` elevado). Por corrida: Haiku 4.5
+      3.89, Sonnet 4.6 11.67, Sonnet 5 7.78, Haiku 5.5 0.39, Sonnet 5.5 7.78.
+      Total: USD 79. Es una cota muy holgada: el costo real depende de los
+      tokens de razonamiento, que no estan medidos para Anthropic.
+    - Conclusion: la estimacion central no supera USD 10, asi que no se crea
+      YAML de verificacion. Riesgo para 6b (decide el usuario): como el tope es
+      MUST NOT y la cota alta lo excede, se recomienda ejecutar de menor a mayor
+      costo (Haiku 5.5, Haiku 4.5, Sonnet 5, Sonnet 5.5, Sonnet 4.6), revisar
+      `usage.cost_usd` tras cada corrida y cortar si el acumulado supera en
+      mas de 50% lo proyectado (supuestos tipicos) para las corridas hechas, o
+      si llega a USD 9 (corte duro bajo el tope). Correccion de la supervision:
+      el corte original en USD 5 cortaba antes de terminar aun con el gasto
+      esperado (USD 6.3).
+      Si la primera corrida con razonamiento de Sonnet 5.5 pasa de USD 1,
+      conviene un YAML de verificacion con `max_metric_calls: 25` (registrarlo
+      en `historial/sdd.md`).
 - 6b: 10 corridas (5 modelos "real" x 2 subproyectos) mas 4 con
   `LLM_THINKING_TASK=off` (Haiku 5.5 y Sonnet 5.5 x 2 subproyectos).
 - 6c: 0 errores 4xx, menos de 1% sin texto con causa en el log, costo sin aviso
@@ -703,13 +748,14 @@ tabla. `claude-e` es el mismo CLI con el perfil de empresa (API key propia), y
 acepta los mismos flags.
 
 - Subfases Opus 5.5: `claude -p ... --model claude-opus-5-5`
-- Subfases Sonnet 5.5: `claude -p ... --model claude-sonnet-5-5` (se dejo de
-  usar `claude-e` por falta de credito en la API key de empresa, 2026-11-22)
+- Subfases Sonnet 5.5: `claude-e -p ... --model claude-sonnet-5-5` (credito de
+  la API key de empresa repuesto y verificado el 2026-11-23; entre el
+  2026-11-22 y el 2026-11-23 se uso `claude`)
 
 ```bash
 SUB=1a   # subfase a ejecutar
 mkdir -p "$HOME/spec103_logs"   # logs fuera del repo
-claude -p "Implementar SPEC-103 subfase $SUB segun docs/plans/PLAN_SPEC-103_proveedor_anthropic.md. \
+claude-e -p "Implementar SPEC-103 subfase $SUB segun docs/plans/PLAN_SPEC-103_proveedor_anthropic.md. \
 Sesion no interactiva: si algo exige decision del usuario, no improvisar; \
 registrarlo en el plan como bloqueo, no commitear y terminar." \
   --model claude-sonnet-5-5 \
@@ -727,8 +773,9 @@ Reglas:
   nada.
 - Si una subfase deja un bloqueo, se resuelve en una sesion interactiva y se
   relanza.
-- La fase 6 (API real con tope de USD 10) y el Cierre van en sesion interactiva,
-  no en `-p`.
+- 6b (API real con tope de USD 10), 6c y el Cierre van en sesion interactiva,
+  no en `-p`. 6a no gasta API y corre con `-p` (decision del 2026-11-23) con
+  el comando de su detalle.
 
 ## Seguimiento
 
@@ -770,17 +817,15 @@ o al diff solo cuando un control falla.
 
 ## Proxima sesion
 
-Estado al 2026-11-22: fases 1 a 5 `hecho`; quedan 6a, 6b, 6c y Cierre. La
-supervision termino tras la fase 5 (parada obligatoria).
+Estado al 2026-11-23: fases 1 a 5 y 6a `hecho`; quedan 6b, 6c y Cierre.
+6a estimo USD 6.3 (peor caso USD 79) sin YAML de verificacion.
 
 - Antes de arrancar: renovar el login de `claude` (`claude auth login`; la
   sesion actual vence entre el 2026-11-24 y el 2026-11-27).
-- Fase 6, sesion interactiva Sonnet 5.5 (gasta API real, tope USD 10 de
-  SC-003): "Implementar SPEC-103 subfase 6a segun
-  docs/plans/PLAN_SPEC-103_proveedor_anthropic.md". Para estimar el costo,
-  contar que en DSPy cada respuesta de tarea sin texto cuesta 3 llamadas
-  (ver Resultado de 2c) y revisar a mano los precios cargados en 3a (Haiku 5.5
-  a 0.10/0.50 es el valor menos esperado).
+- 6b, sesion interactiva Sonnet 5.5 (gasta API real, tope USD 10 de SC-003):
+  "Implementar SPEC-103 subfase 6b segun
+  docs/plans/PLAN_SPEC-103_proveedor_anthropic.md". Seguir el orden y las
+  reglas de corte del Resultado de 6a.
 - 6c y Cierre: Opus 5.5, interactivo. El Cierre arranca por los puntos
   anotados en su seccion.
 - Deudas abiertas por esta spec: D-019 y D-020 (`historial/sdd.md`).
