@@ -35,6 +35,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-019 | `SimpleClassifierAdapter` y `SimpleSQLAdapter` descartan el ejemplo ante un error tecnico (`except Exception` -> solo `print`, sin agregar a `outputs`/`scores`). Rompe el contrato de GEPA (`gepa/core/adapter.py`: `len(outputs) == len(scores) == len(batch)`) e infla el promedio del minibatch porque el ejemplo fallido no cuenta como 0.0. `simple_extractor_adapter.py` y `simple_rag_adapter.py` ya puntuan 0.0. SPEC-103 (2b-fix) solo corrige la respuesta sin texto (FR-009); el error tecnico queda fuera de su alcance. Cambiar a 0.0 altera los scores de corridas con errores tecnicos: requiere decidir si va como fix o spec y comparar contra historico | Supervision SPEC-103 2b (2026-11-22) | Derivada a SPEC-104 (2026-11-23): no se descarta ni se puntua 0; el caso queda no evaluado y contado |
 | D-020 | Respuesta sin texto en inferencia directa de `dspy_gepa_poc` (`run_inference.py` y scripts que llaman al programa sin `Evaluate`): el `EmptyResponseError` de tarea (SPEC-103 FR-009, opcion 2 de B-2c-1) sale sin atrapar y corta el script. Fuera del alcance de SPEC-103 (decision del usuario): una corrida unica de inferencia puede fallar en forma visible. Si se quiere tolerancia, reutilizar el envoltorio de 2c | Supervision SPEC-103 2c (2026-11-22) | Abierta |
 | D-021 | Corte por `max_tokens` con texto parcial (`finish_reason=length`): ningun camino lo detecta ni lo registra; el texto truncado se puntua como completo y una reflexion truncada podria adoptarse como candidato. SC-004 de SPEC-103 quedo verificado solo para respuestas sin texto | Cierre SPEC-103 (2026-11-23) | Derivada a SPEC-104 |
+| D-023 | Limites de deteccion de LiteLLM 1.108.5 + openai 3.57.0 que SPEC-104 no puede cubrir sin parchear LiteLLM: (a) Anthropic `stop_reason="model_context_window_exceeded"` llega como `finish_reason="stop"` sin rastro (texto parcial evaluado como completo); (b) 400 de politica de Anthropic con texto no reconocido llega como `BadRequestError` sin `body` y aborta como `configuracion`; (c) bug de 422 con `openai/` + `drop_params` que devuelve `None`. Re-verificar con SC-009 de SPEC-104 en cada actualizacion de LiteLLM o del SDK de openai (relacionada con D-018) y reportar upstream si sigue | Verificacion de LiteLLM para SPEC-104 (2026-11-23) | Abierta |
 | D-022 | Acceso a simbolos privados entre modulos (severidad baja): `universal_optimizer.py` lee `adapter._judge_config` (se resuelve con el juez como rol de SPEC-105 FR-004) y `shared/analysis/roi_calculator.py` importa `_SNAPSHOT_SUFFIX` de `shared/llm/config.py` (exponer un helper publico) | Code review del Cierre SPEC-103 (2026-11-23) | Abierta |
 
 ## Deuda resuelta
@@ -49,6 +50,47 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-23 — SPEC-104 iteracion 2 (revision de la iteracion 1)
+
+Revision externa de la iteracion 1 contrastada contra el codigo. Decisiones y
+desvios registrados:
+
+- Reemplazo parcial de SPEC-103 FR-009 (spec activa): en tarea y juez la
+  respuesta sin texto deja de puntuar 0.0 y se clasifica por causa. Motivo:
+  presupuesto, `stop` vacio o filtro de salida no prueban que el prompt sea
+  peor; puntuarlos 0 mezcla infraestructura con calidad. El rol reflexion de
+  FR-009 se conserva y se generaliza (SPEC-104 FR-005).
+- Reintentos: la iteracion 1 asumia reintentos de red propios; no existen. La
+  verificacion contra `litellm==1.108.5` + `openai==3.57.0` (transporte HTTP
+  interceptado, 3 proveedores) mostro que `num_retries` de LiteLLM reintenta
+  todas las clases (incluidos 401 y filtros) y se apila sobre el SDK de openai
+  (7 llamadas ante un 5xx en Azure/OpenAI). Decision: `num_retries=0` en
+  LiteLLM y en `dspy.LM`, y un loop propio en `shared/llm` que reintenta solo
+  `infraestructura`. Desvio: cambia el comportamiento vigente de `dspy.LM`
+  (reintentaba todo 3 veces) y del SDK en Azure/OpenAI (2 reintentos).
+- Deteccion de la capa 1 fijada con la misma verificacion: varios filtros de
+  entrada y excesos de contexto de Azure/OpenAI llegan como `BadRequestError`
+  generico; se clasifican por `exc.body["code"]`. Limites no detectables
+  registrados en la spec y en D-023.
+- Corte por estado en el contador de fallas, consultado por envoltorios y
+  orquestadores: `dspy.Evaluate` y `ReflectiveMutationProposer.propose` atrapan
+  las excepciones, asi que lanzar no corta la corrida. No cambia la logica de
+  GEPA ni DSPy.
+- Clases como causas ortogonales al rol (`evaluador` pasa a `formato` del rol
+  juez); atribucion de `entrada` contra el baseline a demanda, valida en
+  cualquier split; `ContextWindowExceededError` entra en `entrada`.
+- Optimizacion: un caso no evaluado vale 0.0 solo como valor tecnico para GEPA y
+  se excluye del dataset reflexivo (opcion A; la opcion B impedia optimizar
+  datasets con un caso problematico).
+- Se mantiene `filtro_salida` como no evaluado (decision del usuario); el sesgo
+  de supervivencia se mitiga con delta pareado y 0.0 en optimizacion.
+- Delta pareado solo dentro de una corrida; el CSV de SPEC-100 no cambia.
+- `presupuesto` en tarea se atribuye contra el baseline como `entrada`
+  (decision del usuario, opcion B): afina "el presupuesto no es culpa del
+  candidato" a "salvo que el baseline con el mismo `max_tokens` no se corte".
+  Evita el incentivo invertido de los adapters de respuesta corta.
+- Sin NEEDS CLARIFICATION abiertos en la spec.
 
 ### 2026-11-23 — Cierre de SPEC-103 (proveedor Anthropic)
 

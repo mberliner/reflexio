@@ -2,7 +2,7 @@
 
 Estado: active
 Iteracion: 3 (rev. 2026-11-23)
-Relacionada con: [[SPEC-104-fallas-tecnicas-justas]] (reclasifica la respuesta sin texto de FR-009 y cubre los cortes de SC-004), [[SPEC-105-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
+Relacionada con: [[SPEC-104-fallas-tecnicas-justas]] (reemplaza FR-009 en los roles tarea y juez y cubre los cortes de SC-004), [[SPEC-105-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
 [[SPEC-101-triaje-casos-nseeds]], docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md,
 docs/ANALISIS_UTILIDADES.md, docs/GEPA_MANEJO_ERRORES.md, docs/PROTOCOLO_N_SEEDS.md
 Plan de implementacion: docs/plans/PLAN_SPEC-103_proveedor_anthropic.md
