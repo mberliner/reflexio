@@ -411,14 +411,19 @@ class LLMConfig:
             "max_tokens_requested": requested,
         }
 
-    def describe(self) -> str:
+    def describe(self, max_tokens: int | None = None) -> str:
         """
-        Return a formatted description of effective LM config for startup logging.
+        Return a formatted description of the effective LM config (SPEC-103 FR-010).
 
-        Shows model name, reasoning model flag, and effective temperature/max_tokens
-        with override notes when reasoning constraints changed the requested values.
+        Shows temperature sent or omitted (noting an ignored config value), effort,
+        reasoning mode and final max_tokens, noting when a config value was raised.
+
+        Args:
+            max_tokens: max_tokens fixed per call by the adapter. If None, the one
+                in the config is used. The reported value is the one effectively
+                sent in those calls, not the `LLMConfig` one.
         """
-        effective = self.effective_params()
+        effective = self.effective_params(max_tokens)
         tag = " [reasoning model]" if self.is_reasoning_model else ""
         lines = [f"{self.model}{tag}"]
 
@@ -432,12 +437,18 @@ class LLMConfig:
         else:
             lines.append(f"    temperature: {temp_eff}")
 
+        if effective["effort"] is not None:
+            origin = "config" if self.effort else "default"
+            lines.append(f"    effort:      {effective['effort']} ({origin})")
+
+        if effective["thinking"] is not None:
+            lines.append(f"    thinking:    {effective['thinking']}")
+
+        requested = effective["max_tokens_requested"]
         tok_eff = effective["max_tokens"]
-        if (self.is_reasoning_model or effective["thinking"] in ("adaptive", "always")) and (
-            self.max_tokens != tok_eff
-        ):
+        if requested != tok_eff:
             lines.append(
-                f"    max_tokens:  {self.max_tokens} (config) -> {tok_eff} (reasoning override)"
+                f"    max_tokens:  {requested} (requested) -> {tok_eff} (reasoning override)"
             )
         else:
             lines.append(f"    max_tokens:  {tok_eff}")

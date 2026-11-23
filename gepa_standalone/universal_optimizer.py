@@ -279,7 +279,6 @@ class UniversalOptimizer:
         task_cfg.temperature = self.active_temperature
         if models_cfg.get("max_tokens"):
             task_cfg.max_tokens = models_cfg["max_tokens"]
-        print_kv("Task LM", task_cfg.describe())
         log_info(f"Initializing {adapter_type} adapter...")
 
         if adapter_type == "classifier":
@@ -319,6 +318,11 @@ class UniversalOptimizer:
         else:
             raise ValueError(f"Unsupported adapter type: {adapter_type}")
 
+        # FR-010: reportar los parametros efectivos de las llamadas del adapter.
+        print_kv("Task LM", task_cfg.describe(max_tokens=self.adapter.task_max_tokens))
+        judge_max = getattr(self.adapter, "judge_max_tokens", None)
+        if judge_max is not None:
+            print_kv("Judge LM", self.adapter._judge_config.describe(max_tokens=judge_max))
         log_ok(f"Adapter initialized: {adapter_type}")
 
     def _eval_repeated(self, data, prompt) -> tuple[float, float]:

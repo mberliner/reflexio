@@ -19,6 +19,8 @@ class SimpleClassifierAdapter(BaseAdapter):
     Adaptador GEPA para clasificación simple.
     """
 
+    task_max_tokens = 50
+
     def __init__(self, valid_classes: list[str], temperature: float = 0.0):
         # Inicializar clase base (configura cliente y deployment)
         super().__init__(temperature=temperature)
@@ -40,7 +42,9 @@ class SimpleClassifierAdapter(BaseAdapter):
             try:
                 # Usar método helper de la clase base
                 predicted_class = self.call_model(
-                    system_prompt=system_prompt, user_content=user_text, max_tokens=50
+                    system_prompt=system_prompt,
+                    user_content=user_text,
+                    max_tokens=self.task_max_tokens,
                 ).lower()
 
                 # Score

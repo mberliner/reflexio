@@ -14,6 +14,9 @@ class BaseAdapter:
     # Atributo requerido por GEPAAdapter
     propose_new_texts = None
 
+    # max_tokens fijado por llamada de tarea (SPEC-103 FR-010); None = el de LLMConfig.
+    task_max_tokens: int | None = None
+
     def __init__(self, temperature: float = 0.0):
         self.temperature = temperature
         self._config = get_task_config()

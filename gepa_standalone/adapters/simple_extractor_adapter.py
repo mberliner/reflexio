@@ -70,6 +70,7 @@ class SimpleExtractorAdapter(BaseAdapter):
             self.max_positive_examples = 2
 
         self.max_response_tokens = max_response_tokens if max_response_tokens is not None else 4000
+        self.task_max_tokens = self.max_response_tokens
 
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False

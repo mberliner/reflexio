@@ -29,6 +29,9 @@ class SimpleRAGAdapter(BaseAdapter):
     3. Evalua la respuesta usando un LLM Juez (Model-Based Evaluation).
     """
 
+    task_max_tokens = 400
+    judge_max_tokens = 200
+
     def __init__(self, temperature: float = 0.0, max_positive_examples: int | None = None):
         super().__init__(temperature=temperature)
         # Usamos el modelo "Profesor" (mas potente) para juzgar
@@ -163,7 +166,7 @@ class SimpleRAGAdapter(BaseAdapter):
                     {"role": "user", "content": user_content},
                 ]
                 response_content = self._call_llm_with_retry(
-                    messages, max_tokens=400, is_reflection=False
+                    messages, max_tokens=self.task_max_tokens, is_reflection=False
                 )
 
                 if response_content is None:
@@ -260,7 +263,10 @@ class SimpleRAGAdapter(BaseAdapter):
 
             # Usar retry para manejar errores de content filter
             content = self._call_llm_with_retry(
-                messages, max_tokens=200, is_reflection=False, model=self.judge_model
+                messages,
+                max_tokens=self.judge_max_tokens,
+                is_reflection=False,
+                model=self.judge_model,
             )
 
             if content is None:

@@ -19,6 +19,8 @@ class SimpleSQLAdapter(BaseAdapter):
     Adaptador GEPA para generación de SQL.
     """
 
+    task_max_tokens = 200
+
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
     ) -> EvaluationBatch:
@@ -37,7 +39,9 @@ class SimpleSQLAdapter(BaseAdapter):
                 user_content = f"Esquema: {schema}\nPregunta: {question}"
 
                 predicted_sql = self.call_model(
-                    system_prompt=system_prompt, user_content=user_content, max_tokens=200
+                    system_prompt=system_prompt,
+                    user_content=user_content,
+                    max_tokens=self.task_max_tokens,
                 )
 
                 # Limpieza

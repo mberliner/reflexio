@@ -42,7 +42,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (excepcion en tarea y reflexion, B-2c-1), envoltorio de programa/metrica en `dspy_gepa_poc` y verificacion contra `dspy.GEPA` y `Evaluate` | FR-009 | Opus 5.5 | hecho (7627c0f) |
 | 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | hecho (611a32b) |
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | hecho (e1ca3a3) |
-| 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | pendiente |
+| 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | hecho (HASH4A) |
 | | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | pendiente |
 | 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | pendiente |
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | pendiente |
@@ -614,6 +614,16 @@ Sin cambios en `usage.py`.
 - Cada adapter expone su `max_tokens` por llamada (clasificador 50, SQL 200,
   extractor `max_response_tokens`, RAG 400 y juez 200), y
   `universal_optimizer` describe despues de crear el adapter.
+
+Resultado de 4a: `describe(max_tokens=None)` (`config.py`) lee de
+`effective_params(max_tokens)` y muestra temperature enviada/omitida, effort
+(`config` o `default`), modo de razonamiento y `max_tokens` pedido -> final. Los
+adapters exponen `task_max_tokens` (clasificador 50, SQL 200, extractor
+`max_response_tokens`, RAG 400) y RAG ademas `judge_max_tokens` (200); las
+llamadas usan ese atributo. `initialize_adapter` describe despues de crear el
+adapter (y el juez en RAG). Tests en `tests/test_describe_effective.py` (14).
+La reflexion (`create_reflection_lm_function`) se sigue describiendo en el paso 6
+con el `max_tokens` del YAML o 2000.
 
 ### 4b Configs unicas y `run.json` — Sonnet 5.5
 
