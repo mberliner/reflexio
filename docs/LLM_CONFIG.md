@@ -100,12 +100,51 @@ LLM_MODEL_REFLECTION=openai/gpt-4o
 ```
 
 ### Anthropic
+
+Formato `anthropic/<id>`. La matriz de modelos soportados y sus restricciones
+(que parametros se envian, effort aceptado, razonamiento) es el contrato de
+[SPEC-103](../specs/SPEC-103-proveedor-anthropic.md#matriz-de-soporte); no se
+copia aca. Un `<id>` puede llevar sufijo de snapshot (`-YYYYMMDD`) y recibe las
+restricciones de su alias.
+
 ```bash
 LLM_API_KEY=sk-ant-...
-LLM_API_BASE=           # Dejar vacio
-LLM_MODEL_TASK=anthropic/claude-3-haiku-20240307
-LLM_MODEL_REFLECTION=anthropic/claude-3-5-sonnet-20241022
+LLM_MODEL_TASK=anthropic/claude-haiku-5-5
+LLM_MODEL_REFLECTION=anthropic/claude-sonnet-5-5
 ```
+
+IDs vigentes: `claude-haiku-4-5`, `claude-opus-4-5`, `claude-sonnet-4-6`,
+`claude-opus-4-6`, `claude-opus-4-7`, `claude-opus-4-8`, `claude-sonnet-5`,
+`claude-opus-5`, `claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`,
+`claude-fable-5`, `claude-fable-5-1`, `claude-fable-5-2`. Un ID `anthropic/`
+fuera de la matriz funciona sin restricciones y emite un aviso al arrancar.
+
+#### `LLM_API_BASE` con Anthropic
+
+- `validate()` no exige `LLM_API_BASE` ni `LLM_API_VERSION`; `api_version` no se envia.
+- Si el `.env` trae un `LLM_API_BASE` (por ejemplo el endpoint Azure que quedo de
+  otra configuracion), NO se envia y se emite un aviso al arrancar. Dejarlo vacio.
+- No hay override propio para proxy o gateway; ese mecanismo queda para
+  SPEC-104 (`LLM_API_BASE_<ROL>`).
+
+#### `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>`
+
+Se configuran por rol (`TASK`, `REFLECTION`, ...) en el `.env`, no en el YAML.
+
+| Variable | Valores | Default | Efecto |
+|----------|---------|---------|--------|
+| `LLM_EFFORT_<ROL>` | `low`, `medium`, `high`, `xhigh`, `max` (segun el modelo) | `medium` en modelos que aceptan effort; nada en los que no | Se envia como `output_config={"effort": ...}` |
+| `LLM_THINKING_<ROL>` | `default`, `off` | `default` (no envia nada) | `off` envia el mecanismo de apagado de la matriz (nada si ya esta apagado) |
+
+- Se ignoran mayusculas y espacios; una variable vacia equivale a no configurada.
+- Un valor fuera de lo permitido, un effort que el modelo no acepta, o apagar el
+  razonamiento donde no se permite (o con un effort incompatible), produce un
+  `LLMConfigError` al validar, con la lista de valores aceptados.
+- `temperature` se omite siempre en los modelos que no la aceptan, venga de donde
+  venga (YAML incluido).
+- Con razonamiento activo, `max_tokens` se eleva a un minimo de 16000.
+- `describe()` y `run.json` muestran los valores efectivos enviados
+  (ver `docs/METADATA_REPRODUCIBILIDAD.md`).
 
 ## Uso en Codigo
 

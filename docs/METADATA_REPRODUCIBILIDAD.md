@@ -87,6 +87,41 @@ results/
   "seed": 1844674407,
   "models": {
     "task": {
+      "model": "anthropic/claude-sonnet-5-5",
+      "temperature": null,
+      "temperature_requested": 0.0,
+      "temperature_omitted": true,
+      "effort": "medium",
+      "thinking": "adaptive",
+      "thinking_param": null,
+      "max_tokens": 16000,
+      "max_tokens_requested": 1000
+    },
+    "reflection": { "...": "mismas claves que task" },
+    "judge": { "...": "solo en RAG; mismas claves" }
+  },
+  "created_at": "2026-02-01T10:00:00",
+  "last_run_at": "2026-02-08T14:30:22",
+  "dataset_hash_changed": true,
+  "previous_dataset_hash": "b4e8c7a2f1..."
+}
+```
+
+**Deteccion de cambios:** Si el SHA-256 del dataset CSV cambia entre runs, se marca `dataset_hash_changed: true` y se guarda el hash anterior.
+
+### Nivel 3: Run (Individual)
+
+**Ubicacion:** `results/runs/<run_dir>/run.json`
+
+**Frecuencia:** Se crea una vez por run.
+
+**Contenido:**
+```json
+{
+  "experiment_name": "email_urgency",
+  "seed": 1844674407,
+  "models": {
+    "task": {
       "model": "azure/gpt-4o",
       "temperature": 0.0,
       "max_tokens": 1000
@@ -100,6 +135,23 @@ results/
   "created_at": "2026-02-08T14:30:22"
 }
 ```
+
+**Parametros efectivos (SPEC-103 FR-012):** cada rol de `models` guarda lo que
+realmente se envia, tomado de las configs usadas en la corrida (no recreadas al
+guardar). Antes eran solo `model`, `temperature` y `max_tokens`.
+
+| Clave | Significado |
+|-------|-------------|
+| `temperature` | Valor enviado; `null` si se omite |
+| `temperature_requested` / `temperature_omitted` | Valor de config y si la familia no la acepta |
+| `effort` | `output_config.effort` enviado; `null` si no se envia |
+| `thinking` | `adaptive`, `always`, `off` o `null` (no se sabe) |
+| `thinking_param` | Dict `thinking` enviado o `null` |
+| `max_tokens` / `max_tokens_requested` | Valor final (tras el minimo de 16000) y el pedido |
+
+`judge` aparece solo con el adapter RAG. Los adapters que fijan su propio
+`max_tokens` reportan el valor efectivo de sus llamadas. `run.json` de corridas
+anteriores conserva el formato de 3 claves. `metricas_optimizacion.csv` no cambia.
 
 **Nota sobre seed:** El seed se registra para documentacion, pero **no se aplica** al LLM ni a GEPA internamente. La reproducibilidad depende de caches del LLM y condiciones de API.
 
@@ -156,11 +208,13 @@ Rango: `0` a `2^31 - 1` (int32 maximo).
 ### `collect_model_info(task_config, reflection_config)`
 
 ```python
-def collect_model_info(task_config, reflection_config) -> dict:
-    """Extrae model, temperature, max_tokens de LLMConfig instances."""
+def collect_model_info(
+    task_config, reflection_config, judge_config=None, task_max_tokens=None, judge_max_tokens=None
+) -> dict:
+    """Guarda effective_params() de cada LLMConfig (SPEC-103 FR-012)."""
 ```
 
-Retorna dict con claves `"task"` y `"reflection"`, cada una con subcampos `model`, `temperature`, `max_tokens`.
+Retorna dict con claves `"task"` y `"reflection"`, cada una con las claves de `LLMConfig.effective_params()` (tabla de arriba), y `"judge"` si se pasa `judge_config`.
 
 ## Relacion con Otros Artefactos
 

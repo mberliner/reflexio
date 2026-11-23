@@ -222,6 +222,10 @@ veredicto de `SPEC-100`). Umbrales: `TRIAGE_VARIANCE_RANGE_PTS=5`,
 
 ## Limitaciones conocidas
 
+- No mezclar en un mismo lote de referencia corridas Claude con distinto
+  `LLM_EFFORT_<ROL>` o `LLM_THINKING_<ROL>` (SPEC-103 FR-012). El criterio de
+  comparabilidad de SPEC-100 solo ve el par de modelos y no detecta esa
+  diferencia; los valores efectivos de cada corrida estan en su `run.json`.
 - El seed es trazable pero no reproducible (ver arriba).
 - El val sigue chico (triage 12, extraction 10): la senal de optimizacion de
   GEPA es coarse aunque el test ya sea fiable. `eval_repeats: 3` lo mitiga
