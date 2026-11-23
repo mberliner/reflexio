@@ -2,6 +2,7 @@
 
 Estado: draft
 Iteracion: 1 (rev. 2026-11-23)
+Cierra: D-019 y D-021 (`historial/sdd.md`)
 Relacionada con: [[SPEC-103-proveedor-anthropic]] (reclasifica la respuesta sin
 texto de su FR-009 y completa la parte de "cortadas por `max_tokens`" de su
 SC-004), [[SPEC-100-veredicto-senal-ruido]], [[SPEC-105-roles-intercambiables]]

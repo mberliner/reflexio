@@ -32,8 +32,10 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-011 | Modo `pipeline` sin tests ni caso activo: `create_pipeline_module` (`dynamic_factory.py`) y `create_pipeline_metric_with_feedback` (`metrics.py`) no tienen tests dedicados y ningun config vigente usa `module.type: pipeline` (el unico, `intake_pipeline.yaml`, se elimino al segmentar; ver `docs/FAST_GATE_SEGMENTACION.md`). Agregar tests unitarios y decidir si se formaliza como spec retrospectiva (rango reservado `SPEC-001..099`) | Cierre de D-003/D-004 (2026-06-10) | Abierta |
 | D-017 | Linea de investigacion (fast_gate): curar un VAL **representativo del TEST** para que GEPA tenga gradiente real. Hipotesis: un VAL sembrado con casos donde el modelo realmente falla (de la dificultad del TEST) daria gradiente | Cierre de D-015d (2026-06-18) | **Refutada 2026-06-19** — se ejecuto el ciclo completo: diagnostico por-caso (`diagnose_rule_baseline.py`), 14 casos `VAR-FG-T01..T14` calibrados a las 5 confusiones del TEST con textura rica y fichas NEUTRALES (se corrigio una fuga de juicio en `supuesto_riesgo`). Gate: el gap de color bajo +22,6 -> +14,1 pp (no cerro <5; residuo = confusion Rojo->Negro). GEPA N=3 con DOS modelos (gpt-5* retirado; nuevos gpt-5.4*): gpt-4.1-mini RUIDO[SOBREAJUSTE][TECHO][ESTABILIZA] (Opt-Base -1,4; Rob TEST 80,0), gpt-5.4-mini SIN REF[SOBREAJUSTE][TECHO] (Opt-Base -2,5; Rob TEST 77,8). Causa raiz nueva: el VAL es representativo en COLOR pero GEPA optimiza la metrica COMBINADA (alto_impacto+color), saturada en techo (87-89%) porque alto_impacto se acierta ~90% y diluye el cuello. El modelo mas nuevo (gpt-5.4-mini) NO mejora -> techo del enfoque, no del modelo. Mejor sistema sigue siendo baseline sin GEPA. Dataset (val 60) y script de diagnostico conservados. Sub-linea abierta: probar metrica solo-color | Cierre de D-015d (2026-06-18) | **Refutada/cerrada 2026-06-19** (la sub-linea "metrica solo-color" queda como nota, no bloqueante) |
 | D-018 | Actualizar DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4 **juntos** (dspy 3.2.1 fija `gepa[dspy]==0.0.27`; dspy 3.5.0 exige `gepa>=0.1.4,<0.2`). Va separado de LiteLLM y de SPEC-103 porque cambia el optimizador y la evaluacion, no solo el transporte: mezclarlo impide atribuir cambios de score. Riesgo de API: `gepa_standalone` usa `EvaluationBatch` y el contrato de adapter de GEPA; `dspy_gepa_poc` depende de la firma de `dspy.GEPA` (`optimizer.py`), `detailed_results` y `EvaluationResult.results` (fix de D-016). Requiere: (a) agregar versiones de librerias al criterio de comparabilidad de SPEC-100 (hoy solo estan en `run.json`, no en el CSV); (b) regresion de resultados, no solo tests: N seeds en casos de referencia comparados contra su historico con el veredicto de SPEC-100. Prerequisito: LiteLLM fijado en version exacta (actualizacion separada) | Analisis de dependencias para SPEC-103 (2026-11-22) | Abierta |
-| D-019 | `SimpleClassifierAdapter` y `SimpleSQLAdapter` descartan el ejemplo ante un error tecnico (`except Exception` -> solo `print`, sin agregar a `outputs`/`scores`). Rompe el contrato de GEPA (`gepa/core/adapter.py`: `len(outputs) == len(scores) == len(batch)`) e infla el promedio del minibatch porque el ejemplo fallido no cuenta como 0.0. `simple_extractor_adapter.py` y `simple_rag_adapter.py` ya puntuan 0.0. SPEC-103 (2b-fix) solo corrige la respuesta sin texto (FR-009); el error tecnico queda fuera de su alcance. Cambiar a 0.0 altera los scores de corridas con errores tecnicos: requiere decidir si va como fix o spec y comparar contra historico | Supervision SPEC-103 2b (2026-11-22) | Abierta |
+| D-019 | `SimpleClassifierAdapter` y `SimpleSQLAdapter` descartan el ejemplo ante un error tecnico (`except Exception` -> solo `print`, sin agregar a `outputs`/`scores`). Rompe el contrato de GEPA (`gepa/core/adapter.py`: `len(outputs) == len(scores) == len(batch)`) e infla el promedio del minibatch porque el ejemplo fallido no cuenta como 0.0. `simple_extractor_adapter.py` y `simple_rag_adapter.py` ya puntuan 0.0. SPEC-103 (2b-fix) solo corrige la respuesta sin texto (FR-009); el error tecnico queda fuera de su alcance. Cambiar a 0.0 altera los scores de corridas con errores tecnicos: requiere decidir si va como fix o spec y comparar contra historico | Supervision SPEC-103 2b (2026-11-22) | Derivada a SPEC-104 (2026-11-23): no se descarta ni se puntua 0; el caso queda no evaluado y contado |
 | D-020 | Respuesta sin texto en inferencia directa de `dspy_gepa_poc` (`run_inference.py` y scripts que llaman al programa sin `Evaluate`): el `EmptyResponseError` de tarea (SPEC-103 FR-009, opcion 2 de B-2c-1) sale sin atrapar y corta el script. Fuera del alcance de SPEC-103 (decision del usuario): una corrida unica de inferencia puede fallar en forma visible. Si se quiere tolerancia, reutilizar el envoltorio de 2c | Supervision SPEC-103 2c (2026-11-22) | Abierta |
+| D-021 | Corte por `max_tokens` con texto parcial (`finish_reason=length`): ningun camino lo detecta ni lo registra; el texto truncado se puntua como completo y una reflexion truncada podria adoptarse como candidato. SC-004 de SPEC-103 quedo verificado solo para respuestas sin texto | Cierre SPEC-103 (2026-11-23) | Derivada a SPEC-104 |
+| D-022 | Acceso a simbolos privados entre modulos (severidad baja): `universal_optimizer.py` lee `adapter._judge_config` (se resuelve con el juez como rol de SPEC-105 FR-004) y `shared/analysis/roi_calculator.py` importa `_SNAPSHOT_SUFFIX` de `shared/llm/config.py` (exponer un helper publico) | Code review del Cierre SPEC-103 (2026-11-23) | Abierta |
 
 ## Deuda resuelta
 
@@ -47,6 +49,36 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-23 — Cierre de SPEC-103 (proveedor Anthropic)
+
+- Code review integral del diff de produccion de la spec (`22156c2~1..HEAD`,
+  ~1000 lineas sin tests): sin hallazgos CRITICAL ni HIGH en su alcance.
+  `apply_constraints` devuelve dict nuevo, es idempotente y valida antes de
+  transformar; la rama Azure/OpenAI queda intacta (SC-006).
+- Puntos anotados por la supervision: `build_llm_configs` muta una instancia
+  propia (`get_task_config()` crea una nueva por llamada): sin efecto externo;
+  `tolerate_empty_responses` cambia `__class__` de una copia (decision
+  documentada); `adapter._judge_config` privado -> D-022.
+- Revision de fallas silenciosas (pedido del usuario): el descarte de casos en
+  clasificador/SQL (D-019), el juez RAG que convierte sus fallas en 0.0, los
+  avisos con `print` y los cortes por `max_tokens` (D-021) se derivan a la spec
+  nueva SPEC-104 (fallas tecnicas justas). La spec de roles intercambiables
+  pasa a SPEC-105 y depende de SPEC-104.
+- `ci_local.sh` verde: 816 passed, cobertura 98%.
+- Spec a `active` (iteracion 3); Coverage mapping sin `pendiente`; quedan tres
+  `[NEEDS CLARIFICATION]` derivados a SPEC-105, SPEC-100 y una iteracion futura.
+
+```
+[SDD-Check]
+- Spec/doc leido: SPEC-103, plan PLAN_SPEC-103, docs/SDD_PROTOCOLO.md, diff de produccion de la spec
+- Incluye/Excluye verificado: el review cubre el diff de la spec; las fallas preexistentes quedan fuera (SPEC-104)
+- Validaciones aplicadas: ci_local.sh (816 passed, cobertura 98%), refs internas, sin emoticones
+- SSOT afectado: specs/SPEC-103 (active), specs/SPECS_REGISTRY.md, historial/sdd.md
+- Derivados a revisar: SPEC-104 (FR-009 y SC-004 de SPEC-103), SPEC-105
+- Deuda arrastrada: D-019 y D-021 derivadas a SPEC-104; D-020 y D-022 abiertas
+- Riesgos/reservas: CheckedLM depende de un metodo interno de dspy 3.2.1 (revalidar con D-018)
+```
 
 ### 2026-11-23 — SPEC-103 verificacion real (SC-003, SC-004, SC-005)
 

@@ -48,7 +48,7 @@ modelos bajo prueba de la matriz de la spec.
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | hecho (869fb92) |
 | | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | hecho (2a15cde) |
 | | 6c Analisis: conteo sin texto, costo vs tabla, registro en `historial/sdd.md` | SC-004, SC-005 | Opus 5.5 | hecho (3587ffb) |
-| Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | pendiente |
+| Cierre | Code review integral y `[SDD-Check]`; pasar la spec a `active` | todos | Opus 5.5 | hecho (este commit) |
 
 ## Dependencias
 
@@ -854,12 +854,7 @@ o al diff solo cuando un control falla.
 
 ## Proxima sesion
 
-Estado al 2026-11-23: fases 1 a 6 `hecho`; queda el Cierre.
-6b gasto USD 1.14 en las 14 corridas, sin errores 4xx; 6c verifico SC-003 a
-SC-005.
-
-- Antes de arrancar: renovar el login de `claude` (`claude auth login`; la
-  sesion actual vence entre el 2026-11-24 y el 2026-11-27).
-- Cierre: Opus 5.5, interactivo. El Cierre arranca por los puntos
-  anotados en su seccion.
-- Deudas abiertas por esta spec: D-019 y D-020 (`historial/sdd.md`).
+SPEC-103 cerrada el 2026-11-23 (spec `active`; detalle en `historial/sdd.md`,
+"Cierre de SPEC-103"). Este plan queda como registro. Lo siguiente es
+SPEC-104 (fallas tecnicas justas): resolver sus `[NEEDS CLARIFICATION]` y
+armar su plan; despues SPEC-105 (roles intercambiables).

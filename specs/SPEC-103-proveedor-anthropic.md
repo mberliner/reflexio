@@ -1,8 +1,8 @@
 # SPEC-103-proveedor-anthropic — Anthropic como proveedor verificado
 
-Estado: draft
-Iteracion: 2 (rev. 2026-11-22)
-Relacionada con: [[SPEC-105-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
+Estado: active
+Iteracion: 3 (rev. 2026-11-23)
+Relacionada con: [[SPEC-104-fallas-tecnicas-justas]] (reclasifica la respuesta sin texto de FR-009 y cubre los cortes de SC-004), [[SPEC-105-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
 [[SPEC-101-triaje-casos-nseeds]], docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md,
 docs/ANALISIS_UTILIDADES.md, docs/GEPA_MANEJO_ERRORES.md, docs/PROTOCOLO_N_SEEDS.md
 Plan de implementacion: docs/plans/PLAN_SPEC-103_proveedor_anthropic.md
@@ -313,6 +313,6 @@ Notas de la matriz:
 | SC-001 | `tests/test_litellm_regression.py` (vigente: header `anthropic-version`, `temperature` por modelo con `drop_params`, pase de `output_config` y `thinking` a nivel LiteLLM); y `tests/test_anthropic_matrix.py` sobre los cuatro caminos de `LLMConfig` (vigente tras 1c y 2a) |
 | SC-002 | `tests/test_anthropic_matrix.py::TestValidateCombinations` (vigente) |
 | SC-003 | corridas manuales con API real, registradas en `historial/sdd.md` (vigente: 14/14 sin 4xx, USD 1.14, 2026-11-23) |
-| SC-004 | conteo de `Respuesta sin texto del LLM` en los logs de las corridas de SC-003 (vigente: 0 sobre 1134 llamadas de tarea y 34 de reflexion; `run.json` no vuelca predicciones por ejemplo) |
+| SC-004 | conteo de `Respuesta sin texto del LLM` en los logs de las corridas de SC-003 (vigente: 0 sobre 1134 llamadas de tarea y 34 de reflexion; `run.json` no vuelca predicciones por ejemplo). Limitacion: los cortes por `max_tokens` con texto parcial no se detectan ni se registran; quedan para [[SPEC-104-fallas-tecnicas-justas]] (D-021) |
 | SC-005 | `run.json` de las corridas de SC-003 (vigente: `usage.cost_usd` = tokens x `DEFAULT_PRICING` en las 14, sin aviso de precio) |
 | SC-006 | `tests/test_litellm_regression.py::TestAzureOpenAIWireRegression` y `tests/test_anthropic_matrix.py::TestAzureOpenAIConfigRegression` (vigente: `to_kwargs()` y cuerpo HTTP de `azure/gpt-4.1-mini`, `azure/gpt-5.4-mini`, `azure/gpt-4o` y `openai/gpt-4o-mini`) y `tests/test_sc006_azure_openai_paths.py` (vigente: `call_llm`, `get_dspy_lm`, `validate_connection` y effort/thinking ignorados fuera de `anthropic/`) |
