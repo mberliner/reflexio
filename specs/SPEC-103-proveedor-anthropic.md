@@ -2,7 +2,7 @@
 
 Estado: draft
 Iteracion: 2 (rev. 2026-11-22)
-Relacionada con: [[SPEC-104-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
+Relacionada con: [[SPEC-105-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
 [[SPEC-101-triaje-casos-nseeds]], docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md,
 docs/ANALISIS_UTILIDADES.md, docs/GEPA_MANEJO_ERRORES.md, docs/PROTOCOLO_N_SEEDS.md
 Plan de implementacion: docs/plans/PLAN_SPEC-103_proveedor_anthropic.md
@@ -48,7 +48,7 @@ hoy no funciona con los modelos recientes. Comportamiento de LiteLLM 1.108.5
 
 Incluye: API directa de Anthropic via LiteLLM, en ambos subproyectos, para los
 roles tarea, reflexion y juez (este ultimo hereda la configuracion de reflexion
-hasta que [[SPEC-104-roles-intercambiables]] lo haga configurable; no existen
+hasta que [[SPEC-105-roles-intercambiables]] lo haga configurable; no existen
 `LLM_EFFORT_JUDGE` ni `LLM_THINKING_JUDGE` en esta spec).
 
 Excluye: Bedrock, Vertex AI y Foundry; SDK nativo de Anthropic (el proyecto se
@@ -56,7 +56,7 @@ mantiene sobre LiteLLM por arquitectura, ver `docs/ARCHITECTURE.md`); prompt
 caching, batches, tools y structured outputs nativos; Mythos (requiere
 organizacion verificada); `claude-sonnet-4-5` (deprecado, se retira el
 2026-11-30: se trata como ID fuera de la matriz, FR-001); mezclar proveedores
-entre roles (eso es [[SPEC-104-roles-intercambiables]]); configurar effort o
+entre roles (eso es [[SPEC-105-roles-intercambiables]]); configurar effort o
 razonamiento desde el YAML (ver Decisiones); modificar el criterio de
 comparabilidad de [[SPEC-100-veredicto-senal-ruido]] (ver FR-011).
 
@@ -133,7 +133,7 @@ Notas de la matriz:
   presente en el `.env` MUST NOT enviarse y MUST producir un aviso al arrancar
   (evita redirigir el pedido al endpoint Azure que quedo en un `.env` editado).
   [NEEDS CLARIFICATION: si hace falta un `api_base` propio para Anthropic (proxy,
-  gateway), el mecanismo se define en [[SPEC-104-roles-intercambiables]] FR-003
+  gateway), el mecanismo se define en [[SPEC-105-roles-intercambiables]] FR-003
   (`LLM_API_BASE_<ROL>`); en esta spec no hay override.]
   `validate_connection()` MUST funcionar con todos los modelos de la matriz (la
   prueba de conexion respeta FR-003 a FR-006).

@@ -125,7 +125,7 @@ fuera de la matriz funciona sin restricciones y emite un aviso al arrancar.
 - Si el `.env` trae un `LLM_API_BASE` (por ejemplo el endpoint Azure que quedo de
   otra configuracion), NO se envia y se emite un aviso al arrancar. Dejarlo vacio.
 - No hay override propio para proxy o gateway; ese mecanismo queda para
-  SPEC-104 (`LLM_API_BASE_<ROL>`).
+  SPEC-105 (`LLM_API_BASE_<ROL>`).
 
 #### `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>`
 

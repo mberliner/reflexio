@@ -765,6 +765,10 @@ verde (816 passed).
   `UniversalOptimizer.build_llm_configs` muta `task_config.temperature` tras
   `get_task_config()` (4b); `tolerate_empty_responses` cambia `__class__` de la
   copia del programa (2c, decision documentada en su docstring).
+- SC-004 (2026-11-23): 6c verifico solo las respuestas sin texto; los cortes
+  por `max_tokens` con texto parcial no se detectan. Anotar la limitacion en la
+  spec y como deuda que apunta a SPEC-104 (fallas tecnicas, agnostica al
+  proveedor), que tambien reclasifica la respuesta sin texto de FR-009.
 - Supervision (2026-11-22): fases 1 a 5 cerradas. O1/O2 y la fila SC-001 los
   completo la supervision tras el control de la fase 5.
 

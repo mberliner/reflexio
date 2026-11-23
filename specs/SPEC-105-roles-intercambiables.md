@@ -1,7 +1,8 @@
-# SPEC-104-roles-intercambiables — Profesor y estudiante intercambiables entre proveedores
+# SPEC-105-roles-intercambiables — Profesor y estudiante intercambiables entre proveedores
 
 Estado: draft
-Iteracion: 1 (rev. 2026-11-22)
+Iteracion: 1 (rev. 2026-11-23)
+Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas y metricas sobre casos evaluados)
 Relacionada con: [[SPEC-103-proveedor-anthropic]], [[SPEC-100-veredicto-senal-ruido]], docs/LLM_CONFIG.md
 
 ## User Story (prioridad)
@@ -51,7 +52,9 @@ proveedores; seleccion automatica de la mejor combinacion.
   seguir contando en el bucket de reflexion.
 - FR-005 Al arrancar, cada subproyecto MUST validar configuracion y conexion de
   todos los roles que la corrida va a usar, y los errores MUST indicar rol,
-  proveedor y modelo.
+  proveedor y modelo. Un error de credenciales o de modelo de un rol es una
+  falla de clase `configuracion` de [[SPEC-104-fallas-tecnicas-justas]]: no se
+  define aca otra clasificacion.
 - FR-006 El registro de cada corrida (CSV y `run.json`) MUST guardar proveedor y
   modelo de cada rol, de modo que [[SPEC-100-veredicto-senal-ruido]] y
   [[SPEC-101-triaje-casos-nseeds]] solo comparen corridas con la misma
@@ -65,7 +68,9 @@ proveedores; seleccion automatica de la mejor combinacion.
   - costo por llamada del estudiante en la evaluacion de test (incluye el prompt
     optimizado y los tokens de razonamiento);
   - costo por resolucion correcta en test = costo de evaluacion de test /
-    casos resueltos correctamente.
+    casos resueltos correctamente. Los casos resueltos se cuentan sobre los
+    evaluados ([[SPEC-104-fallas-tecnicas-justas]] FR-003), pero el costo
+    incluye las llamadas de los casos no evaluados, porque se pagaron.
   Para eso el uso de la evaluacion de test MUST medirse separado del uso de la
   optimizacion.
 - FR-008 El calculo de ROI y el leaderboard MUST usar esas magnitudes medidas
