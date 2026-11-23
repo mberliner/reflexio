@@ -36,7 +36,7 @@ aca solo se ajusta la referencia.
 | 1 Nucleo de fallas (`shared/llm`) | 1a Tests sin red del clasificador de capa 1 sobre los 102 payloads y del contador (RED) | FR-001, FR-006, FR-015, SC-009 | Sonnet 5.5 | hecho (2e75a29) |
 | | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | hecho (147f5ab) |
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | hecho (6e9617a) |
-| 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | pendiente |
+| 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | hecho (d61de1c) |
 | | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente |
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | pendiente |
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | pendiente |
@@ -417,6 +417,41 @@ anota como bloqueo y no commitea.
   `RunAborted` sin HTTP) y la migracion de los tests existentes
   (`test_empty_response*.py`, `test_gepa_adapters.py`, `test_anthropic_matrix.py`
   usan `_call_llm_with_retry`, rol `juez` o 3 llamadas por fallback).
+- Cierre de 2a (relanzamiento Opus 5.5, 2026-11-23, d61de1c). Se continuo sobre
+  el arbol del primer intento; la produccion se reviso contra D3 sin cambios de
+  fondo (solo `noqa: N818` en `DspyLLMCallFailure` y el docstring de rol de
+  `response_text`). Tests: `make_completion_response` en `tests/conftest.py`
+  (`litellm.ModelResponse` real) y fixture autouse `reset_failure_tracker`; los
+  mocks `MagicMock` de `conftest.py`, `test_functional_gepa.py`,
+  `test_gepa_adapters.py` y `test_empty_response.py` pasan al helper; los casos
+  vacios usan `finish_reason` normalizados reales (`length`, `stop`,
+  `content_filter`) y verifican la clase. `test_litellm_failure_mapping.py`
+  conserva la evidencia de `dspy.LM` por defecto (ahora con `dspy.LM` directo) y
+  agrega `test_retry_counts_checked_lm`. `tests/test_single_call_point.py`: AST
+  (solo `call.py::_call`, `validate_connection` y `check_deployments.py`),
+  delegacion de los tres caminos con `num_retries=0`, 1 llamada HTTP por caso via
+  `dspy.Predict` sobre los 99 payloads con falla (1 + 3 si `infraestructura`),
+  control de que sin el corte el fallback repite la llamada, y `RunAborted` sin
+  HTTP en los cuatro caminos. Sonda sobre `dspy==3.2.1`: solo `ChatAdapter`
+  (corte deseado), `ReAct` e `infer_rules` tratan `ContextWindowExceededError`;
+  el repo no usa los dos ultimos. Notas para fases siguientes:
+  - Coverage mapping de la spec: la sesion tenia prohibido editar la spec. Queda
+    para el supervisor (o el Cierre) pasar a vigente FR-011 (`shared/llm/call.py`,
+    `shared/llm/dspy_lm.py`, `tests/test_single_call_point.py`,
+    `test_retry_counts_checked_lm`) y ampliar SC-009 con la medicion por caso
+    (`TestDspyPredictOneCallPerCase`). FR-001 sigue `pendiente` hasta 3c/3e (los
+    adapters y envoltorios aun no reportan al contador).
+  - Para 3c/4b: los adapters clasificador y SQL atrapan `RunAborted` como error
+    del ejemplo (`test_*_unclassified_error_aborts_run` lo documenta: 1 llamada,
+    contador abortado, `RuntimeError` del adapter). RAG ya lo propaga.
+  - Para 3c/3e o 5a (SC-005): `complete_text` y `CheckedLM` siguen logueando a
+    `WARNING` la respuesta sin texto (log SPEC-103 en la capa de llamada). Cuando
+    los envoltorios llamen a `record` (que loguea a `WARNING` una vez por caso)
+    habra dos `WARNING` por falla; hay que bajar el de la capa de llamada a
+    `DEBUG` (FR-007) y ajustar los tests de `test_empty_response*.py` que lo
+    miran.
+  - `response_text` ya no tiene usos en produccion (solo su test); el Cierre lo
+    elimina junto con `EmptyResponseError` si corresponde.
 - 2b. Envoltorio de reflexion en ambos subproyectos (FR-005); verifica contra
   `gepa==0.0.27` como extrae la instruccion (bloque de codigo) y que la
   excepcion saltea la iteracion. Archivos: `shared/llm/config.py`,
