@@ -40,7 +40,7 @@ modelos bajo prueba de la matriz de la spec.
 | | 2b Respuesta sin texto en LiteLLM: helper comun, adapters de `gepa_standalone`, juez, reflexion de `get_lm_function`; `docs/GEPA_MANEJO_ERRORES.md` | FR-009 | Sonnet 5.5 | hecho (75a51bf) |
 | | 2b-fix Respuesta sin texto en clasificador y SQL: score 0.0, `len(outputs)` intacto | FR-009 | Sonnet 5.5 | hecho (12d7f66) |
 | | 2c Respuesta sin texto en DSPy: LM envuelto de `get_dspy_lm` (excepcion en tarea y reflexion, B-2c-1), envoltorio de programa/metrica en `dspy_gepa_poc` y verificacion contra `dspy.GEPA` y `Evaluate` | FR-009 | Opus 5.5 | hecho (7627c0f) |
-| 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | pendiente |
+| 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | hecho (HASH3A) |
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | pendiente |
 | 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | pendiente |
 | | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | pendiente |
@@ -577,6 +577,15 @@ bloqueada; suite 777 passed; `ci_local.sh` verde):
   `DEFAULT_PRICING` cada alias de la matriz.
 - Sincronizar la tabla de `docs/ANALISIS_UTILIDADES.md` con la fecha de la
   consulta.
+
+Resultado de 3a: 14 aliases de la matriz cargados en `DEFAULT_PRICING` con la
+tarifa estandar de la pagina oficial (consulta 2026-11-22; la pagina no muestra
+fecha propia). Fable 5.2 y Opus 5.5 tienen precio distinto de sus hermanos, por
+eso cada alias tiene su clave. Sonnet 5 queda en 2/10 (la pagina indica que la
+tarifa introductoria paso a ser la estandar). Haiku 5.5 con prompts de mas de
+100k tokens cuesta 0.50/2.50: no se modela. Tabla de
+`docs/ANALISIS_UTILIDADES.md` sincronizada con la fecha. Los snapshots y el
+prefijo `anthropic/` los resuelve 3b (`get_model_pricing` aun no los normaliza).
 
 ### 3b Normalizacion y tokens — Sonnet 5.5
 
