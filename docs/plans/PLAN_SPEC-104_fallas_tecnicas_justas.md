@@ -34,7 +34,7 @@ aca solo se ajusta la referencia.
 | Fase | Subfase | Requisitos | Modelo | Estado |
 |---|---|---|---|---|
 | 1 Nucleo de fallas (`shared/llm`) | 1a Tests sin red del clasificador de capa 1 sobre los 102 payloads y del contador (RED) | FR-001, FR-006, FR-015, SC-009 | Sonnet 5.5 | hecho (2e75a29) |
-| | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | pendiente |
+| | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | hecho |
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | pendiente |
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Sonnet 5.5 | pendiente |
 | | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente |
@@ -63,42 +63,125 @@ aca solo se ajusta la referencia.
 
 ## Decisiones de diseno (insumo de 1b y 3b; esas subfases las confirman o corrigen aca)
 
-D1. Modulo `shared/llm/failures.py` (sin importar `dspy`, `gepa_standalone` ni
-`dspy_gepa_poc`):
-- `FailureClass` (enum de texto): `configuracion`, `entrada`, `infraestructura`,
-  `filtro_salida`, `presupuesto`, `sin_texto`, `formato`.
-- `LLMFailure` (dataclass `frozen`): `clase`, `rol`, `causa` (tipo de error o
-  `finish_reason`), `finish_reason`, `case_id` (None en la capa de llamada),
-  `atribucion` (`candidato` | `externa` | None).
-- `LLMCallFailure(Exception)`: lleva un `LLMFailure`. Es lo que lanza la capa de
-  llamada; no cuenta nada.
+D1 a D4 confirmadas o corregidas en 1b (2026-11-23) contra `shared/llm`, los
+tests de 1a y `dspy==3.2.1` (sondas con pytest, ver "Nota de 1b para 1c").
+
+D1. Modulo `shared/llm/failures.py` (sin importar `dspy`, `gepa_standalone`,
+`dspy_gepa_poc` ni `shared/llm/errors.py`, que lo importa a el):
+- `FailureClass(str, Enum)`: `configuracion`, `entrada`, `infraestructura`,
+  `filtro_salida`, `presupuesto`, `sin_texto`, `formato` (valor = nombre).
+- `LLMFailure` (dataclass `frozen`): `clase`, `rol`, `causa` (nombre del tipo
+  de excepcion o `finish_reason`), `finish_reason`, `case_id` (None en la capa
+  de llamada), `atribucion` (`"candidato"` | `"externa"` | None). Los
+  envoltorios que conocen el caso crean la copia con `dataclasses.replace`.
+- `LLMCallFailure(Exception)`: `LLMCallFailure(failure, message=None)`, atributo
+  `failure`; el mensaje por defecto nombra rol, clase y causa. Se lanza con
+  `raise ... from exc` para conservar tipo y mensaje originales (regla 3).
+- `RunAborted(Exception)`: NO hereda de `LLMCallFailure` (un envoltorio que
+  atrapa `LLMCallFailure` para marcar NE no debe tragarse el aborto). Atributos
+  `failure`, `motivo`, `conteo`, `intentos`; el mensaje nombra clase (clave de
+  conteo), rol, conteo/intentos y causa probable. Para `presupuesto` agrega
+  "el baseline tambien se corta en esos casos" (rol tarea) y "subir
+  `max_tokens`"; la sugerencia de bajar el effort depende del modelo del rol y
+  la agrega el orquestador en 4b, que tiene el `LLMConfig`.
 - `classify_exception(exc) -> FailureClass` y
   `classify_response(response) -> FailureClass | None`: funciones puras con las
-  reglas de la capa 1 de la spec, en ese orden. Leen `exc.body` y
+  reglas 1 a 6 de la spec, en ese orden. `classify_exception` recorre la cadena
+  `__cause__` hasta la primera excepcion de `openai`/LiteLLM y clasifica esa
+  (asi reconoce el `ContextWindowExceededError` de DSPy sin importar `dspy`);
+  si no hay ninguna, clasifica la excepcion recibida (regla 3 si no aplica otra).
+  `classify_response(None)` es `configuracion`. Leen `exc.body` y
   `getattr(message, "refusal", None)` en forma defensiva.
-- Destino de `EmptyResponseError` (lo decide 1b): opcion preferida, que pase a
-  ser subclase de `LLMCallFailure` con clase `sin_texto` mientras se migran sus
-  usos, y se elimine al cierre si nada la usa.
+- Destino de `EmptyResponseError` (decidido en 1b): pasa a ser subclase de
+  `LLMCallFailure` en `errors.py`, con firma compatible
+  `EmptyResponseError(role, finish_reason=None, clase=FailureClass.sin_texto)`,
+  conserva `role`, `finish_reason` y su mensaje actual. Desde 2a la capa de
+  llamada lanza `EmptyResponseError` (con la clase real: `presupuesto`,
+  `filtro_salida` o `sin_texto`) cuando la falla de capa 1 viene de una
+  respuesta 200 sin texto, y `LLMCallFailure` en los demas casos (excepciones,
+  y `filtro_salida`/`presupuesto` con texto). Asi los `except
+  EmptyResponseError` de los adapters y de `dspy_gepa_poc/empty_response.py`
+  siguen atrapando exactamente lo mismo hasta que 3c y 3e los migren a
+  `LLMCallFailure`; el Cierre la elimina si nada la usa. 1c no cambia quien la
+  lanza (`response_text` y `CheckedLM` se tocan en 2a).
 
 D2. `FailureTracker` en `failures.py`, mismo patron que `shared/llm/usage.py`
-(`threading.Lock`, `reset()` por corrida, instancia de modulo con
-`get_failure_tracker()`):
-- `record_attempt(rol)` y `record(failure)`: intentos y fallas por (clase, rol);
-  `entrada_dato` por `case_id` unico.
-- `configure(thresholds, min_attempts)` desde el YAML (4c); defaults de la spec.
-- Estado de aborto: `abort(failure, motivo)` lo fija `configuracion` en la capa
-  de llamada y la superacion de umbral en `record`. `check_abort()` lanza
-  `RunAborted` con clase, rol, conteo y causa probable; `aborted` lo consulta la
-  capa de llamada antes de llamar al LLM.
-- `snapshot()`: dict serializable para `run.json` (4c).
+(`threading.Lock`, instancia de modulo con `get_failure_tracker()`):
+- Roles: `task`, `judge`, `reflection` (identificadores del codigo, como
+  `LLMConfig.role` y `usage.py`; equivalen a tarea, juez y reflexion de la spec).
+  A diferencia de `usage.py`, `judge` NO se pliega en `reflection`: tiene
+  umbrales propios. Un rol desconocido es `ValueError`. Los textos de log y de
+  `RunAborted` usan los mismos identificadores; 5b documenta la equivalencia en
+  `docs/GEPA_MANEJO_ERRORES.md`.
+- Clave de conteo (`count_key(failure)`): `entrada` con atribucion `candidato`
+  -> `entrada_candidato`, con `externa` -> `entrada_dato`; `presupuesto` con
+  `candidato` -> `presupuesto_candidato`, con `externa` -> `presupuesto`; el
+  resto, el valor de la clase (incluidos `entrada`/`presupuesto` sin atribucion
+  en juez y reflexion). Son los nombres de la spec ("En los conteos figuran
+  como ...").
+- `record_attempt(rol, case_id=None)`: suma un intento del rol (un caso
+  intentado, una vez por caso y candidato, nunca por llamada HTTP) y, si hay
+  `case_id`, lo agrega al conjunto de casos unicos del rol. Lo llama quien
+  cuenta (D4), no la capa de llamada.
+- `record(failure)`: suma en `counts[clave][rol]` y loguea a `WARNING` una vez
+  (rol, clave, atribucion, causa, `finish_reason`, `case_id`). `entrada_dato`
+  cuenta casos unicos: un `case_id` ya registrado no suma y va a `DEBUG`. Una
+  falla `configuracion` registrada tambien fija el aborto (si no estaba). Los
+  conteos solo salen de `record`; `abort` no cuenta (D4).
+- Umbrales (tasa estricta: aborta si `fallas / denominador > umbral`, con
+  `denominador >= minimo del rol`). Se evaluan en `record` y en
+  `record_attempt` (una tasa que ya superaba el umbral aborta al alcanzar el
+  minimo). Defaults de la spec:
+  `{"presupuesto": {"task": .05, "judge": .05, "reflection": .25},
+  "infraestructura" | "sin_texto" | "filtro_salida": {"task": .10, "judge": .10},
+  "entrada_dato": {"task": .10}, "formato": {"judge": .10},
+  "total": {"reflection": .50}}`. `total` suma todas las claves del rol.
+  Denominador: intentos del rol, salvo `entrada_dato`, cuyo denominador es la
+  cantidad de `case_id` unicos intentados en `task` (ver "Nota de 1b", punto b).
+  Claves sin umbral: `configuracion` (aborta siempre), `formato`,
+  `entrada_candidato` y `presupuesto_candidato` en tarea, y las que la tabla de
+  la spec no lista.
+- `min_attempts` por rol, default `{"task": 20, "judge": 20, "reflection": 4}`
+  (la tabla de la spec fija el minimo por fila y coincide con el rol). Aplica a
+  todas las claves del rol, incluido `entrada_dato` (sobre casos unicos).
+- `configure(thresholds=None, min_attempts=None, infra_retries=None)`: mezcla
+  parcial sobre los defaults (`{clave: {rol: tasa}}`, `{rol: int}`, `int`);
+  claves, roles o rangos invalidos son `ValueError` (la validacion para el
+  usuario es la de `BaseConfigValidator`, 4c). `infra_retries` (default 3) vive
+  en el tracker para que la seccion `failures` del YAML configure un solo
+  objeto; la capa de llamada lo lee si no recibe el parametro.
+- `reset()` limpia conteos, intentos, casos y aborto, y restaura la
+  configuracion por defecto. Los orquestadores llaman `reset()` y despues
+  `configure(...)` al arrancar (4b/4c).
+- Estado de aborto: `abort(failure, motivo)` fija el primero (los siguientes se
+  ignoran) y loguea a `ERROR`; propiedad `aborted`; `check_abort()` lanza
+  `RunAborted` si esta abortado.
+- `snapshot()`: dict serializable para `run.json`: `counts` (`{clave: {rol:
+  int}}`), `attempts` (`{rol: int}`), `unique_cases` (`{rol: int}`),
+  `entrada_dato` (lista ordenada de `case_id`), `aborted` y `abort` (`{clase,
+  rol, conteo, intentos, causa, motivo}` o None).
 
-D3. Llamada comun con reintento propio en `shared/llm` (nombre a fijar en 1b,
-p. ej. `checked_completion(kwargs, messages, role)`): verifica `aborted`, llama
-a `litellm.completion` con `num_retries=0`, clasifica la excepcion o la
-respuesta, reintenta solo `infraestructura` con backoff exponencial (reintentos
-desde la config, default 3; intentos intermedios a `DEBUG`), y devuelve el texto
-o lanza `LLMCallFailure`. Ante `configuracion` fija el aborto antes de lanzar.
-Registra el uso de tokens como hoy (`record_usage`).
+D3. Llamada comun con reintento propio: modulo `shared/llm/call.py` (sin
+importar `dspy`). Dos piezas, para que `gepa_standalone` y `CheckedLM` compartan
+la misma logica:
+- `call_with_infra_retry(fn, role, *, infra_retries=None, backoff_base=1.0)`:
+  si el tracker esta abortado lanza `RunAborted` sin llamar; ejecuta `fn()`; ante
+  excepcion la clasifica; si es `infraestructura` y quedan reintentos, loguea a
+  `DEBUG`, espera `backoff_base * 2**n` segundos (`time.sleep`, 1, 2, 4 s) y
+  reintenta (verificando de nuevo el aborto); si es `configuracion`, fija
+  `abort` y lanza; en otro caso lanza `LLMCallFailure(...) from exc`. Devuelve
+  lo que devuelve `fn`.
+- `raise_for_response(response, role)`: aplica `classify_response`; sin falla
+  devuelve el texto original (sin strip, como `response_text`); con falla lanza
+  `EmptyResponseError` o `LLMCallFailure` (D1), y fija el aborto si es
+  `configuracion` (respuesta `None`). No reintenta.
+- `checked_completion(kwargs, messages, role, *, infra_retries=None,
+  backoff_base=1.0) -> str`: `call_with_infra_retry` sobre
+  `litellm.completion(messages=messages, **{**kwargs, "num_retries": 0})`,
+  `record_usage(role, response)` por cada respuesta recibida (incluidas las 200
+  con falla, que gastaron tokens; como hoy) y `raise_for_response`. Recibe los
+  kwargs ya restringidos (`apply_constraints` sigue en el llamador). Nunca llama
+  a `record` ni a `record_attempt` (D4).
 Es la unica llamada a `litellm.completion` en codigo de produccion. Hoy hay
 tres copias de la secuencia kwargs -> `apply_constraints` -> `completion` ->
 `record_usage` -> texto (`get_lm_function`, `call_llm` de
@@ -110,18 +193,30 @@ cuatro archivos de tests. Quedan fuera las sondas de configuracion
 (`LLMConfig.validate_connection`, `shared/utils/check_deployments.py`). Un test
 de 2a verifica que no aparezca otra llamada a `litellm.completion` en
 produccion fuera de `shared/llm` y esas sondas.
-En DSPy, `CheckedLM` se construye con `num_retries=0`; el reintento va en
-`forward` (envuelve `super().forward`) y la clasificacion de la respuesta en
-`_process_lm_response`. 1b verifica que `forward` sea el punto correcto en
-dspy 3.2.1 y como se ve la excepcion envuelta de `ContextWindowExceededError`.
+En DSPy (2a), `CheckedLM` se construye con `num_retries=0` y recibe
+`infra_retries`; `forward` envuelve `super().forward(...)` con
+`call_with_infra_retry`, y `_process_lm_response` llama a `super()` y despues a
+`raise_for_response` (reemplaza `_check_empty`; el uso de tokens sigue
+contandose porque DSPy guarda `history` antes). Verificado en 1b con
+`dspy==3.2.1`: `lm("...")` llama a `forward` una vez y despues a
+`_process_lm_response`; `forward` ve todas las excepciones de los 60
+`RETRY_CASES` con 1 llamada HTTP usando `num_retries=0` (el 422 de OpenAI da 1
+llamada y `BadRequestError` porque `CheckedLM` usa `drop_params=False`; con
+`drop_params=True` serian 2 y `None`, limite conocido de la spec); el
+`ContextWindowExceededError` llega envuelto en el de DSPy con el de LiteLLM en
+`__cause__`. `aforward` no se usa en el repo (sin `acall`/`aforward`); 2a no lo
+cubre y lo deja anotado en el docstring.
 
-D4. Conteo una vez por caso (FR-007): la capa de llamada nunca llama a
-`record`; solo lanza. Cuenta quien conoce el caso: los adapters de
-`gepa_standalone`, el envoltorio de programa/metrica de `dspy_gepa_poc` y, para
-reflexion, el envoltorio del `reflection_lm` (una vez por propuesta). Asi el
-fallback `ChatAdapter` -> `JSONAdapter` de DSPy no multiplica el conteo.
-Excepcion: `configuracion` fija el aborto en la capa de llamada (no cuenta, solo
-corta), porque `Evaluate` y GEPA pueden tragarse la excepcion.
+D4. Conteo una vez por caso (FR-007), confirmado: la capa de llamada
+(`call.py`, `CheckedLM`) nunca llama a `record` ni a `record_attempt`; solo
+lanza. Cuenta quien conoce el caso: los adapters de `gepa_standalone`, el
+envoltorio de programa/metrica de `dspy_gepa_poc` y, para reflexion, el
+envoltorio del `reflection_lm` (un intento y a lo sumo una falla por propuesta,
+`case_id` = iteracion de GEPA, FR-013). Asi el fallback de adapters de DSPy no
+multiplica el conteo. Excepcion: `configuracion` fija el aborto en la capa de
+llamada (no cuenta, solo corta), porque `Evaluate` y GEPA pueden tragarse la
+excepcion; el envoltorio que conoce el caso la registra con `record` como
+cualquier otra falla. `RunAborted` nunca se registra como falla.
 
 D5. Atribucion contra el baseline (FR-004): un `BaselineProbe` por corrida, con
 cache `case_id -> resultado de la llamada baseline` (clase de capa 1 o "ok" y
@@ -140,7 +235,9 @@ de 4a lee el flag NE de cada caso desde `outputs` o desde
 `EvaluationResult.results`; no recalcula llamando al modelo.
 
 D7. Seccion YAML (4c), comun a ambos subproyectos y opcional:
-`failures: {infra_retries, min_attempts, thresholds: {<clase>: {<rol>: tasa}}}`.
+`failures: {infra_retries, min_attempts: {<rol>: int}, thresholds: {<clave>:
+{<rol>: tasa}}}`, con las claves de conteo y roles de D2 (incluida `total` para
+reflexion); se pasa tal cual a `FailureTracker.configure`.
 Validacion en `BaseConfigValidator` (claves y rangos de tasa en [0, 1]); sin la
 seccion se usan los defaults de la spec. Nombres finales a fijar en 4c y
 documentar en `docs/YAML_CONFIG_REFERENCE.md` (5b).
@@ -189,6 +286,57 @@ anota como bloqueo y no commitea.
   estricto (`test_failures.py`, `test_failure_call.py`); algunos pueden fallar
   hoy solo por `ImportError`, y 1c debe verificar que pasen por la razon correcta
   al quitar la marca.
+- Nota de 1b para 1c (D1 a D4 ya reescritas con el resultado; aca solo lo que
+  pidio el supervisor y lo que queda para despues):
+  - (a) `min_attempts`: un unico entero no expresa la tabla de la spec (20 en
+    tarea y juez, 4 en reflexion). Se fija por rol, `{rol: int}` con mezcla
+    parcial sobre los defaults (D2, D7). Test de 1a ajustado:
+    `configure(..., min_attempts={"task": 2})`.
+  - (b) Denominador de `entrada_dato`: la spec dice "0.10 de los casos unicos
+    del split"; el test de 1a usaba los intentos de tarea, que con varios
+    candidatos sobre los mismos casos diluyen la tasa (3 casos de 20 serian
+    3/100). Se fija: casos unicos `entrada_dato` / `case_id` unicos intentados
+    en `task` (`record_attempt(rol, case_id)`), con el minimo de 20 sobre casos
+    unicos. "Del split" se lee como "casos, no intentos": el contador no conoce
+    el split (el `case_id` de FR-013 no siempre lo lleva y ni el adapter ni
+    `Evaluate` lo saben), y un caso pertenece a un solo split, asi que los casos
+    unicos de la corrida son la union de los splits tocados. Consecuencia: un
+    split chico (p. ej. test) no se evalua aislado. Si el usuario quiere tasa
+    por split, hace falta pasar el split al contador desde el orquestador
+    (cambio de 3b/4b); no bloquea 1c. Tests de 1a ajustados
+    (`test_entrada_dato_threshold_uses_unique_cases`) y agregados
+    (`test_entrada_dato_min_attempts_counts_unique_cases`,
+    `test_count_keys_carry_task_attribution`).
+  - (c) Roles: identificadores en ingles (`task`, `judge`, `reflection`) en
+    codigo, logs, `RunAborted`, `run.json` y YAML; la spec habla de tarea, juez
+    y reflexion y 5b documenta la equivalencia. `judge` no se pliega en
+    `reflection` (D2). Hoy `SimpleRAGAdapter` usa `"juez"` como rol de causa:
+    2a lo pasa a `"judge"` al delegar en `checked_completion`.
+  - 1c: `test_failure_call.py` necesita un fixture autouse que anule
+    `shared.llm.call.time.sleep` (con 3 reintentos y backoff de 1 s cada caso de
+    `infraestructura` tardaria 7 s). Al quitar los `xfail`, verificar que cada
+    test pase por la razon correcta (no solo porque ahora existe el modulo).
+  - Para 2a y 3e, hallazgo de la sonda de 1b (`dspy==3.2.1`): ante una excepcion
+    del LM, `dspy.Predict` con `ChatAdapter` llama a `forward` 3 veces (fallback
+    a `JSONAdapter`, que reintenta), salvo que la excepcion sea (o herede de)
+    `dspy.utils.exceptions.ContextWindowExceededError`, que se propaga tras 1
+    llamada. Consecuencias con D3 tal como esta: `configuracion` sigue en 1
+    llamada HTTP (el aborto bloquea las siguientes con `RunAborted`); una falla
+    no reintentable (`entrada`, 200 con falla) cuesta 3 llamadas por caso y una
+    `infraestructura` persistente 3 x 4 = 12; y envolver el
+    `ContextWindowExceededError` de DSPy en `LLMCallFailure` pasaria de 1 a 3
+    llamadas. El conteo no cambia (D4), pero SC-009 ("exactamente 1 llamada
+    HTTP si no es `infraestructura`... en ambos subproyectos") solo se cumple a
+    nivel de `CheckedLM`, no por caso. [NEEDS CLARIFICATION: ¿SC-009 se mide
+    por llamada al LM o por caso de DSPy? Si es por caso, 2a debe hacer que
+    `CheckedLM` lance una excepcion que corte el fallback (p. ej. que
+    `LLMCallFailure` de `CheckedLM` herede del `ContextWindowExceededError` de
+    DSPy, o que el envoltorio de 3e memorice la falla del caso).] No bloquea
+    1c, que no toca `CheckedLM`; se decide en la parada posterior a 1b o en 2a.
+  - Hueco de la spec: la tabla de umbrales no lista `entrada` en juez (NE sin
+    umbral), aunque la spec pide que todo NE quede acotado por umbrales. 1c
+    implementa la tabla tal cual. [NEEDS CLARIFICATION: ¿umbral para `entrada`
+    del juez (p. ej. 0.10 / 20 como las otras NE)?]
 - 1b. Sin codigo de produccion: confirma o corrige D1 a D4 contra `shared/llm`,
   `dspy==3.2.1` (`dspy.LM.forward`, `_process_lm_response`) y los tests de 1a;
   fija nombres de modulo y funciones. Archivos: este plan; los tests de 1a solo

@@ -7,9 +7,9 @@ real de LiteLLM se pasa al clasificador de `shared/llm/failures.py` (FR-001,
 FR-015, SC-009).
 
 Los nombres siguen las decisiones D1 y D2 del plan
-(`docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md`); la subfase 1b los
-confirma o corrige. Roles del contador: los del codigo (`task`, `reflection`,
-`judge`), como en `shared/llm/usage.py`.
+(`docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md`), confirmadas o
+corregidas en la subfase 1b. Roles del contador: los del codigo (`task`,
+`reflection`, `judge`), como en `shared/llm/usage.py`.
 
 Todo el modulo esta marcado `xfail(strict=True)`: la subfase 1c implementa
 `failures.py` y quita la marca. `failures` se importa de forma diferida porque
@@ -351,16 +351,46 @@ class TestFailureTrackerThresholds:
         assert not tracker.aborted
 
     def test_entrada_dato_threshold_uses_unique_cases(self, tracker: Any) -> None:
-        # 0.10 de los casos unicos; el mismo caso repetido no sube la tasa
+        # 1b: tasa = casos unicos entrada_dato / casos unicos intentados en tarea
+        # (no intentos). 5 candidatos sobre los mismos 20 casos: 100 intentos.
         f = _failures()
-        _attempts(tracker, "task", 20)
+        for _ in range(5):
+            for i in range(20):
+                tracker.record_attempt("task", case_id=f"c{i}")
+        for _ in range(10):  # el mismo caso repetido no sube la tasa
+            tracker.record(_failure(f, "entrada", case_id="c0", atribucion="externa"))
+        tracker.record(_failure(f, "entrada", case_id="c1", atribucion="externa"))
+        assert not tracker.aborted  # 2/20 = 0.10, no supera
+        tracker.record(_failure(f, "entrada", case_id="c2", atribucion="externa"))
+        assert tracker.aborted  # 3/20 = 0.15 (sobre intentos seria 3/100)
+
+    def test_entrada_dato_min_attempts_counts_unique_cases(self, tracker: Any) -> None:
+        # Minimo de 20 sobre casos unicos: 100 intentos sobre 10 casos no alcanzan
+        f = _failures()
         for _ in range(10):
-            tracker.record(_failure(f, "entrada", case_id="same", atribucion="externa"))
+            for i in range(10):
+                tracker.record_attempt("task", case_id=f"c{i}")
+        for i in range(5):
+            tracker.record(_failure(f, "entrada", case_id=f"c{i}", atribucion="externa"))
         assert not tracker.aborted
-        tracker.record(_failure(f, "entrada", case_id="other-1", atribucion="externa"))
-        tracker.record(_failure(f, "entrada", case_id="other-2", atribucion="externa"))
-        tracker.record(_failure(f, "entrada", case_id="other-3", atribucion="externa"))
-        assert tracker.aborted
+
+    def test_count_keys_carry_task_attribution(self, tracker: Any) -> None:
+        # Claves de conteo de la spec: entrada_candidato / entrada_dato y
+        # presupuesto_candidato / presupuesto; entrada_dato cuenta casos unicos
+        f = _failures()
+        _attempts(tracker, "task", 100)
+        tracker.record(_failure(f, "entrada", case_id="a", atribucion="candidato"))
+        tracker.record(_failure(f, "entrada", case_id="b", atribucion="externa"))
+        tracker.record(_failure(f, "entrada", case_id="b", atribucion="externa"))
+        tracker.record(_failure(f, "presupuesto", case_id="c", atribucion="candidato"))
+        tracker.record(_failure(f, "presupuesto", case_id="d", atribucion="externa"))
+        tracker.record(_failure(f, "entrada", "judge", case_id="e"))
+        counts = tracker.snapshot()["counts"]
+        assert counts["entrada_candidato"]["task"] == 1
+        assert counts["entrada_dato"]["task"] == 1
+        assert counts["presupuesto_candidato"]["task"] == 1
+        assert counts["presupuesto"]["task"] == 1
+        assert counts["entrada"]["judge"] == 1
 
     def test_judge_formato_has_threshold(self, tracker: Any) -> None:
         f = _failures()
@@ -371,7 +401,8 @@ class TestFailureTrackerThresholds:
 
     def test_configure_overrides_thresholds_and_min_attempts(self, tracker: Any) -> None:
         f = _failures()
-        tracker.configure(thresholds={"infraestructura": {"task": 0.9}}, min_attempts=2)
+        # 1b: min_attempts por rol (la spec fija 20 en tarea/juez y 4 en reflexion)
+        tracker.configure(thresholds={"infraestructura": {"task": 0.9}}, min_attempts={"task": 2})
         _attempts(tracker, "task", 10)
         for _ in range(5):
             tracker.record(_failure(f, "infraestructura"))

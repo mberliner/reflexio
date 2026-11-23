@@ -6,9 +6,9 @@ Sin red: se intercepta `httpx.Client.send` con los payloads de
 la clase no es `infraestructura`, 1 + reintentos si lo es), que la capa de
 llamada no cuenta fallas (D4) y que un estado de aborto impide llamar al LLM.
 
-Nombres provisionales segun D3 del plan (`shared.llm.call.checked_completion(kwargs,
-messages, role, infra_retries=...)`); la subfase 1b los fija. Marcado
-`xfail(strict=True)` hasta la subfase 1c.
+Nombres segun D3 del plan, confirmados en 1b
+(`shared.llm.call.checked_completion(kwargs, messages, role, infra_retries=...)`).
+Marcado `xfail(strict=True)` hasta la subfase 1c.
 """
 
 from __future__ import annotations
