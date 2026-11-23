@@ -25,29 +25,37 @@ def generate_seed() -> int:
     return random.randint(0, _MAX_SEED)
 
 
-def collect_model_info(task_config, reflection_config) -> dict[str, Any]:
+def collect_model_info(
+    task_config,
+    reflection_config,
+    judge_config=None,
+    task_max_tokens: int | None = None,
+    judge_max_tokens: int | None = None,
+) -> dict[str, Any]:
     """
-    Collect model information from LLMConfig instances.
+    Collect effective model parameters from LLMConfig instances (SPEC-103 FR-012).
+
+    Each role stores `LLMConfig.effective_params()`: what is really sent (temperature
+    omitted, effort, reasoning mode, final max_tokens), so a run.json is comparable
+    across providers.
 
     Args:
         task_config: LLMConfig for the task model.
         reflection_config: LLMConfig for the reflection model.
+        judge_config: LLMConfig of the judge (RAG adapter); omitted if None.
+        task_max_tokens: max_tokens fixed per call by the adapter (None = config).
+        judge_max_tokens: max_tokens fixed per call for the judge (None = config).
 
     Returns:
-        Dictionary with model details for both task and reflection.
+        Dictionary with "task", "reflection" and, if given, "judge" entries.
     """
-    return {
-        "task": {
-            "model": task_config.model,
-            "temperature": task_config.temperature,
-            "max_tokens": task_config.max_tokens,
-        },
-        "reflection": {
-            "model": reflection_config.model,
-            "temperature": reflection_config.temperature,
-            "max_tokens": reflection_config.max_tokens,
-        },
+    info = {
+        "task": task_config.effective_params(task_max_tokens),
+        "reflection": reflection_config.effective_params(),
     }
+    if judge_config is not None:
+        info["judge"] = judge_config.effective_params(judge_max_tokens)
+    return info
 
 
 def _hash_file(path: Path) -> str:

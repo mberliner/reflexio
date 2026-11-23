@@ -64,6 +64,8 @@ from shared.paths import get_paths
 TOTAL_STEPS = 7
 # Identificador del motor que aparece en el header del run.
 ENGINE = "GEPA-STANDALONE"
+# max_tokens de la reflexion cuando el YAML no lo fija.
+_REFLECTION_DEFAULT_MAX_TOKENS = 2000
 
 
 class UniversalOptimizer:
@@ -83,6 +85,32 @@ class UniversalOptimizer:
         self.val_data = None
         self.test_data = None
         self.results = None
+        self.task_config = None
+        self.reflection_config = None
+
+    def build_llm_configs(self):
+        """
+        Build once the task and reflection LLMConfig with the YAML overrides.
+
+        The same instances are used for validation, adapter reporting, the
+        reflection LM and save_results, so run.json reports what was sent.
+        """
+        models_cfg = self.config.get("models", {})
+        self.active_temperature = models_cfg.get("temperature", 0.0)
+
+        self.task_config = get_task_config()
+        self.task_config.temperature = self.active_temperature
+        self.reflection_config = get_reflection_config()
+        if models_cfg.get("temperature") is not None:
+            self.reflection_config.temperature = models_cfg["temperature"]
+        for cfg in (self.task_config, self.reflection_config):
+            if models_cfg.get("max_tokens"):
+                cfg.max_tokens = models_cfg["max_tokens"]
+        if models_cfg.get("cache") is not None:
+            self.reflection_config.cache = models_cfg["cache"]
+        if not models_cfg.get("max_tokens"):
+            # default usado por create_reflection_lm_function
+            self.reflection_config.max_tokens = _REFLECTION_DEFAULT_MAX_TOKENS
 
     def run(self, verbose: bool = False):
         """Execute complete optimization workflow."""
@@ -111,6 +139,7 @@ class UniversalOptimizer:
 
         Config.apply_yaml_config(self.config)
         self.validate_config()
+        self.build_llm_configs()
 
         # STEP 2: LLM check
         print_step(2, TOTAL_STEPS, "LLM CONNECTION CHECK")
@@ -216,19 +245,8 @@ class UniversalOptimizer:
         Raises:
             LLMConnectionError: If any endpoint is unreachable or misconfigured.
         """
-        models_cfg = self.config.get("models", {})
-
-        task_cfg = get_task_config()
-        if models_cfg.get("temperature") is not None:
-            task_cfg.temperature = models_cfg["temperature"]
-        if models_cfg.get("max_tokens"):
-            task_cfg.max_tokens = models_cfg["max_tokens"]
-
-        ref_cfg = get_reflection_config()
-        if models_cfg.get("temperature") is not None:
-            ref_cfg.temperature = models_cfg["temperature"]
-        if models_cfg.get("max_tokens"):
-            ref_cfg.max_tokens = models_cfg["max_tokens"]
+        task_cfg = self.task_config
+        ref_cfg = self.reflection_config
 
         log_info("Validando conexion con Task LM...")
         task_cfg.validate()
@@ -271,14 +289,7 @@ class UniversalOptimizer:
     def initialize_adapter(self):
         """Initialize adapter based on config type."""
         adapter_type = self.config["adapter"]["type"]
-        models_cfg = self.config.get("models", {})
-        # Capture actual temperature used for reporting consistency
-        self.active_temperature = models_cfg.get("temperature", 0.0)
-
-        task_cfg = get_task_config()
-        task_cfg.temperature = self.active_temperature
-        if models_cfg.get("max_tokens"):
-            task_cfg.max_tokens = models_cfg["max_tokens"]
+        task_cfg = self.task_config
         log_info(f"Initializing {adapter_type} adapter...")
 
         if adapter_type == "classifier":
@@ -405,23 +416,10 @@ class UniversalOptimizer:
 
         # STEP 6: Optimization
         print_step(6, TOTAL_STEPS, "GEPA OPTIMIZATION")
-        models_config = self.config.get("models", {})
-
-        ref_cfg = get_reflection_config()
-        if models_config.get("temperature") is not None:
-            ref_cfg.temperature = models_config["temperature"]
-        if models_config.get("max_tokens") is not None:
-            ref_cfg.max_tokens = models_config["max_tokens"]
-        else:
-            ref_cfg.max_tokens = 2000  # default usado por create_reflection_lm_function
+        ref_cfg = self.reflection_config
         print_kv("Reflection LM", ref_cfg.describe())
 
-        reflection_lm = create_reflection_lm_function(
-            verbose=verbose,
-            temperature=models_config.get("temperature"),
-            max_tokens=models_config.get("max_tokens"),
-            cache=models_config.get("cache"),
-        )
+        reflection_lm = create_reflection_lm_function(verbose=verbose, config=ref_cfg)
 
         # Snapshot parameters for consistency
         self.active_max_metric_calls = self.config["optimization"]["max_metric_calls"]
@@ -493,7 +491,7 @@ class UniversalOptimizer:
         }
         self._summary_config = {
             "Task LM": self.adapter.model,
-            "Reflection LM": get_reflection_config().model,
+            "Reflection LM": self.reflection_config.model,
             "Budget used": f"{result.total_metric_calls} metric calls",
             "Eval repeats": str(self.eval_repeats),
             "Prompt changed": "Si" if prompt_changed else "No (delta=ruido)",
@@ -526,9 +524,8 @@ class UniversalOptimizer:
         run_id = str(uuid.uuid4())[:8]
 
         # Determine model names; restore configured temperature for accurate logging
-        task_config = get_task_config()
-        task_config.temperature = self.active_temperature
-        reflect_config = get_reflection_config()
+        task_config = self.task_config
+        reflect_config = self.reflection_config
 
         # Write reproducibility metadata (3 levels)
         self.metadata_mgr.ensure_environment()
@@ -570,7 +567,13 @@ class UniversalOptimizer:
             run_dir=run_dir,
             experiment_name=self.config["case"]["name"],
             seed=self.seed,
-            models=collect_model_info(task_config, reflect_config),
+            models=collect_model_info(
+                task_config,
+                reflect_config,
+                judge_config=getattr(self.adapter, "_judge_config", None),
+                task_max_tokens=self.adapter.task_max_tokens,
+                judge_max_tokens=getattr(self.adapter, "judge_max_tokens", None),
+            ),
             usage=usage,
         )
 

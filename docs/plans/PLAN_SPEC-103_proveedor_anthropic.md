@@ -43,7 +43,7 @@ modelos bajo prueba de la matriz de la spec.
 | 3 Costos | 3a Precios desde la pagina oficial y tabla de `docs/ANALISIS_UTILIDADES.md` | FR-011 | Sonnet 5.5 | hecho (611a32b) |
 | | 3b `normalize_model`, `get_model_pricing` y test de tokens de razonamiento en `usage.py` | FR-011 | Sonnet 5.5 | hecho (e1ca3a3) |
 | 4 Reporte y metadata | 4a `describe()` desde `effective_params`, con `max_tokens` por adapter | FR-010 | Sonnet 5.5 | hecho (efd8b96) |
-| | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | pendiente |
+| | 4b Configs unicas por corrida en `universal_optimizer`; `run.json` con parametros efectivos | FR-012 | Sonnet 5.5 | hecho (HASH4B) |
 | 5 Docs | `docs/LLM_CONFIG.md`, `docs/PROTOCOLO_N_SEEDS.md`, `docs/METADATA_REPRODUCIBILIDAD.md` | FR-012, FR-013 | Sonnet 5.5 | pendiente |
 | 6 Verificacion real (sesion aparte) | 6a Estimacion de costo y, si hace falta, YAML de verificacion | SC-003 | Sonnet 5.5 | pendiente |
 | | 6b Ejecucion de las 14 corridas | SC-003 | Sonnet 5.5 | pendiente |
@@ -635,6 +635,21 @@ con el `max_tokens` del YAML o 2000.
   `reflexio_declarativa.py` ya pasa las configs usadas.
 - Tests en `tests/test_shared_metadata.py`; `metricas_optimizacion.csv` sin
   cambios.
+
+Resultado de 4b: `UniversalOptimizer.build_llm_configs()` arma una vez
+`task_config` y `reflection_config` (overrides del YAML; `cache` y el default de
+2000 `max_tokens` solo en reflexion) justo despues de `validate_config`; los usan
+la validacion, el reporte del adapter, la reflexion y `save_results`.
+`create_reflection_lm_function` acepta `config` (ignora los otros overrides si se
+pasa). `collect_model_info(task, reflection, judge_config=None,
+task_max_tokens=None, judge_max_tokens=None)` guarda `effective_params()` por rol
+(y `judge` en RAG); `reflexio_declarativa.py` no necesito cambios. Los adapters
+conservan su propia config (`get_task_config` en `BaseAdapter`): su parametro
+efectivo se reporta via `task_max_tokens`. Cambio de formato de `run.json`:
+`models.<rol>` pasa de 3 claves a las de `effective_params` (`temperature` es el
+valor enviado, None si se omite). Tests en `tests/test_shared_metadata.py` y
+`tests/test_universal_optimizer_configs.py`; suite 816 passed; `ci_local.sh`
+verde.
 
 ### 5 Docs — Sonnet 5.5
 

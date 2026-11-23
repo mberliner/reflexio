@@ -5,10 +5,10 @@ Tests MetadataManager (3 levels), generate_seed, and collect_model_info.
 """
 
 import json
-from types import SimpleNamespace
 
 import pytest
 
+from shared.llm import LLMConfig
 from shared.logging.metadata import _MAX_SEED, MetadataManager, collect_model_info, generate_seed
 
 
@@ -47,17 +47,65 @@ class TestGenerateSeed:
 # ==================== collect_model_info ====================
 
 
+def _cfg(model, role="task", **kwargs):
+    params = {
+        "model": model,
+        "api_key": "x",
+        "temperature": 0.0,
+        "max_tokens": 1000,
+        "role": role,
+    }
+    params.update(kwargs)
+    return LLMConfig(**params)
+
+
 class TestCollectModelInfo:
-    def test_returns_task_and_reflection(self):
-        task = SimpleNamespace(model="azure/gpt-4o", temperature=0.0, max_tokens=1000)
-        reflection = SimpleNamespace(model="azure/gpt-4o-mini", temperature=0.7, max_tokens=2000)
+    def test_returns_task_and_reflection_effective_params(self):
+        task = _cfg("azure/gpt-4o")
+        reflection = _cfg("azure/gpt-4o-mini", "reflection", temperature=0.7, max_tokens=2000)
 
         info = collect_model_info(task, reflection)
 
+        assert info["task"] == task.effective_params()
+        assert info["reflection"] == reflection.effective_params()
         assert info["task"]["model"] == "azure/gpt-4o"
-        assert info["task"]["temperature"] == 0.0
-        assert info["reflection"]["model"] == "azure/gpt-4o-mini"
+        assert info["reflection"]["temperature"] == 0.7
         assert info["reflection"]["max_tokens"] == 2000
+        assert "judge" not in info
+
+    def test_anthropic_reports_what_is_sent(self):
+        task = _cfg("anthropic/claude-opus-4-7", temperature=0.3, max_tokens=500)
+        reflection = _cfg("anthropic/claude-opus-5-5", "reflection", effort="high")
+
+        info = collect_model_info(task, reflection)
+
+        assert info["task"]["temperature"] is None
+        assert info["task"]["temperature_omitted"] is True
+        assert info["task"]["temperature_requested"] == 0.3
+        assert info["reflection"]["effort"] == "high"
+        assert info["reflection"]["thinking"] == "adaptive"
+        assert info["reflection"]["max_tokens"] >= 16000
+        assert info["reflection"]["max_tokens_requested"] == 1000
+
+    def test_per_call_max_tokens_and_judge(self):
+        task = _cfg("anthropic/claude-haiku-4-5", max_tokens=2000)
+        reflection = _cfg("anthropic/claude-haiku-4-5", "reflection")
+        judge = _cfg("anthropic/claude-haiku-4-5", "reflection", max_tokens=2000)
+
+        info = collect_model_info(
+            task, reflection, judge_config=judge, task_max_tokens=400, judge_max_tokens=200
+        )
+
+        assert info["task"]["max_tokens"] == 400
+        assert info["judge"]["max_tokens"] == 200
+        assert info["reflection"]["max_tokens"] == 1000
+
+    def test_is_json_serializable_and_has_no_secrets(self):
+        task = _cfg("anthropic/claude-opus-5-5", api_key="sk-secret")
+
+        info = collect_model_info(task, _cfg("azure/gpt-4o"))
+
+        assert "sk-secret" not in json.dumps(info)
 
 
 # ==================== Level 1: Environment ====================
