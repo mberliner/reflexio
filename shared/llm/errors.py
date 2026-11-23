@@ -6,6 +6,8 @@ Provides structured error handling for LLM connection issues.
 
 from typing import Any
 
+from .failures import FailureClass, LLMCallFailure, LLMFailure
+
 
 class LLMConnectionError(Exception):
     """
@@ -133,16 +135,31 @@ class LLMConfigError(LLMConnectionError):
         )
 
 
-class EmptyResponseError(Exception):
+class EmptyResponseError(LLMCallFailure):
     """
-    Respuesta del LLM sin texto (SPEC-103, FR-009).
+    Respuesta del LLM sin texto (SPEC-103, FR-009; SPEC-104, D1).
 
     Se lanza cuando el contenido es None o vacio (p. ej. `finish_reason`
-    `max_tokens` o `refusal`). No hereda de LLMConnectionError: los adapters
-    la tratan como fallo del ejemplo, no como corte de la corrida.
+    `max_tokens` o `refusal`). Es una `LLMCallFailure` con la clase real de la
+    falla (`sin_texto` por defecto). No hereda de LLMConnectionError: los
+    adapters la tratan como fallo del ejemplo, no como corte de la corrida.
     """
 
-    def __init__(self, role: str, finish_reason: str | None = None):
+    def __init__(
+        self,
+        role: str,
+        finish_reason: str | None = None,
+        clase: FailureClass = FailureClass.sin_texto,
+    ):
         self.role = role
         self.finish_reason = finish_reason
-        super().__init__(f"Respuesta sin texto del LLM (rol={role}, finish_reason={finish_reason})")
+        failure = LLMFailure(
+            clase=clase,
+            rol=role,
+            causa=str(finish_reason) if finish_reason else "EmptyContent",
+            finish_reason=finish_reason,
+        )
+        super().__init__(
+            failure,
+            f"Respuesta sin texto del LLM (rol={role}, finish_reason={finish_reason})",
+        )

@@ -1,5 +1,5 @@
 """
-Tests RED de SPEC-104 subfase 1a: clasificador de la capa 1 y `FailureTracker`.
+Tests de SPEC-104 (1a, GREEN en 1c): clasificador de la capa 1 y `FailureTracker`.
 
 Sin red: los payloads HTTP de `tests/litellm_failure_payloads.py` (102 casos) se
 inyectan en el transporte HTTP (`httpx.Client.send`) y la excepcion o respuesta
@@ -11,9 +11,6 @@ Los nombres siguen las decisiones D1 y D2 del plan
 corregidas en la subfase 1b. Roles del contador: los del codigo (`task`,
 `reflection`, `judge`), como en `shared/llm/usage.py`.
 
-Todo el modulo esta marcado `xfail(strict=True)`: la subfase 1c implementa
-`failures.py` y quita la marca. `failures` se importa de forma diferida porque
-el modulo todavia no existe.
 """
 
 from __future__ import annotations
@@ -36,8 +33,6 @@ from tests.litellm_failure_payloads import (
     FailurePayloadCase,
 )
 from tests.test_litellm_failure_mapping import _call_completion, intercept_httpx
-
-pytestmark = pytest.mark.xfail(strict=True, reason="SPEC-104 1c")
 
 
 def _failures() -> ModuleType:
@@ -391,6 +386,25 @@ class TestFailureTrackerThresholds:
         assert counts["presupuesto_candidato"]["task"] == 1
         assert counts["presupuesto"]["task"] == 1
         assert counts["entrada"]["judge"] == 1
+
+    def test_judge_entrada_threshold_is_010_with_min_20(self, tracker: Any) -> None:
+        # Decidido tras 1b: `entrada` en juez con umbral 0.10 y minimo 20 intentos
+        f = _failures()
+        _attempts(tracker, "judge", 19)
+        for _ in range(19):  # bajo el minimo: no aborta aunque la tasa sea 1.0
+            tracker.record(_failure(f, "entrada", "judge"))
+        assert not tracker.aborted
+        tracker.reset()
+        _attempts(tracker, "judge", 20)
+        for _ in range(2):  # 2/20 = 0.10, no supera
+            tracker.record(_failure(f, "entrada", "judge"))
+        assert not tracker.aborted
+        tracker.record(_failure(f, "entrada", "judge"))  # 3/20 = 0.15
+        assert tracker.aborted
+        with pytest.raises(f.RunAborted) as exc_info:
+            tracker.check_abort()
+        assert "entrada" in str(exc_info.value)
+        assert "judge" in str(exc_info.value)
 
     def test_judge_formato_has_threshold(self, tracker: Any) -> None:
         f = _failures()

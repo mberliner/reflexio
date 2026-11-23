@@ -8,7 +8,6 @@ llamada no cuenta fallas (D4) y que un estado de aborto impide llamar al LLM.
 
 Nombres segun D3 del plan, confirmados en 1b
 (`shared.llm.call.checked_completion(kwargs, messages, role, infra_retries=...)`).
-Marcado `xfail(strict=True)` hasta la subfase 1c.
 """
 
 from __future__ import annotations
@@ -30,8 +29,6 @@ from tests.litellm_failure_payloads import (
 )
 from tests.test_litellm_failure_mapping import intercept_httpx
 
-pytestmark = pytest.mark.xfail(strict=True, reason="SPEC-104 1c")
-
 INFRA_RETRIES = 3
 _HTTP_200_OK = tuple(
     c for c in ALL_FAILURE_CASES if c.case_type == "http_200" and c.spec104_class == "ok"
@@ -51,6 +48,7 @@ def _call_mod() -> ModuleType:
 
 @pytest.fixture(autouse=True)
 def _isolate(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setattr("shared.llm.call.time.sleep", lambda _s: None)
     monkeypatch.setattr(litellm, "drop_params", True)
     monkeypatch.setattr(litellm, "num_retries", None)
     monkeypatch.setattr(litellm, "suppress_debug_info", True)
