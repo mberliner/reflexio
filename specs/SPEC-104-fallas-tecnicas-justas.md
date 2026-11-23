@@ -12,6 +12,7 @@ por `max_tokens`" de su SC-004), [[SPEC-100-veredicto-senal-ruido]],
 [[SPEC-105-roles-intercambiables]], `docs/GEPA_MANEJO_ERRORES.md`,
 `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md`,
 `docs/ARCHITECTURE.md`
+Plan de implementacion: docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md
 
 ## User Story (prioridad)
 
