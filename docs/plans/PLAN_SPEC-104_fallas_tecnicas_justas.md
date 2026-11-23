@@ -37,7 +37,7 @@ aca solo se ajusta la referencia.
 | | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | hecho (147f5ab) |
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | hecho (6e9617a) |
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | hecho (d61de1c) |
-| | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente |
+| | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente (relanzar; ver "Primer intento de 2b") |
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | pendiente |
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | pendiente |
 | | 3c Adapters de `gepa_standalone`: resultado por caso (evaluado / NE / score 0 por clase), atribucion, `make_reflective_dataset` sin NE, `formato` por adapter | FR-002, FR-004, FR-010, FR-011, FR-012, SC-001, SC-008 | Sonnet 5.5 | pendiente |
@@ -456,7 +456,83 @@ anota como bloqueo y no commitea.
   `gepa==0.0.27` como extrae la instruccion (bloque de codigo) y que la
   excepcion saltea la iteracion. Archivos: `shared/llm/config.py`,
   `shared/llm/dspy_lm.py`, `gepa_standalone/core/llm_factory.py`, test nuevo de
-  reflexion.
+  reflexion, `shared/llm/reflection.py` (nuevo), `tests/test_empty_response_dspy.py`
+  (ampliado tras el primer intento, aprobado por el usuario el 2026-11-23).
+- Resolucion del primer intento de 2b (usuario, 2026-11-23). El relanzamiento
+  continua sobre el arbol (no lo descarta), con Opus 5.5:
+  1. `test_text_passes_through` refleja el comportamiento nuevo: una propuesta
+     con bloque pasa; `"ok"` sin bloque en rol `reflection` se descarta como
+     `formato`.
+  2. FR-007: en 2b se baja a DEBUG el log de respuesta sin texto de la capa de
+     llamada solo para el rol `reflection` (un unico WARNING, el de `record`),
+     ajustando los tests de `test_empty_response_dspy.py`. Tarea y juez se
+     resuelven cuando sus envoltorios cuenten (3c, 3e).
+  3. `reflection_format_failure` y `ReflectionGuard` se mueven a
+     `shared/llm/reflection.py`; `shared/llm/config.py` MUST quedar por debajo
+     de 800 lineas.
+  4. Cableado del callback de GEPA (`case_id` = iteracion) en 4b;
+     `dspy_gepa_poc/optimizer.py` entra en la lista de Archivos de 4b.
+- Primer intento de 2b (sesion `-p` Opus 5.5, 2026-11-23; sin commit, arbol sin
+  commitear para relanzar sobre el). Implementado:
+  - Verificacion contra `gepa==0.0.27` / `dspy==3.2.1`: ambos caminos
+    (`ReflectiveMutationProposer.propose_new_texts` y
+    `DspyAdapter.propose_new_texts`) extraen con
+    `InstructionProposalSignature.output_extractor`, que nunca falla: sin bloque
+    de triple backtick devuelve el texto entero (o lo salva si falta un cierre)
+    y GEPA lo adopta como instruccion. `propose` atrapa cualquier excepcion y
+    saltea la iteracion (candidato vigente sin cambios). Por eso el envoltorio
+    detecta `formato` y lanza.
+  - `shared/llm/config.py`: `reflection_format_failure(text)` (`formato` con
+    causa `sin_bloque_instruccion` o `instruccion_vacia`, usando el extractor de
+    GEPA con import diferido) y `ReflectionGuard` (D4: `check_abort` antes de
+    llamar, `record_attempt("reflection", case_id)` una vez por propuesta,
+    `record` de la falla de capa 1 o `formato` con su `case_id` y relanza;
+    `RunAborted` no se registra). `gepa_standalone/core/llm_factory.py`:
+    `create_reflection_lm_function` devuelve `ReflectionLM` (envuelve tambien el
+    modo verbose). `shared/llm/dspy_lm.py`: `CheckedLM.__call__` con rol
+    `reflection` pasa por el guard (salidas str o dict con `text`, como
+    `stripped_lm_call`); la falla sigue cortando el fallback de adapters.
+  - `case_id` (FR-013, D4): la iteracion de GEPA (`iteracion:<i>`) si el
+    envoltorio recibe el callback `on_proposal_start` (`ReflectionLM` y
+    `CheckedLM` lo implementan; un intento por iteracion aunque se actualicen
+    varios componentes); si no, el numero de propuesta (`propuesta:<n>`). El
+    cableado (`callbacks=[reflection_lm]` en `gepa.optimize` y
+    `gepa_kwargs={"callbacks": [reflection_lm]}` en `dspy.GEPA`) queda para 4b;
+    `dspy_gepa_poc/optimizer.py`, donde se arma `dspy.GEPA`, no esta en la lista
+    de Archivos de 4b y deberia entrar.
+  - `tests/test_reflection_guard.py` (250 tests, pasan): `formato` contrastado
+    con el extractor de GEPA; los 99 payloads con falla en rol `reflection` en
+    ambos subproyectos (clase, 1 llamada HTTP o 1 + reintentos, un conteo por
+    propuesta, aborto por `configuracion`); 200 con falla via
+    `make_completion_response`; `gepa.optimize` y `dspy.GEPA` reales: propuesta
+    con falla no crea ni evalua candidato (SC-003), propuesta valida si;
+    callback -> `case_id` = iteracion. Comportamiento real observado: con fallas
+    persistentes, 3 propuestas fallan y el 4o intento alcanza el minimo de
+    reflexion (4) y aborta por umbral (`presupuesto` 0.25 o `total` 0.50)
+    antes de llamar; GEPA sigue iterando sin llamadas (`RunAborted` atrapado)
+    hasta que el orquestador consulte el estado (4b).
+  - `ci_local.sh`: lint, seguridad y cobertura OK; falla 1 test.
+  Puntos que requirieron decision del usuario (resueltos arriba):
+  1. `tests/test_empty_response_dspy.py::TestCheckedLM::test_text_passes_through`
+     fija el comportamiento anterior: un `CheckedLM` de rol `reflection` que
+     devuelve `"ok"` (sin bloque) lo deja pasar. Con FR-005 eso es `formato` y
+     se descarta. El archivo no esta en la lista de 2b. Propuesta: agregar
+     `tests/test_empty_response_dspy.py` a los Archivos de 2b y cambiar el
+     contenido del test a una propuesta con bloque (o mover el caso a rol
+     `task`).
+  2. FR-007 en reflexion (decidir junto con 1): desde 2b el envoltorio de
+     reflexion registra con `record` (WARNING una vez por propuesta), y la capa
+     de llamada sigue logueando a WARNING la respuesta sin texto
+     (`log_empty_response` en `complete_text` y `CheckedLM`): dos WARNING por
+     falla sin texto de reflexion. Opciones: (a) en 2b bajar a DEBUG ese log
+     solo para el rol `reflection` (unico rol cuyo envoltorio ya cuenta) y
+     ajustar `test_empty_response_dspy.py` (`test_reflection_raises_with_cause`,
+     `test_empty_reflection_skips_iteration`, que miran el WARNING
+     `rol=reflection, finish_reason=...`); (b) dejarlo para 3c/3e/5a como ya
+     anota el Cierre de 2a. Recomendacion: (a), asi 2b cumple FR-007 en su rol.
+  Nota menor: `shared/llm/config.py` queda en 823 lineas (tope 800 de
+  `coding-style`); el Cierre, al eliminar `response_text` (sin usos en
+  produccion), lo devuelve bajo el tope.
 - 3a. Archivos: `gepa_standalone/data/data_loader.py`,
   `dspy_gepa_poc/data_loader.py`, tests de loaders (existentes o uno nuevo).
 - 3b. Sin codigo de produccion: fija D5 y D6 (donde vive el probe, como se
@@ -474,8 +550,10 @@ anota como bloqueo y no commitea.
   test nuevo.
 - 4b. Archivos: `gepa_standalone/universal_optimizer.py`,
   `dspy_gepa_poc/reflexio_declarativa.py`,
-  `dspy_gepa_poc/scripts/baseline_only.py`, `shared/display/formatting.py`
-  (solo si el reporte vive ahi), tests de los orquestadores.
+  `dspy_gepa_poc/scripts/baseline_only.py`, `dspy_gepa_poc/optimizer.py`
+  (cableado del callback de reflexion, decidido tras 2b),
+  `shared/display/formatting.py` (solo si el reporte vive ahi), tests de los
+  orquestadores.
 - 4c. Archivos: `shared/validation/base_validator.py`,
   `gepa_standalone/config_schema.py`, `dspy_gepa_poc/config_schema.py`,
   `shared/logging/metadata.py`, `gepa_standalone/universal_optimizer.py` y
