@@ -3,8 +3,8 @@
 Laboratorio de experimentacion para optimizar sistemas que usan LLM mediante
 DSPy y GEPA.
 
-> Este archivo es el entry file del agente. `AGENTS.md` y `GEMINI.md` son copias
-> identicas: cualquier cambio aqui MUST replicarse en las tres.
+> Este archivo es el entry file central y unico del agente (SSOT). `CLAUDE.md`
+> apunta aqui mediante `@AGENTS.md`.
 
 ## Reglas-gatillo (siempre activas)
 

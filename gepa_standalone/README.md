@@ -75,7 +75,7 @@ Para comparación detallada RAG vs Prompt, ver `docs/DEMO4_RAG_GUIDE.md`.
 
 El **Universal Optimizer** permite ejecutar cualquiera de estos casos simplemente apuntando al archivo de configuración correspondiente en `experiments/configs/`:
 
-> **Nota de invocación:** todos los comandos se ejecutan **desde la raíz del repo** con `python -m`. Invocar el script directo (`python gepa_standalone/universal_optimizer.py`) NO funciona porque Python pondría el directorio del script en `sys.path` y `import shared` fallaría. Ver `CLAUDE.md` para detalle.
+> **Nota de invocación:** todos los comandos se ejecutan **desde la raíz del repo** con `python -m`. Invocar el script directo (`python gepa_standalone/universal_optimizer.py`) NO funciona porque Python pondría el directorio del script en `sys.path` y `import shared` fallaría. Ver `AGENTS.md` para detalle.
 
 ### 1. Clasificación de Urgencia
 Clasifica la urgencia de correos electrónicos (`urgent`, `normal`, `low`).

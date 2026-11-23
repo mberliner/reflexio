@@ -8,7 +8,7 @@ LLM mediante DSPy y GEPA.
 Orden de lectura para ponerse al dia. Empieza por el entry file del agente, no
 por el README (que es la puerta para humanos).
 
-1. [CLAUDE.md](CLAUDE.md) — PUNTO DE PARTIDA del agente: reglas-gatillo y protocolo de navegacion hacia los SSOTs (copias identicas en `AGENTS.md` y `GEMINI.md`)
+1. [AGENTS.md](AGENTS.md) — PUNTO DE PARTIDA del agente: entry file central y unico con reglas-gatillo y protocolo de navegacion hacia los SSOTs (`CLAUDE.md` lo referencia via `@AGENTS.md`)
 2. [docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md](docs/GEPA_STANDALONE_EN_DSPY_ANALISIS.md) — arquitectura de integracion y metodologia de 3 conjuntos
 3. [docs/LLM_CONFIG.md](docs/LLM_CONFIG.md) — configuracion LLM unificada antes de correr nada
 4. [docs/YAML_CONFIG_REFERENCE.md](docs/YAML_CONFIG_REFERENCE.md) — campos de configuracion YAML de ambos proyectos

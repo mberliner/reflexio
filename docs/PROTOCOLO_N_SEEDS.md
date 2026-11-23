@@ -15,7 +15,7 @@ no sobre un punto.
 
 ## Invocacion
 
-Siempre como modulo desde la raiz del repo (ver convencion en `CLAUDE.md`):
+Siempre como modulo desde la raiz del repo (ver convencion en `AGENTS.md`):
 
 ```bash
 python -m shared.utils.seed_protocol \

@@ -3,7 +3,7 @@
 Comparadores y scoring por campo (exact/normalized/fuzzy/set) sin dependencia de
 ningun framework. Permite que `dspy_gepa_poc` y `gepa_standalone` apliquen la
 misma logica de match sin que un paquete importe al otro (ver invariante de
-paquetes hermanos en CLAUDE.md).
+paquetes hermanos en AGENTS.md).
 """
 
 from shared.scoring.field_match import (

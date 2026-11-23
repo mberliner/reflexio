@@ -48,6 +48,32 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-23 — Unificacion de entry files en AGENTS.md
+
+Se elimina la triplicacion de entry files (`AGENTS.md` / `CLAUDE.md` / `GEMINI.md`)
+dejando `AGENTS.md` como entry file central y unico (SSOT):
+
+- Eliminado `GEMINI.md`.
+- `CLAUDE.md` reducido exclusivamente a la referencia `@AGENTS.md`.
+- `AGENTS.md` actualizado para declararse como entry file central y unico (sin
+  regla de replicacion en tres archivos).
+- `00-INDEX.md`, `docs/PROTOCOLO_N_SEEDS.md`, `gepa_standalone/README.md` y
+  `shared/scoring/__init__.py` actualizados para apuntar a `AGENTS.md` y eliminar
+  referencias a copias duplicadas.
+
+[SDD-Check]
+- Spec/doc leido: `00-INDEX.md`, `docs/CONTRIBUTING.md`, `docs/SDD_PROTOCOLO.md`.
+- Incluye/Excluye verificado: incluye unificacion de entry files y actualizacion de
+  referencias vigentes; excluye entradas historicas fechadas en `historial/sdd.md`.
+- Validaciones aplicadas: `./shared/utils/ci_local.sh`, verificacion de referencias
+  en el repo y ausencia de emoticones.
+- SSOT afectado: `AGENTS.md`, `CLAUDE.md`, `00-INDEX.md`, `docs/PROTOCOLO_N_SEEDS.md`,
+  `gepa_standalone/README.md`, `shared/scoring/__init__.py`, `historial/sdd.md`.
+- Derivados a revisar: ninguno.
+- Deuda arrastrada: ninguna.
+- Riesgos/reservas: herramientas que solo lean `GEMINI.md` ya no tienen archivo
+  dedicado; `CLAUDE.md` delega via `@AGENTS.md`.
+
 ### 2026-06-20 (cont.) — fast_gate: anotacion completa (100/100) + GEPA refutado (libre vs fijo)
 
 Se completo la anotacion de los 8 sub-hechos objetivos para las 100 filas train+val (antes
