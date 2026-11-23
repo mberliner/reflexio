@@ -33,7 +33,7 @@ aca solo se ajusta la referencia.
 
 | Fase | Subfase | Requisitos | Modelo | Estado |
 |---|---|---|---|---|
-| 1 Nucleo de fallas (`shared/llm`) | 1a Tests sin red del clasificador de capa 1 sobre los 102 payloads y del contador (RED) | FR-001, FR-006, FR-015, SC-009 | Sonnet 5.5 | pendiente |
+| 1 Nucleo de fallas (`shared/llm`) | 1a Tests sin red del clasificador de capa 1 sobre los 102 payloads y del contador (RED) | FR-001, FR-006, FR-015, SC-009 | Sonnet 5.5 | hecho |
 | | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | pendiente |
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | pendiente |
 | 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Sonnet 5.5 | pendiente |
@@ -177,6 +177,19 @@ anota como bloqueo y no commitea.
   concurrencia) y llamada comun (1 llamada HTTP si no es `infraestructura`,
   1 + reintentos si lo es; no llama al LLM si hay aborto). Archivos: tests
   nuevos en `tests/` (`test_failures.py`, `test_failure_call.py`).
+- Nota de 1a para 1b (nombres que los tests RED asumieron, a confirmar o
+  corregir): llamada comun `shared.llm.call.checked_completion(kwargs, messages,
+  role, infra_retries=...)` que devuelve el texto; roles del contador `task` /
+  `reflection` / `judge` (no los nombres en espanol de la spec);
+  `FailureTracker.snapshot()` con `counts[clase][rol]` y `entrada_dato` (lista de
+  `case_id`); `configure(thresholds={clase: {rol: tasa}}, min_attempts=int)`;
+  `classify_response(None)` -> `configuracion`; `RunAborted` lo lanza tanto
+  `check_abort()` como la llamada comun si el estado ya es abortado; `abort(
+  failure, motivo)` y propiedad `aborted`. Los 214 tests nuevos son xfail
+  estricto (`test_failures.py`, `test_failure_call.py`); algunos pueden fallar
+  hoy solo por `ImportError`, y 1c debe verificar que pasen por la razon correcta
+  al quitar la marca. Hash del commit de 1a: ver `git log` (mensaje
+  `test(spec-104): 1a`).
 - 1b. Sin codigo de produccion: confirma o corrige D1 a D4 contra `shared/llm`,
   `dspy==3.2.1` (`dspy.LM.forward`, `_process_lm_response`) y los tests de 1a;
   fija nombres de modulo y funciones. Archivos: este plan; los tests de 1a solo
