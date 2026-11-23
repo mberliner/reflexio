@@ -904,3 +904,18 @@ train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
 - VAL representativo (D-017): casos `VAR-FG-T01..T14` en `make_variations.py` (fichas neutrales + textura rica calibradas a las confusiones del TEST)
 - Few-shot fijos (D-017): mecanismo `few_shot_ids` (`config_schema.py` + `reflexio_declarativa.py`), demos enseñantes `VAR-FG-D01/D02`, config `flujo_intents_fast_gate_rule_fixfs_v1.yaml`
 - Registro de fases: `historial/sdd.md` (2026-06-15/16, Hallazgo 5 y validación externa)
+
+## 9. Tests contra la spec, no contra el codigo (SPEC-104, 2026-11-23)
+
+- **Hallazgo.** Al introducir el clasificador de fallas de SPEC-104 (2a), 152
+  tests fallaron: las respuestas de LLM simuladas con `MagicMock` tienen
+  `message.refusal` truthy y `finish_reason` arbitrario, asi que el clasificador
+  las trataba como `filtro_salida`. Los tests pasaban antes solo porque el codigo
+  viejo no miraba esos campos.
+- **Tentacion descartada.** Endurecer el clasificador (`isinstance(refusal, str)`)
+  no cambiaba nada con respuestas reales: solo adaptaba el codigo a mocks
+  irreales.
+- **Leccion.** Los dobles de prueba replican la dependencia real (helper de
+  respuestas `litellm.ModelResponse` en `tests/conftest.py`) y los tests fijan el
+  comportamiento que pide la spec. Regla normativa en `docs/CONTRIBUTING.md`
+  (Convenciones del proyecto).

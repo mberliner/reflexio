@@ -14,6 +14,17 @@ cierre de entregas bajo el protocolo SDD. Para setup y comandos ver
 - Lint con ruff: line-length 100, reglas E/F/I/N/UP/B/C4. Ver `pyproject.toml`.
 - MUST: antes de cerrar un cambio, pasar el pipeline local
   `./shared/utils/ci_local.sh` (ver `docs/DEVELOPMENT.md`).
+- MUST: los tests verifican el comportamiento deseado del sistema segun su spec
+  (FR/SC), no el comportamiento actual del codigo. Si el codigo no cumple la
+  spec, el test falla y se corrige el codigo; si la spec cambia, se actualiza el
+  test y no se ablanda el codigo para que pase. Un test que fija un
+  comportamiento contrario a la spec vigente es un defecto del test. Los dobles
+  de prueba MUST parecerse a lo que produce la dependencia real (p. ej.
+  respuestas de LLM con `litellm.ModelResponse` via el helper de
+  `tests/conftest.py`, no `MagicMock`, que tiene todos los atributos truthy) y,
+  cuando existan, se toman de evidencia capturada
+  (`tests/litellm_failure_payloads.py`). Caso de origen en
+  `docs/LECCIONES_APRENDIDAS.md` (seccion 9).
 
 ## Protocolo SDD (en adopcion por tramos)
 
