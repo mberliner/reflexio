@@ -36,7 +36,7 @@ aca solo se ajusta la referencia.
 | 1 Nucleo de fallas (`shared/llm`) | 1a Tests sin red del clasificador de capa 1 sobre los 102 payloads y del contador (RED) | FR-001, FR-006, FR-015, SC-009 | Sonnet 5.5 | hecho (2e75a29) |
 | | 1b Diseno: confirmar D1 a D4 contra el codigo (API de `failures.py`, destino de `EmptyResponseError`, punto de reintento en `CheckedLM`, conteo una vez por caso) | FR-001, FR-007, FR-011 | Opus 5.5 | hecho (147f5ab) |
 | | 1c Clasificador, `FailureTracker` y llamada con reintento propio; `num_retries=0` en LiteLLM y `CheckedLM` (GREEN) | FR-001, FR-006, FR-007, FR-011, FR-015 | Sonnet 5.5 | hecho (6e9617a) |
-| 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Sonnet 5.5 | pendiente |
+| 2 Caminos de llamada | 2a Los tres lugares que hoy llaman a `litellm.completion` delegan en la llamada comun: `get_lm_function`, `call_llm` (queda como fachada en `gepa_standalone/core/llm_factory.py`) y `SimpleRAGAdapter._call_llm_with_retry` (se elimina, con su reintento por `content_filter`); `CheckedLM` con `num_retries=0`; `ContextWindowExceededError` de DSPy por `__cause__`; test de que no hay otra llamada a `litellm.completion` en produccion | FR-001, FR-011, FR-015 | Opus 5.5 (relanzada; primer intento Sonnet 5.5) | pendiente |
 | | 2b Reflexion: descarte en el envoltorio (clase de capa 1 y `formato` sin bloque de instruccion) en ambos subproyectos; verificacion contra GEPA 0.0.27 y `dspy.GEPA` | FR-005, SC-003 | Opus 5.5 | pendiente |
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | pendiente |
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | pendiente |
@@ -361,7 +361,62 @@ anota como bloqueo y no commitea.
   `gepa_standalone/adapters/base_adapter.py`, `tests/test_empty_response.py`,
   `tests/test_empty_response_dspy.py`, `tests/test_anthropic_matrix.py`,
   `tests/test_sc006_azure_openai_paths.py`, `tests/test_gepa_adapters.py`,
-  `tests/test_shared_llm.py`, test nuevo del punto unico de llamada.
+  `tests/test_shared_llm.py`, test nuevo del punto unico de llamada,
+  `tests/conftest.py`, `tests/test_functional_gepa.py`,
+  `tests/test_litellm_failure_mapping.py` (ampliado tras el primer intento,
+  aprobado por el usuario el 2026-11-23).
+- Primer intento de 2a (sesion `-p`, 2026-11-23; sin commit). Resuelto por el
+  usuario el 2026-11-23, ver "Resolucion" al final de este punto.
+  Se implemento en el arbol (sin commitear): `complete_text` en
+  `shared/llm/config.py` (delega en `checked_completion` y conserva el log
+  SPEC-103 de respuesta sin texto) usado por `get_lm_function` y `call_llm`;
+  `SimpleRAGAdapter._complete` (reemplaza `_call_llm_with_retry`, rol `judge`,
+  `RunAborted` no se traga); `CheckedLM` con `num_retries=0`, `forward` por
+  `call_with_infra_retry`, `_process_lm_response` por `raise_for_response`, y
+  `DspyLLMCallFailure` / `DspyEmptyResponseError` (heredan tambien de
+  `dspy.utils.exceptions.ContextWindowExceededError`, lo que corta el fallback
+  de `ChatAdapter`). La suite completa dio 152 fallos; la parte que no se puede
+  cerrar dentro de los "Archivos" de 2a es:
+  1. Estado global del contador entre tests: una excepcion desconocida
+     (`RuntimeError("boom")` de un mock de `litellm.completion`) se clasifica
+     `configuracion` y fija el aborto del `FailureTracker` de modulo; los tests
+     siguientes (p. ej. `test_litellm_regression.py`,
+     `test_sc006_azure_openai_paths.py`, que pasan solos) fallan con
+     `RunAborted`. Falta un fixture autouse con `get_failure_tracker().reset()`
+     en `tests/conftest.py`, que no esta en la lista de 2a.
+  2. `classify_response` trata como `filtro_salida` cualquier mensaje con
+     `refusal` truthy; las respuestas `MagicMock` de la suite (fixture
+     `mock_litellm` de `tests/conftest.py`, `tests/test_functional_gepa.py` y
+     decenas de mocks de `tests/test_gepa_adapters.py`) tienen `refusal` como
+     `MagicMock` y `finish_reason` sin fijar, asi que todo camino que pasa a
+     `raise_for_response` falla. Decision que necesita el usuario: (a) endurecer
+     `classify_response` (en `failures.py`, fuera de 2a) para exigir
+     `isinstance(refusal, str)` y texto no vacio (los refusal reales son
+     strings), o (b) corregir todos los mocks (`refusal=None`,
+     `finish_reason="stop"`), incluidos `conftest.py` y `test_functional_gepa.py`.
+  3. `tests/test_litellm_failure_mapping.py` (fuera de la lista) fija el
+     comportamiento viejo de `CheckedLM`: `test_retry_counts_dspy_lm_default`
+     (60 casos, espera 4 o 7 llamadas y `litellm.openai.APIError`) y
+     `TestCheckedLMProcessResponse` deben pasar a 1 llamada (o 1 + reintentos si
+     `infraestructura`) y `LLMCallFailure`; ese archivo debe entrar en la lista.
+  Resolucion (usuario, 2026-11-23): los tests reflejan el comportamiento real,
+  no al reves. Punto 2: opcion (b), sin tocar `failures.py` ni la spec: un
+  helper unico en `tests/conftest.py` arma respuestas reales
+  (`litellm.ModelResponse` con `content`, `finish_reason="stop"`, sin
+  `refusal`, con `usage`) y los mocks de `conftest.py`,
+  `test_functional_gepa.py` y `test_gepa_adapters.py` pasan a usarlo. Puntos 1
+  y 3: se amplia la lista de Archivos (arriba). El relanzamiento continua sobre
+  el arbol del primer intento (no lo descarta) y corre con Opus 5.5.
+  Nota original del primer intento: agregar a "Archivos" de 2a `tests/conftest.py`,
+  `tests/test_functional_gepa.py`, `tests/test_litellm_failure_mapping.py` (y
+  `shared/llm/failures.py` si se elige 2.a), y resolver la decision 2. Faltan
+  ademas los tests nuevos de 2a: `tests/test_single_call_point.py` (AST sin otra
+  `litellm.completion` en produccion fuera de `shared/llm/call.py`, la sonda
+  `validate_connection` y `check_deployments.py`; 1 llamada HTTP por caso via
+  `dspy.Predict` sobre `RETRY_CASES` y las 200 con falla, con `drop_params=False`;
+  `RunAborted` sin HTTP) y la migracion de los tests existentes
+  (`test_empty_response*.py`, `test_gepa_adapters.py`, `test_anthropic_matrix.py`
+  usan `_call_llm_with_retry`, rol `juez` o 3 llamadas por fallback).
 - 2b. Envoltorio de reflexion en ambos subproyectos (FR-005); verifica contra
   `gepa==0.0.27` como extrae la instruccion (bloque de codigo) y que la
   excepcion saltea la iteracion. Archivos: `shared/llm/config.py`,
