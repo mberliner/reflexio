@@ -598,6 +598,14 @@ prefijo `anthropic/` los resuelve 3b (`get_model_pricing` aun no los normaliza).
   sin doble conteo (`completion_tokens` de LiteLLM ya los incluye para
   Anthropic y OpenAI; el test lo fija).
 
+Resultado de 3b: `normalize_model` (`roi_calculator.py`) quita `azure/`,
+`openai/` y `anthropic/`, y si el nombre resuelve en la matriz
+(`resolve_anthropic_family`) quita el sufijo de snapshot; fuera de la matriz no
+toca el texto. `get_model_pricing` la usa. Tests: precio por alias, con prefijo
+y con snapshot para los 14 aliases sin aviso de "sin precio", y dos tests de
+`usage.py` que fijan que `reasoning_tokens` no se suma a `completion_tokens`.
+Sin cambios en `usage.py`.
+
 ### 4a `describe()` — Sonnet 5.5
 
 - `describe(max_tokens=None)` se arma desde `effective_params`: temperature

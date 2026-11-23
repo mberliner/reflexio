@@ -901,3 +901,30 @@ def test_budget_breakdown_model_combo_desglose(metrics_csv_sample, capsys):
     output = captured.out
 
     assert "Combinacion de Modelos" in output or "Desglose" in output
+
+
+def test_normalize_model_strips_provider_prefixes():
+    for prefix in ("azure/", "openai/", "anthropic/"):
+        assert roi_calculator.normalize_model(prefix + "Gpt-4o") == "gpt-4o"
+
+
+def test_normalize_model_resolves_snapshot_to_alias():
+    norm = roi_calculator.normalize_model
+    assert norm("anthropic/claude-opus-5-5-20260514") == "claude-opus-5-5"
+    assert norm("claude-haiku-5-5-20260101") == "claude-haiku-5-5"
+    # fuera de la matriz no se toca el sufijo
+    assert norm("claude-opus-5-5-preview") == "claude-opus-5-5-preview"
+    assert norm("gpt-4o-20250101") == "gpt-4o-20250101"
+
+
+@pytest.mark.parametrize(
+    "alias", sorted(k for k in roi_calculator.DEFAULT_PRICING if k.startswith("claude-"))
+)
+def test_get_model_pricing_anthropic_alias_and_snapshot(alias, caplog):
+    import logging
+
+    expected = roi_calculator.DEFAULT_PRICING[alias]
+    with caplog.at_level(logging.WARNING):
+        for name in (alias, "anthropic/" + alias, "anthropic/" + alias + "-20260514"):
+            assert roi_calculator.get_model_pricing(name) is expected
+    assert not any("sin precio configurado" in r.message for r in caplog.records)

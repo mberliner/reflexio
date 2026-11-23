@@ -117,3 +117,28 @@ class TestRecordDspyHistory:
     def test_none_history_is_noop(self, tracker):
         record_dspy_history("task", None)
         assert tracker.snapshot()["total_tokens"] == 0
+
+
+class TestReasoningTokens:
+    def test_reasoning_tokens_not_double_counted(self, tracker):
+        """LiteLLM ya incluye los tokens de razonamiento en completion_tokens
+        (Anthropic y OpenAI): el detalle no se suma de nuevo."""
+        usage = SimpleNamespace(
+            prompt_tokens=100,
+            completion_tokens=70,
+            completion_tokens_details=SimpleNamespace(reasoning_tokens=50),
+        )
+        resp = SimpleNamespace(usage=usage)
+        assert extract_usage(resp) == (100, 70)
+        record_usage("task", resp)
+        assert tracker.snapshot()["task"]["completion_tokens"] == 70
+
+    def test_reasoning_tokens_in_dict_usage(self):
+        resp = {
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 40,
+                "completion_tokens_details": {"reasoning_tokens": 30},
+            }
+        }
+        assert extract_usage(resp) == (10, 40)

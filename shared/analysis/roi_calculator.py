@@ -25,6 +25,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from shared.llm.config import _SNAPSHOT_SUFFIX, resolve_anthropic_family
+
 from .base import (
     extract_budget_from_rows,
     format_currency,
@@ -35,6 +37,8 @@ from .base import (
 )
 
 logger = logging.getLogger(__name__)
+
+_PROVIDER_PREFIXES = ("azure/", "openai/", "anthropic/")
 
 
 @dataclass
@@ -145,8 +149,19 @@ DEFAULT_VAL_SIZES = {
 
 
 def normalize_model(model_name: str) -> str:
-    """Normalize a model name for comparison (drops the ``azure/`` prefix)."""
-    return (model_name or "").lower().replace("azure/", "")
+    """Normalize a model name for pricing/comparison.
+
+    Drops the ``azure/``, ``openai/`` and ``anthropic/`` prefixes. A dated
+    Anthropic snapshot (``claude-opus-5-5-20260514``) resolves to its alias
+    (``claude-opus-5-5``) through ``resolve_anthropic_family``; names outside
+    the Anthropic matrix keep their text.
+    """
+    name = (model_name or "").lower()
+    for prefix in _PROVIDER_PREFIXES:
+        name = name.replace(prefix, "")
+    if resolve_anthropic_family(name) is not None:
+        name = _SNAPSHOT_SUFFIX.sub("", name)
+    return name
 
 
 def lookup_by_case(case_name: str, table: dict, default):
@@ -172,7 +187,7 @@ def get_model_pricing(model_name: str, pricing: dict = None) -> ModelPricing:
     silent miss would understate cost. Add the model to DEFAULT_PRICING to fix.
     """
     pricing = pricing or DEFAULT_PRICING
-    model_key = model_name.lower().replace("azure/", "")
+    model_key = normalize_model(model_name)
     if model_key in pricing:
         return pricing[model_key]
     logger.warning(
