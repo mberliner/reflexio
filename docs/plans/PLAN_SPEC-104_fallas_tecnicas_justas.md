@@ -49,7 +49,7 @@ aca solo se ajusta la referencia.
 | 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | hecho (6700f3f) |
 | | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | hecho (8d771ab) |
 | 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | hecho (2026-11-24, ver "Resultado de la fase 6") |
-| Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | en progreso (code review: 0243b69, 9fc9a0d, 98c98db, d9258f8, ae7fec4, e174a4f; faltan `[SDD-Check]`, D-019/D-021 y `active`; fase 6 hecha) |
+| Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | hecho (code review: 0243b69, 9fc9a0d, 98c98db, d9258f8, ae7fec4, e174a4f; cierre: ver historial/sdd.md 2026-11-24) |
 
 ## Dependencias
 
@@ -1082,6 +1082,10 @@ Contexto: de cada log leer solo el final (`tail -n 40`); entrar al log completo
 o al diff solo cuando un control falla.
 
 ## Proxima sesion
+
+**Plan cerrado (2026-11-24).** SPEC-104 `active` (iteracion 3); fases 1 a 6 y
+Cierre `hecho`. Resumen y `[SDD-Check]` en `historial/sdd.md`. Lo que sigue
+debajo es el estado historico de la supervision.
 
 Estado al 2026-11-23 (sesion supervisora detenida por el usuario tras el
 control de 5a). Fases 1 a 4 y 5a `hecho`; arbol limpio en `c19d87b`,
