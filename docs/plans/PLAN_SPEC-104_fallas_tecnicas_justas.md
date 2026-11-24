@@ -46,7 +46,7 @@ aca solo se ajusta la referencia.
 | 4 Metricas y orquestacion | 4a Agregacion sobre casos evaluados y delta pareado en `shared/scoring` (incluye `eval_repeats` y `n_evaluados == 0`) | FR-003, SC-002, SC-007 | Sonnet 5.5 | hecho (a7a3bf2) |
 | | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | hecho (c61ff98) |
 | | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | hecho (def60c8) |
-| 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | pendiente |
+| 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | hecho (HASH_5A) |
 | | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | pendiente |
 | 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | pendiente |
 | Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | pendiente |
@@ -917,6 +917,68 @@ anota como bloqueo y no commitea.
     y `status`, `abort`, `failures`, `metrics` en `docs/METADATA_REPRODUCIBILIDAD.md`.
   - `baseline_only.py` no escribe `run.json` (fuera del alcance de 4c).
 - 5a. Solo tests (nuevos o existentes de los orquestadores) y este plan.
+- Cierre de 5a (Opus 5.5, 2026-11-23). Sin bloqueos; produccion sin tocar.
+  `ci_local.sh` en verde (2267 passed, cobertura 98%). La spec se edito solo en
+  el Coverage mapping, por pedido del usuario en el lanzamiento.
+  - `tests/orchestrator_e2e.py` (nuevo, auxiliar): `UniversalOptimizer.run()` y
+    `ReflexioDeclarativa.run()` de punta a punta sobre YAML, CSV y prompt reales
+    en `tmp_path`, GEPA y DSPy reales; solo se simula el transporte
+    (`litellm.completion` y `dspy.clients.lm.litellm_completion`) con
+    `make_completion_response` o excepciones reales de LiteLLM, y se anula la
+    sonda `validate_connection`. Clasificador y RAG con juez en
+    `gepa_standalone`, modulo dinamico en `dspy_gepa_poc`. Captura `run.json`,
+    CSV maestro, `results.json`, llamadas por modelo y todo registro WARNING o
+    superior del proceso.
+  - SC-006 (`tests/test_sc006_no_failure_regression.py`, 10 tests). Oraculo: el
+    comportamiento previo a SPEC-104 (commit 35c5b1c), leido con `git diff
+    35c5b1c HEAD` (la sesion `-p` no puede crear un worktree ni correr scripts
+    sueltos) y derivado a mano de respuestas fijas: scores = media de todos los
+    casos, `effective_delta = optimizado - baseline`, rangos 0, unidad de
+    `Evaluate` en DSPy; claves previas de `run.json` (`experiment_name`, `seed`,
+    `models`, `created_at`, `usage`) con los mismos valores mas las de FR-008;
+    esquema y valores del CSV; ningun WARNING. Sin regresion en ambos
+    subproyectos. Sin fallas hay exactamente 1 llamada HTTP por caso evaluado
+    (sin reintentos, sin fallback de `ChatAdapter`, sin llamadas de atribucion
+    al baseline): confirma el riesgo "SC-006 depende de que sin fallas nada
+    cambie". Unica diferencia, esperada: `gepa_standalone` hace `len(test)`
+    llamadas de tarea menos (FR-014 quito la segunda evaluacion de test), y
+    `usage` / `Tokens Task` bajan en esa medida.
+  - SC-005 (`tests/test_sc005_logs_vs_run_json.py`, 9 tests). Corridas
+    completadas con fallas de todas las clases de tarea (`infraestructura`,
+    `entrada_dato`, `presupuesto_candidato`, `formato`), `formato` de reflexion
+    y, en RAG, `formato` y `presupuesto` del juez; abortadas por
+    `configuracion`, por umbral de tarea y por umbral de reflexion atrapado por
+    GEPA; en ambos subproyectos (RAG solo en `gepa_standalone`). Se exige: conteo
+    por (clave, rol) de las lineas WARNING de `record` igual a
+    `run.json["failures"]["counts"]`, cada una con `case_id`; la linea ERROR del
+    aborto se compara aparte con `run.json["abort"]` (nota de 3e y 4c: la
+    `configuracion` deja su WARNING, que cuenta, y el ERROR del aborto, que no);
+    ninguna otra linea WARNING o superior. Pasa sin cambios de produccion.
+  - FR-007 en el juez (pendiente en el Coverage mapping): la corrida RAG
+    verifica una falla por caso evaluado (1 + `judge_retries` llamadas por
+    puntaje ilegible, un solo conteo), reintentos del puntaje a DEBUG y
+    `presupuesto` del juez sin reintento. Fila FR-007 pasa a vigente.
+  Notas para el Cierre (decision del usuario; ningun test fija estos
+  comportamientos):
+  - Hallazgo: tras una falla `configuracion`, `run.json["abort"]["conteo"]` y el
+    mensaje de `RunAborted` dicen `conteo=0/N` aunque `counts.configuracion` del
+    rol es 1: la capa de llamada fija el aborto (D4) antes de que el envoltorio
+    registre la falla, y `_abort_locked` toma el conteo de ese momento. No rompe
+    SC-005 tal como lo fija la nota de 3e (aborto comparado aparte), pero el
+    error de FR-006 "nombra el conteo" con un 0 enganoso. Opciones: (a) que
+    `record` actualice `conteo` del aborto si la falla registrada es de la misma
+    clave y rol (toca `shared/llm/failures.py`); (b) aceptarlo y que 5b
+    documente que el conteo del aborto es el del momento del corte.
+  - Relacionado: tras un aborto por umbral, la metrica de DSPy puede registrar la
+    falla del caso en curso (el `record_attempt` va despues de la llamada), asi
+    que `counts` final puede superar `abort.conteo`. Es coherente con el log;
+    5b deberia documentar que `abort.conteo` es el del momento del corte.
+  - Nota de 4b sobre `print_detailed_results` (tabla de test de
+    `gepa_standalone` muestra un caso NE como 0% / "NO"): no es log ni
+    `run.json`, asi que queda fuera de SC-005 y SC-006, y no es una metrica
+    reportada de FR-003 sino el detalle por caso. Sin cambios; si se quiere
+    mostrar "NE (clase)", es un cambio de `shared/display/formatting.py` para el
+    Cierre.
 - 5b. Archivos: `docs/GEPA_MANEJO_ERRORES.md`,
   `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md`.
 
