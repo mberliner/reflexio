@@ -349,19 +349,12 @@ class UniversalOptimizer:
 
         log_info(f"Loading data from: {csv_filename}")
 
-        # If output_columns not specified, infer from CSV
-        if not output_columns:
-            csv_path = get_paths().dataset(csv_filename)
-            with open(csv_path, encoding="utf-8") as f:
-                import csv
-
-                reader = csv.DictReader(f)
-                all_cols = reader.fieldnames
-                output_columns = [c for c in all_cols if c not in ["split", input_column]]
-
-        # Load using universal function
+        # Load using universal function (cuando output_columns es None/vacio,
+        # load_gepa_data infiere las columnas excluyendo split, case_id e input_column).
         self.train_data, self.val_data, self.test_data = load_gepa_data(
-            csv_filename=csv_filename, input_column=input_column, output_columns=output_columns
+            csv_filename=csv_filename,
+            input_column=input_column,
+            output_columns=output_columns or None,
         )
 
         log_ok(

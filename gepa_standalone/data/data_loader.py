@@ -147,7 +147,7 @@ def get_dataset_info(csv_filename: str) -> dict[str, Any]:
     columns = list(rows[0].keys())
 
     # Filtrar columnas None o vacías
-    output_columns = [col for col in columns if col and col not in ["split", "text"]]
+    output_columns = [col for col in columns if col and col not in ["split", "case_id", "text"]]
 
     return {
         "filename": csv_filename,

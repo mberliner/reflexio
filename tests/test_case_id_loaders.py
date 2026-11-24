@@ -77,6 +77,40 @@ class TestGepaStandaloneCaseId:
         ids = [e["case_id"] for e in train + val + test]
         assert len(ids) == len(set(ids))
 
+    def test_universal_optimizer_load_data_excludes_case_id_when_inferring_outputs(
+        self, tmp_path, monkeypatch
+    ):
+        """H-03: cuando el YAML omite `output_columns` y el CSV trae `case_id`,
+        `UniversalOptimizer.load_data()` no debe tratar `case_id` como salida."""
+        from gepa_standalone import universal_optimizer as uo
+
+        (tmp_path / "cls.csv").write_text(WITH_ID_CSV, encoding="utf-8")
+        ext_csv = "split,case_id,text,a,b\ntrain,id-1,t,1,2\n"
+        (tmp_path / "ext.csv").write_text(ext_csv, encoding="utf-8")
+        fake_paths = SimpleNamespace(dataset=lambda name: str(tmp_path / name))
+        monkeypatch.setattr(gepa_loader, "get_paths", lambda: fake_paths)
+        monkeypatch.setattr(uo, "get_paths", lambda: fake_paths)
+
+        opt = uo.UniversalOptimizer()
+        opt.config = {"data": {"csv_filename": "cls.csv", "input_column": "text"}}
+        opt.load_data()
+        assert opt.train_data[0] == {"text": "a", "label": "x", "case_id": "caso-A"}
+        assert "extracted" not in opt.train_data[0]
+
+        opt.config = {"data": {"csv_filename": "ext.csv", "input_column": "text"}}
+        opt.load_data()
+        assert opt.train_data[0]["extracted"] == {"a": "1", "b": "2"}
+        assert opt.train_data[0]["case_id"] == "id-1"
+
+    def test_get_dataset_info_excludes_case_id_from_output_columns(self, tmp_path, monkeypatch):
+        """H-03: `get_dataset_info` tampoco lista `case_id` como columna de salida."""
+        (tmp_path / "d.csv").write_text(WITH_ID_CSV, encoding="utf-8")
+        fake_paths = SimpleNamespace(dataset=lambda name: str(tmp_path / name))
+        monkeypatch.setattr(gepa_loader, "get_paths", lambda: fake_paths)
+
+        info = gepa_loader.get_dataset_info("d.csv")
+        assert info["output_columns"] == ["label"]
+
 
 class TestDspyCaseId:
     def test_fallback_is_split_and_row_within_split(self, dspy_load):
