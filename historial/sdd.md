@@ -35,12 +35,12 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-020 | Respuesta sin texto en inferencia directa de `dspy_gepa_poc` (`run_inference.py` y scripts que llaman al programa sin `Evaluate`): el `EmptyResponseError` de tarea (SPEC-103 FR-009, opcion 2 de B-2c-1) sale sin atrapar y corta el script. Fuera del alcance de SPEC-103 (decision del usuario): una corrida unica de inferencia puede fallar en forma visible. Si se quiere tolerancia, reutilizar el envoltorio de 2c | Supervision SPEC-103 2c (2026-11-22) | Abierta |
 | D-023 | Limites de deteccion de LiteLLM 1.108.5 + openai 3.57.0 que SPEC-104 no puede cubrir sin parchear LiteLLM: (a) Anthropic `stop_reason="model_context_window_exceeded"` llega como `finish_reason="stop"` sin rastro (texto parcial evaluado como completo); (b) 400 de politica de Anthropic con texto no reconocido llega como `BadRequestError` sin `body` y aborta como `configuracion`; (c) bug de 422 con `openai/` + `drop_params=True` (global, lo activa `validate()`) que devuelve `None`; (d) HTTP 413 generico mapeado distinto por proveedor (`RateLimitError` en OpenAI, `APIError(413)` en Azure, `BadRequestError(400)` en Anthropic). Evidencia y regresion: `tests/test_litellm_failure_mapping.py` (320 tests, fallan si una actualizacion cambia el mapeo). Re-verificar con SC-009 de SPEC-104 en cada actualizacion de LiteLLM o del SDK de openai (relacionada con D-018) y reportar upstream si sigue | Verificacion de LiteLLM para SPEC-104 (2026-11-23) | Abierta |
 | D-022 | Acceso a simbolos privados entre modulos (severidad baja): `universal_optimizer.py` lee `adapter._judge_config` (se resuelve con el juez como rol de SPEC-105 FR-004) y `shared/analysis/roi_calculator.py` importa `_SNAPSHOT_SUFFIX` de `shared/llm/config.py` (exponer un helper publico) | Code review del Cierre SPEC-103 (2026-11-23) | Abierta |
-| D-024 | Metricas con feedback de `dspy_gepa_poc/metrics.py` devuelven un dict plano `{"score", "feedback"}`; `dspy.GEPA` 3.2.1 detecta el feedback con `hasattr(o, "feedback")` (`dspy/teleprompt/gepa/gepa.py:537`), un dict no lo tiene, y el Profesor recibe "This trajectory got a score of {...}" con el feedback embebido en el repr. Matiza el hallazgo del caso CV Profile (feedback por campo). Fix: devolver `dspy.Prediction(score=..., feedback=...)` con test contra `dspy.GEPA` real del texto que llega a la reflexion. Se corrige despues del Cierre de SPEC-104 (decision del usuario): cambia la optimizacion y mezclarlo romperia la lectura de SC-006 | Supervision SPEC-104 3e (2026-11-23) | Abierta |
 
 ## Deuda resuelta
 
 | ID | Descripcion | Resuelta | Cierre |
 |---|---|---|---|
+| D-024 | Metricas con feedback de `dspy_gepa_poc/metrics.py` devuelven un dict plano `{"score", "feedback"}`; `dspy.GEPA` 3.2.1 detecta el feedback con `hasattr(o, "feedback")` (`dspy/teleprompt/gepa/gepa.py:537`), un dict no lo tiene, y el Profesor recibe "This trajectory got a score of {...}" con el feedback embebido en el repr. Matiza el hallazgo del caso CV Profile (feedback por campo). Fix: devolver `dspy.Prediction(score=..., feedback=...)` con test contra `dspy.GEPA` real del texto que llega a la reflexion. Se corrige despues del Cierre de SPEC-104 (decision del usuario): cambia la optimizacion y mezclarlo romperia la lectura de SC-006 | 2026-11-24 | Las cinco metricas con feedback de `dspy_gepa_poc/metrics.py` (`create_dynamic_metric_with_feedback`, `create_rule_derived_metric_with_feedback`, `create_pipeline_metric_with_feedback`, `sentiment_with_feedback_metric`, `extraction_with_feedback_metric`) devuelven `dspy.Prediction(score=..., feedback=...)` cuando `pred_name`/`pred_trace` estan presentes y mantienen `float` en la ruta de `Evaluate`. Verificado con `dspy.GEPA` real y LM simulado en `tests/test_dspy_metric_feedback.py` (texto limpio en `reflection_lm`, sin `warn_on_score_mismatch` y scores `float`). SC-006 de SPEC-104 intacto; leccion y matiz historico en `docs/LECCIONES_APRENDIDAS.md` (seccion 1) |
 | D-019 | `SimpleClassifierAdapter` y `SimpleSQLAdapter` descartan el ejemplo ante un error tecnico (`except Exception` -> solo `print`, sin agregar a `outputs`/`scores`). Rompe el contrato de GEPA (`gepa/core/adapter.py`: `len(outputs) == len(scores) == len(batch)`) e infla el promedio del minibatch porque el ejemplo fallido no cuenta como 0.0. `simple_extractor_adapter.py` y `simple_rag_adapter.py` ya puntuan 0.0. SPEC-103 (2b-fix) solo corrige la respuesta sin texto (FR-009); el error tecnico queda fuera de su alcance. Cambiar a 0.0 altera los scores de corridas con errores tecnicos: requiere decidir si va como fix o spec y comparar contra historico | 2026-11-24 | Cerrada por SPEC-104: los adapters ya no descartan el caso ante una falla tecnica; cada falla se clasifica, se cuenta una vez por caso y el caso queda no evaluado (NE, fuera de la metrica con `n_evaluados / n_total`) o puntua 0 si es del candidato (FR-002, FR-012, SC-001) |
 | D-021 | Corte por `max_tokens` con texto parcial (`finish_reason=length`): ningun camino lo detecta ni lo registra; el texto truncado se puntua como completo y una reflexion truncada podria adoptarse como candidato. SC-004 de SPEC-103 quedo verificado solo para respuestas sin texto | 2026-11-24 | Cerrada por SPEC-104: `finish_reason=length` (con o sin texto) se clasifica `presupuesto`, se atribuye contra el baseline en tarea, descarta la propuesta en reflexion y aborta por umbral (FR-001, FR-004, FR-005, FR-006). Verificado con API real en la fase 6 (Anthropic y Azure con modelo de razonamiento) |
 | D-002 | Primera spec de capacidad con formato hibrido | 2026-06-03 | `SPEC-100-veredicto-senal-ruido` estrena el formato (registrada en `specs/SPECS_REGISTRY.md`); Tramo 2 pasa a activo |
@@ -51,6 +51,40 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-24 — Correccion de feedback en metricas DSPy (cierre D-024)
+
+- Test RED previo (`tests/test_dspy_metric_feedback.py`) con `dspy.GEPA` 3.2.1
+  real y LM simulado (`make_completion_response`), capturando el prompt recibido
+  por `reflection_lm` en las cinco metricas con feedback (`create_dynamic_metric_with_feedback`,
+  `create_rule_derived_metric_with_feedback`, `create_pipeline_metric_with_feedback`,
+  `sentiment_with_feedback_metric` y las dos ramas de `extraction_with_feedback_metric`).
+- Fix GREEN en `dspy_gepa_poc/metrics.py`: los cinco retornos con `pred_name` /
+  `pred_trace` pasan de `{"score", "feedback"}` a `dspy.Prediction(score=..., feedback=...)`
+  (el camino de `Evaluate` sin `pred_name` sigue devolviendo `float`). Verificado
+  contra `dspy` 3.2.1 (`Prediction` soporta `hasattr(..., "feedback")`, `o["score"]`,
+  `float()`, sumas y comparaciones; desaparece ademas el warning interno de
+  `score mismatch` en `gepa_utils.py`).
+- Consumidores revisados y alineados: `_to_float_score` (`reflexio_declarativa.py`),
+  docstring de `GEPAOptimizer` (`optimizer.py`), `_metric` de `test_dspy_call_failures.py`
+  y tests unitarios de `test_dspy_metric_feedback.py`.
+- SC-006 de SPEC-104 (`tests/test_sc006_no_failure_regression.py`) verificado sin
+  cambios: `orchestrator_e2e.py` evalua `sino.yaml` sin `metric_feedback`
+  (`create_dynamic_metric`), por lo que el oraculo no se ve afectado.
+- Docs actualizados: `docs/LECCIONES_APRENDIDAS.md` (nueva subseccion D-024 en
+  seccion 1 + referencias en CV Profile y `rule_derived`), `docs/DSPY_GUIA_DISENO.md`
+  y `docs/plans/plan_implementacion_toma_requerimientos.md`.
+
+```
+[SDD-Check]
+- Spec/doc leido: AGENTS.md, 00-INDEX.md, docs/SDD_PROTOCOLO.md, docs/DEVELOPMENT.md, docs/CONTRIBUTING.md, docs/LECCIONES_APRENDIDAS.md, docs/PROTOCOLO_N_SEEDS.md, docs/DSPY_GUIA_DISENO.md, specs/SPEC-104-fallas-tecnicas-justas.md
+- Incluye/Excluye verificado: incluye fix D-024 en las 5 metricas con feedback, consumidores, tests con dspy.GEPA real y docs; excluye ejecucion con API real (queda propuesta N seeds sin ejecutar)
+- Validaciones aplicadas: test RED previo verificado, ./shared/utils/ci_local.sh verde (lint + format + security + pytest con cobertura >= 85%), SC-006 intacto, sin emoticones
+- SSOT afectado: docs/LECCIONES_APRENDIDAS.md, docs/DSPY_GUIA_DISENO.md, historial/sdd.md (mas plan operativo docs/plans/plan_implementacion_toma_requerimientos.md)
+- Derivados a revisar: corridas historicas DSPy con metric_feedback: true (candidatas a re-medicion N seeds si se desea aislar el efecto del feedback limpio)
+- Deuda arrastrada: D-024 cerrada; sin deuda nueva (siguen abiertas D-001, D-005, D-006, D-008..D-011, D-014, D-015c, D-018, D-020, D-022, D-023)
+- Riesgos/reservas: revalidar el contrato de ScoreWithFeedback / Prediction al actualizar DSPy 3.2.1 -> 3.5.0 + GEPA 0.0.27 -> 0.1.4 (D-018)
+```
 
 ### 2026-11-24 — Cierre de SPEC-104 (fallas tecnicas justas)
 

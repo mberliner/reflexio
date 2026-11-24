@@ -906,10 +906,10 @@ class ReflexioDeclarativa:
 
     @staticmethod
     def _to_float_score(score_value) -> float:
-        if isinstance(score_value, dict):
-            score_value = score_value.get("score", 0.0)
-        elif hasattr(score_value, "score"):
+        if hasattr(score_value, "score"):
             score_value = score_value.score
+        elif isinstance(score_value, dict):
+            score_value = score_value.get("score", 0.0)
 
         try:
             return float(score_value)

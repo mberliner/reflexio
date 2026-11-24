@@ -94,7 +94,7 @@ Cómo descomponer un problema complejo en un pipeline de DSPy.
     *   Empieza con `BootstrapFewShot` (rápido y barato).
     *   Si necesitas más calidad, pasa a `RandomSearch`.
     *   Si el prompt es el problema, usa `MIPRO`.
-4.  **Definir Métrica:** Crear una función Python que devuelva `True/False` o un puntaje `0.0-1.0`. Sin una buena métrica, la optimización es imposible.
+4.  **Definir Métrica:** Crear una función Python que devuelva `True/False` o un puntaje `0.0-1.0` en evaluación normal, o `dspy.Prediction(score=..., feedback=...)` cuando `dspy.GEPA` solicita feedback textual (`pred_name` o `pred_trace` presente; nunca un `dict` plano, ver `docs/LECCIONES_APRENDIDAS.md`, D-024). Sin una buena métrica, la optimización es imposible.
 
 ---
 

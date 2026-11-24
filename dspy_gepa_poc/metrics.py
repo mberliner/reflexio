@@ -95,7 +95,7 @@ def create_dynamic_metric_with_feedback(
     default_mode: str = "normalized",
     fuzzy_threshold: float = 0.85,
     list_separators: str = ",;",
-) -> Callable[..., float | dict[str, float | str]]:
+) -> Callable[..., float | dspy.Prediction]:
     """
     Factory para metrica dinamica con scoring por campo y feedback textual.
 
@@ -104,8 +104,9 @@ def create_dynamic_metric_with_feedback(
         (modos: exact, normalized, fuzzy, set).
       - Acepta scoring parcial en listas (mode='set' con Jaccard sobre la
         cobertura del esperado).
-      - Cuando GEPA solicita feedback (`pred_name is not None`), devuelve
-        `{'score', 'feedback'}` con diagnostico campo-por-campo.
+      - Cuando GEPA solicita feedback (`pred_name` o `pred_trace` no es None),
+        devuelve `dspy.Prediction(score=..., feedback=...)` con diagnostico
+        campo-por-campo (`dspy.GEPA` detecta el feedback con `hasattr(o, "feedback")`).
 
     Args:
         eval_fields: Lista ordenada de campos a evaluar.
@@ -161,7 +162,7 @@ def create_dynamic_metric_with_feedback(
                 correct = total - len(diagnostics)
                 header = f"Score {avg:.2f} ({correct}/{total} campos perfectos). Errores por campo:"
                 feedback = header + "\n" + "\n".join(diagnostics)
-            return {"score": avg, "feedback": feedback}
+            return dspy.Prediction(score=avg, feedback=feedback)
 
         return avg
 
@@ -178,7 +179,7 @@ def create_rule_derived_metric_with_feedback(
     default_mode: str = "normalized",
     fuzzy_threshold: float = 0.85,
     list_separators: str = ",;",
-) -> Callable[..., float | dict[str, float | str]]:
+) -> Callable[..., float | dspy.Prediction]:
     """Factory de metrica para modulos `rule_derived` con feedback consciente de la regla.
 
     El score es identico al de `create_dynamic_metric_with_feedback` (promedio sobre
@@ -294,7 +295,7 @@ def create_rule_derived_metric_with_feedback(
                             f"corregi estos juicios: {', '.join(diff)}."
                         )
                 feedback = "\n".join(lines)
-            return {"score": avg, "feedback": feedback}
+            return dspy.Prediction(score=avg, feedback=feedback)
 
         return avg
 
@@ -311,7 +312,7 @@ def create_pipeline_metric_with_feedback(
     fuzzy_threshold: float = 0.85,
     list_separators: str = ",;",
     triage_weight: float = 0.3,
-) -> Callable[..., float | dict[str, float | str]]:
+) -> Callable[..., float | dspy.Prediction]:
     """
     Metrica condicional jerarquica para pipelines triage+clasificacion.
 
@@ -324,8 +325,8 @@ def create_pipeline_metric_with_feedback(
         cuenta triage; fastgate_fields se omiten (el modulo ya inyecta
         valores fijos como 'no_aplica').
 
-    Devuelve dict {score, feedback} cuando GEPA lo pide (pred_name not None),
-    diferenciando los errores por etapa.
+    Devuelve `dspy.Prediction(score=..., feedback=...)` cuando GEPA lo pide
+    (`pred_name` o `pred_trace` no es None), diferenciando los errores por etapa.
 
     Args:
         gate_field: nombre del campo que dispara la condicion (ej 'triage_decision').
@@ -407,7 +408,7 @@ def create_pipeline_metric_with_feedback(
                 parts.append(f"Fast Gate: omitido (caso de triage='{expected_gate}', no avanza).")
             header = f"Score total {avg:.2f}."
             feedback = header + "\n" + "\n".join(parts)
-            return {"score": avg, "feedback": feedback}
+            return dspy.Prediction(score=avg, feedback=feedback)
 
         return avg
 
@@ -431,7 +432,7 @@ def sentiment_accuracy_metric(gold: dspy.Example, pred: dspy.Prediction, trace=N
 
 def sentiment_with_feedback_metric(
     gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name: str = None, pred_trace=None
-) -> float | dict[str, float | str]:
+) -> float | dspy.Prediction:
     """
     Sentiment metric with textual feedback for GEPA optimization.
 
@@ -446,12 +447,12 @@ def sentiment_with_feedback_metric(
         pred_trace: Predictor-specific trace
 
     Returns:
-        Float for normal evaluation, Dictionary with 'score' and 'feedback' for GEPA
+        Float for normal evaluation, `dspy.Prediction(score=..., feedback=...)` for GEPA
     """
     correct = gold.sentiment.lower() == pred.sentiment.lower()
     score = 1.0 if correct else 0.0
 
-    # If GEPA is requesting feedback (pred_name is set), return dict
+    # If GEPA is requesting feedback, return Prediction with score and feedback
     if pred_name is not None or pred_trace is not None:
         if correct:
             feedback = f"Correct classification as '{pred.sentiment}'. Good reasoning provided."
@@ -461,7 +462,7 @@ def sentiment_with_feedback_metric(
                 f"but got '{pred.sentiment}'. The text was: '{gold.text}'. "
                 f"Consider analyzing the emotional tone and word choice more carefully."
             )
-        return {"score": score, "feedback": feedback}
+        return dspy.Prediction(score=score, feedback=feedback)
 
     # Otherwise, return just the score for normal evaluation
     return score
@@ -499,7 +500,7 @@ def extraction_accuracy_metric(gold: dspy.Example, pred: dspy.Prediction, trace=
 
 def extraction_with_feedback_metric(
     gold: dspy.Example, pred: dspy.Prediction, trace=None, pred_name: str = None, pred_trace=None
-) -> float | dict[str, float | str]:
+) -> float | dspy.Prediction:
     """
     Information extraction metric with textual feedback for GEPA.
 
@@ -511,11 +512,11 @@ def extraction_with_feedback_metric(
         pred_trace: Predictor-specific trace
 
     Returns:
-        Float for normal evaluation, Dictionary with 'score' and 'feedback' for GEPA
+        Float for normal evaluation, `dspy.Prediction(score=..., feedback=...)` for GEPA
     """
     if not hasattr(gold, "extracted_info"):
         if pred_name is not None or pred_trace is not None:
-            return {"score": 0.0, "feedback": "No ground truth information available."}
+            return dspy.Prediction(score=0.0, feedback="No ground truth information available.")
         return 0.0
 
     expected = gold.extracted_info
@@ -536,7 +537,7 @@ def extraction_with_feedback_metric(
 
     score = correct_fields / total_fields if total_fields > 0 else 0.0
 
-    # If GEPA is requesting feedback, return dict
+    # If GEPA is requesting feedback, return Prediction with score and feedback
     if pred_name is not None or pred_trace is not None:
         if score == 1.0:
             feedback = "Perfect extraction! All fields correctly identified."
@@ -546,7 +547,7 @@ def extraction_with_feedback_metric(
                 f"Errors: {'; '.join(errors)}. "
                 f"Focus on parsing dates, names, and numeric values more accurately."
             )
-        return {"score": score, "feedback": feedback}
+        return dspy.Prediction(score=score, feedback=feedback)
 
     # Otherwise, return just the score
     return score

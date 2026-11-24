@@ -314,12 +314,12 @@ def requirements_completeness_metric(gold, pred, trace=None, pred_name=None, pre
         gold: Ejemplo con campos de ground truth
         pred: Prediction con campos generados
         trace: Opcional, para debugging
-        pred_name: Si no es None, GEPA solicita feedback (retorna dict)
+        pred_name: Si no es None, GEPA solicita feedback (retorna dspy.Prediction)
         pred_trace: Trace del predictor
 
     Returns:
         float (0.0-1.0) para evaluacion normal
-        dict {"score": float, "feedback": str} cuando GEPA solicita feedback
+        dspy.Prediction(score=float, feedback=str) cuando GEPA solicita feedback
     """
     # Nivel 1: Campos no vacios (40%)
     presence_score = _evaluate_presence(gold, pred)
@@ -329,10 +329,10 @@ def requirements_completeness_metric(gold, pred, trace=None, pred_name=None, pre
 
     total_score = presence_score * 0.4 + count_score * 0.6
 
-    # Si GEPA solicita feedback, retornar dict
+    # Si GEPA solicita feedback, retornar dspy.Prediction (hasattr 'feedback', D-024)
     if pred_name is not None or pred_trace is not None:
         feedback = _generate_feedback(total_score, field_details)
-        return {"score": total_score, "feedback": feedback}
+        return dspy.Prediction(score=total_score, feedback=feedback)
 
     return total_score
 
@@ -425,7 +425,7 @@ def _generate_feedback(total_score: float, field_details: dict) -> str:
     return f"Score {total_score:.2f}. Revisar completitud de campos."
 ```
 
-**Interfaz GEPA correcta**: La metrica usa `pred_name` como parametro (no `trace.feedback = ...`). Cuando GEPA solicita feedback, retorna `{"score": float, "feedback": str}` -- consistente con las metricas existentes en `metrics.py` (ver `sentiment_with_feedback_metric` y `extraction_with_feedback_metric`).
+**Interfaz GEPA correcta**: La metrica usa `pred_name` como parametro (no `trace.feedback = ...`). Cuando GEPA solicita feedback, retorna `dspy.Prediction(score=float, feedback=str)` (nunca un `dict` plano: `dspy.GEPA` detecta el feedback con `hasattr(o, "feedback")`, D-024) -- consistente con las metricas existentes en `metrics.py` (ver `sentiment_with_feedback_metric` y `extraction_with_feedback_metric`).
 
 ---
 

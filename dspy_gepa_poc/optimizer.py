@@ -23,7 +23,7 @@ class GEPAOptimizer:
         Initialize GEPA optimizer.
 
         Args:
-            metric: Evaluation metric function (can return score or dict with feedback)
+            metric: Evaluation metric (float or dspy.Prediction with score/feedback)
             reflection_lm: Strong language model for reflection
             config: GEPA configuration (uses defaults if not provided)
         """

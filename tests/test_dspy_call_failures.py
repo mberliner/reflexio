@@ -155,7 +155,7 @@ def _dataset(n: int = 4, split: str = "val"):
 def _metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
     score = float(getattr(pred, "answer", None) == gold.answer)
     if pred_name is not None or pred_trace is not None:
-        return {"score": score, "feedback": "ok" if score else "respuesta incorrecta"}
+        return dspy.Prediction(score=score, feedback="ok" if score else "respuesta incorrecta")
     return score
 
 
@@ -464,10 +464,10 @@ class TestFeedback:
         metric = self._metric()
         gold = _dataset(1)[0]
         assert metric(gold, dspy.Prediction(answer="yes")) == 1.0
-        assert metric(gold, dspy.Prediction(answer="no"), None, "self", []) == {
-            "score": 0.0,
-            "feedback": "respuesta incorrecta",
-        }
+        assert metric(gold, dspy.Prediction(answer="no"), None, "self", []) == dspy.Prediction(
+            score=0.0,
+            feedback="respuesta incorrecta",
+        )
 
     def test_missing_case_id_is_value_error(self):
         gold = dspy.Example(question="q", answer="yes").with_inputs("question")

@@ -55,6 +55,16 @@ La métrica define qué puede aprender GEPA. Cada adapter built-in elige una est
 
 **Lección general:** antes de elegir un adapter built-in o crear uno nuevo, identificá qué señal necesita ver el optimizador para mejorar. Si tu score solo da 0/1, GEPA tiene poco gradiente. Si tu score es continuo y refleja la calidad parcial, la optimización converge mucho más rápido.
 
+### Contrato de retorno con feedback en `dspy.GEPA`: `dspy.Prediction` vs `dict` plano (D-024)
+
+**Síntoma:** Las cinco métricas con feedback de `dspy_gepa_poc/metrics.py` devolvían un `dict` plano `{"score": ..., "feedback": ...}` cuando `pred_name` o `pred_trace` no eran `None`. En `dspy.GEPA` 3.2.1 (`dspy/teleprompt/gepa/gepa.py:537`), `feedback_fn` decide si hay feedback con `hasattr(o, "feedback")`. Como un `dict` no tiene ese atributo, GEPA caía al fallback `dict(score=o, feedback=f"This trajectory got a score of {o}.")`: el `score` interno quedaba siendo el `dict` entero (disparando además el warning `warn_on_score_mismatch` frente al `float` de módulo) y el Profesor (`reflection_lm`) recibía el diagnóstico escapado y embebido dentro del `repr` del diccionario en vez de como texto limpio bajo `## Feedback`.
+
+**Solución implementada (D-024, 2026-11-24):** Devolver `dspy.Prediction(score=..., feedback=...)` cuando `pred_name` o `pred_trace` están presentes, manteniendo `float` en la ruta de `Evaluate` (sin `pred_name`). `dspy.Prediction` expone el atributo `.feedback` (`hasattr` verdadero), acceso por clave (`o["score"]`, `o["feedback"]`), conversión `float()`, sumas y comparaciones en DSPy 3.2.1.
+
+**Lección y matiz sobre hallazgos previos:**
+- **Verificar el contrato real del optimizador con un test end-to-end que inspeccione el prompt enviado al `reflection_lm`**, no solo el valor retornado por la función métrica en aislamiento (en DSPy 3.2.1 incluso el docstring de `GEPA` menciona un dict en un bloque y `dspy.Prediction` en el protocolo `GEPAFeedbackMetric`, mientras el código exige `hasattr(o, "feedback")`).
+- **Matiz histórico (CV Profile, `fast_gate`):** hasta este fix, todas las corridas de `dspy_gepa_poc` con `metric_feedback: true` entregaban el feedback al Profesor envuelto en `"This trajectory got a score of {'score': ..., 'feedback': '...'}"`. Los límites estructurales de datos/modelo documentados en las secciones 2, 8 y 11 siguen vigentes (errores de definición de gold, baseline en techo, juicios subjetivos de precedencia), pero los hallazgos previos sobre el efecto marginal de "feedback por campo" en DSPy tenían el canal reflexivo degradado por formato; para aislar el aporte real del feedback limpio conviene re-medir con protocolo de N seeds.
+
 ## 2. Datos y Complejidad de la Tarea
 
 ### Calibración de Urgencia en Modelos Reasoning (gpt-5-mini)
@@ -122,7 +132,7 @@ Desacuerdos en `val` (análisis inicial):
 
 **Síntoma.** En `rule_derived`, la métrica puntuaba `clasificacion` (color), que el predictor NO emite (lo calcula una regla pura). El feedback a GEPA decía "esperado Rojo, obtenido Negro" — inaccionable: el reflection_lm no puede corregir un campo que el modelo no produce.
 
-**Lección.** Cuando un output es derivado por código, el feedback de la métrica debe **traducir el error del campo derivado al juicio controlable** que lo causó. Solución implementada: `create_rule_derived_metric_with_feedback` (`metrics.py`) muestra la traza de la regla (bits gold vs pred, conteo/override) y señala **qué juicio P1..P5/`alto_impacto` corregir** para que el color salga bien. El score no cambia (comparabilidad); solo el texto del feedback. Generaliza [[gepa_metric_feedback_pattern]] al caso de outputs derivados.
+**Lección.** Cuando un output es derivado por código, el feedback de la métrica debe **traducir el error del campo derivado al juicio controlable** que lo causó. Solución implementada: `create_rule_derived_metric_with_feedback` (`metrics.py`) muestra la traza de la regla (bits gold vs pred, conteo/override) y señala **qué juicio P1..P5/`alto_impacto` corregir** para que el color salga bien. El score no cambia (comparabilidad); solo el texto del feedback (devuelto vía `dspy.Prediction(score=..., feedback=...)`; ver matiz histórico D-024 en la sección 1). Generaliza [[gepa_metric_feedback_pattern]] al caso de outputs derivados.
 
 ### El Efecto Techo (Ceiling Effect)
 **Síntoma:** El modelo base obtenía 100% de efectividad en la primera prueba ("Zero-Shot").
@@ -270,7 +280,7 @@ Caso de estudio longitudinal sobre `cv_profile` (45 CVs, 10 campos, español). D
 
 **Causa:** `create_dynamic_metric` devolvía solo un float. GEPA recibía un número sin saber qué campos fallaban — las mutaciones de instrucción eran ciegas.
 
-**Fix (commit `48492b3`, 2026-05-17):** Reemplazar por `create_dynamic_metric_with_feedback`, que devuelve `{"score": float, "feedback": "diagnóstico campo a campo"}` cuando GEPA lo solicita. Baseline subió a ~91%, pero el delta siguió siendo marginal — indicando que había un segundo problema.
+**Fix (commit `48492b3`, 2026-05-17; formato corregido en D-024, 2026-11-24):** Reemplazar por `create_dynamic_metric_with_feedback`, que devuelve `dspy.Prediction(score=float, feedback="diagnóstico campo a campo")` cuando GEPA lo solicita (en la versión original de `48492b3` devolvía un `dict` plano y el feedback llegaba al Profesor embebido en el `repr`; ver sección 1, D-024). Baseline subió a ~91%, pero el delta siguió siendo marginal — indicando que había un segundo problema.
 
 ### Fase 2 — Descripciones de campos ambiguas
 
