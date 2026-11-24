@@ -206,15 +206,15 @@ class TestPinnedStackVersions:
             "(historial/sdd.md) y SC-009 de SPEC-104 (specs/SPEC-104-fallas-tecnicas-justas.md)."
         )
 
-    def test_requirements_pins_litellm_and_dspy(self) -> None:
+    def test_requirements_pins_expected_stack_versions(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         req_lines = [
             line.strip()
             for line in (repo_root / "requirements.txt").read_text(encoding="utf-8").splitlines()
             if line.strip() and not line.strip().startswith("#")
         ]
-        for package in ("litellm", "dspy"):
-            pinned = f"{package}=={EXPECTED_VERSIONS[package]}"
+        for package, expected in sorted(EXPECTED_VERSIONS.items()):
+            pinned = f"{package}=={expected}"
             assert pinned in req_lines, (
                 f"requirements.txt ya no fija {pinned}: re-verificar D-023 y SC-009 de SPEC-104."
             )
