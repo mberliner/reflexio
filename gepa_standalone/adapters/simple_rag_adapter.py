@@ -6,6 +6,7 @@ Simula la fase de recuperacion leyendo el contexto directamente del dataset.
 Usa un LLM como juez para evaluar la calidad de la respuesta generada.
 """
 
+from dataclasses import replace
 from typing import Any
 
 import litellm
@@ -14,7 +15,7 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
-from shared.llm import LLMConnectionError, RunAborted
+from shared.llm import LLMCallFailure, get_failure_tracker
 from shared.llm.config import complete_text
 
 
@@ -95,6 +96,19 @@ class SimpleRAGAdapter(BaseAdapter):
 
         return complete_text(call_kwargs, messages, "judge" if is_judge else "task")
 
+    @staticmethod
+    def _user_content(example: dict[str, Any]) -> str:
+        return (
+            f"Contexto:\n{example.get('context', '')}\n\nPregunta:\n{example.get('question', '')}"
+        )
+
+    def _task_call(self, system_prompt: str, example: dict[str, Any]) -> str:
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": self._user_content(example)},
+        ]
+        return self._complete(messages, max_tokens=self.task_max_tokens)
+
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
     ) -> EvaluationBatch:
@@ -103,62 +117,60 @@ class SimpleRAGAdapter(BaseAdapter):
         trajectories = [] if capture_traces else None
 
         system_prompt = candidate.get("system_prompt", "")
+        tracker = get_failure_tracker()
 
-        for idx, example in enumerate(batch):
+        for example in batch:
+            case_id = self._case_id(example)
             question = example.get("question", "")
             context = example.get("context", "")
             ground_truth = example.get("answer", "")
 
-            # Construir input completo para el modelo de tarea
-            user_content = f"Contexto:\n{context}\n\nPregunta:\n{question}"
+            # 1. Generacion (Task Model)
+            response_content, failure = self._run_task_case(system_prompt, example, case_id)
+            generated_answer = ""
+            score = 0.0
+            feedback = ""
 
-            try:
-                # 1. Generacion (Task Model) con retry
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ]
-                response_content = self._complete(messages, max_tokens=self.task_max_tokens)
-
+            # 2. Evaluacion (Judge Model): solo si la tarea respondio; una falla del
+            # juez deja el caso NE con rol `judge` (el `formato` del juez es de 3d).
+            if failure is None:
                 generated_answer = response_content.strip()
+                tracker.record_attempt("judge", case_id)
+                try:
+                    score, feedback = self._evaluate_with_judge(
+                        question=question,
+                        ground_truth=ground_truth,
+                        generated_answer=generated_answer,
+                    )
+                except LLMCallFailure as exc:
+                    failure = replace(exc.failure, case_id=case_id)
+                    tracker.record(failure)
+                    score, feedback = 0.0, ""
 
-                # 2. Evaluación (Judge Model)
-                score, feedback = self._evaluate_with_judge(
-                    question=question, ground_truth=ground_truth, generated_answer=generated_answer
-                )
+            meta = self._case_meta(case_id, failure)
+            outputs.append(
+                {
+                    "generated_answer": generated_answer,
+                    "ground_truth": ground_truth,
+                    "judge_feedback": feedback,
+                    **meta,
+                }
+            )
+            scores.append(score)
 
-                outputs.append(
+            if capture_traces:
+                trajectories.append(
                     {
-                        "generated_answer": generated_answer,
+                        "question": question,
+                        "context": context,
                         "ground_truth": ground_truth,
+                        "generated_answer": generated_answer,
+                        "score": score,
                         "judge_feedback": feedback,
+                        "system_prompt": system_prompt,
+                        **meta,
                     }
                 )
-                scores.append(score)
-
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "question": question,
-                            "context": context,
-                            "ground_truth": ground_truth,
-                            "generated_answer": generated_answer,
-                            "score": score,
-                            "judge_feedback": feedback,
-                            "system_prompt": system_prompt,
-                        }
-                    )
-
-            except (LLMConnectionError, RunAborted):
-                # Connection-level failure or run aborted by state: abort optimization
-                raise
-            except Exception as e:
-                print(f"[WARNING] Error en ejemplo {idx}: {e}")
-                # Penalizar fallos técnicos
-                outputs.append({"error": str(e)})
-                scores.append(0.0)
-                if capture_traces:
-                    trajectories.append({"error": str(e)})
 
         return EvaluationBatch(outputs=outputs, scores=scores, trajectories=trajectories)
 
@@ -198,39 +210,30 @@ class SimpleRAGAdapter(BaseAdapter):
             f"Respuesta Generada: {generated_answer}"
         )
 
-        try:
-            # Llamada al modelo Judge con retry
-            messages = [
-                {"role": "system", "content": judge_prompt},
-                {"role": "user", "content": user_content},
-            ]
+        # Llamada al modelo Judge
+        messages = [
+            {"role": "system", "content": judge_prompt},
+            {"role": "user", "content": user_content},
+        ]
 
-            content = self._complete(
-                messages, max_tokens=self.judge_max_tokens, is_judge=True
-            ).strip()
+        content = self._complete(messages, max_tokens=self.judge_max_tokens, is_judge=True).strip()
 
-            # Parsear respuesta
-            score = 0.0
-            reason = content
+        # Parsear respuesta
+        score = 0.0
+        reason = content
 
-            lines = content.split("\n")
-            for line in lines:
-                if line.upper().startswith("PUNTAJE:") or line.upper().startswith("SCORE:"):
-                    try:
-                        score_str = line.split(":")[1].strip()
-                        score = float(score_str)
-                    except Exception:
-                        pass
-                if line.upper().startswith("RAZON:") or line.upper().startswith("REASON:"):
-                    reason = line.split(":", 1)[1].strip()
+        lines = content.split("\n")
+        for line in lines:
+            if line.upper().startswith("PUNTAJE:") or line.upper().startswith("SCORE:"):
+                try:
+                    score_str = line.split(":")[1].strip()
+                    score = float(score_str)
+                except Exception:
+                    pass
+            if line.upper().startswith("RAZON:") or line.upper().startswith("REASON:"):
+                reason = line.split(":", 1)[1].strip()
 
-            return score, reason
-
-        except (LLMConnectionError, RunAborted):
-            # Config invalida, falla de conexion del juez o corrida abortada: corta la corrida
-            raise
-        except Exception as e:
-            return 0.0, f"Error del Juez: {str(e)}"
+        return score, reason
 
     def make_reflective_dataset(
         self,
@@ -245,14 +248,19 @@ class SimpleRAGAdapter(BaseAdapter):
 
         source_data = eval_batch.trajectories if eval_batch.trajectories else eval_batch.outputs
 
-        for _i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+        for i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+            # Un caso NE nunca llega al Profesor (FR-012)
+            if not self._case_evaluated(eval_batch, i, data):
+                continue
             # Proporcionar feedback si el score no es perfecto
             if score < 1.0:
                 q = data.get("question", "")
                 ctx = data.get("context", "")
                 gen = data.get("generated_answer", "")
                 gt = data.get("ground_truth", "")
-                fb = data.get("judge_feedback", "Respuesta incorrecta.")
+                fb = self._failure_feedback(data) or data.get(
+                    "judge_feedback", "Respuesta incorrecta."
+                )
 
                 # Truncar contexto según configuración
                 max_len = Config.RAG_CONTEXT_MAX_LENGTH

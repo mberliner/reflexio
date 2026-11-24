@@ -165,8 +165,8 @@ class TestGEPAAdapterEvaluation:
         )
 
         batch = [
-            {"text": "Hello!", "label": "greeting"},
-            {"text": "Hi there!", "label": "greeting"},
+            {"case_id": "c0", "text": "Hello!", "label": "greeting"},
+            {"case_id": "c1", "text": "Hi there!", "label": "greeting"},
         ]
         candidate = {"system_prompt": "Classify as greeting or farewell"}
 
@@ -195,8 +195,8 @@ class TestGEPAAdapterEvaluation:
         )
 
         batch = [
-            {"text": "Hello!", "label": "greeting"},
-            {"text": "Goodbye!", "label": "farewell"},
+            {"case_id": "c0", "text": "Hello!", "label": "greeting"},
+            {"case_id": "c1", "text": "Goodbye!", "label": "farewell"},
         ]
         candidate = {"system_prompt": "Classify as greeting or farewell"}
 

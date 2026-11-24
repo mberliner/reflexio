@@ -12,7 +12,6 @@ from gepa import EvaluationBatch
 
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
-from shared.llm import LLMConnectionError
 from shared.scoring import VALID_FIELD_MODES, score_field
 
 
@@ -72,6 +71,57 @@ class SimpleExtractorAdapter(BaseAdapter):
         self.max_response_tokens = max_response_tokens if max_response_tokens is not None else 4000
         self.task_max_tokens = self.max_response_tokens
 
+    def _task_call(self, system_prompt: str, example: dict[str, Any]) -> str:
+        return self.call_model(
+            system_prompt=system_prompt,
+            user_content=example.get("text", ""),
+            max_tokens=self.max_response_tokens,
+        )
+
+    def _parse_json(self, text: str) -> dict[str, Any] | None:
+        """Objeto JSON de la respuesta, o None si no es parseable (`formato`, FR-010)."""
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return self._find_json_object(text)
+        return parsed if isinstance(parsed, dict) else None
+
+    def _score_fields(
+        self, expected_fields: dict[str, Any], extracted_fields: dict[str, Any]
+    ) -> tuple[float, dict[str, Any]]:
+        """Score parcial (promedio de `score_field`) y comparacion por campo."""
+        # Filtrar campos ignorados para no contar en el scoring
+        eval_fields = {k: v for k, v in expected_fields.items() if k not in self.ignore_fields}
+        total_score = 0.0
+        field_comparisons = {}
+
+        for field_name, expected_value in eval_fields.items():
+            cfg = self.field_configs.get(field_name, {})
+            mode = cfg.get("mode", self.default_mode)
+            threshold = cfg.get("fuzzy_threshold", self.fuzzy_threshold)
+            seps = cfg.get("separators", self.list_separators)
+
+            field_score, diag = score_field(
+                expected_value,
+                extracted_fields.get(field_name, ""),
+                mode,
+                threshold,
+                seps,
+            )
+            total_score += field_score
+
+            field_comparisons[field_name] = {
+                "expected": expected_value,
+                "extracted": extracted_fields.get(field_name),
+                "correct": field_score == 1.0,
+                "score": field_score,
+                "mode": mode,
+                "diag": diag,
+            }
+
+        score = total_score / len(eval_fields) if eval_fields else 0.0
+        return score, field_comparisons
+
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
     ) -> EvaluationBatch:
@@ -81,116 +131,47 @@ class SimpleExtractorAdapter(BaseAdapter):
 
         system_prompt = candidate.get("system_prompt", "")
 
-        for idx, example in enumerate(batch):
+        for example in batch:
+            case_id = self._case_id(example)
             user_text = example.get("text", "")
             expected_fields = example.get("extracted", {})
 
-            try:
-                extracted_text = self.call_model(
-                    system_prompt=system_prompt,
-                    user_content=user_text,
-                    max_tokens=self.max_response_tokens,
-                )
+            extracted_text, failure = self._run_task_case(system_prompt, example, case_id)
+            extracted_fields: dict[str, Any] = {}
+            field_comparisons: dict[str, Any] = {}
+            score = 0.0
+            if failure is None:
+                parsed = self._parse_json(extracted_text)
+                if parsed is None:
+                    failure = self._record_format_failure(case_id, "json_no_parseable")
+                else:
+                    extracted_fields = parsed
+                    score, field_comparisons = self._score_fields(expected_fields, parsed)
 
-                # Parsear JSON
-                try:
-                    extracted_fields = json.loads(extracted_text)
-                except json.JSONDecodeError:
-                    extracted_fields = self._extract_json_from_text(extracted_text)
-
-                # Filtrar campos ignorados para no contar en el scoring
-                eval_fields = {
-                    k: v for k, v in expected_fields.items() if k not in self.ignore_fields
+            meta = self._case_meta(case_id, failure)
+            outputs.append(
+                {
+                    "extracted": extracted_fields,
+                    "expected": expected_fields,
+                    "field_comparisons": field_comparisons,
+                    "text": user_text,
+                    **meta,
                 }
-
-                # Comparar campos con scoring por campo (mismo contrato que DSPy).
-                # Score parcial: promedio de score_field sobre los campos evaluados.
-                total_score = 0.0
-                total_fields = len(eval_fields)
-                field_comparisons = {}
-
-                for field_name, expected_value in eval_fields.items():
-                    cfg = self.field_configs.get(field_name, {})
-                    mode = cfg.get("mode", self.default_mode)
-                    threshold = cfg.get("fuzzy_threshold", self.fuzzy_threshold)
-                    seps = cfg.get("separators", self.list_separators)
-
-                    field_score, diag = score_field(
-                        expected_value,
-                        extracted_fields.get(field_name, ""),
-                        mode,
-                        threshold,
-                        seps,
-                    )
-                    total_score += field_score
-
-                    field_comparisons[field_name] = {
-                        "expected": expected_value,
-                        "extracted": extracted_fields.get(field_name),
-                        "correct": field_score == 1.0,
-                        "score": field_score,
-                        "mode": mode,
-                        "diag": diag,
-                    }
-
-                score = total_score / total_fields if total_fields > 0 else 0.0
-
-                outputs.append(
-                    {
-                        "extracted": extracted_fields,
-                        "expected": expected_fields,
-                        "field_comparisons": field_comparisons,
-                        "text": user_text,
-                    }
-                )
-                scores.append(score)
-
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "input": user_text,
-                            "expected_fields": expected_fields,
-                            "extracted_fields": extracted_fields,
-                            "field_comparisons": field_comparisons,
-                            "system_prompt": system_prompt,
-                            "score": score,
-                        }
-                    )
-
-            except LLMConnectionError:
-                # Connection-level failure: abort optimization
-                raise
-            except Exception as e:
-                # NO descartar: GEPA assertea len(outputs)==len(val_ids).
-                # Score 0 + outputs sentinela preservan el alineamiento.
-                print(f"[WARNING] Error técnico en ejemplo {idx}, score=0: {e}")
-                outputs.append(
-                    {
-                        "extracted": {},
-                        "expected": example.get("extracted", {}),
-                        "field_comparisons": {},
-                        "text": example.get("text", ""),
-                        "error": str(e),
-                    }
-                )
-                scores.append(0.0)
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "input": example.get("text", ""),
-                            "expected_fields": example.get("extracted", {}),
-                            "extracted_fields": {},
-                            "field_comparisons": {},
-                            "system_prompt": system_prompt,
-                            "score": 0.0,
-                            "error": str(e),
-                        }
-                    )
-
-        if not scores:
-            raise RuntimeError(
-                f"ERROR CRÍTICO: Todos los ejemplos fallaron ({len(batch)} totales)."
             )
+            scores.append(score)
+
+            if capture_traces:
+                trajectories.append(
+                    {
+                        "input": user_text,
+                        "expected_fields": expected_fields,
+                        "extracted_fields": extracted_fields,
+                        "field_comparisons": field_comparisons,
+                        "system_prompt": system_prompt,
+                        "score": score,
+                        **meta,
+                    }
+                )
 
         return EvaluationBatch(outputs=outputs, scores=scores, trajectories=trajectories)
 
@@ -207,7 +188,10 @@ class SimpleExtractorAdapter(BaseAdapter):
 
         source_data = eval_batch.trajectories if eval_batch.trajectories else eval_batch.outputs
 
-        for _i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+        for i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+            # Un caso NE nunca llega al Profesor (FR-012)
+            if not self._case_evaluated(eval_batch, i, data):
+                continue
             if score < 1.0:
                 field_comparisons = data.get("field_comparisons", {})
                 errors = []
@@ -238,7 +222,8 @@ class SimpleExtractorAdapter(BaseAdapter):
                     "Generated Outputs": {
                         "extracted_fields": data.get("extracted_fields", data.get("extracted"))
                     },
-                    "Feedback": (
+                    "Feedback": self._failure_feedback(data)
+                    or (
                         f"Errores: {'; '.join(errors)}. "
                         f"Revisa el formato JSON y la extracción exacta."
                     ),
@@ -298,9 +283,14 @@ class SimpleExtractorAdapter(BaseAdapter):
         return reflective_datasets
 
     def _extract_json_from_text(self, text: str) -> dict[str, str]:
+        return self._find_json_object(text) or {}
+
+    @staticmethod
+    def _find_json_object(text: str) -> dict[str, Any] | None:
+        """Primer objeto JSON balanceado y parseable del texto, o None."""
         start = text.find("{")
         if start == -1:
-            return {}
+            return None
         count = 0
         for i in range(start, len(text)):
             if text[i] == "{":
@@ -312,4 +302,4 @@ class SimpleExtractorAdapter(BaseAdapter):
                         return json.loads(text[start : i + 1])
                     except Exception:
                         pass
-        return {}
+        return None

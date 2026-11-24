@@ -76,14 +76,13 @@ def log_empty_response(role: str, finish_reason: Any, *, call_layer: bool = Fals
     """
     Registra la causa de una respuesta sin texto (FR-009), comun a LiteLLM y DSPy.
 
-    Con `call_layer=True` (`complete_text` y `CheckedLM`) el rol `reflection`
-    va a DEBUG (SPEC-104 FR-007, 2b): el unico WARNING por falla es el de
-    `FailureTracker.record`, que hace el envoltorio de reflexion
-    (`shared.llm.reflection.ReflectionGuard`). Tarea y juez siguen en WARNING
-    hasta que sus envoltorios cuenten (3c, 3e).
+    Con `call_layer=True` (`complete_text` y `CheckedLM`) va a DEBUG en todos los
+    roles (SPEC-104 FR-007, 3c): el unico WARNING por falla es el de
+    `FailureTracker.record`, que hacen los envoltorios que conocen el caso (los
+    adapters de `gepa_standalone`, el envoltorio de reflexion). La tarea de
+    `dspy_gepa_poc` queda sin WARNING hasta que 3e cuente en su metrica.
     """
-    counted = call_layer and role == "reflection"
-    level = logging.DEBUG if counted else logging.WARNING
+    level = logging.DEBUG if call_layer else logging.WARNING
     logger.log(level, "Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
 
 

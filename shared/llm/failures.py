@@ -43,6 +43,8 @@ class LLMFailure:
     finish_reason: str | None = None
     case_id: str | None = None
     atribucion: str | None = None  # "candidato" | "externa" | None
+    # `finish_reason` de la llamada baseline de la atribucion (FR-004); None sin atribuir.
+    baseline_finish_reason: str | None = None
 
 
 class LLMCallFailure(Exception):  # noqa: N818 - nombre fijado por D1
@@ -333,13 +335,19 @@ class FailureTracker:
             self._last[(clave, rol)] = failure
             self._last[("total", rol)] = failure
             logger.warning(
-                "Falla de LLM: rol=%s clave=%s atribucion=%s causa=%s finish_reason=%s case_id=%s",
+                "Falla de LLM: rol=%s clave=%s atribucion=%s causa=%s finish_reason=%s "
+                "case_id=%s%s",
                 rol,
                 clave,
                 failure.atribucion,
                 failure.causa,
                 failure.finish_reason,
                 failure.case_id,
+                (
+                    f" baseline_finish_reason={failure.baseline_finish_reason}"
+                    if failure.baseline_finish_reason is not None
+                    else ""
+                ),
             )
             if failure.clase == FailureClass.configuracion and self._abort is None:
                 self._abort_locked(failure, "Falla de configuracion", clave=clave)

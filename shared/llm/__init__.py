@@ -5,7 +5,20 @@ Provides unified LLM configuration for both gepa_standalone and dspy_gepa_poc pr
 Uses LiteLLM as the underlying client.
 """
 
-from .call import call_with_infra_retry, checked_completion, raise_for_response
+from .attribution import (
+    BaselineOutcome,
+    BaselineProbe,
+    attribute_failure,
+    failure_to_dict,
+    is_evaluated,
+)
+from .call import (
+    call_with_infra_retry,
+    capture_finish_reason,
+    checked_completion,
+    checked_completion_with_reason,
+    raise_for_response,
+)
 from .config import LLMConfig, response_text
 from .errors import EmptyResponseError, LLMConfigError, LLMConnectionError
 from .failures import (
@@ -21,6 +34,11 @@ from .failures import (
 from .usage import UsageTracker, get_tracker, record_usage
 
 __all__ = [
+    "BaselineOutcome",
+    "BaselineProbe",
+    "attribute_failure",
+    "failure_to_dict",
+    "is_evaluated",
     "EmptyResponseError",
     "FailureClass",
     "FailureTracker",
@@ -28,7 +46,9 @@ __all__ = [
     "LLMFailure",
     "RunAborted",
     "call_with_infra_retry",
+    "capture_finish_reason",
     "checked_completion",
+    "checked_completion_with_reason",
     "classify_exception",
     "classify_response",
     "get_failure_tracker",

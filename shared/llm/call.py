@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from .errors import EmptyResponseError
@@ -27,6 +29,26 @@ from .failures import (
 from .usage import record_usage
 
 logger = logging.getLogger(__name__)
+
+# Receptor opcional del finish_reason de la ultima respuesta sana del contexto actual.
+_finish_reason_sink: ContextVar[list[str | None] | None] = ContextVar(
+    "finish_reason_sink", default=None
+)
+
+
+@contextmanager
+def capture_finish_reason() -> Iterator[list[str | None]]:
+    """
+    Captura el `finish_reason` de la respuesta sana de las llamadas hechas dentro
+    del bloque (SPEC-104 FR-004: el de la llamada baseline sana). La lista cede el
+    de la ultima llamada, o queda vacia si ninguna respondio sana.
+    """
+    sink: list[str | None] = []
+    token = _finish_reason_sink.set(sink)
+    try:
+        yield sink
+    finally:
+        _finish_reason_sink.reset(token)
 
 
 def call_with_infra_retry[T](
@@ -123,6 +145,24 @@ def checked_completion(
 
     Recibe los kwargs ya restringidos (`apply_constraints` sigue en el llamador).
     """
+    return checked_completion_with_reason(
+        kwargs, messages, role, infra_retries=infra_retries, backoff_base=backoff_base
+    )[0]
+
+
+def checked_completion_with_reason(
+    kwargs: dict[str, Any],
+    messages: list[dict[str, Any]],
+    role: str,
+    *,
+    infra_retries: int | None = None,
+    backoff_base: float = 1.0,
+) -> tuple[str, str | None]:
+    """
+    Como `checked_completion`, pero devuelve `(texto, finish_reason)` de la
+    respuesta sana; ademas lo publica en `capture_finish_reason` si hay un bloque
+    activo. Las fallas se lanzan igual que en `checked_completion`.
+    """
     import litellm
 
     def _call() -> Any:
@@ -133,4 +173,9 @@ def checked_completion(
     )
     if response is not None:
         record_usage(role, response)
-    return raise_for_response(response, role)
+    text = raise_for_response(response, role)
+    finish_reason = getattr(response.choices[0], "finish_reason", None)
+    sink = _finish_reason_sink.get()
+    if sink is not None:
+        sink[:] = [finish_reason]
+    return text, finish_reason

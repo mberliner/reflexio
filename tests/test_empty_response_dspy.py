@@ -213,7 +213,9 @@ class TestCheckedLM:
     def test_task_raises_with_cause(self, monkeypatch, caplog, content, reason):
         _patch_dspy_completion(monkeypatch, lambda r: (content, reason), None)
         lm = _lm(TASK_MODEL, "task")
-        with caplog.at_level(logging.WARNING), pytest.raises(EmptyResponseError) as exc_info:
+        # La capa de llamada va a DEBUG (SPEC-104 FR-007, 3c); el WARNING de la tarea de DSPy
+        # lo emite la metrica que cuenta (3e).
+        with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
             lm("hola")
         assert exc_info.value.role == "task"
         assert exc_info.value.finish_reason == reason
@@ -404,7 +406,7 @@ class TestTaskInGepa:
             num_threads=1,
         )
         batch = _dataset()
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.DEBUG):
             result = adapter.evaluate(
                 batch, {"self": SEED_INSTRUCTION}, capture_traces=capture_traces
             )
@@ -420,7 +422,7 @@ class TestTaskInGepa:
             lambda r: (None, "length"),
             lambda r: (f"```\n{VALID_INSTRUCTION}\n```", "stop"),
         )
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.DEBUG):
             result = _run_gepa(_lm(REFLECTION_MODEL, "reflection"), budget=24)
         assert result.detailed_results.val_aggregate_scores[0] == 0.0
         assert result.detailed_results.total_metric_calls >= 24

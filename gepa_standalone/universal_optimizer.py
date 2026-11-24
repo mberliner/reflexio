@@ -156,6 +156,8 @@ class UniversalOptimizer:
         print_step(4, TOTAL_STEPS, "ADAPTER")
         self.initialize_adapter()
         initial_prompt = self.load_prompt()
+        # SPEC-104 D5: el adapter necesita el baseline para atribuir fallas de la tarea.
+        self.adapter.set_baseline(initial_prompt.get("system_prompt", ""))
 
         # Reset real token tracking just before any task/reflection LLM call so
         # the snapshot in save_results reflects only this run's optimization.

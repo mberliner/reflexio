@@ -481,28 +481,28 @@ se diga otra cosa.
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | parcial: `shared/llm/failures.py`, `shared/llm/call.py` (clasificador y contador, vigente); `tests/test_single_call_point.py` (punto unico de llamada, vigente); conteo por los envoltorios pendiente (3c, 3e) |
-| FR-002 | pendiente |
+| FR-001 | parcial: `shared/llm/failures.py`, `shared/llm/call.py` (clasificador y contador, vigente); `tests/test_single_call_point.py` (punto unico de llamada, vigente); conteo por los adapters de `gepa_standalone` vigente (3c); envoltorios de `dspy_gepa_poc` pendiente (3e) |
+| FR-002 | parcial: `gepa_standalone/adapters/*.py`, `shared/llm/attribution.py`; `tests/test_gepa_adapters_failures.py` (tratamiento por clase en los cuatro adapters de `gepa_standalone`, vigente); `dspy_gepa_poc` pendiente (3e) |
 | FR-003 | pendiente |
-| FR-004 | pendiente |
+| FR-004 | parcial: `gepa_standalone/adapters/*.py`, `shared/llm/attribution.py`, `shared/llm/call.py` (`capture_finish_reason`, `finish_reason` del baseline sano), `shared/llm/failures.py`; `tests/test_attribution.py`, `tests/test_gepa_adapters_failures.py` (`TestAttribution`, vigente); `dspy_gepa_poc` pendiente (3e) |
 | FR-005 | `shared/llm/reflection.py` (`ReflectionGuard`, `reflection_format_failure`), `gepa_standalone/core/llm_factory.py` (`ReflectionLM`), `shared/llm/dspy_lm.py` (`CheckedLM` rol `reflection`); `tests/test_reflection_guard.py` (verificado contra `gepa==0.0.27` y `dspy==3.2.1`, vigente); `case_id` = iteracion de GEPA via callback, cableado en los orquestadores pendiente (4b) |
 | FR-006 | pendiente |
-| FR-007 | parcial: rol `reflection` (un WARNING por propuesta desde `FailureTracker.record`, log de la capa de llamada a DEBUG; `shared/llm/config.py`, `tests/test_reflection_guard.py`, `tests/test_empty_response_dspy.py`, vigente); tarea y juez pendiente (3c, 3e) |
+| FR-007 | parcial: rol `reflection` (un WARNING por propuesta desde `FailureTracker.record`, log de la capa de llamada a DEBUG; `shared/llm/config.py`, `tests/test_reflection_guard.py`, `tests/test_empty_response_dspy.py`, vigente); tarea de `gepa_standalone` vigente (3c); tarea de `dspy_gepa_poc` (3e) y juez pendiente |
 | FR-008 | pendiente |
 | FR-009 | pendiente |
-| FR-010 | pendiente |
+| FR-010 | parcial: `formato` por adapter en `gepa_standalone/adapters/simple_classifier_adapter.py` y `simple_extractor_adapter.py`; `tests/test_gepa_adapters_failures.py` (`TestFormatFailures`, vigente); `dspy_gepa_poc` pendiente (3e) |
 | FR-011 | parcial: `shared/llm/call.py`, `shared/llm/dspy_lm.py` (`num_retries=0` y reintento propio solo de `infraestructura`, vigente); `tests/test_failure_call.py`, `tests/test_single_call_point.py`; reintentos desde el YAML pendiente (4c) |
-| FR-012 | pendiente |
-| FR-013 | `gepa_standalone/data/data_loader.py`, `dspy_gepa_poc/data_loader.py` (`case_id` del CSV o `<split>:<fila>`, vigente); `tests/test_case_id_loaders.py`; el uso como `case_id` de las fallas en adapters y envoltorios queda en 3c y 3e |
+| FR-012 | parcial: resultado por caso (`case_id`, `evaluated`, `failure`) en `gepa_standalone/adapters/base_adapter.py`; `tests/test_gepa_adapters_failures.py` (`TestNoCaseDisappears`, vigente); prediccion NE de DSPy pendiente (3e) |
+| FR-013 | `gepa_standalone/data/data_loader.py`, `dspy_gepa_poc/data_loader.py` (`case_id` del CSV o `<split>:<fila>`, vigente); `tests/test_case_id_loaders.py`; `case_id` de las fallas en los adapters de `gepa_standalone` vigente (3c); envoltorios de `dspy_gepa_poc` pendiente (3e) |
 | FR-014 | pendiente |
 | FR-015 | `tests/litellm_failure_payloads.py`, `tests/test_litellm_failure_mapping.py` (evidencia del comportamiento de LiteLLM, vigente); `shared/llm/failures.py`, `tests/test_failures.py` (clasificador, vigente) |
 | FR-016 | pendiente |
-| SC-001 | pendiente |
+| SC-001 | parcial: `tests/test_gepa_adapters_failures.py` (fallas inyectadas en los cuatro adapters de `gepa_standalone`: ningun caso desaparece, vigente); `dspy_gepa_poc` pendiente (3e) |
 | SC-002 | pendiente |
 | SC-003 | `tests/test_reflection_guard.py` (`gepa.optimize` y `dspy.GEPA` reales: propuesta con respuesta 200 `presupuesto`, `filtro_salida`, `sin_texto` o `formato` (y `configuracion` en `gepa.optimize`) no crea ni evalua candidato; las 99 fallas de capa 1 se lanzan desde el envoltorio en ambos subproyectos, vigente) |
 | SC-004 | pendiente |
 | SC-005 | pendiente |
 | SC-006 | pendiente |
 | SC-007 | pendiente |
-| SC-008 | pendiente |
+| SC-008 | parcial: `tests/test_gepa_adapters_failures.py` (`TestReflectiveDatasetExcludesNE`: un caso NE nunca entra al dataset reflexivo de `gepa_standalone`, vigente); `dspy_gepa_poc` pendiente (3e) |
 | SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); `tests/test_failures.py` (clasificador sobre los 102 payloads, vigente); `tests/test_single_call_point.py` (1 llamada HTTP por caso via `dspy.Predict`, 1 + reintentos si es `infraestructura`, vigente) |

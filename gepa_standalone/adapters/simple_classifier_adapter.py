@@ -11,7 +11,6 @@ from gepa import EvaluationBatch
 
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
-from shared.llm import EmptyResponseError, LLMConnectionError
 
 
 class SimpleClassifierAdapter(BaseAdapter):
@@ -26,6 +25,19 @@ class SimpleClassifierAdapter(BaseAdapter):
         super().__init__(temperature=temperature)
         self.valid_classes = valid_classes
 
+    def _task_call(self, system_prompt: str, example: dict[str, Any]) -> str:
+        return self.call_model(
+            system_prompt=system_prompt,
+            user_content=example.get("text", ""),
+            max_tokens=self.task_max_tokens,
+        )
+
+    def _normalize_class(self, raw: str) -> str | None:
+        """Clase valida a la que normaliza la respuesta, o None (`formato`, FR-010)."""
+        candidate = raw.strip().lower()
+        valid = {c.lower() for c in self.valid_classes}
+        return candidate if candidate in valid else None
+
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
     ) -> EvaluationBatch:
@@ -35,72 +47,46 @@ class SimpleClassifierAdapter(BaseAdapter):
 
         system_prompt = candidate.get("system_prompt", "")
 
-        for idx, example in enumerate(batch):
+        for example in batch:
+            case_id = self._case_id(example)
             user_text = example.get("text", "")
             expected_class = example.get(self._get_label_key(example), "")
 
-            try:
-                # Usar método helper de la clase base
-                predicted_class = self.call_model(
-                    system_prompt=system_prompt,
-                    user_content=user_text,
-                    max_tokens=self.task_max_tokens,
-                ).lower()
+            raw, failure = self._run_task_case(system_prompt, example, case_id)
+            predicted_class = ""
+            if failure is None:
+                normalized = self._normalize_class(raw)
+                if normalized is None:
+                    predicted_class = raw.strip().lower()
+                    failure = self._record_format_failure(case_id, "clase_invalida")
+                else:
+                    predicted_class = normalized
 
-                # Score
-                is_correct = predicted_class == expected_class.lower()
-                score = 1.0 if is_correct else 0.0
+            is_correct = failure is None and predicted_class == expected_class.lower()
+            score = 1.0 if is_correct else 0.0
+            meta = self._case_meta(case_id, failure)
 
-                outputs.append(
-                    {"predicted": predicted_class, "expected": expected_class, "text": user_text}
-                )
-                scores.append(score)
+            outputs.append(
+                {
+                    "predicted": predicted_class,
+                    "expected": expected_class,
+                    "text": user_text,
+                    **meta,
+                }
+            )
+            scores.append(score)
 
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "input": user_text,
-                            "expected": expected_class,
-                            "predicted": predicted_class,
-                            "system_prompt": system_prompt,
-                            "correct": is_correct,
-                        }
-                    )
-
-            except LLMConnectionError:
-                # Connection-level failure: abort optimization
-                raise
-            except EmptyResponseError as e:
-                # SPEC-103 FR-009: respuesta sin texto = prediccion fallida (score 0.0).
-                # La causa ya fue registrada por response_text; se mantiene len(outputs).
-                print(f"[WARNING] Respuesta sin texto en ejemplo {idx}, score=0: {e}")
-                outputs.append(
+            if capture_traces:
+                trajectories.append(
                     {
-                        "predicted": "",
+                        "input": user_text,
                         "expected": expected_class,
-                        "text": user_text,
-                        "error": str(e),
+                        "predicted": predicted_class,
+                        "system_prompt": system_prompt,
+                        "correct": is_correct,
+                        **meta,
                     }
                 )
-                scores.append(0.0)
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "input": user_text,
-                            "expected": expected_class,
-                            "predicted": "",
-                            "system_prompt": system_prompt,
-                            "correct": False,
-                            "error": str(e),
-                        }
-                    )
-            except Exception as e:
-                print(f"[WARNING] Error técnico en ejemplo {idx}, descartando: {e}")
-
-        if not scores:
-            raise RuntimeError(
-                f"ERROR CRÍTICO: Todos los ejemplos fallaron ({len(batch)} totales)."
-            )
 
         return EvaluationBatch(outputs=outputs, scores=scores, trajectories=trajectories)
 
@@ -118,7 +104,10 @@ class SimpleClassifierAdapter(BaseAdapter):
         # Usar trajectories si existen, sino outputs
         source_data = eval_batch.trajectories if eval_batch.trajectories else eval_batch.outputs
 
-        for _i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+        for i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+            # Un caso NE nunca llega al Profesor (FR-012)
+            if not self._case_evaluated(eval_batch, i, data):
+                continue
             if score < 1.0:
                 # Extraer datos dependiendo de si viene de trajectory o output
                 text = data.get("input", data.get("text", ""))
@@ -136,12 +125,13 @@ class SimpleClassifierAdapter(BaseAdapter):
                 else:
                     text_truncado = text
 
+                feedback = self._failure_feedback(data) or (
+                    f"Clasificación incorrecta. Se esperaba '{exp}' pero se obtuvo '{pred}'."
+                )
                 reflective_record = {
                     "Inputs": {"text": text_truncado},
                     "Generated Outputs": {"predicted_class": pred, "expected_class": exp},
-                    "Feedback": (
-                        f"Clasificación incorrecta. Se esperaba '{exp}' pero se obtuvo '{pred}'."
-                    ),
+                    "Feedback": feedback,
                 }
                 reflective_datasets["system_prompt"].append(reflective_record)
 

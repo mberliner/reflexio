@@ -11,7 +11,6 @@ from typing import Any
 from gepa import EvaluationBatch
 
 from gepa_standalone.adapters.base_adapter import BaseAdapter
-from shared.llm import EmptyResponseError, LLMConnectionError
 
 
 class SimpleSQLAdapter(BaseAdapter):
@@ -20,6 +19,18 @@ class SimpleSQLAdapter(BaseAdapter):
     """
 
     task_max_tokens = 200
+
+    @staticmethod
+    def _user_content(example: dict[str, Any]) -> str:
+        extracted = example.get("extracted", {})
+        return f"Esquema: {extracted.get('schema', '')}\nPregunta: {example.get('question', '')}"
+
+    def _task_call(self, system_prompt: str, example: dict[str, Any]) -> str:
+        return self.call_model(
+            system_prompt=system_prompt,
+            user_content=self._user_content(example),
+            max_tokens=self.task_max_tokens,
+        )
 
     def evaluate(
         self, batch: list[dict[str, Any]], candidate: dict[str, str], capture_traces: bool = False
@@ -30,76 +41,42 @@ class SimpleSQLAdapter(BaseAdapter):
 
         system_prompt = candidate.get("system_prompt", "")
 
-        for idx, example in enumerate(batch):
+        for example in batch:
+            case_id = self._case_id(example)
             question = example.get("question", "")
-            schema = example.get("extracted", {}).get("schema", "")
             expected_sql = example.get("extracted", {}).get("expected_sql", "")
+            user_content = self._user_content(example)
 
-            try:
-                user_content = f"Esquema: {schema}\nPregunta: {question}"
-
-                predicted_sql = self.call_model(
-                    system_prompt=system_prompt,
-                    user_content=user_content,
-                    max_tokens=self.task_max_tokens,
-                )
-
+            raw, failure = self._run_task_case(system_prompt, example, case_id)
+            predicted_sql = ""
+            if failure is None:
                 # Limpieza
-                predicted_sql = re.sub(
-                    r"```sql\s*|```", "", predicted_sql, flags=re.IGNORECASE
-                ).strip()
+                predicted_sql = re.sub(r"```sql\s*|```", "", raw, flags=re.IGNORECASE).strip()
 
-                is_correct = self._compare_sql(predicted_sql, expected_sql)
-                score = 1.0 if is_correct else 0.0
+            is_correct = failure is None and self._compare_sql(predicted_sql, expected_sql)
+            score = 1.0 if is_correct else 0.0
+            meta = self._case_meta(case_id, failure)
 
-                outputs.append(
-                    {"predicted": predicted_sql, "expected": expected_sql, "question": question}
-                )
-                scores.append(score)
+            outputs.append(
+                {
+                    "predicted": predicted_sql,
+                    "expected": expected_sql,
+                    "question": question,
+                    **meta,
+                }
+            )
+            scores.append(score)
 
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "input": user_content,
-                            "expected": expected_sql,
-                            "predicted": predicted_sql,
-                            "correct": is_correct,
-                        }
-                    )
-
-            except LLMConnectionError:
-                # Connection-level failure: abort optimization
-                raise
-            except EmptyResponseError as e:
-                # SPEC-103 FR-009: respuesta sin texto = prediccion fallida (score 0.0).
-                # La causa ya fue registrada por response_text; se mantiene len(outputs).
-                print(f"[WARNING] Respuesta sin texto en ejemplo {idx}, score=0: {e}")
-                outputs.append(
+            if capture_traces:
+                trajectories.append(
                     {
-                        "predicted": "",
+                        "input": user_content,
                         "expected": expected_sql,
-                        "question": question,
-                        "error": str(e),
+                        "predicted": predicted_sql,
+                        "correct": is_correct,
+                        **meta,
                     }
                 )
-                scores.append(0.0)
-                if capture_traces:
-                    trajectories.append(
-                        {
-                            "input": f"Esquema: {schema}\nPregunta: {question}",
-                            "expected": expected_sql,
-                            "predicted": "",
-                            "correct": False,
-                            "error": str(e),
-                        }
-                    )
-            except Exception as e:
-                print(f"[WARNING] Error técnico en ejemplo {idx}, descartando: {e}")
-
-        if not scores:
-            raise RuntimeError(
-                f"ERROR CRÍTICO: Todos los ejemplos fallaron ({len(batch)} totales)."
-            )
 
         return EvaluationBatch(outputs=outputs, scores=scores, trajectories=trajectories)
 
@@ -124,7 +101,10 @@ class SimpleSQLAdapter(BaseAdapter):
 
         source_data = eval_batch.trajectories if eval_batch.trajectories else eval_batch.outputs
 
-        for _i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+        for i, (data, score) in enumerate(zip(source_data, eval_batch.scores, strict=False)):
+            # Un caso NE nunca llega al Profesor (FR-012)
+            if not self._case_evaluated(eval_batch, i, data):
+                continue
             if score < 1.0:
                 reflective_record = {
                     "Inputs": {
@@ -132,7 +112,8 @@ class SimpleSQLAdapter(BaseAdapter):
                         "expected_sql": data.get("expected", ""),
                     },
                     "Generated Outputs": {"predicted_sql": data.get("predicted", "")},
-                    "Feedback": (
+                    "Feedback": self._failure_feedback(data)
+                    or (
                         "El SQL generado no coincide con el esperado. "
                         "Sigue el esquema y sintaxis exacta."
                     ),

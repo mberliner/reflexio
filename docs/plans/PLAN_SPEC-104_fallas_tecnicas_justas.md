@@ -765,6 +765,13 @@ anota como bloqueo y no commitea.
   (b) aceptar que el `finish_reason` del baseline sano queda sin registrar y
   ajustar FR-004. Hasta entonces: sin commit, fila de 3c en `pendiente`, filas
   del Coverage mapping sin cambios.
+- Cierre de 3c (Sonnet 5.5, relanzamiento, 2026-11-24). Opcion (a):
+  `checked_completion_with_reason` en `shared/llm/call.py` devuelve texto y
+  `finish_reason` de la respuesta sana y los publica en el bloque
+  `capture_finish_reason()` (contextvar, seguro con hilos); `checked_completion`
+  delega en ella sin cambiar su comportamiento. `BaseAdapter.set_baseline` envuelve
+  la llamada baseline en ese bloque y `BaselineProbe` acepta un `BaselineOutcome`
+  devuelto. Los 4 `xfail` quitados; `ci_local.sh` en verde (2006 passed).
 - 3d. Archivos: `gepa_standalone/adapters/simple_rag_adapter.py`, tests de RAG.
 - 3e. Ver D5 y D6 (reutiliza `shared/llm/attribution.py` de 3c sin
   cambiarlo). Archivos: `dspy_gepa_poc/empty_response.py` (o el modulo que lo

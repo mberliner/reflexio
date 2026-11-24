@@ -1,10 +1,11 @@
 """
-SPEC-103 FR-009 (2b) y SPEC-104 (2a): respuesta sin texto en los caminos LiteLLM.
+SPEC-103 FR-009 (2b) y SPEC-104 (2a, 3c): respuesta sin texto en los caminos LiteLLM.
 
 Cubre el helper `response_text`, `call_llm`, `get_lm_function` (tarea y
 reflexion), los adapters de gepa_standalone y el juez de RAG. Desde SPEC-104 2a
 la respuesta sin texto sale de la llamada comun como `EmptyResponseError` con la
-clase de capa 1 de su `finish_reason` normalizado por LiteLLM.
+clase de capa 1 de su `finish_reason` normalizado por LiteLLM; desde 3c cada
+adapter la trata segun la tabla de la spec (score 0 del candidato o NE).
 """
 
 import logging
@@ -19,9 +20,11 @@ from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from gepa_standalone.core.llm_factory import call_llm
 from shared.llm import (
     EmptyResponseError,
+    LLMCallFailure,
     LLMConfig,
     LLMConfigError,
     LLMConnectionError,
+    RunAborted,
     get_failure_tracker,
     response_text,
 )
@@ -75,124 +78,200 @@ class TestLmFunctions:
     @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
     def test_call_llm_raises(self, mock_env, monkeypatch, content, reason, clase, caplog):
         _patch_completion(monkeypatch, content, reason)
-        with caplog.at_level(logging.WARNING), pytest.raises(EmptyResponseError) as exc_info:
+        with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
             call_llm("hola", model_name="task")
         assert exc_info.value.failure.clase.value == clase
-        # SPEC-103 FR-009: la causa de la respuesta sin texto sigue registrada
+        # SPEC-103 FR-009: la causa sigue registrada, a DEBUG (SPEC-104 FR-007: el unico
+        # WARNING por falla lo emite quien conoce el caso, no la capa de llamada).
         assert "rol=task" in caplog.text
         assert reason in caplog.text
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
 
     def test_call_llm_returns_text(self, mock_env, monkeypatch):
         _patch_completion(monkeypatch, "ok")
         assert call_llm("hola", model_name="task") == "ok"
 
 
+# Tratamiento de la tarea segun la tabla de la spec: `filtro_salida` y `sin_texto` son NE;
+# `presupuesto` se atribuye contra el baseline (que aca responde sano -> candidato, score 0).
+TASK_TREATMENT = {
+    "presupuesto": (True, "presupuesto_candidato"),
+    "sin_texto": (False, "sin_texto"),
+    "filtro_salida": (False, "filtro_salida"),
+}
+
+
+def _scripted(monkeypatch, fn):
+    """`litellm.completion` con respuestas reales: `fn(system, user)` -> `ModelResponse`."""
+    calls = []
+
+    def completion(*args, **kwargs):
+        messages = kwargs["messages"]
+        system = next((m["content"] for m in messages if m["role"] == "system"), "")
+        user = messages[-1]["content"]
+        calls.append((system, user))
+        return fn(system, user)
+
+    monkeypatch.setattr("litellm.completion", completion)
+    return calls
+
+
 class TestAdapters:
     @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
     @pytest.mark.parametrize("traces", [False, True])
-    def test_classifier_scores_zero_and_logs_cause(
-        self, mock_env, monkeypatch, capsys, caplog, content, reason, clase, traces
+    @pytest.mark.parametrize("adapter_kind", ["classifier", "sql"])
+    def test_task_failure_follows_treatment_table(
+        self, mock_env, monkeypatch, caplog, content, reason, clase, traces, adapter_kind
     ):
-        # Comportamiento vigente hasta 3c (SPEC-103 FR-009): score 0.0; 3c lo pasa a NE.
-        calls = iter([_response(content, reason), _response("greeting")])
-        monkeypatch.setattr("litellm.completion", lambda *a, **k: next(calls))
-        adapter = SimpleClassifierAdapter(valid_classes=["greeting", "farewell"])
-        batch = [{"text": "x", "label": "greeting"}, {"text": "hi", "label": "greeting"}]
+        """FR-002 / FR-007: cada falla de la tarea es score 0 del candidato o NE segun la
+        tabla, el lote conserva todos sus casos y se registra un WARNING por caso."""
+
+        def respond(system, user):
+            if system == "p" and "FALLA" in user:
+                return _response(content, reason)
+            return _response("greeting" if adapter_kind == "classifier" else "SELECT 1")
+
+        _scripted(monkeypatch, respond)
+        if adapter_kind == "classifier":
+            adapter = SimpleClassifierAdapter(valid_classes=["greeting", "farewell"])
+            batch = [
+                {"case_id": "a", "text": "FALLA", "label": "greeting"},
+                {"case_id": "b", "text": "hi", "label": "greeting"},
+            ]
+        else:
+            adapter = SimpleSQLAdapter()
+            ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
+            batch = [
+                {"case_id": "a", "question": "FALLA", "extracted": ex},
+                {"case_id": "b", "question": "b", "extracted": ex},
+            ]
+        adapter.set_baseline("base")
+        evaluated, key = TASK_TREATMENT[clase]
 
         with caplog.at_level(logging.WARNING):
             result = adapter.evaluate(batch, {"system_prompt": "p"}, capture_traces=traces)
 
         assert result.scores == [0.0, 1.0]
         assert len(result.outputs) == len(result.scores) == len(batch)
-        assert "rol=task" in capsys.readouterr().out + caplog.text
-        assert reason in caplog.text
+        assert result.outputs[0]["case_id"] == "a"
+        assert result.outputs[0]["evaluated"] is evaluated
+        assert result.outputs[0]["failure"]["clave"] == key
+        assert result.outputs[1]["evaluated"] is True
+        assert result.outputs[1]["failure"] is None
         if traces:
             assert len(result.trajectories) == len(batch)
+            assert result.trajectories[0]["evaluated"] is evaluated
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["counts"][key]["task"] == 1
+        assert snapshot["attempts"]["task"] == 2
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+        assert "rol=task" in warnings[0].getMessage()
+        assert reason in warnings[0].getMessage()
 
-    def test_classifier_unclassified_error_aborts_run(self, mock_env, monkeypatch):
-        # SPEC-104 regla 3: una excepcion no clasificada es `configuracion` y fija el
-        # aborto; la llamada siguiente no llega al LLM. Que el adapter descarte los
-        # ejemplos (D-019) en vez de propagar `RunAborted` lo corrigen 3c y 4b.
+    @pytest.mark.parametrize("adapter_kind", ["classifier", "sql"])
+    def test_unclassified_error_aborts_run(self, mock_env, monkeypatch, adapter_kind):
+        """Regla 3: excepcion no clasificada = `configuracion`; aborta (FR-006) y el adapter
+        propaga `RunAborted` en vez de descartar ejemplos ni inventar un RuntimeError."""
         completion = MagicMock(side_effect=[RuntimeError("boom"), _response("greeting")])
         monkeypatch.setattr("litellm.completion", completion)
-        adapter = SimpleClassifierAdapter(valid_classes=["greeting"])
-        batch = [{"text": "x", "label": "greeting"}, {"text": "hi", "label": "greeting"}]
+        if adapter_kind == "classifier":
+            adapter = SimpleClassifierAdapter(valid_classes=["greeting"])
+            batch = [
+                {"case_id": "a", "text": "x", "label": "greeting"},
+                {"case_id": "b", "text": "hi", "label": "greeting"},
+            ]
+        else:
+            adapter = SimpleSQLAdapter()
+            ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
+            batch = [
+                {"case_id": "a", "question": "a", "extracted": ex},
+                {"case_id": "b", "question": "b", "extracted": ex},
+            ]
 
-        with pytest.raises(RuntimeError, match="Todos los ejemplos fallaron"):
+        with pytest.raises(RunAborted):
             adapter.evaluate(batch, {"system_prompt": "p"})
 
         assert completion.call_count == 1
         assert get_failure_tracker().aborted
 
     @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
-    @pytest.mark.parametrize("traces", [False, True])
-    def test_sql_scores_zero_and_logs_cause(
-        self, mock_env, monkeypatch, caplog, content, reason, clase, traces
+    def test_extractor_task_failure_follows_treatment_table(
+        self, mock_env, monkeypatch, content, reason, clase
     ):
-        calls = iter([_response(content, reason), _response("SELECT 1")])
-        monkeypatch.setattr("litellm.completion", lambda *a, **k: next(calls))
-        adapter = SimpleSQLAdapter()
-        ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
-        batch = [{"question": "a", "extracted": ex}, {"question": "b", "extracted": ex}]
+        def respond(system, user):
+            if system == "p":
+                return _response(content, reason)
+            return _response('{"name": "Ana"}')
 
-        with caplog.at_level(logging.WARNING):
-            result = adapter.evaluate(batch, {"system_prompt": "p"}, capture_traces=traces)
-
-        assert result.scores == [0.0, 1.0]
-        assert len(result.outputs) == len(result.scores) == len(batch)
-        assert reason in caplog.text
-        if traces:
-            assert len(result.trajectories) == len(batch)
-
-    def test_sql_unclassified_error_aborts_run(self, mock_env, monkeypatch):
-        # Igual que en el clasificador: `configuracion` aborta (3c y 4b ajustan el adapter).
-        completion = MagicMock(side_effect=[RuntimeError("boom"), _response("SELECT 1")])
-        monkeypatch.setattr("litellm.completion", completion)
-        adapter = SimpleSQLAdapter()
-        ex = {"schema": "t(a)", "expected_sql": "SELECT 1"}
-        batch = [{"question": "a", "extracted": ex}, {"question": "b", "extracted": ex}]
-
-        with pytest.raises(RuntimeError, match="Todos los ejemplos fallaron"):
-            adapter.evaluate(batch, {"system_prompt": "p"})
-
-        assert completion.call_count == 1
-        assert get_failure_tracker().aborted
-
-    def test_extractor_scores_zero(self, mock_env, monkeypatch):
-        _patch_completion(monkeypatch, "", "stop")
+        _scripted(monkeypatch, respond)
         adapter = SimpleExtractorAdapter(required_fields=["name"])
-        batch = [{"text": "x", "extracted": {"name": "Ana"}}]
+        adapter.set_baseline("base")
+        batch = [{"case_id": "a", "text": "x", "extracted": {"name": "Ana"}}]
+        evaluated, key = TASK_TREATMENT[clase]
 
         result = adapter.evaluate(batch, {"system_prompt": "p"})
 
         assert result.scores == [0.0]
         assert len(result.outputs) == 1
+        assert result.outputs[0]["evaluated"] is evaluated
+        assert result.outputs[0]["failure"]["clave"] == key
 
     @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
-    def test_rag_task_empty_scores_zero_not_content_filter(
+    def test_rag_task_failure_follows_treatment_table(
         self, mock_env, monkeypatch, content, reason, clase
     ):
-        _patch_completion(monkeypatch, content, reason)
+        def respond(system, user):
+            if system == "p":
+                return _response(content, reason)
+            return _response("ok")
+
+        _scripted(monkeypatch, respond)
         adapter = SimpleRAGAdapter()
-        batch = [{"question": "q", "context": "c", "answer": "a"}]
+        adapter.set_baseline("base")
+        batch = [{"case_id": "a", "question": "q", "context": "c", "answer": "a"}]
+        evaluated, key = TASK_TREATMENT[clase]
 
         result = adapter.evaluate(batch, {"system_prompt": "p"})
 
         assert result.scores == [0.0]
         assert "Content filter" not in str(result.outputs)
-        assert reason in str(result.outputs)
+        assert result.outputs[0]["evaluated"] is evaluated
+        assert result.outputs[0]["failure"]["clave"] == key
+        assert result.outputs[0]["failure"]["finish_reason"] == reason
+        # La tarea fallo: el juez no se intento (D4: un intento por caso y rol)
+        assert get_failure_tracker().snapshot()["attempts"]["judge"] == 0
 
-    def test_rag_judge_empty_names_judge(self, mock_env, monkeypatch, caplog):
-        _patch_completion(monkeypatch, None, "length")
+    def test_rag_judge_empty_is_ne_with_role_judge(self, mock_env, monkeypatch, caplog):
+        """Falla de capa 1 del juez: el caso queda NE con rol `judge` (tabla de la spec)."""
+
+        def respond(system, user):
+            if "evaluador" in system:
+                return _response(None, "length")
+            return _response("Paris")
+
+        _scripted(monkeypatch, respond)
         adapter = SimpleRAGAdapter()
-        with caplog.at_level(logging.WARNING):
-            score, feedback = adapter._evaluate_with_judge("q", "gt", "gen")
+        batch = [{"case_id": "a", "question": "q", "context": "c", "answer": "Paris"}]
 
-        assert score == 0.0
-        assert "Error del Juez" in feedback
-        # Rol del contador (SPEC-104 D2): `judge`, no `juez`
+        with caplog.at_level(logging.WARNING):
+            result = adapter.evaluate(batch, {"system_prompt": "p"})
+
+        assert result.scores == [0.0]
+        assert result.outputs[0]["evaluated"] is False
+        assert result.outputs[0]["failure"]["rol"] == "judge"
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["counts"]["presupuesto"]["judge"] == 1
+        assert snapshot["attempts"] == {"task": 1, "judge": 1, "reflection": 0}
         assert "rol=judge" in caplog.text
         assert "finish_reason=length" in caplog.text
+
+    def test_rag_judge_failure_propagates_from_helper(self, mock_env, monkeypatch):
+        _patch_completion(monkeypatch, None, "length")
+        adapter = SimpleRAGAdapter()
+        with pytest.raises(LLMCallFailure) as exc_info:
+            adapter._evaluate_with_judge("q", "gt", "gen")
+        assert exc_info.value.failure.rol == "judge"
 
     def test_rag_judge_config_error_propagates(self, mock_env, monkeypatch):
         adapter = SimpleRAGAdapter()
