@@ -47,7 +47,7 @@ aca solo se ajusta la referencia.
 | | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | hecho (c61ff98) |
 | | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | hecho (def60c8) |
 | 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | hecho (6700f3f) |
-| | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | pendiente |
+| | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | hecho (8d771ab) |
 | 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | pendiente |
 | Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | pendiente |
 
@@ -981,6 +981,27 @@ anota como bloqueo y no commitea.
     Cierre.
 - 5b. Archivos: `docs/GEPA_MANEJO_ERRORES.md`,
   `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md`.
+- Cierre de 5b (Sonnet 5.5, 2026-11-24, 8d771ab). Sin bloqueos; solo docs y la
+  fila FR-016 del Coverage mapping (por pedido del usuario). `ci_local.sh` en
+  verde (2267 passed, 98.47%).
+  - `docs/GEPA_MANEJO_ERRORES.md`: seccion "Estado vigente: fallas clasificadas
+    (SPEC-104)" reemplaza la de SPEC-103 (clases, tratamiento por rol, atribucion,
+    reintentos, aborto, equivalencia de roles `task`/`judge`/`reflection`); el
+    descarte directo queda marcado como historico. Pendiente 2 de la parada de
+    fin de fase 5: documentado que tras un aborto por umbral en DSPy `counts`
+    final puede superar `abort.conteo`. Pendiente 4 (parte de 5b): referencias a
+    `empty_response.py` reemplazadas por `call_failures.py`.
+  - `docs/YAML_CONFIG_REFERENCE.md`: nueva seccion 3 `failures` (`infra_retries`,
+    `judge_retries`, `min_attempts`, `thresholds`, defaults y ejemplo); "Campos
+    Compartidos" pasa a la seccion 4.
+  - `docs/METADATA_REPRODUCIBILIDAD.md`: `status`, `abort`, `failures` y `metrics`
+    de `run.json`.
+  - La documentacion del conteo 0 en el aborto por `configuracion` (pendiente 1)
+    queda como "pendiente de decision": si el Cierre elige la opcion (a), hay que
+    quitar esa viñeta de `GEPA_MANEJO_ERRORES.md`.
+  - Siguen para el Cierre (no son de 5b): docstrings de `shared/llm/dspy_lm.py` y
+    `log_empty_response` (`shared/llm/config.py`) con referencias al modulo viejo,
+    y `response_text` sin usos.
 
 ## Lanzamiento por CLI (modo no interactivo)
 
