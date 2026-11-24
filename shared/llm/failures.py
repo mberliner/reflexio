@@ -81,7 +81,7 @@ class RunAborted(Exception):  # noqa: N818 - nombre fijado por D1
             f"Corrida abortada: clase={self.clave} rol={failure.rol} "
             f"conteo={conteo}/{intentos} causa={failure.causa}. {motivo}"
         )
-        if failure.clase == FailureClass.presupuesto:
+        if self.clave == "presupuesto":
             if failure.rol == "task":
                 msg += " El baseline tambien se corta en esos casos."
             msg += " Subir `max_tokens`."

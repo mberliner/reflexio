@@ -402,6 +402,23 @@ class TestFailureTrackerThresholds:
         tracker.record(_failure(f, "infraestructura", "reflection"))  # 3/4
         assert tracker.aborted
 
+    def test_reflection_total_abort_ending_with_presupuesto_does_not_suggest_max_tokens(
+        self, tracker: Any
+    ) -> None:
+        """H-07: si reflexion aborta por `total` y la ultima falla fue `presupuesto`
+        (1/4 <= 0.25), el mensaje no debe sugerir subir `max_tokens`."""
+        f = _failures()
+        _attempts(tracker, "reflection", 4)
+        tracker.record(_failure(f, "formato", "reflection"))
+        tracker.record(_failure(f, "sin_texto", "reflection"))
+        tracker.record(_failure(f, "presupuesto", "reflection", causa="length"))
+        assert tracker.aborted
+        with pytest.raises(f.RunAborted) as exc_info:
+            tracker.check_abort()
+        assert exc_info.value.clave == "total"
+        assert "clase=total" in str(exc_info.value)
+        assert "max_tokens" not in str(exc_info.value)
+
     def test_task_candidate_attributed_classes_have_no_threshold(self, tracker: Any) -> None:
         f = _failures()
         _attempts(tracker, "task", 100)

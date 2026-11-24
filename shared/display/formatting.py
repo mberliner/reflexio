@@ -267,10 +267,10 @@ def format_abort_error(exc: Any, model: str | None = None) -> str:
     `model` del rol lo acepta (`docs/LLM_CONFIG.md`), la sugerencia de bajar el
     effort.
     """
-    from shared.llm.config import resolve_anthropic_family
+    from shared.llm.config import _is_anthropic, resolve_anthropic_family
 
     message = str(exc)
-    if getattr(exc.failure.clase, "value", None) == "presupuesto" and model:
+    if getattr(exc, "clave", None) == "presupuesto" and model and _is_anthropic(model):
         family = resolve_anthropic_family(model)
         if family is not None and family.efforts is not None:
             message += " Bajar el effort del rol (`LLM_EFFORT_<ROL>`)."

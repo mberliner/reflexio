@@ -451,6 +451,33 @@ class TestAbortMessage:
         message = opt.abort_message(self._aborted(FailureClass.infraestructura))
         assert "infraestructura" in message and "effort" not in message
 
+    def test_total_abort_ending_with_presupuesto_does_not_suggest_max_tokens_or_effort(
+        self, monkeypatch
+    ):
+        """H-07: un aborto por `total` no sugiere `max_tokens` ni `effort` aunque la
+        ultima falla registrada haya sido `presupuesto`."""
+        opt = _optimizer(monkeypatch)
+        opt.reflection_config.model = "anthropic/claude-sonnet-5-5"
+        exc = RunAborted(
+            LLMFailure(FailureClass.presupuesto, "reflection", "length"),
+            "Tasa 3/4 supera el umbral 0.5",
+            conteo=3,
+            intentos=4,
+            clave="total",
+        )
+        message = opt.abort_message(exc)
+        assert "clase=total" in message
+        assert "max_tokens" not in message
+        assert "effort" not in message
+
+    def test_unprefixed_claude_model_does_not_suggest_effort(self, monkeypatch):
+        """H-07: solo modelos `anthropic/<id>` aceptan `LLM_EFFORT_<ROL>`."""
+        opt = _optimizer(monkeypatch)
+        opt.task_config.model = "claude-sonnet-5-5"
+        message = opt.abort_message(self._aborted(FailureClass.presupuesto))
+        assert "max_tokens" in message
+        assert "effort" not in message
+
     def test_main_exits_with_the_abort_message(self, monkeypatch, capsys):
         from gepa_standalone import universal_optimizer as module
 
