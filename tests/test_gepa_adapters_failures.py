@@ -161,7 +161,7 @@ ADAPTERS = {
 
 
 def _healthy_rag_reply(system, ok_text):
-    return "PUNTAJE: 1.0\nRAZON: ok" if "evaluador" in system else ok_text
+    return '{"puntaje": 1.0, "razon": "ok"}' if "evaluador" in system else ok_text
 
 
 def _scripted_adapter(env, kind, fail_payload, baseline_payload=None, fail_ids=("c1",)):
@@ -641,7 +641,8 @@ class TestFormatFailures:
     def test_free_text_adapters_have_no_format_failures(self, env, kind):
         make, make_batch, _ = ADAPTERS[kind]
         free_text = "texto libre cualquiera"
-        Script(env, lambda s, u: "PUNTAJE: 0.5\nRAZON: x" if "evaluador" in s else free_text)
+        judge_reply = '{"puntaje": 0.5, "razon": "x"}'
+        Script(env, lambda s, u: judge_reply if "evaluador" in s else free_text)
         adapter = make()
 
         adapter.evaluate(make_batch(2), {"system_prompt": "cand"})

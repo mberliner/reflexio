@@ -41,7 +41,7 @@ aca solo se ajusta la referencia.
 | 3 Casos y atribucion | 3a Identificador canonico de caso en ambos loaders | FR-013 | Sonnet 5.5 | hecho (60b1ba2) |
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | hecho (6d2dec1) |
 | | 3c Adapters de `gepa_standalone`: resultado por caso (evaluado / NE / score 0 por clase), atribucion, `make_reflective_dataset` sin NE, `formato` por adapter | FR-002, FR-004, FR-010, FR-011, FR-012, SC-001, SC-008 | Sonnet 5.5 | hecho (cf21af2) |
-| | 3d Juez de RAG con JSON en el prompt, validacion de rango y reintentos | FR-009 | Sonnet 5.5 | pendiente |
+| | 3d Juez de RAG con JSON en el prompt, validacion de rango y reintentos | FR-009 | Sonnet 5.5 | hecho (HASH) |
 | | 3e `dspy_gepa_poc`: generaliza `empty_response.py` a fallas clasificadas, atribucion, feedback de falla externa, conteo una vez por caso pese al fallback de adapters | FR-002, FR-004, FR-007, FR-010, FR-012, SC-001, SC-008 | Opus 5.5 | pendiente |
 | 4 Metricas y orquestacion | 4a Agregacion sobre casos evaluados y delta pareado en `shared/scoring` (incluye `eval_repeats` y `n_evaluados == 0`) | FR-003, SC-002, SC-007 | Sonnet 5.5 | pendiente |
 | | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | pendiente |
@@ -773,6 +773,15 @@ anota como bloqueo y no commitea.
   la llamada baseline en ese bloque y `BaselineProbe` acepta un `BaselineOutcome`
   devuelto. Los 4 `xfail` quitados; `ci_local.sh` en verde (2006 passed).
 - 3d. Archivos: `gepa_standalone/adapters/simple_rag_adapter.py`, tests de RAG.
+  Cierre (Sonnet 5.5, 2026-11-23): el juez pide `{"puntaje", "razon"}` como JSON
+  en el prompt (sin structured outputs), valida numero finito en [0.0, 1.0] y
+  reintenta (`judge_retries`, default 2; el cableado desde el YAML es de 4c). Agotados
+  los reintentos lanza `LLMCallFailure(formato, rol judge)`: el caso queda NE.
+  Los intentos intermedios van a DEBUG. Tests nuevos en
+  `tests/test_rag_judge_json.py`; los tests existentes de RAG pasan el puntaje
+  como JSON y se elimino `test_rag_evaluate_with_judge_invalid_format` (fijaba
+  score 0.0 ante un puntaje ilegible, contrario a FR-009). `ci_local.sh` en verde
+  (2035 passed).
 - 3e. Ver D5 y D6 (reutiliza `shared/llm/attribution.py` de 3c sin
   cambiarlo). Archivos: `dspy_gepa_poc/empty_response.py` (o el modulo que lo
   reemplace, segun D6), `dspy_gepa_poc/metrics.py`,

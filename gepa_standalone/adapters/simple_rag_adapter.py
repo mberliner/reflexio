@@ -6,6 +6,9 @@ Simula la fase de recuperacion leyendo el contexto directamente del dataset.
 Usa un LLM como juez para evaluar la calidad de la respuesta generada.
 """
 
+import json
+import logging
+import math
 from dataclasses import replace
 from typing import Any
 
@@ -15,8 +18,12 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
-from shared.llm import LLMCallFailure, get_failure_tracker
+from shared.llm import FailureClass, LLMCallFailure, LLMFailure, get_failure_tracker
 from shared.llm.config import complete_text
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_JUDGE_RETRIES = 2
 
 
 class SimpleRAGAdapter(BaseAdapter):
@@ -32,8 +39,21 @@ class SimpleRAGAdapter(BaseAdapter):
     task_max_tokens = 400
     judge_max_tokens = 200
 
-    def __init__(self, temperature: float = 0.0, max_positive_examples: int | None = None):
+    def __init__(
+        self,
+        temperature: float = 0.0,
+        max_positive_examples: int | None = None,
+        judge_retries: int = DEFAULT_JUDGE_RETRIES,
+    ):
         super().__init__(temperature=temperature)
+        if (
+            isinstance(judge_retries, bool)
+            or not isinstance(judge_retries, int)
+            or judge_retries < 0
+        ):
+            raise ValueError(f"judge_retries debe ser un entero >= 0: {judge_retries!r}")
+        # Reintentos ante un puntaje ilegible o fuera de rango (SPEC-104 FR-009)
+        self.judge_retries = judge_retries
         # Usamos el modelo "Profesor" (mas potente) para juzgar
         self._judge_config = get_reflection_config()
         self.judge_model = self._judge_config.model
@@ -132,7 +152,7 @@ class SimpleRAGAdapter(BaseAdapter):
             feedback = ""
 
             # 2. Evaluacion (Judge Model): solo si la tarea respondio; una falla del
-            # juez deja el caso NE con rol `judge` (el `formato` del juez es de 3d).
+            # juez deja el caso NE con rol `judge` (tambien su `formato`, FR-009).
             if failure is None:
                 generated_answer = response_content.strip()
                 tracker.record_attempt("judge", case_id)
@@ -199,9 +219,9 @@ class SimpleRAGAdapter(BaseAdapter):
             "- Penaliza fuertemente alucinaciones\n"
             "- Números y límites son CRÍTICOS\n"
             "- Si contexto no tiene info, debe admitir desconocimiento\n\n"
-            "Formato:\n"
-            "PUNTAJE: [0.0, 0.25, 0.5, 0.75, 1.0]\n"
-            "RAZON: [Explicación detallada]"
+            "FORMATO DE RESPUESTA: responde SOLO con un objeto JSON, sin texto adicional "
+            "ni bloques de codigo, con las claves puntaje (numero entre 0.0 y 1.0) y "
+            "razon (explicacion breve)."
         )
 
         user_content = (
@@ -216,24 +236,54 @@ class SimpleRAGAdapter(BaseAdapter):
             {"role": "user", "content": user_content},
         ]
 
-        content = self._complete(messages, max_tokens=self.judge_max_tokens, is_judge=True).strip()
+        # Un puntaje ilegible o fuera de rango se reintenta; agotados los reintentos
+        # es `formato` del juez (NE). Las fallas de capa 1 salen sin reintento.
+        attempts = self.judge_retries + 1
+        problem = ""
+        for attempt in range(1, attempts + 1):
+            content = self._complete(
+                messages, max_tokens=self.judge_max_tokens, is_judge=True
+            ).strip()
+            parsed = self._parse_judge_score(content)
+            if isinstance(parsed, tuple):
+                return parsed
+            problem = parsed
+            logger.debug(
+                "Puntaje del juez invalido (intento %d/%d): %s", attempt, attempts, problem
+            )
 
-        # Parsear respuesta
-        score = 0.0
-        reason = content
+        raise LLMCallFailure(
+            LLMFailure(
+                clase=FailureClass.formato,
+                rol="judge",
+                causa=f"puntaje del juez invalido tras {attempts} intentos: {problem}",
+            )
+        )
 
-        lines = content.split("\n")
-        for line in lines:
-            if line.upper().startswith("PUNTAJE:") or line.upper().startswith("SCORE:"):
-                try:
-                    score_str = line.split(":")[1].strip()
-                    score = float(score_str)
-                except Exception:
-                    pass
-            if line.upper().startswith("RAZON:") or line.upper().startswith("REASON:"):
-                reason = line.split(":", 1)[1].strip()
+    @staticmethod
+    def _parse_judge_score(content: str) -> tuple[float, str] | str:
+        """
+        `(puntaje, razon)` si el JSON del juez es valido; si no, el motivo (str).
 
-        return score, reason
+        El puntaje MUST ser un numero finito en [0.0, 1.0] (FR-009); un booleano no es
+        un numero.
+        """
+        start, end = content.find(chr(123)), content.rfind(chr(125))
+        if start == -1 or end <= start:
+            return "sin objeto JSON"
+        try:
+            data = json.loads(content[start : end + 1])
+        except ValueError:
+            return "JSON no parseable"
+        if not isinstance(data, dict) or "puntaje" not in data:
+            return "falta el campo puntaje"
+        raw = data["puntaje"]
+        if isinstance(raw, bool) or not isinstance(raw, int | float):
+            return f"puntaje no numerico: {raw!r}"
+        score = float(raw)
+        if not math.isfinite(score) or not 0.0 <= score <= 1.0:
+            return f"puntaje fuera de rango [0.0, 1.0]: {raw!r}"
+        return score, str(data.get("razon", "")).strip()
 
     def make_reflective_dataset(
         self,

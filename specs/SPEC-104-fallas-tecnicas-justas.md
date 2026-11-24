@@ -489,7 +489,7 @@ se diga otra cosa.
 | FR-006 | pendiente |
 | FR-007 | parcial: rol `reflection` (un WARNING por propuesta desde `FailureTracker.record`, log de la capa de llamada a DEBUG; `shared/llm/config.py`, `tests/test_reflection_guard.py`, `tests/test_empty_response_dspy.py`, vigente); tarea de `gepa_standalone` vigente (3c); tarea de `dspy_gepa_poc` (3e) y juez pendiente |
 | FR-008 | pendiente |
-| FR-009 | pendiente |
+| FR-009 | `gepa_standalone/adapters/simple_rag_adapter.py` (prompt JSON, validacion de rango, `judge_retries` default 2, `formato` del juez; reintentos desde el YAML pendiente en 4c); `tests/test_rag_judge_json.py` (vigente) |
 | FR-010 | parcial: `formato` por adapter en `gepa_standalone/adapters/simple_classifier_adapter.py` y `simple_extractor_adapter.py`; `tests/test_gepa_adapters_failures.py` (`TestFormatFailures`, vigente); `dspy_gepa_poc` pendiente (3e) |
 | FR-011 | parcial: `shared/llm/call.py`, `shared/llm/dspy_lm.py` (`num_retries=0` y reintento propio solo de `infraestructura`, vigente); `tests/test_failure_call.py`, `tests/test_single_call_point.py`; reintentos desde el YAML pendiente (4c) |
 | FR-012 | parcial: resultado por caso (`case_id`, `evaluated`, `failure`) en `gepa_standalone/adapters/base_adapter.py`; `tests/test_gepa_adapters_failures.py` (`TestNoCaseDisappears`, vigente); prediccion NE de DSPy pendiente (3e) |

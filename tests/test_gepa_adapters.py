@@ -691,7 +691,7 @@ class TestSimpleRAGAdapter:
                 response.choices[0].message.content = "Paris is the capital."
             # Judge model evaluates
             else:
-                response.choices[0].message.content = "PUNTAJE: 0.8\nRAZON: Good answer"
+                response.choices[0].message.content = '{"puntaje": 0.8, "razon": "Good answer"}'
             return response
 
         monkeypatch.setattr("litellm.completion", mock_completion)
@@ -749,7 +749,7 @@ class TestSimpleRAGAdapter:
 
         def fake_complete_text(kwargs, messages, role):
             roles.append(role)
-            return "PUNTAJE: 1.0\nRAZON: ok" if role == "judge" else "Paris"
+            return '{"puntaje": 1.0, "razon": "ok"}' if role == "judge" else "Paris"
 
         monkeypatch.setattr(
             "gepa_standalone.adapters.simple_rag_adapter.complete_text", fake_complete_text
@@ -785,7 +785,8 @@ class TestSimpleRAGAdapter:
 
         def mock_completion(*args, **kwargs):
             response = make_completion_response()
-            response.choices[0].message.content = "PUNTAJE: 0.75\nRAZON: Good but missing detail"
+            reply = '{"puntaje": 0.75, "razon": "Good but missing detail"}'
+            response.choices[0].message.content = reply
             return response
 
         monkeypatch.setattr("litellm.completion", mock_completion)
@@ -795,21 +796,6 @@ class TestSimpleRAGAdapter:
 
         assert score == 0.75
         assert "Good but missing detail" in reason
-
-    def test_rag_evaluate_with_judge_invalid_format(self, mock_env, monkeypatch):
-        """Judge without 'Score:' → score 0.0."""
-
-        def mock_completion(*args, **kwargs):
-            response = make_completion_response()
-            response.choices[0].message.content = "This is wrong format"
-            return response
-
-        monkeypatch.setattr("litellm.completion", mock_completion)
-
-        adapter = SimpleRAGAdapter()
-        score, reason = adapter._evaluate_with_judge("q", "gt", "gen")
-
-        assert score == 0.0
 
     def test_rag_judge_content_filtered_is_ne_with_role_judge(self, mock_env, monkeypatch):
         """Juez bloqueado por filtro de entrada: 1 llamada del juez sin reintento y el caso
@@ -966,7 +952,7 @@ class TestSimpleRAGAdapter:
             if "evaluador" not in system_msg.lower():
                 response.choices[0].message.content = "Paris"
             else:
-                response.choices[0].message.content = "PUNTAJE: 1.0\nRAZON: Perfect"
+                response.choices[0].message.content = '{"puntaje": 1.0, "razon": "Perfect"}'
             return response
 
         monkeypatch.setattr("litellm.completion", mock_completion)
