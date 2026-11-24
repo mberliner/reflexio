@@ -733,8 +733,38 @@ anota como bloqueo y no commitea.
   `tests/test_empty_response.py` (SPEC-103 score 0 -> NE, `case_id`),
   `tests/test_empty_response_dspy.py` (solo los tests que miran el nivel del log
   de la capa de llamada), `tests/test_functional_gepa.py` (`case_id` en los
-  lotes), `tests/test_failures.py` (si cambia la linea de log), tests nuevos
+  lotes), `tests/test_failures.py` (si cambia la linea de log),
+  `shared/llm/call.py` (solo una funcion nueva que devuelva texto y
+  `finish_reason` de la respuesta sana, sin cambiar `checked_completion`;
+  ampliado tras el primer intento, aprobado por el usuario el 2026-11-23),
+  tests nuevos
   (`tests/test_attribution.py` y de adapters).
+- Resolucion del primer intento de 3c (usuario, 2026-11-23): opcion (a).
+  `shared/llm/call.py` entra en la lista de 3c para exponer el `finish_reason`
+  del baseline sano (FR-004) con una funcion nueva; `checked_completion` no
+  cambia. Relanzar sobre el arbol y quitar los 4 `xfail` haciendo pasar los
+  tests.
+- Primer intento de 3c (Sonnet 5.5, 2026-11-23, sin commit). Implementado y con
+  `./shared/utils/ci_local.sh` en verde (2002 passed, 4 xfailed) en el arbol sin
+  commitear: `shared/llm/attribution.py`, `baseline_finish_reason` y su log,
+  log de la capa de llamada a DEBUG, los cuatro adapters (resultado por caso,
+  atribucion, `formato`, `make_reflective_dataset` sin NE), `set_baseline` en
+  `universal_optimizer.py` y los tests (`test_attribution.py`,
+  `test_gepa_adapters_failures.py`, ajustes a los existentes). Falta un solo
+  punto de FR-004 ("La atribucion MUST registrar el `finish_reason` de ambas
+  llamadas"): cuando el baseline responde sano, `checked_completion` /
+  `raise_for_response` devuelven solo el texto y el `finish_reason` de esa
+  respuesta no llega al probe, asi que `baseline_finish_reason` queda None (si el
+  baseline falla, si se registra). Cerrarlo exige tocar `shared/llm/call.py`
+  (p. ej. que `checked_completion` exponga el `finish_reason` de la respuesta
+  sana), archivo fuera de la lista de 3c. Los 4 tests
+  `test_healthy_baseline_finish_reason_is_recorded` (`tests/test_gepa_adapters_failures.py`)
+  son `xfail(strict=True)` con ese motivo; al resolverlo se les quita la marca.
+  Decision pendiente del usuario: (a) ampliar la lista de archivos de 3c con
+  `shared/llm/call.py` y relanzar (la sesion retoma el arbol tal como esta), o
+  (b) aceptar que el `finish_reason` del baseline sano queda sin registrar y
+  ajustar FR-004. Hasta entonces: sin commit, fila de 3c en `pendiente`, filas
+  del Coverage mapping sin cambios.
 - 3d. Archivos: `gepa_standalone/adapters/simple_rag_adapter.py`, tests de RAG.
 - 3e. Ver D5 y D6 (reutiliza `shared/llm/attribution.py` de 3c sin
   cambiarlo). Archivos: `dspy_gepa_poc/empty_response.py` (o el modulo que lo
