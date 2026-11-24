@@ -40,7 +40,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 | ID | Descripcion | Resuelta | Cierre |
 |---|---|---|---|
-| D-024 | Metricas con feedback de `dspy_gepa_poc/metrics.py` devuelven un dict plano `{"score", "feedback"}`; `dspy.GEPA` 3.2.1 detecta el feedback con `hasattr(o, "feedback")` (`dspy/teleprompt/gepa/gepa.py:537`), un dict no lo tiene, y el Profesor recibe "This trajectory got a score of {...}" con el feedback embebido en el repr. Matiza el hallazgo del caso CV Profile (feedback por campo). Fix: devolver `dspy.Prediction(score=..., feedback=...)` con test contra `dspy.GEPA` real del texto que llega a la reflexion. Se corrige despues del Cierre de SPEC-104 (decision del usuario): cambia la optimizacion y mezclarlo romperia la lectura de SC-006 | 2026-11-24 | Las cinco metricas con feedback de `dspy_gepa_poc/metrics.py` (`create_dynamic_metric_with_feedback`, `create_rule_derived_metric_with_feedback`, `create_pipeline_metric_with_feedback`, `sentiment_with_feedback_metric`, `extraction_with_feedback_metric`) devuelven `dspy.Prediction(score=..., feedback=...)` cuando `pred_name`/`pred_trace` estan presentes y mantienen `float` en la ruta de `Evaluate`. Verificado con `dspy.GEPA` real y LM simulado en `tests/test_dspy_metric_feedback.py` (`e886b7a`) y con `N=5` seeds reales sobre `dynamic_cv_extraction_v3.yaml` vs `N=8` previas (`azure/gpt-5.4-mini` / `azure/gpt-5.4`): veredicto `RUIDO [ESTABILIZA]` (Rob `95,50% [90,83..99,17]` vs `96,04% [89,17..99,17]`, rango `10,00 -> 8,34`, `0` warnings de `score mismatch`). SC-006 intacto; hallazgo en `docs/LECCIONES_APRENDIDAS.md` (seccion 1) |
+| D-024 | Metricas con feedback de `dspy_gepa_poc/metrics.py` devuelven un dict plano `{"score", "feedback"}`; `dspy.GEPA` 3.2.1 detecta el feedback con `hasattr(o, "feedback")` (`dspy/teleprompt/gepa/gepa.py:537`), un dict no lo tiene, y el Profesor recibe "This trajectory got a score of {...}" con el feedback embebido en el repr. Matiza el hallazgo del caso CV Profile (feedback por campo). Fix: devolver `dspy.Prediction(score=..., feedback=...)` con test contra `dspy.GEPA` real del texto que llega a la reflexion. Se corrige despues del Cierre de SPEC-104 (decision del usuario): cambia la optimizacion y mezclarlo romperia la lectura de SC-006 | 2026-11-24 | Las cinco metricas con feedback de `dspy_gepa_poc/metrics.py` (`create_dynamic_metric_with_feedback`, `create_rule_derived_metric_with_feedback`, `create_pipeline_metric_with_feedback`, `sentiment_with_feedback_metric`, `extraction_with_feedback_metric`) devuelven `dspy.Prediction(score=..., feedback=...)` cuando `pred_name`/`pred_trace` estan presentes y mantienen `float` en la ruta de `Evaluate`. Verificado con `dspy.GEPA` real y LM simulado en `tests/test_dspy_metric_feedback.py` (`e886b7a`) y con `N=5` seeds reales sobre `dynamic_cv_extraction_v3.yaml` vs `N=8` previas (`azure/gpt-5.4-mini` / `azure/gpt-5.4`): `5/5` sin fallas ni warnings de `score mismatch`, veredicto `RUIDO` (`delta -0,54 pp`: Rob `95,50% [90,83..99,17]` vs `96,04% [89,17..99,17]`; `ESTABILIZA` no concluyente por `N=5` vs `N=8`; no extrapolable a `CV Profile` / `fast_gate` sin medicion propia). SC-006 intacto; detalle en `docs/LECCIONES_APRENDIDAS.md` (seccion 1) |
 | D-019 | `SimpleClassifierAdapter` y `SimpleSQLAdapter` descartan el ejemplo ante un error tecnico (`except Exception` -> solo `print`, sin agregar a `outputs`/`scores`). Rompe el contrato de GEPA (`gepa/core/adapter.py`: `len(outputs) == len(scores) == len(batch)`) e infla el promedio del minibatch porque el ejemplo fallido no cuenta como 0.0. `simple_extractor_adapter.py` y `simple_rag_adapter.py` ya puntuan 0.0. SPEC-103 (2b-fix) solo corrige la respuesta sin texto (FR-009); el error tecnico queda fuera de su alcance. Cambiar a 0.0 altera los scores de corridas con errores tecnicos: requiere decidir si va como fix o spec y comparar contra historico | 2026-11-24 | Cerrada por SPEC-104: los adapters ya no descartan el caso ante una falla tecnica; cada falla se clasifica, se cuenta una vez por caso y el caso queda no evaluado (NE, fuera de la metrica con `n_evaluados / n_total`) o puntua 0 si es del candidato (FR-002, FR-012, SC-001) |
 | D-021 | Corte por `max_tokens` con texto parcial (`finish_reason=length`): ningun camino lo detecta ni lo registra; el texto truncado se puntua como completo y una reflexion truncada podria adoptarse como candidato. SC-004 de SPEC-103 quedo verificado solo para respuestas sin texto | 2026-11-24 | Cerrada por SPEC-104: `finish_reason=length` (con o sin texto) se clasifica `presupuesto`, se atribuye contra el baseline en tarea, descarta la propuesta en reflexion y aborta por umbral (FR-001, FR-004, FR-005, FR-006). Verificado con API real en la fase 6 (Anthropic y Azure con modelo de razonamiento) |
 | D-002 | Primera spec de capacidad con formato hibrido | 2026-06-03 | `SPEC-100-veredicto-senal-ruido` estrena el formato (registrada en `specs/SPECS_REGISTRY.md`); Tramo 2 pasa a activo |
@@ -65,21 +65,26 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
     Rob `95,50 +/- 8,34 [90,83..99,17]` (desvio `2,67`), `gap val-test -0,30 pts`.
   - Referencia previa (`N=8`): Opt `96,67 +/- 6,67`,
     Rob `96,04 +/- 10,00 [89,17..99,17]` (desvio `2,97`).
-  - Lectura: un modelo Profesor capaz (`gpt-5.4`) ya extraia el diagnostico del
-    `repr` del dict (el techo ~95,5-96,0% se conserva y valida los hallazgos
-    previos de techo estructural en CV Profile y `fast_gate`), mientras que el
-    feedback limpio baja la dispersion entre seeds (`rango 10,00 -> 8,34 pts`,
-    `3/5` seeds convergen exactamente a `Opt 96,00% / Rob 95,83%`).
+  - Lectura ajustada: en `cv_extraction_v3`, con `gpt-5.4` como Profesor, corregir
+    el formato del feedback confirma la sanidad tecnica del fix en corrida real
+    (`prompt_changed=yes`, `0` fallas, `0` warnings de `score mismatch`) y no cambia
+    la robustez de forma medible (`RUIDO`, `delta -0,54 pp`; sin ablacion con
+    `metric_feedback: false` no se distingue entre lectura del `repr` y bajo peso
+    del feedback en esta tarea). El flag `ESTABILIZA` (`rango 10,00 -> 8,34` en
+    `test`, con `val` en `6,67 -> 9,34`) no es concluyente porque `N=5` se compara
+    contra `N=8`. No se extrapola a `CV Profile` ni a `fast_gate` (`rule_derived`,
+    otros modelos/metricas), ni a Profesores mas chicos, donde el efecto podria
+    ser mayor.
 
 ```
 [SDD-Check]
 - Spec/doc leido: docs/PROTOCOLO_N_SEEDS.md, docs/LECCIONES_APRENDIDAS.md, historial/sdd.md
-- Incluye/Excluye verificado: incluye registro documental de la medicion N=5 post D-024; excluye versionar salidas de results/ (invariante de ARCHITECTURE.md)
+- Incluye/Excluye verificado: incluye registro documental y alcance exacto de la medicion N=5 post D-024 en cv_extraction_v3; excluye versionar salidas de results/ y extrapolar a otros casos no medidos
 - Validaciones aplicadas: seed_protocol N=5 completado sin fallas (0 errores, 0 mismatch warnings), verificacion de referencias y ausencia de emoticones, ./shared/utils/ci_local.sh verde
 - SSOT afectado: docs/LECCIONES_APRENDIDAS.md, historial/sdd.md
 - Derivados a revisar: ninguno
-- Deuda arrastrada: ninguna (D-024 cerrada y validada empiricamente)
-- Riesgos/reservas: con un Profesor mas chico que gpt-5.4 el impacto del feedback limpio podria ser mayor que en este par
+- Deuda arrastrada: ninguna (D-024 cerrada)
+- Riesgos/reservas: el resultado aplica solo a cv_extraction_v3 con gpt-5.4; no cierra el matiz sobre CV Profile, fast_gate ni Profesores mas chicos
 ```
 
 ### 2026-11-24 — Correccion de feedback en metricas DSPy (cierre D-024)
