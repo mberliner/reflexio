@@ -1069,6 +1069,8 @@ seccion Seguimiento de docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md".
 Siguiente subfase: 5b (Sonnet 5.5); al terminarla, parada obligatoria (fin de
 fase 5).
 
+Arreglo previo a 5b (2026-11-24, fuera de 5b): `5810d67` (filtro de loggers propios en `caplog` para pytest 9.1+) y `96b8743` (pin `openai==3.57.0` y `httpx==0.28.1`, D-023); `ci_local.sh` verde (2267 passed, 98.47%).
+
 Practicas de lanzamiento que funcionaron (agregar al prompt de cada subfase):
 - "Los tests MUST verificar el comportamiento deseado segun la spec, con
   respuestas reales via el helper de tests/conftest.py (ver
