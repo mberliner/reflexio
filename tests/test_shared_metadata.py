@@ -9,7 +9,13 @@ import json
 import pytest
 
 from shared.llm import LLMConfig
-from shared.logging.metadata import _MAX_SEED, MetadataManager, collect_model_info, generate_seed
+from shared.logging.metadata import (
+    _MAX_SEED,
+    MetadataManager,
+    collect_model_info,
+    generate_seed,
+    metrics_coverage,
+)
 
 
 @pytest.fixture
@@ -238,3 +244,72 @@ class TestCreateRun:
         assert data["usage"]["total_tokens"] == 2250
         assert data["usage"]["cost_usd"] == 0.01234
         assert data["usage"]["task"]["prompt_tokens"] == 1000
+
+
+class TestCreateRunFailures:
+    """SPEC-104 FR-008 / D8: estado, conteos, casos entrada_dato y n_evaluados / n_total."""
+
+    SNAPSHOT_ABORTED = {
+        "counts": {"presupuesto": {"task": 3}},
+        "attempts": {"task": 20},
+        "unique_cases": {"task": 20},
+        "entrada_dato": ["val:4", "val:7"],
+        "aborted": True,
+        "abort": {
+            "clase": "presupuesto",
+            "rol": "task",
+            "conteo": 3,
+            "intentos": 20,
+            "causa": "length",
+            "motivo": "Tasa 3/20 supera el umbral 0.05",
+        },
+    }
+
+    def _create(self, manager, tmp_path, **kwargs):
+        path = manager.create_run(
+            run_dir=tmp_path / "run",
+            experiment_name="demo",
+            seed=1,
+            models={"task": {}, "reflection": {}},
+            **kwargs,
+        )
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_status_defaults_to_completed(self, manager, tmp_path):
+        data = self._create(manager, tmp_path)
+        assert data["status"] == "completed"
+        assert "abort" not in data and "failures" not in data
+
+    def test_aborted_run_records_class_role_count_and_cause(self, manager, tmp_path):
+        data = self._create(manager, tmp_path, status="aborted", failures=self.SNAPSHOT_ABORTED)
+        assert data["status"] == "aborted"
+        assert data["abort"] == {
+            "clase": "presupuesto",
+            "rol": "task",
+            "conteo": 3,
+            "causa": "length",
+        }
+        assert data["failures"]["counts"] == {"presupuesto": {"task": 3}}
+        assert data["failures"]["entrada_dato"] == ["val:4", "val:7"]
+
+    def test_completed_run_has_null_abort_and_the_counts(self, manager, tmp_path):
+        snapshot = {**self.SNAPSHOT_ABORTED, "aborted": False, "abort": None}
+        data = self._create(manager, tmp_path, status="completed", failures=snapshot)
+        assert data["status"] == "completed"
+        assert data["abort"] is None
+        assert data["failures"]["attempts"] == {"task": 20}
+
+    def test_metrics_coverage_is_n_evaluados_over_n_total(self, manager, tmp_path):
+        from shared.scoring import summarize
+
+        summaries = {
+            "baseline": summarize([[("a", 1.0, True), ("b", 0.0, False), ("c", 0.0, True)]]),
+            "test": summarize([]),
+        }
+        data = self._create(manager, tmp_path, metrics=metrics_coverage(summaries))
+        assert data["metrics"]["baseline"] == {"n_evaluados": 2, "n_total": 3}
+        assert data["metrics"]["test"] == {"n_evaluados": 0, "n_total": 0}
+
+    def test_invalid_status_is_rejected(self, manager, tmp_path):
+        with pytest.raises(ValueError, match="status"):
+            self._create(manager, tmp_path, status="done")

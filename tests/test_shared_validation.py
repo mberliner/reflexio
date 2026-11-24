@@ -238,3 +238,67 @@ class TestBaseConfigValidator:
             TYPE_SCHEMAS = {"foo": {}, "bar": {}}
 
         assert sorted(CustomValidator.get_valid_types()) == ["bar", "foo"]
+
+
+class TestFailuresSection:
+    """SPEC-104 FR-006 / D7: seccion opcional `failures`, validada antes de gastar tokens."""
+
+    @staticmethod
+    def _config(**extra):
+        config = {
+            "case": {"name": "test_case"},
+            "data": {"csv_filename": "data.csv"},
+            "optimization": {"max_metric_calls": 100},
+        }
+        config.update(extra)
+        return config
+
+    def test_section_is_optional(self):
+        assert BaseConfigValidator.validate(self._config()) == []
+        assert BaseConfigValidator.validate(self._config(failures=None)) == []
+        assert BaseConfigValidator.validate(self._config(failures={})) == []
+
+    def test_full_valid_section(self):
+        section = {
+            "infra_retries": 5,
+            "judge_retries": 1,
+            "min_attempts": {"task": 10, "judge": 8, "reflection": 2},
+            "thresholds": {"presupuesto": {"task": 0.2}, "total": {"reflection": 0.7}},
+        }
+        assert BaseConfigValidator.validate(self._config(failures=section)) == []
+
+    @pytest.mark.parametrize(
+        "section, fragment",
+        [
+            ("nope", "must be a mapping"),
+            ({"retries": 3}, "failures.retries"),
+            ({"infra_retries": -1}, "infra_retries"),
+            ({"infra_retries": True}, "infra_retries"),
+            ({"infra_retries": "3"}, "infra_retries"),
+            ({"judge_retries": -2}, "judge_retries"),
+            ({"judge_retries": 1.5}, "judge_retries"),
+            ({"min_attempts": 5}, "failures.min_attempts"),
+            ({"min_attempts": {"planner": 5}}, "planner"),
+            ({"min_attempts": {"task": -1}}, "min_attempts"),
+            ({"thresholds": [0.1]}, "failures.thresholds"),
+            ({"thresholds": {"presupuesto": 0.1}}, "failures.thresholds.presupuesto"),
+            ({"thresholds": {"inventada": {"task": 0.1}}}, "inventada"),
+            ({"thresholds": {"presupuesto": {"planner": 0.1}}}, "planner"),
+            ({"thresholds": {"presupuesto": {"task": 1.5}}}, "fuera de [0, 1]"),
+            ({"thresholds": {"presupuesto": {"task": -0.1}}}, "fuera de [0, 1]"),
+        ],
+    )
+    def test_invalid_section_is_reported(self, section, fragment):
+        errors = BaseConfigValidator.validate(self._config(failures=section))
+        assert errors and any(fragment in e for e in errors), errors
+
+    def test_rate_bounds_are_inclusive(self):
+        section = {"thresholds": {"presupuesto": {"task": 0, "judge": 1}}}
+        assert BaseConfigValidator.validate(self._config(failures=section)) == []
+
+    def test_validation_does_not_touch_the_global_failure_counter(self):
+        from shared.llm import get_failure_tracker
+
+        before = get_failure_tracker().infra_retries
+        BaseConfigValidator.validate(self._config(failures={"infra_retries": before + 4}))
+        assert get_failure_tracker().infra_retries == before

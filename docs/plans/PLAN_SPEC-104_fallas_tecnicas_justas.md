@@ -45,7 +45,7 @@ aca solo se ajusta la referencia.
 | | 3e `dspy_gepa_poc`: generaliza `empty_response.py` a fallas clasificadas, atribucion, feedback de falla externa, conteo una vez por caso pese al fallback de adapters | FR-002, FR-004, FR-007, FR-010, FR-012, SC-001, SC-008 | Opus 5.5 | hecho (75cd319) |
 | 4 Metricas y orquestacion | 4a Agregacion sobre casos evaluados y delta pareado en `shared/scoring` (incluye `eval_repeats` y `n_evaluados == 0`) | FR-003, SC-002, SC-007 | Sonnet 5.5 | hecho (a7a3bf2) |
 | | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | hecho (c61ff98) |
-| | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | pendiente |
+| | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | hecho (HASH_4C) |
 | 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | pendiente |
 | | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | pendiente |
 | 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | pendiente |
@@ -890,6 +890,32 @@ anota como bloqueo y no commitea.
   `dspy_gepa_poc/reflexio_declarativa.py` (solo `save_results` y arranque del
   tracker), `tests/test_shared_metadata.py`, `tests/test_shared_validation.py`,
   `tests/test_universal_optimizer_configs.py`.
+- Cierre de 4c (Sonnet 5.5, 2026-11-24). Sin bloqueos. `ci_local.sh` en verde (2248
+  passed, cobertura 98%). Implementado:
+  - `failures` (D7): `infra_retries`, `judge_retries` (nombre fijado aca; cierra el
+    cableado pendiente de 3d), `min_attempts`, `thresholds`. Validada en
+    `BaseConfigValidator._validate_failures` (estructura propia y valores con
+    `FailureTracker().configure` sobre una instancia descartable, para no duplicar
+    reglas); ambos `ConfigValidator` la heredan por `super().validate`.
+  - `configure_failure_tracker()` en ambos orquestadores (`reset()` y despues
+    `configure(...)`; en DSPy lo llama `setup_models`). `judge_retries` se pasa a
+    `SimpleRAGAdapter` desde `initialize_adapter`; `infra_retries` lo lee la capa de
+    llamada desde el contador.
+  - D8: `MetadataManager.create_run(status, failures, metrics)` y
+    `metrics_coverage`; `save_aborted_run()` en ambos orquestadores (solo `run.json`,
+    sin CSV); un fallo al escribirlo se loguea y no tapa el `RunAborted`. En DSPy
+    `run()` pasa a envolver `_run_pipeline()`. `save_results` de ambos escribe
+    `status: completed`, conteos y metricas.
+  - Desvio de lista de archivos: los tests de orquestadores de 4c (cableado y
+    `run.json` de DSPy y `gepa_standalone`) quedaron en
+    `tests/test_universal_optimizer_configs.py` para no agregar archivos fuera de la
+    lista del plan.
+  Notas para fases siguientes:
+  - 5a (SC-005): `run.json` guarda `failures.counts` y `abort`; un caso `configuracion`
+    cuenta en `counts` y fija el aborto (WARNING + ERROR en el log).
+  - 5b: documentar `failures` (incl. `judge_retries`) en `docs/YAML_CONFIG_REFERENCE.md`
+    y `status`, `abort`, `failures`, `metrics` en `docs/METADATA_REPRODUCIBILIDAD.md`.
+  - `baseline_only.py` no escribe `run.json` (fuera del alcance de 4c).
 - 5a. Solo tests (nuevos o existentes de los orquestadores) y este plan.
 - 5b. Archivos: `docs/GEPA_MANEJO_ERRORES.md`,
   `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md`.

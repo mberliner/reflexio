@@ -18,6 +18,14 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _MAX_SEED = 2**31 - 1
+RUN_STATUSES = ("completed", "aborted")
+
+
+def metrics_coverage(summaries: dict[str, Any]) -> dict[str, dict[str, int]]:
+    """`n_evaluados / n_total` per metric from MetricSummary-like objects (FR-008)."""
+    return {
+        name: {"n_evaluados": m.n_evaluados, "n_total": m.n_total} for name, m in summaries.items()
+    }
 
 
 def generate_seed() -> int:
@@ -194,6 +202,9 @@ class MetadataManager:
         seed: int,
         models: dict[str, Any],
         usage: dict[str, Any] | None = None,
+        status: str = "completed",
+        failures: dict[str, Any] | None = None,
+        metrics: dict[str, Any] | None = None,
     ) -> Path:
         """
         Write run-level metadata (run.json) to the run directory.
@@ -206,10 +217,21 @@ class MetadataManager:
             usage: Optional real token-usage block (task/reflection buckets,
                 total_tokens and cost_usd) from shared.llm.usage. Omitted from
                 run.json when None.
+            status: "completed" or "aborted" (SPEC-104 FR-008).
+            failures: FailureTracker.snapshot(): counts per (class, role), attempts,
+                `entrada_dato` cases and abort detail. When given, run.json gains
+                `failures` and `abort` (class, role, count, cause; None if completed).
+            metrics: `n_evaluados / n_total` per metric, e.g.
+                {"baseline": {"n_evaluados": 9, "n_total": 10}}. Omitted when None.
 
         Returns:
             Path to run.json.
+
+        Raises:
+            ValueError: If status is not "completed" or "aborted".
         """
+        if status not in RUN_STATUSES:
+            raise ValueError(f"status debe ser uno de {RUN_STATUSES}: {status!r}")
         run_dir = Path(run_dir)
         run_dir.mkdir(parents=True, exist_ok=True)
         run_path = run_dir / "run.json"
@@ -218,8 +240,17 @@ class MetadataManager:
             "experiment_name": experiment_name,
             "seed": seed,
             "models": models,
+            "status": status,
             "created_at": datetime.now().isoformat(),
         }
+        if failures is not None:
+            abort = failures.get("abort")
+            data["abort"] = (
+                {k: abort[k] for k in ("clase", "rol", "conteo", "causa")} if abort else None
+            )
+            data["failures"] = failures
+        if metrics is not None:
+            data["metrics"] = metrics
         if usage is not None:
             data["usage"] = usage
 

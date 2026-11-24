@@ -34,7 +34,12 @@ from shared.display import (
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import RunAborted, get_failure_tracker
 from shared.llm.usage import get_tracker, record_dspy_history
-from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
+from shared.logging.metadata import (
+    MetadataManager,
+    collect_model_info,
+    generate_seed,
+    metrics_coverage,
+)
 from shared.paths import get_dspy_paths
 from shared.scoring import MetricSummary, paired_delta, summarize
 
@@ -143,11 +148,48 @@ class ReflexioDeclarativa:
         config = configs.get(exc.failure.rol)
         return format_abort_error(exc, config.model if config is not None else None)
 
+    def configure_failure_tracker(self) -> None:
+        """Reinicia el contador de fallas y aplica la seccion `failures` del YAML (D7)."""
+        tracker = get_failure_tracker()
+        tracker.reset()
+        section = self.config.raw_config.get("failures") or {}
+        tracker.configure(
+            thresholds=section.get("thresholds"),
+            min_attempts=section.get("min_attempts"),
+            infra_retries=section.get("infra_retries"),
+        )
+
+    def save_aborted_run(self) -> Path:
+        """
+        Escribe solo `run.json` (estado `aborted`) de una corrida abortada (FR-008).
+
+        No escribe fila de CSV ni presenta metricas como validas; los artefactos que
+        la corrida ya haya dejado (p. ej. `candidates.json`) quedan en el directorio.
+        """
+        tracker = get_tracker()
+        tracker.reset()
+        record_dspy_history("task", getattr(self.task_lm, "history", None))
+        record_dspy_history("reflection", getattr(self.reflection_lm, "history", None))
+        usage = tracker.snapshot()
+        usage["cost_usd"] = cost_from_usage(
+            usage, self.task_config.model, self.reflection_config.model
+        )
+        return self.metadata_mgr.create_run(
+            run_dir=self.results_dir,
+            experiment_name=self.config.raw_config["case"]["name"],
+            seed=self.seed,
+            models=collect_model_info(self.task_config, self.reflection_config),
+            usage=usage,
+            status="aborted",
+            failures=get_failure_tracker().snapshot(),
+        )
+
     def setup_models(self):
         """Configure Task and Reflection LMs with connection validation."""
-        # SPEC-104: contador de fallas limpio por corrida (la seccion `failures` del
-        # YAML que lo configura es de 4c). Lo usan `run()` y `scripts/baseline_only.py`.
-        get_failure_tracker().reset()
+        # SPEC-104: contador de fallas limpio por corrida y configurado desde la
+        # seccion opcional `failures` del YAML (FR-006). Lo usan `run()` y
+        # `scripts/baseline_only.py`.
+        self.configure_failure_tracker()
         self.task_config = LLMConfig.from_env("task")
         self.reflection_config = LLMConfig.from_env("reflection")
 
@@ -464,7 +506,18 @@ class ReflexioDeclarativa:
             log_warn("No hay campos para evaluar. Todos los outputs estan en ignore_in_metric.")
 
     def run(self):
-        """Execute the optimization pipeline."""
+        """Execute the optimization pipeline; an aborted run leaves `run.json` (FR-008)."""
+        try:
+            self._run_pipeline()
+        except RunAborted:
+            try:
+                self.save_aborted_run()
+            except Exception as e:  # noqa: BLE001 - no debe tapar el motivo del aborto
+                log_error(f"No se pudo escribir run.json de la corrida abortada: {e}")
+            raise
+
+    def _run_pipeline(self):
+        """Pasos 1 a 7 del pipeline."""
         case = self.config.raw_config["case"]
         print_header(f"[{ENGINE}] {case.get('title', case['name'])}")
         log_info(f"Command: {' '.join(sys.argv)}")
@@ -744,6 +797,9 @@ class ReflexioDeclarativa:
             seed=self.seed,
             models=collect_model_info(self.task_config, self.reflection_config),
             usage=usage,
+            status="completed",
+            failures=get_failure_tracker().snapshot(),
+            metrics=metrics_coverage(getattr(self, "metric_summaries", {})),
         )
 
         # Log to master CSV

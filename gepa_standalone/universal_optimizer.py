@@ -58,7 +58,12 @@ from shared.display import (
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import LLMConnectionError, RunAborted, get_failure_tracker
 from shared.llm.usage import get_tracker
-from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
+from shared.logging.metadata import (
+    MetadataManager,
+    collect_model_info,
+    generate_seed,
+    metrics_coverage,
+)
 from shared.paths import get_paths
 from shared.scoring import MetricSummary, paired_delta, summarize
 
@@ -104,6 +109,48 @@ class UniversalOptimizer:
         }
         config = configs.get(exc.failure.rol)
         return format_abort_error(exc, config.model if config is not None else None)
+
+    def configure_failure_tracker(self) -> None:
+        """Reinicia el contador de fallas y aplica la seccion `failures` del YAML (D7)."""
+        tracker = get_failure_tracker()
+        tracker.reset()
+        section = self.config.get("failures") or {}
+        tracker.configure(
+            thresholds=section.get("thresholds"),
+            min_attempts=section.get("min_attempts"),
+            infra_retries=section.get("infra_retries"),
+        )
+
+    def _run_models(self) -> dict[str, Any]:
+        return collect_model_info(
+            self.task_config,
+            self.reflection_config,
+            judge_config=getattr(self.adapter, "_judge_config", None),
+            task_max_tokens=self.adapter.task_max_tokens,
+            judge_max_tokens=getattr(self.adapter, "judge_max_tokens", None),
+        )
+
+    def save_aborted_run(self) -> Path:
+        """
+        Escribe solo `run.json` (estado `aborted`) de una corrida abortada (FR-008).
+
+        No escribe fila de CSV ni presenta metricas como validas; los artefactos que
+        la corrida ya haya dejado (p. ej. `candidates.json`) quedan en el directorio.
+        """
+        run_dir = get_paths().run_dir(self.config["case"]["name"], run_id=str(uuid.uuid4())[:8])
+        usage = get_tracker().snapshot()
+        usage["cost_usd"] = cost_from_usage(
+            usage, self.task_config.model, self.reflection_config.model
+        )
+        return self.metadata_mgr.create_run(
+            run_dir=run_dir,
+            experiment_name=self.config["case"]["name"],
+            seed=self.seed,
+            models=self._run_models(),
+            usage=usage,
+            status="aborted",
+            failures=get_failure_tracker().snapshot(),
+        )
 
     def build_llm_configs(self):
         """
@@ -179,16 +226,24 @@ class UniversalOptimizer:
         # Reset real token tracking just before any task/reflection LLM call so
         # the snapshot in save_results reflects only this run's optimization.
         get_tracker().reset()
-        # SPEC-104: contador de fallas limpio por corrida (la seccion `failures`
-        # del YAML que lo configura es de 4c).
-        get_failure_tracker().reset()
+        # SPEC-104: contador de fallas limpio por corrida y configurado desde la
+        # seccion opcional `failures` del YAML (FR-006).
+        self.configure_failure_tracker()
 
         # STEPS 5-7 (Baseline, Optimization, Test+Summary) ocurren dentro de
         # execute_gepa_pipeline para preservar el flujo actual.
-        self.execute_gepa_pipeline(initial_prompt, verbose=verbose)
+        try:
+            self.execute_gepa_pipeline(initial_prompt, verbose=verbose)
 
-        # FR-006: una corrida abortada no llega a save_results (ni al CSV).
-        get_failure_tracker().check_abort()
+            # FR-006: una corrida abortada no llega a save_results (ni al CSV).
+            get_failure_tracker().check_abort()
+        except RunAborted:
+            # FR-008: la corrida abortada deja run.json con estado y conteos, sin CSV.
+            try:
+                self.save_aborted_run()
+            except Exception as e:  # noqa: BLE001 - no debe tapar el motivo del aborto
+                log_error(f"No se pudo escribir run.json de la corrida abortada: {e}")
+            raise
         run_dir = self.save_results()
 
         if self.config:
@@ -350,8 +405,12 @@ class UniversalOptimizer:
 
         elif adapter_type == "rag":
             max_pos = self.config["adapter"].get("max_positive_examples")
+            rag_kwargs = {}
+            judge_retries = (self.config.get("failures") or {}).get("judge_retries")
+            if judge_retries is not None:  # FR-009: reintentos del juez desde el YAML
+                rag_kwargs["judge_retries"] = judge_retries
             self.adapter = SimpleRAGAdapter(
-                temperature=self.active_temperature, max_positive_examples=max_pos
+                temperature=self.active_temperature, max_positive_examples=max_pos, **rag_kwargs
             )
 
         else:
@@ -614,14 +673,11 @@ class UniversalOptimizer:
             run_dir=run_dir,
             experiment_name=self.config["case"]["name"],
             seed=self.seed,
-            models=collect_model_info(
-                task_config,
-                reflect_config,
-                judge_config=getattr(self.adapter, "_judge_config", None),
-                task_max_tokens=self.adapter.task_max_tokens,
-                judge_max_tokens=getattr(self.adapter, "judge_max_tokens", None),
-            ),
+            models=self._run_models(),
             usage=usage,
+            status="completed",
+            failures=get_failure_tracker().snapshot(),
+            metrics=metrics_coverage(self.metric_summaries),
         )
 
         # Log to master CSV (real tokens + cost; European comma decimal)
