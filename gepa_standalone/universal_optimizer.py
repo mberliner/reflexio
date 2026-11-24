@@ -442,6 +442,7 @@ class UniversalOptimizer:
         eval_result = None
         for _ in range(k):
             eval_result = self.adapter.evaluate(data, prompt)
+            get_failure_tracker().check_abort()
             cases = [
                 (output["case_id"], score, output.get("evaluated", True))
                 for output, score in zip(eval_result.outputs, eval_result.scores, strict=True)

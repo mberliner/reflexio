@@ -7,7 +7,7 @@ import dspy
 from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc import AppConfig, CSVDataLoader, GEPAOptimizer, LLMConfig, LLMConnectionError
-from dspy_gepa_poc.call_failures import guard_program_and_metric
+from dspy_gepa_poc.call_failures import guard_program_and_metric, run_evaluate
 from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
 from dspy_gepa_poc.metrics import (
     create_dynamic_metric,
@@ -888,7 +888,7 @@ class ReflexioDeclarativa:
         means: list[float] = []
         self._last_eval_results = None
         for _ in range(k):
-            result = evaluator(student)
+            result = run_evaluate(evaluator, student)
             # dspy 3.x: Evaluate devuelve EvaluationResult (.score + .results, lista de
             # (example, prediction, score)). Guardamos los results de la ultima pasada para
             # poder volcar las predicciones REALES del eval (las que dieron el score) sin

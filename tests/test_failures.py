@@ -280,6 +280,39 @@ class TestFailureTrackerCounts:
         assert tracker.snapshot()["counts"]["formato"]["task"] == n_threads * per_thread
         assert not tracker.aborted
 
+    def test_check_abort_reads_consistent_state_under_lock(self, tracker: Any) -> None:
+        """H-05: `check_abort` y `aborted` leen bajo el lock del tracker, nunca un
+        dict `_abort` a medio actualizar por `_settle_pending_locked`."""
+        f = _failures()
+        failure = _failure(f, "configuracion", "task", causa="AuthenticationError")
+        tracker.record_attempt("task", "val:0")
+        tracker.abort(failure, "401")
+        started = threading.Event()
+        observed: list[tuple[int, str | None]] = []
+
+        def reader() -> None:
+            started.set()
+            try:
+                tracker.check_abort()
+            except f.RunAborted as exc:
+                observed.append((exc.conteo, exc.failure.case_id))
+
+        with tracker._lock:
+            t = threading.Thread(target=reader)
+            t.start()
+            started.wait(timeout=1.0)
+            # Mientras el hilo principal tiene el lock y muta `_abort` a medias,
+            # `check_abort` debe esperar el lock y ver el estado ya asentado.
+            tracker._abort["failure"] = f.with_case(failure, "val:0")
+            # Dar tiempo al hilo lector para intentar leer sin lock.
+            t.join(timeout=0.05)
+            tracker._abort["conteo"] = 1
+            tracker._abort["intentos"] = 1
+            tracker._abort["pendiente"] = False
+        t.join(timeout=2.0)
+
+        assert observed == [(1, "val:0")]
+
 
 class TestFailureTrackerThresholds:
     def test_configuracion_aborts_on_first_occurrence(self, tracker: Any) -> None:

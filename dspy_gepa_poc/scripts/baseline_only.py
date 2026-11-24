@@ -14,6 +14,7 @@ from pathlib import Path
 
 from dspy.evaluate import Evaluate
 
+from dspy_gepa_poc.call_failures import run_evaluate
 from dspy_gepa_poc.reflexio_declarativa import ReflexioDeclarativa
 from shared.display import (
     log_error,
@@ -30,7 +31,7 @@ from shared.scoring import MetricSummary, summarize
 
 def _evaluate(evaluator, student) -> MetricSummary:
     """Baseline sobre sus casos evaluados, con `n_evaluados/n_total` (SPEC-104 FR-003)."""
-    result = evaluator(student)
+    result = run_evaluate(evaluator, student)
     summary = summarize([ReflexioDeclarativa.case_results(result)])
     # FR-006: tras cada paso se consulta el estado del contador.
     get_failure_tracker().check_abort()
@@ -43,6 +44,7 @@ def run_baseline(config_path: Path) -> int:
         return _run_baseline(orchestrator)
     except RunAborted as e:
         # SPEC-104 FR-006: corrida abortada por el contador de fallas.
+        get_failure_tracker().flush_abort()
         log_error(orchestrator.abort_message(e))
         return 1
 

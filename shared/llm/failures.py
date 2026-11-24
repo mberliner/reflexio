@@ -261,11 +261,13 @@ class FailureTracker:
 
     @property
     def infra_retries(self) -> int:
-        return self._infra_retries
+        with self._lock:
+            return self._infra_retries
 
     @property
     def aborted(self) -> bool:
-        return self._abort is not None
+        with self._lock:
+            return self._abort is not None
 
     def configure(
         self,
@@ -274,7 +276,6 @@ class FailureTracker:
         infra_retries: int | None = None,
     ) -> None:
         """Mezcla parcial sobre los defaults; valores invalidos son `ValueError`."""
-        new_thr = copy.deepcopy(self._thresholds)
         for clave, by_role in (thresholds or {}).items():
             if clave not in _THRESHOLD_KEYS:
                 raise ValueError(f"Clave de umbral desconocida: {clave!r}")
@@ -283,13 +284,10 @@ class FailureTracker:
                 valid = isinstance(rate, (int, float)) and not isinstance(rate, bool)
                 if not valid or not 0 <= rate <= 1:
                     raise ValueError(f"Umbral {clave}/{rol} fuera de [0, 1]: {rate!r}")
-                new_thr.setdefault(clave, {})[rol] = float(rate)
-        new_min = dict(self._min_attempts)
         for rol, n in (min_attempts or {}).items():
             _check_role(rol)
             if isinstance(n, bool) or not isinstance(n, int) or n < 0:
                 raise ValueError(f"min_attempts {rol} debe ser un entero >= 0: {n!r}")
-            new_min[rol] = n
         bad_retries = infra_retries is not None and (
             not isinstance(infra_retries, int)
             or isinstance(infra_retries, bool)
@@ -298,6 +296,13 @@ class FailureTracker:
         if bad_retries:
             raise ValueError(f"infra_retries debe ser un entero >= 0: {infra_retries!r}")
         with self._lock:
+            new_thr = copy.deepcopy(self._thresholds)
+            for clave, by_role in (thresholds or {}).items():
+                for rol, rate in by_role.items():
+                    new_thr.setdefault(clave, {})[rol] = float(rate)
+            new_min = dict(self._min_attempts)
+            for rol, n in (min_attempts or {}).items():
+                new_min[rol] = n
             self._thresholds = new_thr
             self._min_attempts = new_min
             if infra_retries is not None:
@@ -445,17 +450,26 @@ class FailureTracker:
         with self._lock:
             self._abort_locked(failure, motivo, pendiente=True)
 
+    def flush_abort(self) -> None:
+        """Emite el ERROR de un aborto pendiente si ningun envoltorio llego a contarlo."""
+        with self._lock:
+            if self._abort is not None and self._abort["pendiente"]:
+                self._log_abort_locked()
+
     def check_abort(self) -> None:
         """Lanza `RunAborted` si la corrida esta abortada."""
-        state = self._abort
-        if state is not None:
-            raise RunAborted(
+        with self._lock:
+            state = self._abort
+            if state is None:
+                return
+            exc = RunAborted(
                 state["failure"],
                 state["motivo"],
                 conteo=state["conteo"],
                 intentos=state["intentos"],
                 clave=state["clave"],
             )
+        raise exc
 
     def snapshot(self) -> dict[str, Any]:
         """Estado serializable para `run.json`."""

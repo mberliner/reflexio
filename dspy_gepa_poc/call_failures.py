@@ -43,7 +43,9 @@ from functools import cache
 from typing import Any
 
 import dspy
-from dspy.utils.exceptions import AdapterParseError
+from dspy.adapters.chat_adapter import ChatAdapter
+from dspy.adapters.json_adapter import JSONAdapter, _get_structured_outputs_response_format
+from dspy.utils.exceptions import AdapterParseError, ContextWindowExceededError
 
 from shared.llm import (
     BaselineOutcome,
@@ -51,6 +53,7 @@ from shared.llm import (
     FailureClass,
     LLMCallFailure,
     LLMFailure,
+    RunAborted,
     get_failure_tracker,
     is_evaluated,
 )
@@ -113,12 +116,79 @@ def _output_fields(program: dspy.Module) -> list[str]:
     return fields
 
 
+class _SafeJSONAdapter(JSONAdapter):
+    """`JSONAdapter` que propaga `LLMCallFailure` y `RunAborted` sin caer a `json_object` (H-04).
+
+    En dspy 3.2.1 `JSONAdapter.__call__` tiene un `except Exception:` que traga incluso
+    `ContextWindowExceededError` (`DspyLLMCallFailure`), lo que duplicaba llamadas o
+    dejaba abortos `configuracion` sin contar. Usa `_json_adapter_call_common` y
+    `_get_structured_outputs_response_format` de dspy 3.2.1 (revalidar en D-018).
+    """
+
+    def __call__(self, lm, lm_kwargs, signature, demos, inputs):
+        result = self._json_adapter_call_common(
+            lm, lm_kwargs, signature, demos, inputs, super(JSONAdapter, self).__call__
+        )
+        if result:
+            return result
+        try:
+            structured_output_model = _get_structured_outputs_response_format(
+                signature, self.use_native_function_calling
+            )
+            lm_kwargs["response_format"] = structured_output_model
+            return super(JSONAdapter, self).__call__(lm, lm_kwargs, signature, demos, inputs)
+        except (LLMCallFailure, RunAborted):
+            raise
+        except Exception:
+            logging.getLogger(_JSON_ADAPTER_LOGGER).warning(
+                "Failed to use structured output format, falling back to JSON mode."
+            )
+            lm_kwargs["response_format"] = {"type": "json_object"}
+            return super(JSONAdapter, self).__call__(lm, lm_kwargs, signature, demos, inputs)
+
+
+class _SafeChatAdapter(ChatAdapter):
+    """`ChatAdapter` cuyo fallback usa `_SafeJSONAdapter` en lugar de `JSONAdapter` (H-04)."""
+
+    def __call__(self, lm, lm_kwargs, signature, demos, inputs):
+        try:
+            return super(ChatAdapter, self).__call__(lm, lm_kwargs, signature, demos, inputs)
+        except Exception as exc:
+            if (
+                isinstance(exc, (ContextWindowExceededError, LLMCallFailure, RunAborted))
+                or isinstance(self, JSONAdapter)
+                or not self.use_json_adapter_fallback
+            ):
+                raise
+            return _SafeJSONAdapter()(lm, lm_kwargs, signature, demos, inputs)
+
+
+def _safe_adapter() -> Any:
+    current = dspy.settings.adapter
+    if current is None:
+        return _SafeChatAdapter()
+    if type(current) is ChatAdapter:
+        return _SafeChatAdapter(
+            callbacks=current.callbacks,
+            use_native_function_calling=current.use_native_function_calling,
+            native_response_types=current.native_response_types,
+            use_json_adapter_fallback=current.use_json_adapter_fallback,
+        )
+    if type(current) is JSONAdapter:
+        return _SafeJSONAdapter(
+            callbacks=current.callbacks,
+            use_native_function_calling=current.use_native_function_calling,
+        )
+    return current
+
+
 class _FailureTolerantMixin:
     """Mixin de `tolerate_call_failures`: `forward` devuelve la falla como prediccion."""
 
     def forward(self, *args: Any, **kwargs: Any):
         try:
-            return super().forward(*args, **kwargs)
+            with dspy.context(adapter=_safe_adapter()):
+                return super().forward(*args, **kwargs)
         except LLMCallFailure as exc:
             failure = exc.failure
         except AdapterParseError as exc:
@@ -172,7 +242,7 @@ def baseline_caller(baseline: dspy.Module) -> Callable[[Any], BaselineOutcome]:
     def call_baseline(example: Any) -> BaselineOutcome:
         recorder = _HistoryRecorder()
         callers = [*(dspy.settings.caller_modules or []), recorder]
-        with dspy.context(trace=[], caller_modules=callers):
+        with dspy.context(trace=[], caller_modules=callers, adapter=_safe_adapter()):
             try:
                 baseline(**example.inputs())
             except AdapterParseError:
@@ -263,6 +333,65 @@ def guard_program_and_metric(
     probe = BaselineProbe(baseline_caller(baseline))
     guarded = guard_metric(metric, probe, instructions_snapshot(program))
     return tolerate_call_failures(program), guarded
+
+
+class _AbortedItem:
+    """Marcador interno de un caso salteado en `Evaluate` tras un aborto."""
+
+
+_ABORTED_ITEM = _AbortedItem()
+
+
+class _AbortAwareProgram:
+    """Envuelve `program` en `Evaluate` para cortar casos tras un aborto sin
+    disparar `max_errors` / `shutdown(wait=False)` ni dejar hilos huerfanos (H-01)."""
+
+    def __init__(self, program: Any):
+        self._program = program
+
+    def __call__(self, *args: Any, **kwargs: Any):
+        if get_failure_tracker().aborted:
+            return _ABORTED_ITEM
+        try:
+            return self._program(*args, **kwargs)
+        except RunAborted:
+            return _ABORTED_ITEM
+
+
+def _abort_aware_metric(metric: Callable) -> Callable:
+    def wrapped(example: Any, pred: Any, *args: Any, **kwargs: Any):
+        if pred is _ABORTED_ITEM:
+            return 0.0
+        return metric(example, pred, *args, **kwargs)
+
+    return wrapped
+
+
+def run_evaluate(evaluator: Any, program: Any) -> Any:
+    """
+    Ejecuta `evaluator(program)` respetando el aborto por estado (FR-006, H-01).
+
+    Si `evaluator` es un `dspy.evaluate.Evaluate`, envuelve `program` y `metric`
+    para saltear casos posteriores al aborto sin lanzar `RunAborted` al
+    `ParallelExecutor` (evita la cancelacion por `max_errors` y permite que los
+    hilos en vuelo terminen `record` antes de `check_abort`). Luego consulta el
+    estado del contador y propaga `RunAborted` si la corrida fue abortada.
+    """
+    tracker = get_failure_tracker()
+    tracker.check_abort()
+    try:
+        if isinstance(evaluator, dspy.evaluate.Evaluate) and evaluator.metric is not None:
+            result = evaluator(
+                _AbortAwareProgram(program),
+                metric=_abort_aware_metric(evaluator.metric),
+            )
+        else:
+            result = evaluator(program)
+    except Exception:
+        tracker.check_abort()
+        raise
+    tracker.check_abort()
+    return result
 
 
 class _DemoteAdapterFallback(logging.Filter):

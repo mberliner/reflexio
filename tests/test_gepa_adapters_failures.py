@@ -672,6 +672,46 @@ class TestAbortAndProgrammingErrors:
             make().evaluate(make_batch(2), {"system_prompt": "cand"})
 
         assert completion.call_count == 0
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["attempts"]["task"] == 0
+        assert snapshot["unique_cases"]["task"] == 0
+
+    @pytest.mark.parametrize("kind", list(ADAPTERS))
+    def test_configuracion_abort_does_not_inflate_attempts_or_unique_cases(self, env, kind):
+        """H-06: tras abortar en el caso 0, el caso 1 no suma intento ni caso unico."""
+        adapter, batch, _ = _scripted_adapter(env, kind, _auth(), fail_ids=("c0",))
+
+        with pytest.raises(RunAborted) as exc_info:
+            adapter.evaluate(batch, {"system_prompt": "cand"})
+
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["attempts"]["task"] == 1
+        assert snapshot["unique_cases"]["task"] == 1
+        assert snapshot["abort"]["intentos"] == 1
+        assert snapshot["counts"] == {"configuracion": {"task": 1}}
+        assert exc_info.value.intentos == 1
+
+    def test_rag_judge_configuracion_abort_does_not_inflate_attempts(self, env):
+        """H-06: un aborto `configuracion` del juez en el caso 0 corta antes del caso 1."""
+
+        def rule(system, user):
+            if "evaluador" in system:
+                return _auth()
+            return "Paris"
+
+        Script(env, rule)
+        adapter = _rag()
+
+        with pytest.raises(RunAborted) as exc_info:
+            adapter.evaluate(_rag_batch(2), {"system_prompt": "cand"})
+
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["attempts"]["task"] == 1
+        assert snapshot["attempts"]["judge"] == 1
+        assert snapshot["unique_cases"]["judge"] == 1
+        assert snapshot["abort"]["rol"] == "judge"
+        assert snapshot["abort"]["intentos"] == 1
+        assert exc_info.value.intentos == 1
 
     @pytest.mark.parametrize("kind", list(ADAPTERS))
     def test_non_llm_exceptions_are_not_swallowed(self, env, kind):

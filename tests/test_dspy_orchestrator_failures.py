@@ -319,6 +319,86 @@ class TestBaselineOnly:
 
         assert "BASELINE EN TEST SET" not in capsys.readouterr().out
 
+    def test_baseline_only_aborts_cleanly_above_max_errors(
+        self,
+        monkeypatch,
+        task_lm,  # noqa: F811
+        capsys,
+    ):
+        """H-01: con valset > max_errors (10), baseline_only captura RunAborted y retorna 1."""
+        import litellm
+
+        def auth_on_q0(user_text):
+            if "q0" in user_text:
+                return litellm.AuthenticationError(
+                    message="bad key", llm_provider="openai", model="openai/gpt-4o-mini"
+                )
+            return _ok(answer="yes")
+
+        fake = FakeLLM({SEED: auth_on_q0}).install(monkeypatch)
+        student, metric = guard_program_and_metric(_seed_student(), _metric)
+        stub = self._stub(_dataset(12, "val"), _dataset(3, "test"), student, metric)
+
+        class Factory:
+            case_results = staticmethod(ReflexioDeclarativa.case_results)
+
+            def __new__(cls, path):
+                return stub
+
+        monkeypatch.setattr(baseline_only, "ReflexioDeclarativa", Factory)
+
+        code = baseline_only.run_baseline("ignorado.yaml")
+
+        assert code == 1
+        captured = capsys.readouterr()
+        assert "configuracion" in captured.out + captured.err
+        assert fake.calls == {SEED: 1}
+
+    def test_run_baseline_flushes_pending_abort_error_log(
+        self,
+        monkeypatch,
+        task_lm,  # noqa: F811
+        caplog,
+    ):
+        """H-05: un aborto pendiente sin `record` en baseline_only igual emite su ERROR."""
+        FakeLLM({SEED: lambda u: _ok(answer="yes")}).install(monkeypatch)
+        student, metric = guard_program_and_metric(_seed_student(), _metric)
+        stub = self._stub(_dataset(4, "val"), _dataset(3, "test"), student, metric)
+        stub.setup_models = _abort_config_error
+
+        class Factory:
+            case_results = staticmethod(ReflexioDeclarativa.case_results)
+
+            def __new__(cls, path):
+                return stub
+
+        monkeypatch.setattr(baseline_only, "ReflexioDeclarativa", Factory)
+
+        with caplog.at_level(logging.ERROR, logger="shared.llm.failures"):
+            code = baseline_only.run_baseline("ignorado.yaml")
+
+        assert code == 1
+        errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 1
+        assert "Corrida abortada: clase=configuracion" in errors[0]
+
+    def test_eval_repeated_stops_between_repeats_on_threshold_abort(
+        self,
+        monkeypatch,
+        task_lm,  # noqa: F811
+    ):
+        """H-01: si la primera repeticion supera el umbral, `_eval_repeated` no corre la 2da."""
+        get_failure_tracker().configure(min_attempts={"task": 4})
+        fake = FakeLLM({SEED: _on("q")}).install(monkeypatch)
+        student, metric = guard_program_and_metric(_seed_student(), _metric)
+        evaluator = _evaluator(_dataset(4), metric)
+
+        with pytest.raises(RunAborted, match="infraestructura"):
+            _orchestrator(2)._eval_repeated(evaluator, student)
+
+        # 4 casos x (1 intento + 3 reintentos) = 16 llamadas en la 1a repeticion; 0 de la 2da.
+        assert fake.calls[SEED] == 16
+
     def test_setup_models_resets_the_failure_counter(self, monkeypatch):
         _abort_config_error()
         orchestrator = _orchestrator()

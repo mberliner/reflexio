@@ -364,6 +364,67 @@ class TestFormat:
         [warning] = project_warnings(caplog)
         assert "clave=formato" in warning.message
 
+    def test_layer1_configuracion_during_json_adapter_fallback_is_counted_once(
+        self, monkeypatch, caplog, task_lm
+    ):
+        """H-04: si `JSONAdapter` (fallback tras `AdapterParseError`) recibe una falla
+        `configuracion`, no cae a `json_object`: se registra 1 vez con 1 WARNING y 1 ERROR."""
+        calls: list[object] = []
+
+        def fake_completion(request, num_retries, cache=None):
+            calls.append(request.get("response_format"))
+            if len(calls) == 1:
+                return make_completion_response("sin marcadores dspy", "stop")
+            raise litellm.AuthenticationError(
+                message="bad key", llm_provider="openai", model=TASK_MODEL
+            )
+
+        monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+        student, metric = guard_program_and_metric(_seed_student(), _metric)
+        with caplog.at_level(logging.DEBUG):
+            result = Evaluate(devset=_dataset(1), metric=metric, num_threads=1)(student)
+
+        assert len(calls) == 2
+        _, pred, score = result.results[0]
+        assert isinstance(pred, FailedCallPrediction)
+        assert pred.failure.clase == FailureClass.configuracion
+        assert pred.failure.case_id == "val:0"
+        assert score == 0.0
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["counts"] == {"configuracion": {"task": 1}}
+        assert snapshot["attempts"]["task"] == 1
+        assert snapshot["abort"]["conteo"] == 1
+        assert snapshot["abort"]["intentos"] == 1
+        warnings = project_warnings(caplog, include_errors=False)
+        errors = [
+            r for r in caplog.records if r.levelno == logging.ERROR and r.name.startswith("shared.")
+        ]
+        assert len(warnings) == 1 and "clave=configuracion" in warnings[0].message
+        assert len(errors) == 1 and "conteo=1/1" in errors[0].message
+
+    def test_layer1_presupuesto_during_json_adapter_fallback_does_not_retry_json_object(
+        self, monkeypatch, task_lm
+    ):
+        """H-04: falla de capa 1 (`presupuesto`) en structured output de `JSONAdapter`
+        no dispara un tercer intento con `json_object` (SC-009)."""
+        calls: list[object] = []
+
+        def fake_completion(request, num_retries, cache=None):
+            calls.append(request.get("response_format"))
+            if len(calls) == 1:
+                return make_completion_response("sin marcadores dspy", "stop")
+            return make_completion_response(None, "length")
+
+        monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+        student, metric = guard_program_and_metric(_seed_student(), _metric)
+        result = Evaluate(devset=_dataset(1), metric=metric, num_threads=1)(student)
+
+        assert len(calls) == 2
+        _, pred, _ = result.results[0]
+        assert isinstance(pred, FailedCallPrediction)
+        assert pred.failure.clase == FailureClass.presupuesto
+        assert get_failure_tracker().snapshot()["counts"] == {"presupuesto": {"task": 1}}
+
 
 # ==================== FR-012: feedback de la metrica ====================
 

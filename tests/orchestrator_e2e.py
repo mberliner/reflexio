@@ -280,6 +280,8 @@ def run_dspy_gepa_poc(
     sizes: tuple[int, int, int] = (4, 6, 4),
     max_metric_calls: int = 30,
     failures: dict[str, Any] | None = None,
+    num_threads: int = 1,
+    eval_repeats: int = 1,
 ) -> RunOutcome:
     """`ReflexioDeclarativa.run()` completo de un modulo dinamico `question -> answer`."""
     from dspy_gepa_poc import reflexio_declarativa as module
@@ -310,8 +312,9 @@ def run_dspy_gepa_poc(
         "data: {csv_filename: sino.csv, input_column: question}\n"
         "models: {temperature: 0.0, cache: false}\n"
         f"optimization: {{max_metric_calls: {max_metric_calls}, predictor_type: predict,"
-        " use_few_shot: false, match_mode: exact, ignore_in_metric: [], num_threads: 1,"
-        " eval_repeats: 1}\n" + _yaml_block("failures", failures),
+        " use_few_shot: false, match_mode: exact, ignore_in_metric: [],"
+        f" num_threads: {num_threads}, eval_repeats: {eval_repeats}}}\n"
+        + _yaml_block("failures", failures),
         encoding="utf-8",
     )
 

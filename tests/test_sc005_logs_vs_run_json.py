@@ -384,3 +384,42 @@ class TestDspyGepaPoc:
         assert set(outcome.run_json["failures"]["counts"]) == {"formato"}
         assert abort_lines[0]["rol"] == "reflection"
         assert outcome.csv_rows == []
+
+    def test_configuracion_abort_above_max_errors_writes_run_json(self, tmp_path, monkeypatch):
+        """H-01: con valset > max_errors (10) de dspy, Evaluate no debe tapar RunAborted
+        con `Execution cancelled` ni omitir `run.json`."""
+
+        def rule(model, system, user):
+            if dspy_question(user) == "v0":
+                return _auth_error()
+            return dspy_answer("si")
+
+        outcome = run_dspy_gepa_poc(tmp_path, monkeypatch, rule, sizes=(4, 12, 4))
+
+        assert isinstance(outcome.error, RunAborted)
+        failure_lines, abort_lines = assert_log_matches_run_json(outcome)
+        assert [(f["clave"], f["rol"], f["case_id"]) for f in failure_lines] == [
+            ("configuracion", "task", "val:0")
+        ]
+        assert outcome.run_json["abort"]["conteo"] == 1
+        assert len(outcome.calls) == 1
+        assert outcome.csv_rows == []
+
+    def test_configuracion_abort_multithreaded_above_max_errors_matches_log(
+        self, tmp_path, monkeypatch
+    ):
+        """H-01 / H-05: con num_threads > 1 y valset > max_errors, `run.json` espera
+        a los hilos en vuelo y coincide con el log (sin conteo=0 ni WARNING huerfano)."""
+
+        def rule(model, system, user):
+            if dspy_question(user) == "v0":
+                return _auth_error()
+            return dspy_answer("si")
+
+        outcome = run_dspy_gepa_poc(tmp_path, monkeypatch, rule, sizes=(4, 16, 4), num_threads=4)
+
+        assert isinstance(outcome.error, RunAborted)
+        failure_lines, _ = assert_log_matches_run_json(outcome)
+        assert any(f["clave"] == "configuracion" and f["case_id"] == "val:0" for f in failure_lines)
+        assert outcome.run_json["abort"]["conteo"] == 1
+        assert outcome.csv_rows == []

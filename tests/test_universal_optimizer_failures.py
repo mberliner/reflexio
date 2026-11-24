@@ -361,6 +361,23 @@ class TestAbortByState:
         assert len(completion.task_calls()) == 10
         assert not hasattr(opt, "metric_summaries")
 
+    def test_eval_repeated_stops_between_repeats_on_threshold_abort(self, monkeypatch):
+        """H-01: si la 1a repeticion deja el contador abortado, no se ejecuta la 2da."""
+        get_failure_tracker().configure(min_attempts={"task": 4})
+        completion = Completion(
+            monkeypatch,
+            lambda model, system, user: _rate_limit() if user == "v3" else "greeting",
+        )
+        opt = _optimizer(monkeypatch, eval_repeats=2)
+        opt.val_data = _split("v", 4)
+
+        with pytest.raises(RunAborted, match="infraestructura"):
+            opt._eval_repeated(opt.val_data, {"system_prompt": BASE})
+
+        # v0..v2 sanos (3) + v3 con 1+3 reintentos (4) = 7; 0 de la 2da repeticion.
+        assert len(completion.calls) == 7
+        assert get_failure_tracker().snapshot()["attempts"]["task"] == 4
+
     def test_run_does_not_reach_save_results_when_aborted(self, monkeypatch):
         opt = _optimizer(monkeypatch)
         for name in ("validate_config", "build_llm_configs", "validate_llm_connections"):

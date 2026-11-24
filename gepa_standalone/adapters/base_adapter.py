@@ -132,12 +132,14 @@ class BaseAdapter:
         propagan (D6).
         """
         tracker = get_failure_tracker()
+        tracker.check_abort()
         tracker.record_attempt("task", case_id)
         try:
             return self._task_call(system_prompt, example), None
         except LLMCallFailure as exc:
             failure = self._attribute(exc.failure, case_id, example, system_prompt)
             tracker.record(failure)
+            tracker.check_abort()
             return None, failure
 
     @staticmethod

@@ -155,6 +155,7 @@ class SimpleRAGAdapter(BaseAdapter):
             # juez deja el caso NE con rol `judge` (tambien su `formato`, FR-009).
             if failure is None:
                 generated_answer = response_content.strip()
+                tracker.check_abort()
                 tracker.record_attempt("judge", case_id)
                 try:
                     score, feedback = self._evaluate_with_judge(
@@ -165,6 +166,7 @@ class SimpleRAGAdapter(BaseAdapter):
                 except LLMCallFailure as exc:
                     failure = replace(exc.failure, case_id=case_id)
                     tracker.record(failure)
+                    tracker.check_abort()
                     score, feedback = 0.0, ""
 
             meta = self._case_meta(case_id, failure)
