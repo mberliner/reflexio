@@ -193,9 +193,14 @@ class TestCheckedLM:
             lm("hola")
         assert exc_info.value.role == "reflection"
         assert exc_info.value.finish_reason == reason
-        call_layer = [r for r in caplog.records if "rol=reflection, finish_reason=" in r.message]
-        assert [(r.levelno, r.message) for r in call_layer] == [
-            (logging.DEBUG, f"Respuesta sin texto del LLM (rol=reflection, finish_reason={reason})")
+        call_layer = [
+            r
+            for r in caplog.records
+            if r.levelno == logging.DEBUG and r.name.startswith("shared.llm")
+        ]
+        assert [r.getMessage() for r in call_layer] == [
+            f"Falla de respuesta (rol=reflection, clase={exc_info.value.failure.clase.value}, "
+            f"finish_reason={reason})"
         ]
         warnings = project_warnings(caplog)
         assert len(warnings) == 1
@@ -208,13 +213,21 @@ class TestCheckedLM:
     def test_task_raises_with_cause(self, monkeypatch, caplog, content, reason):
         _patch_dspy_completion(monkeypatch, lambda r: (content, reason), None)
         lm = _lm(TASK_MODEL, "task")
-        # La capa de llamada va a DEBUG y no cuenta (SPEC-104 FR-007, D4): el WARNING de la
-        # tarea de DSPy lo emite la metrica que conoce el caso (3e).
+        # La capa de llamada deja un unico DEBUG (sin duplicar, H-09) y no cuenta
+        # (SPEC-104 FR-007, D4): el WARNING lo emite la metrica que conoce el caso.
         with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
             lm("hola")
         assert exc_info.value.role == "task"
         assert exc_info.value.finish_reason == reason
-        assert f"rol=task, finish_reason={reason}" in caplog.text
+        call_layer = [
+            r
+            for r in caplog.records
+            if r.levelno == logging.DEBUG and r.name.startswith("shared.llm")
+        ]
+        assert [r.getMessage() for r in call_layer] == [
+            f"Falla de respuesta (rol=task, clase={exc_info.value.failure.clase.value}, "
+            f"finish_reason={reason})"
+        ]
         assert project_warnings(caplog) == []
         assert get_failure_tracker().snapshot()["counts"] == {}
         assert len(lm.history) == 1

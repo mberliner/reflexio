@@ -29,35 +29,19 @@ def complete_text(kwargs: dict[str, Any], messages: list[dict[str, Any]], role: 
     """
     Llamada comun a LiteLLM (SPEC-104, D3, FR-001): delega en `checked_completion`
     (`num_retries=0`, reintento propio de infraestructura, clasificacion de la
-    respuesta) y deja en DEBUG la causa de una respuesta sin texto.
+    respuesta con detalle en DEBUG).
 
     Es el camino de los tres lugares que llaman al LLM sin DSPy (`get_lm_function`,
     `call_llm` y el adapter de RAG); recibe los kwargs ya restringidos.
     """
     from .call import checked_completion
-    from .errors import EmptyResponseError
 
-    try:
-        return checked_completion(kwargs, messages, role)
-    except EmptyResponseError as exc:
-        log_empty_response(role, exc.finish_reason)
-        raise
+    return checked_completion(kwargs, messages, role)
 
 
 def is_empty_text(content: Any) -> bool:
     """True si el contenido de una respuesta es None o queda vacio tras `strip()`."""
     return content is None or not str(content).strip()
-
-
-def log_empty_response(role: str, finish_reason: Any) -> None:
-    """
-    Deja en DEBUG la causa de una respuesta sin texto, comun a LiteLLM y DSPy.
-
-    Lo usan las capas de llamada (`complete_text` y `CheckedLM`). Es detalle de
-    diagnostico: el unico WARNING por falla es el de `FailureTracker.record`, que
-    hacen los envoltorios que conocen el caso (SPEC-104 FR-007).
-    """
-    logger.debug("Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
 
 
 def _is_reasoning(model: str) -> bool:

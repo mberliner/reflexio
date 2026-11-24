@@ -13,7 +13,7 @@ sin heuristicas sobre el parseo.
   SPEC-104 (2b, FR-005): en este rol `__call__` pasa por `ReflectionGuard`
   (`reflection.py`): cuenta un intento por propuesta, registra la falla de capa
   1 y descarta tambien la propuesta sin bloque de instruccion (`formato`). El
-  log de respuesta sin texto de este rol va a DEBUG (FR-007).
+  log de capa 1 va a DEBUG en `raise_for_response` (FR-007).
 - `task`: el programa y la metrica se envuelven con
   `dspy_gepa_poc.call_failures.guard_program_and_metric`: el `forward` devuelve
   una `FailedCallPrediction` con la falla clasificada y la metrica decide NE o
@@ -49,7 +49,6 @@ import dspy
 from dspy.utils.exceptions import ContextWindowExceededError
 
 from .call import call_with_infra_retry, raise_for_response
-from .config import log_empty_response
 from .errors import EmptyResponseError
 from .failures import FailureClass, LLMCallFailure, LLMFailure
 from .reflection import ReflectionGuard
@@ -160,9 +159,6 @@ class CheckedLM(dspy.LM):
                 return outputs
         try:
             raise_for_response(response, self.role)
-        except EmptyResponseError as exc:
-            log_empty_response(self.role, exc.finish_reason)
-            raise _cut_adapter_fallback(exc, self.model) from exc
         except LLMCallFailure as exc:
             raise _cut_adapter_fallback(exc, self.model) from exc
         return outputs

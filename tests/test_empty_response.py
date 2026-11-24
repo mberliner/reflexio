@@ -68,10 +68,16 @@ class TestLmFunctions:
         with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
             call_llm("hola", model_name="task")
         assert exc_info.value.failure.clase.value == clase
-        # SPEC-103 FR-009: la causa sigue registrada, a DEBUG (SPEC-104 FR-007: el unico
-        # WARNING por falla lo emite quien conoce el caso, no la capa de llamada).
-        assert "rol=task" in caplog.text
-        assert reason in caplog.text
+        # SPEC-104 FR-007 / H-09: la capa de llamada deja un unico DEBUG por falla
+        # (el de `raise_for_response`, sin duplicar) y ningun WARNING.
+        debug_records = [
+            r
+            for r in caplog.records
+            if r.levelno == logging.DEBUG and r.name.startswith("shared.llm")
+        ]
+        assert [r.getMessage() for r in debug_records] == [
+            f"Falla de respuesta (rol=task, clase={clase}, finish_reason={reason})"
+        ]
         assert not project_warnings(caplog)
 
     def test_call_llm_returns_text(self, mock_env, monkeypatch):
