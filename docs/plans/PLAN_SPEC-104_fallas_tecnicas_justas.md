@@ -48,8 +48,8 @@ aca solo se ajusta la referencia.
 | | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | hecho (def60c8) |
 | 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | hecho (6700f3f) |
 | | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | hecho (8d771ab) |
-| 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | pendiente |
-| Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | en progreso (code review: 0243b69, 9fc9a0d, 98c98db, d9258f8, ae7fec4, e174a4f; faltan `[SDD-Check]`, D-019/D-021 y `active` tras fase 6) |
+| 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | hecho (2026-11-24, ver "Resultado de la fase 6") |
+| Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | en progreso (code review: 0243b69, 9fc9a0d, 98c98db, d9258f8, ae7fec4, e174a4f; faltan `[SDD-Check]`, D-019/D-021 y `active`; fase 6 hecha) |
 
 ## Dependencias
 
@@ -1159,3 +1159,57 @@ Cierre): hallazgos aprobados resueltos con test RED previo y `ci_local.sh` verde
 
 Pendiente tras fase 6 (API real): `[SDD-Check]`, cierre de D-019/D-021 y paso de
 `specs/SPEC-104-fallas-tecnicas-justas.md` a `active`.
+
+## Resultado de la fase 6 (verificacion con API real, 2026-11-24)
+
+Caso `email_urgency` (10 val, 5 test), `max_metric_calls: 12`, YAML temporales
+fuera del repo. Anthropic: `claude-haiku-5-5` (tarea) y `claude-sonnet-5-5`
+(reflexion). Azure: `gpt-5.4-mini` (tarea) y `gpt-5.4` (reflexion);
+`gpt-5-mini` ya no existe en el endpoint (NotFound), asi que H-02 se verifico
+con `gpt-5.4-mini` (razonamiento).
+
+| # | Proveedor | Subproyecto | Escenario | Estado | `failures.counts` | CSV | Veredicto |
+|---|---|---|---|---|---|---|---|
+| 1 | anthropic | gepa_standalone | sin fallas | completed | vacio | fila | SC-006 cumple |
+| 2 | anthropic | dspy_gepa_poc | sin fallas | completed | vacio | fila | SC-006 cumple |
+| 3 | azure | gepa_standalone | sin fallas | completed | vacio | fila | SC-006 cumple |
+| 4 | azure | dspy_gepa_poc | sin fallas | completed | vacio | fila | SC-006 cumple |
+| 5 | anthropic (thinking off) | gepa_standalone | `max_tokens: 4` | aborted | presupuesto/task 4 (abort 4/20) | sin fila | SC-004 cumple |
+| 6 | anthropic (thinking off) | dspy_gepa_poc | `max_tokens: 4` | aborted | presupuesto/task 20 (abort 19/20) | sin fila | SC-004 cumple |
+| 7 | azure gpt-5.4-mini | gepa_standalone | `max_tokens: 4` | completed | vacio | fila | sin efecto (nota 1) |
+| 8 | azure gpt-5.4-mini | dspy_gepa_poc | `max_tokens: 4` | completed | vacio | fila | sin efecto (nota 1) |
+| 7b | azure gpt-5.4-mini | gepa_standalone | piso de razonamiento en 4 (nota 1) | completed | presupuesto/reflection 1 | fila | cumple (nota 2) |
+| 8b | azure gpt-5.4-mini | dspy_gepa_poc | piso de razonamiento en 4 (nota 1) | aborted | presupuesto/task 20 (abort 19/20) | sin fila | SC-004 cumple |
+
+Corridas 1 a 4 (SC-006): `run.json` con `metrics.*.n_evaluados == n_total`
+(10/10 baseline y optimizado, 5/5 test), `paired_delta` presente, una fila de
+CSV por corrida, sin lineas WARNING de falla (solo avisos de "GEPA no modifico
+el prompt" y de parametros no soportados por dspy, que no son fallas).
+
+Corridas abortadas (SC-004): el mensaje nombra clase, rol, conteo y causa
+(`clase=presupuesto rol=task conteo=N/20 causa=length`), dice que el baseline
+tambien se corta y sugiere subir `max_tokens`; sugiere bajar `LLM_EFFORT_<ROL>`
+solo en anthropic (5 y 6), no en azure (8b). `run.json` queda con
+`status: aborted` y `abort` poblado.
+
+SC-005: en 5, 6, 7b y 8b el conteo de lineas `Falla de LLM:` del log coincide
+con `failures.counts` (4, 20, 1 y 20). En 6 y 8b `abort.conteo` (19) es menor
+que `counts` (20): es el valor al momento del corte, documentado en
+`docs/GEPA_MANEJO_ERRORES.md` (lineas 238-248).
+
+Notas:
+
+1. Con modelos de razonamiento (azure gpt-5.x) `max_tokens` del YAML se eleva
+   a 16000 (FR-006; el log muestra `4 (requested) -> 16000`), por lo que 7 y 8
+   no podian fallar por presupuesto. Para 7b y 8b se uso un wrapper en el
+   scratchpad que baja `shared.llm.config._REASONING_MIN_MAX_TOKENS` a 4 solo en
+   memoria (sin tocar el repo). Con eso `gpt-5.4-mini` (`max_completion_tokens`)
+   se clasifica como `presupuesto`, sin `KeyError` ni `configuracion` (H-02).
+2. 7b: una falla de reflexion `presupuesto` (1 intento) no aborta porque el
+   minimo de intentos de reflexion es 4 (umbral 0.25); GEPA la absorbe y no crea
+   candidato (FR-005). Coherente con la spec.
+3. En `gepa_standalone` con el adaptador de clasificacion la tarea usa
+   `task_max_tokens` fijo (50); `models.max_tokens` bajo solo llega a la
+   reflexion. En la corrida 5 el aborto fue de tarea porque `claude-haiku-5-5`
+   corto 4 de 20 respuestas por `length` con ese limite de 50.
+4. Sin hallazgos de incumplimiento de la spec en esta fase.
