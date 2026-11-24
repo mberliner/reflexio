@@ -1,11 +1,11 @@
 """
-LM de DSPy que revisa la respuesta sin texto (SPEC-103, FR-009 / D8).
+LM de DSPy que clasifica las fallas de la llamada (SPEC-103 FR-009, SPEC-104).
 
 `LLMConfig.get_dspy_lm()` devuelve un `CheckedLM` en lugar de un `dspy.LM`.
-Ante una respuesta sin texto registra la causa (rol y `finish_reason`) y lanza
-`EmptyResponseError` en todo rol (D8 corregida por la RESOLUCION B-2c-1). El
-tipo de excepcion separa la respuesta sin texto de un error de formato real
-(`AdapterParseError`), sin heuristicas sobre el parseo.
+Ante una falla de capa 1 lanza `LLMCallFailure` (una respuesta sin texto,
+`EmptyResponseError`, con su causa en DEBUG) en todo rol. El tipo de excepcion
+separa la falla de la llamada de un error de formato real (`AdapterParseError`),
+sin heuristicas sobre el parseo.
 
 - `reflection`: en `dspy.GEPA` (GEPA 0.0.27, dspy 3.2.1) la excepcion sale de
   `DspyAdapter.propose_new_texts`, la atrapa `ReflectiveMutationProposer.propose`
@@ -14,10 +14,11 @@ tipo de excepcion separa la respuesta sin texto de un error de formato real
   (`reflection.py`): cuenta un intento por propuesta, registra la falla de capa
   1 y descarta tambien la propuesta sin bloque de instruccion (`formato`). El
   log de respuesta sin texto de este rol va a DEBUG (FR-007).
-- `task`: el programa DSPy debe envolverse con
-  `dspy_gepa_poc.empty_response.tolerate_empty_responses`, que convierte la
-  excepcion en una prediccion fallida con score 0.0. Sin envoltorio, la
-  excepcion cuenta como error del ejemplo (`max_errors` de `Evaluate`).
+- `task`: el programa y la metrica se envuelven con
+  `dspy_gepa_poc.call_failures.guard_program_and_metric`: el `forward` devuelve
+  una `FailedCallPrediction` con la falla clasificada y la metrica decide NE o
+  score 0 segun su clase (SPEC-104 3e). Sin envoltorio, la excepcion cuenta
+  como error del ejemplo (`max_errors` de `Evaluate`).
 
 SPEC-104 (2a, D3, FR-001/FR-011/FR-015): `CheckedLM` se construye con
 `num_retries=0` (LiteLLM no reintenta) y `forward` envuelve a `dspy.LM.forward`
@@ -150,7 +151,7 @@ class CheckedLM(dspy.LM):
         try:
             raise_for_response(response, self.role)
         except EmptyResponseError as exc:
-            log_empty_response(self.role, exc.finish_reason, call_layer=True)
+            log_empty_response(self.role, exc.finish_reason)
             raise _cut_adapter_fallback(exc, self.model) from exc
         except LLMCallFailure as exc:
             raise _cut_adapter_fallback(exc, self.model) from exc

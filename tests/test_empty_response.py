@@ -1,7 +1,7 @@
 """
 SPEC-103 FR-009 (2b) y SPEC-104 (2a, 3c): respuesta sin texto en los caminos LiteLLM.
 
-Cubre el helper `response_text`, `call_llm`, `get_lm_function` (tarea y
+Cubre `call_llm`, `get_lm_function` (tarea y
 reflexion), los adapters de gepa_standalone y el juez de RAG. Desde SPEC-104 2a
 la respuesta sin texto sale de la llamada comun como `EmptyResponseError` con la
 clase de capa 1 de su `finish_reason` normalizado por LiteLLM; desde 3c cada
@@ -26,7 +26,6 @@ from shared.llm import (
     LLMConnectionError,
     RunAborted,
     get_failure_tracker,
-    response_text,
 )
 from tests.conftest import make_completion_response, project_warnings
 
@@ -46,19 +45,7 @@ def _patch_completion(monkeypatch, content, finish_reason="stop"):
     monkeypatch.setattr("litellm.completion", lambda *a, **k: _response(content, finish_reason))
 
 
-class TestResponseTextHelper:
-    def test_returns_content_unchanged(self):
-        assert response_text(_response(" hola "), "task") == " hola "
-
-    @pytest.mark.parametrize(("content", "reason", "clase"), EMPTY_CASES)
-    def test_empty_raises_with_cause(self, content, reason, clase, caplog):
-        with caplog.at_level(logging.WARNING), pytest.raises(EmptyResponseError) as exc_info:
-            response_text(_response(content, reason), "reflection")
-        assert exc_info.value.role == "reflection"
-        assert exc_info.value.finish_reason == reason
-        assert reason in caplog.text
-        assert "reflection" in caplog.text
-
+class TestEmptyResponseError:
     def test_not_a_connection_error(self):
         assert not issubclass(EmptyResponseError, LLMConnectionError)
 

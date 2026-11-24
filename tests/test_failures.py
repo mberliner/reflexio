@@ -294,6 +294,39 @@ class TestFailureTrackerThresholds:
         assert "configuracion" in msg
         assert "reflection" in msg
 
+    def test_call_layer_abort_count_includes_the_recorded_failure(
+        self, tracker: Any, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # La capa de llamada fija el aborto antes de que el envoltorio cuente la
+        # falla: el conteo y el ERROR salen despues del `record`, no con 0/N.
+        f = _failures()
+        failure = _failure(f, "configuracion", "task", causa="AuthenticationError")
+        tracker.record_attempt("task", "val:1")
+        with caplog.at_level("ERROR", logger=f.__name__):
+            tracker.abort(failure, "401")
+            assert not [r for r in caplog.records if r.levelname == "ERROR"]
+            tracker.record(f.with_case(failure, "val:1"))
+        errors = [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 1
+        assert "conteo=1/1" in errors[0]
+        snap = tracker.snapshot()
+        assert snap["abort"]["conteo"] == snap["counts"]["configuracion"]["task"] == 1
+        with pytest.raises(f.RunAborted) as exc_info:
+            tracker.check_abort()
+        assert exc_info.value.conteo == 1
+
+    def test_unrecorded_call_layer_abort_is_logged_by_snapshot(
+        self, tracker: Any, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        f = _failures()
+        tracker.abort(_failure(f, "configuracion", "task", causa="NoneResponse"), "None")
+        with caplog.at_level("ERROR", logger=f.__name__):
+            snap = tracker.snapshot()
+            tracker.snapshot()
+        errors = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 1
+        assert snap["abort"]["conteo"] == 0
+
     def test_check_abort_is_silent_when_not_aborted(self, tracker: Any) -> None:
         tracker.check_abort()
 

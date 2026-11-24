@@ -25,34 +25,11 @@ _REASONING_TEMPERATURE = 1.0
 _REASONING_MIN_MAX_TOKENS = 16000
 
 
-def response_text(response: Any, role: str) -> str:
-    """
-    Extrae el texto de una respuesta de LiteLLM (SPEC-103, FR-009 / D7).
-
-    Si el contenido es None o queda vacio tras `strip()`, registra la causa
-    (`finish_reason`) y lanza `EmptyResponseError`. Devuelve el texto original
-    (sin strip) cuando hay contenido.
-
-    Args:
-        response: Respuesta de `litellm.completion`.
-        role: Rol que hizo la llamada ("task", "reflection", "judge").
-    """
-    from .errors import EmptyResponseError
-
-    choice = response.choices[0]
-    content = choice.message.content
-    if is_empty_text(content):
-        finish_reason = getattr(choice, "finish_reason", None)
-        log_empty_response(role, finish_reason)
-        raise EmptyResponseError(role, finish_reason)
-    return content
-
-
 def complete_text(kwargs: dict[str, Any], messages: list[dict[str, Any]], role: str) -> str:
     """
     Llamada comun a LiteLLM (SPEC-104, D3, FR-001): delega en `checked_completion`
     (`num_retries=0`, reintento propio de infraestructura, clasificacion de la
-    respuesta) y registra la causa de una respuesta sin texto (SPEC-103, FR-009).
+    respuesta) y deja en DEBUG la causa de una respuesta sin texto.
 
     Es el camino de los tres lugares que llaman al LLM sin DSPy (`get_lm_function`,
     `call_llm` y el adapter de RAG); recibe los kwargs ya restringidos.
@@ -63,7 +40,7 @@ def complete_text(kwargs: dict[str, Any], messages: list[dict[str, Any]], role: 
     try:
         return checked_completion(kwargs, messages, role)
     except EmptyResponseError as exc:
-        log_empty_response(role, exc.finish_reason, call_layer=True)
+        log_empty_response(role, exc.finish_reason)
         raise
 
 
@@ -72,18 +49,15 @@ def is_empty_text(content: Any) -> bool:
     return content is None or not str(content).strip()
 
 
-def log_empty_response(role: str, finish_reason: Any, *, call_layer: bool = False) -> None:
+def log_empty_response(role: str, finish_reason: Any) -> None:
     """
-    Registra la causa de una respuesta sin texto (FR-009), comun a LiteLLM y DSPy.
+    Deja en DEBUG la causa de una respuesta sin texto, comun a LiteLLM y DSPy.
 
-    Con `call_layer=True` (`complete_text` y `CheckedLM`) va a DEBUG en todos los
-    roles (SPEC-104 FR-007, 3c): el unico WARNING por falla es el de
-    `FailureTracker.record`, que hacen los envoltorios que conocen el caso (los
-    adapters de `gepa_standalone`, el envoltorio de reflexion). La tarea de
-    `dspy_gepa_poc` queda sin WARNING hasta que 3e cuente en su metrica.
+    Lo usan las capas de llamada (`complete_text` y `CheckedLM`). Es detalle de
+    diagnostico: el unico WARNING por falla es el de `FailureTracker.record`, que
+    hacen los envoltorios que conocen el caso (SPEC-104 FR-007).
     """
-    level = logging.DEBUG if call_layer else logging.WARNING
-    logger.log(level, "Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
+    logger.debug("Respuesta sin texto del LLM (rol=%s, finish_reason=%s)", role, finish_reason)
 
 
 def _is_reasoning(model: str) -> bool:

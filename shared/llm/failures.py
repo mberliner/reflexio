@@ -349,6 +349,7 @@ class FailureTracker:
                     else ""
                 ),
             )
+            self._settle_pending_locked(failure, clave)
             if failure.clase == FailureClass.configuracion and self._abort is None:
                 self._abort_locked(failure, "Falla de configuracion", clave=clave)
             self._evaluate_locked(rol)
@@ -388,6 +389,7 @@ class FailureTracker:
         clave: str | None = None,
         conteo: int | None = None,
         intentos: int | None = None,
+        pendiente: bool = False,
     ) -> None:
         if self._abort is not None:
             return
@@ -401,21 +403,47 @@ class FailureTracker:
             "conteo": conteo,
             "intentos": intentos,
             "clave": clave,
+            "pendiente": pendiente,
         }
+        if not pendiente:
+            self._log_abort_locked()
+
+    def _log_abort_locked(self) -> None:
+        state = self._abort
+        state["pendiente"] = False
         logger.error(
             "Corrida abortada: clase=%s rol=%s conteo=%s/%s causa=%s. %s",
-            clave,
-            failure.rol,
-            conteo,
-            intentos,
-            failure.causa,
-            motivo,
+            state["clave"],
+            state["failure"].rol,
+            state["conteo"],
+            state["intentos"],
+            state["failure"].causa,
+            state["motivo"],
         )
 
+    def _settle_pending_locked(self, failure: LLMFailure, clave: str) -> None:
+        """Completa el aborto fijado por la capa de llamada con la falla ya contada."""
+        state = self._abort
+        if state is None or not state["pendiente"]:
+            return
+        if state["clave"] != clave or state["failure"].rol != failure.rol:
+            return
+        state["failure"] = failure
+        state["conteo"], state["intentos"] = self._rate_locked(clave, failure.rol)
+        self._log_abort_locked()
+
     def abort(self, failure: LLMFailure, motivo: str) -> None:
-        """Fija el estado de aborto (el primero gana). No cuenta la falla (D4)."""
+        """
+        Fija el estado de aborto (el primero gana). No cuenta la falla (D4).
+
+        Lo llama la capa de llamada, que lanza la falla para que su envoltorio la
+        cuente con `record`: el aborto queda pendiente y `record` de la misma
+        (clave, rol) completa `conteo`, `intentos` y el caso antes de emitir el
+        ERROR, asi el conteo incluye la falla que lo disparo. Si ningun envoltorio
+        la cuenta, `snapshot` emite el ERROR con los valores vigentes.
+        """
         with self._lock:
-            self._abort_locked(failure, motivo)
+            self._abort_locked(failure, motivo, pendiente=True)
 
     def check_abort(self) -> None:
         """Lanza `RunAborted` si la corrida esta abortada."""
@@ -434,6 +462,8 @@ class FailureTracker:
         with self._lock:
             state = self._abort
             abort = None
+            if state is not None and state["pendiente"]:
+                self._log_abort_locked()
             if state is not None:
                 failure: LLMFailure = state["failure"]
                 abort = {

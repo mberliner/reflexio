@@ -243,15 +243,15 @@ Como leer el conteo del aborto:
   llamada), por lo que `run.json["failures"]["counts"]` final puede superar
   `abort.conteo`. No es una inconsistencia: `counts` coincide con el log y
   `abort.conteo` es el valor que disparo el aborto.
-- En un aborto por `configuracion`, la capa de llamada fija el aborto antes de
-  que el envoltorio registre la falla, asi que `abort.conteo` puede decir 0
-  aunque `counts.configuracion` valga 1 (pendiente de decision, ver
-  `docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md`).
+- En un aborto por `configuracion`, la capa de llamada fija el aborto y el
+  envoltorio cuenta la falla despues: el aborto queda pendiente hasta ese
+  `record`, asi `abort.conteo` incluye la falla que lo disparo y la linea ERROR
+  sale despues de su WARNING.
 
 #### Referencias a modulos anteriores (SPEC-103)
 
-`shared.llm.response_text` y `EmptyResponseError` (SPEC-103 FR-009) ya no son el
-camino de las fallas: la capa de llamada lanza `LLMCallFailure` y su subclase
+El helper `shared.llm.response_text` (SPEC-103 FR-009) se elimino: la capa de
+llamada lanza `LLMCallFailure` y su subclase
 `EmptyResponseError` ante una respuesta 200 sin texto. El modulo
 `dspy_gepa_poc/empty_response.py` (`EmptyResponsePrediction`,
 `zero_on_empty_response`) fue reemplazado por `dspy_gepa_poc/call_failures.py`

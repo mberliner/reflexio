@@ -19,7 +19,7 @@ from .call import (
     checked_completion_with_reason,
     raise_for_response,
 )
-from .config import LLMConfig, response_text
+from .config import LLMConfig
 from .errors import EmptyResponseError, LLMConfigError, LLMConnectionError
 from .failures import (
     FailureClass,
@@ -59,5 +59,4 @@ __all__ = [
     "UsageTracker",
     "get_tracker",
     "record_usage",
-    "response_text",
 ]

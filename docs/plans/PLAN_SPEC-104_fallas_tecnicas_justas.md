@@ -1103,6 +1103,17 @@ Practicas de lanzamiento que funcionaron (agregar al prompt de cada subfase):
 - Un relanzamiento tras bloqueo continua sobre el arbol sin commitear y la
   resolucion se registra antes en este plan (commit solo del plan).
 
+Decisiones del usuario (2026-11-24, tras 5b), resueltas en el commit
+"fix(spec-104): conteo del aborto por configuracion, NE en la tabla de detalle y
+limpieza de SPEC-103" (hash abajo): punto 1 corregido (el aborto que fija la
+capa de llamada queda pendiente y `record` de la misma (clave, rol) completa
+conteo, intentos y caso antes del ERROR; `snapshot` lo emite si nadie la
+cuenta), punto 3 con opcion (a) (`print_detailed_results` muestra "NE" con la
+clave de la falla) y punto 4 corregido (`response_text` eliminado,
+`log_empty_response` siempre a DEBUG, docstring de `dspy_lm.py` al dia). Punto
+7 hecho (login renovado). Quedan para el Cierre: code review, `[SDD-Check]`,
+D-019, D-021 y spec a `active`.
+
 Pendientes para la parada de fin de fase 5 / Cierre (decision del usuario):
 1. Conteo 0 en el aborto por `configuracion`: `run.json["abort"]["conteo"]` y
    `RunAborted` dicen `conteo=0/N` aunque `counts.configuracion` vale 1 (la capa

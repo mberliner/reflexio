@@ -277,10 +277,21 @@ def format_abort_error(exc: Any, model: str | None = None) -> str:
     return message
 
 
+def _ne_key(out: dict) -> str | None:
+    """Clave de la falla de un caso no evaluado (NE, SPEC-104), o None si se evaluo."""
+    if out.get("evaluated", True) is not False:
+        return None
+    failure = out.get("failure") or {}
+    return str(failure.get("clave") or failure.get("clase") or "desconocida")
+
+
 def print_detailed_results(eval_batch) -> None:
     """
     Imprime una tabla detallada con los resultados de cada caso de prueba.
     Detecta automaticamente el tipo de tarea basado en las claves de salida.
+
+    Un caso no evaluado (NE, SPEC-104) se muestra como "NE" con la clave de su
+    falla, no como 0% / "NO": su score 0.0 es solo un valor tecnico para GEPA.
     """
     if not eval_batch.outputs:
         log_warn("No hay resultados para mostrar.")
@@ -296,6 +307,10 @@ def print_detailed_results(eval_batch) -> None:
         print("-" * 100)
         for out, score in _zip(eval_batch.outputs, eval_batch.scores):
             text_preview = _truncate(out.get("text", ""), 27)
+            ne_key = _ne_key(out)
+            if ne_key is not None:
+                print(f"{text_preview:<30} | {'NE':<6} | no evaluado ({ne_key})")
+                continue
             score_str = f"{score * 100:.0f}%"
 
             errors = []
@@ -314,6 +329,10 @@ def print_detailed_results(eval_batch) -> None:
         print("-" * 100)
         for out, score in _zip(eval_batch.outputs, eval_batch.scores):
             q_preview = _truncate(out.get("question", ""), 37)
+            ne_key = _ne_key(out)
+            if ne_key is not None:
+                print(f"{q_preview:<40} | {'NE':<8} | no evaluado ({ne_key})")
+                continue
             is_correct = "SI" if score == 1.0 else "NO"
             sql_preview = out.get("predicted", "")[:50]
             print(f"{q_preview:<40} | {is_correct:<8} | {sql_preview}")
@@ -326,7 +345,8 @@ def print_detailed_results(eval_batch) -> None:
             text_preview = _truncate(out.get("text", ""), 37)
             pred = str(out.get("predicted", ""))
             exp = str(out.get("expected", ""))
-            is_correct = "SI" if score == 1.0 else "NO"
+            ne_key = _ne_key(out)
+            is_correct = f"NE ({ne_key})" if ne_key is not None else "SI" if score == 1.0 else "NO"
             print(f"{text_preview:<40} | {pred:<15} | {exp:<15} | {is_correct}")
 
     print("-" * 100)

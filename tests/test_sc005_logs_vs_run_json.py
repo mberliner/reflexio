@@ -257,6 +257,11 @@ class TestGepaStandalone:
             ("configuracion", "task", "val:2")
         ]
         assert abort_lines[0]["clase"] == "configuracion"
+        # El conteo del aborto incluye la falla que lo disparo (no 0/N).
+        assert outcome.run_json["abort"]["conteo"] == 1
+        failures = outcome.run_json["failures"]
+        assert failures["abort"]["conteo"] == failures["counts"]["configuracion"]["task"]
+        assert "conteo=1/" in str(outcome.error)
         assert outcome.csv_rows == []
 
     def test_threshold_abort_counts_match_the_log(self, tmp_path, monkeypatch):
@@ -341,6 +346,11 @@ class TestDspyGepaPoc:
             ("configuracion", "task", "val:2")
         ]
         assert abort_lines[0]["clase"] == "configuracion"
+        # El conteo del aborto incluye la falla que lo disparo (no 0/N).
+        assert outcome.run_json["abort"]["conteo"] == 1
+        failures = outcome.run_json["failures"]
+        assert failures["abort"]["conteo"] == failures["counts"]["configuracion"]["task"]
+        assert "conteo=1/" in str(outcome.error)
         assert outcome.csv_rows == []
 
     def test_threshold_abort_counts_match_the_log(self, tmp_path, monkeypatch):
