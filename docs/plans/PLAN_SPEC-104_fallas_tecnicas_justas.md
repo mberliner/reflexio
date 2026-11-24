@@ -1105,7 +1105,7 @@ Practicas de lanzamiento que funcionaron (agregar al prompt de cada subfase):
 
 Decisiones del usuario (2026-11-24, tras 5b), resueltas en el commit
 "fix(spec-104): conteo del aborto por configuracion, NE en la tabla de detalle y
-limpieza de SPEC-103" (hash abajo): punto 1 corregido (el aborto que fija la
+limpieza de SPEC-103" (a2c0ce5): punto 1 corregido (el aborto que fija la
 capa de llamada queda pendiente y `record` de la misma (clave, rol) completa
 conteo, intentos y caso antes del ERROR; `snapshot` lo emite si nadie la
 cuenta), punto 3 con opcion (a) (`print_detailed_results` muestra "NE" con la
