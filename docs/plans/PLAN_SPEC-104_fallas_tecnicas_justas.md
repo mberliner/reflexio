@@ -1062,6 +1062,41 @@ o al diff solo cuando un control falla.
 
 ## Proxima sesion
 
-Plan aprobado el 2026-11-23. Arrancar con: "Supervisar SPEC-104 segun la
+Estado al 2026-11-23 (sesion supervisora detenida por el usuario tras el
+control de 5a). Fases 1 a 4 y 5a `hecho`; arbol limpio en `c19d87b`,
+`ci_local.sh` verde (2267 passed). Arrancar con: "Supervisar SPEC-104 segun la
 seccion Seguimiento de docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md".
-Primera subfase: 1a.
+Siguiente subfase: 5b (Sonnet 5.5); al terminarla, parada obligatoria (fin de
+fase 5).
+
+Practicas de lanzamiento que funcionaron (agregar al prompt de cada subfase):
+- "Los tests MUST verificar el comportamiento deseado segun la spec, con
+  respuestas reales via el helper de tests/conftest.py (ver
+  docs/CONTRIBUTING.md)".
+- "Al cerrar, actualizar las filas del Coverage mapping de la spec que
+  correspondan. Registrar el hash en la tabla en un commit aparte de docs".
+- Subfases que leen internals (y el Cierre): `--add-dir
+  /datum1/dev/venvs/reflexio`.
+- Un relanzamiento tras bloqueo continua sobre el arbol sin commitear y la
+  resolucion se registra antes en este plan (commit solo del plan).
+
+Pendientes para la parada de fin de fase 5 / Cierre (decision del usuario):
+1. Conteo 0 en el aborto por `configuracion`: `run.json["abort"]["conteo"]` y
+   `RunAborted` dicen `conteo=0/N` aunque `counts.configuracion` vale 1 (la capa
+   de llamada fija el aborto antes del `record`). Recomendacion del supervisor:
+   que `record` actualice el conteo del aborto vigente (toca
+   `shared/llm/failures.py`, en el Cierre), porque FR-006 pide nombrar el
+   conteo y un 0 confunde.
+2. En DSPy, tras un aborto por umbral, `counts` final puede superar
+   `abort.conteo` (falla del caso en curso): documentar en 5b.
+3. Tabla de detalle de test de `gepa_standalone` muestra un NE como 0% / "NO"
+   (`shared/display/formatting.py`): decidir si se muestra "NE".
+4. Referencias viejas a `empty_response.py` (docstrings de
+   `shared/llm/dspy_lm.py` y `log_empty_response`) y `response_text` sin usos:
+   limpiar en el Cierre; `docs/GEPA_MANEJO_ERRORES.md` en 5b.
+5. Riesgo: el oraculo de SC-006 de 5a sale de leer el codigo previo a
+   `35c5b1c`, no de correrlo; la fase 6 (API real) lo contrasta.
+6. D-024 (`historial/sdd.md`, feedback de metricas DSPy como dict plano): se
+   corrige despues del Cierre, aparte.
+7. El login de `claude` (subfases Opus) vence entre 2026-11-25 y 2026-11-28:
+   `claude auth login` antes del Cierre.
