@@ -1,5 +1,10 @@
 # Manejo de Errores en GEPA Standalone
 
+> Las secciones "Problema Original" a "Consideraciones" describen el descarte
+> directo original (historico). El comportamiento vigente, con clasificacion de
+> fallas, atribucion y aborto, esta en "Estado vigente: fallas clasificadas
+> (SPEC-104)".
+
 ## Problema Original
 
 Cuando hay un **error técnico** durante la evaluación de un ejemplo (excepción de API, timeout, problema de conexión), NO es lo mismo que cuando el modelo da una **respuesta incorrecta**.
@@ -152,55 +157,109 @@ Si tu caso de uso requiere que **todos los ejemplos** sean evaluados (por ejempl
 2. **Fallback a modelo alternativo**: Si falla el modelo principal, usar uno de respaldo
 3. **Pausar y alertar**: Detener la optimización si hay muchos errores técnicos
 
-### ¿Qué tipos de errores se descartan?
+### Estado vigente: fallas clasificadas (SPEC-104)
 
-Cualquier `Exception` capturada durante la llamada al LLM:
-- `ConnectionError`
-- `TimeoutError`
-- `APIError`
-- `RateLimitError`
-- `ServiceUnavailableError`
-- Etc.
+El "descarte directo" de arriba es el diseno original. Lo reemplaza
+[SPEC-104](../specs/SPEC-104-fallas-tecnicas-justas.md): ya no se atrapa
+cualquier `Exception` para descartar el ejemplo. Cada falla se clasifica, se
+cuenta una vez por caso y recibe el tratamiento de su clase y su rol. Las
+definiciones normativas (reglas de deteccion, umbrales, FR/SC) viven en la spec;
+aca solo se resume como operar y leer los resultados.
 
-### Respuesta sin texto (SPEC-103, FR-009)
+Roles en codigo, logs, `run.json` y YAML: `task` (tarea), `judge` (juez, solo
+RAG) y `reflection` (reflexion). `judge` tiene umbrales propios y no se pliega en
+`reflection`.
 
-Una respuesta LiteLLM con contenido `None` o vacio (por ejemplo `finish_reason`
-`max_tokens` o `refusal`) no es un error de red ni un content filter. El helper
-`shared.llm.response_text` registra la causa (rol y `finish_reason`, nivel
-WARNING) y lanza `EmptyResponseError`, que NO hereda de `LLMConnectionError`:
-nunca corta la corrida. Lo usan `get_lm_function`, `call_llm` y
-`SimpleRAGAdapter._call_llm_with_retry`.
+Capas de deteccion (`shared/llm/failures.py`, `shared/llm/call.py`):
 
-| Rol | Conducta |
+1. Respuesta del LLM: excepcion de LiteLLM, `finish_reason` y `message.refusal`.
+2. Parseo de la respuesta (adapter, metrica, juez, envoltorio de reflexion):
+   solo la clase `formato`.
+
+| Clase | Causa |
 |---|---|
-| Tarea (clasificador, SQL, extractor, RAG) | Prediccion fallida: score 0.0, la causa queda en `outputs` (clave `error`) y en log, y `len(outputs)` se mantiene (RAG ya no la rotula como content filter) |
-| Juez (RAG) | Score 0.0 con feedback "Error del Juez: ..."; la causa dice `rol=juez` |
-| Reflexion | `get_lm_function(role="reflection")` lanza la excepcion; GEPA la atrapa y saltea la iteracion |
+| `configuracion` | 4xx de autenticacion, permisos, modelo inexistente o parametros invalidos; excepcion no clasificada |
+| `entrada` | Rechazo antes de generar: filtro de entrada o ventana de contexto excedida |
+| `presupuesto` | `finish_reason=length` (`max_tokens` insuficiente), con texto parcial o sin texto |
+| `filtro_salida` | `finish_reason=content_filter` o `refusal` presente |
+| `sin_texto` | HTTP 200 sin texto, sin otra causa |
+| `infraestructura` | Red, timeout, 429 o 5xx que persiste tras los reintentos |
+| `formato` | Hay texto pero no cumple el formato (clase no valida, JSON no parseable, `AdapterParseError`, puntaje de juez ilegible) |
 
-En el juez de RAG, un `LLMConnectionError` (incluido `LLMConfigError`) se
-propaga y corta la corrida, igual que en los demas adapters.
+En tarea, `entrada` y `presupuesto` se atribuyen contra el baseline (una llamada
+extra por caso, cacheada): si el baseline tambien falla es causa externa
+(`entrada_dato`, `presupuesto`) y el caso queda NE; si no, es del prompt
+(`entrada_candidato`, `presupuesto_candidato`) y puntua 0. Las claves de conteo
+son esos nombres.
 
-En `dspy_gepa_poc`, `get_dspy_lm()` devuelve `CheckedLM`
-(`shared/llm/dspy_lm.py`), que registra la causa y lanza `EmptyResponseError`
-en todo rol. `ReflexioDeclarativa.create_module_and_metric` envuelve el
-programa y la metrica (`dspy_gepa_poc/empty_response.py`); lo usan `dspy.GEPA`,
-los `Evaluate` de `reflexio_declarativa.py` y `scripts/baseline_only.py`.
+Tratamiento ("NE" = no evaluado: no suma ni resta al score reportado, se cuenta y
+se registra; "Descarta" = la propuesta de reflexion no se adopta):
 
-| Rol (DSPy) | Conducta |
-|---|---|
-| Tarea | El `forward` envuelto devuelve una `EmptyResponsePrediction` (campos en None) y la metrica envuelta la puntua 0.0 (con la causa como feedback para la reflexion). No cuenta para `max_errors`: un `Evaluate` con mas de 10 respuestas sin texto no se cancela. Cuesta 3 llamadas (`ChatAdapter` reintenta con `JSONAdapter`) |
-| Reflexion | `dspy.GEPA` atrapa la excepcion y saltea la iteracion, sin candidato con instruccion vacia |
+| Clase | Tarea | Juez | Reflexion |
+|---|---|---|---|
+| `configuracion` | Aborta | Aborta | Aborta |
+| `entrada` | `entrada_candidato`: score 0. `entrada_dato`: NE | NE | Descarta |
+| `presupuesto` | `presupuesto_candidato`: score 0. `presupuesto`: NE | NE | Descarta |
+| `filtro_salida`, `sin_texto`, `infraestructura` | NE | NE | Descarta |
+| `formato` | Score 0 | NE, tras los reintentos del juez | Descarta |
 
-Un error tecnico real (red, auth) o de formato (`AdapterParseError`) no se
-envuelve: sigue su curso como antes (cuenta para `max_errors` de `Evaluate`; en
-la ruta con trazas de `dspy.GEPA` el de formato se vuelve `FailedPrediction`). El envoltorio no queda en
-`optimized_program.json` (solo cambia la clase; el arbol de predictores es el
-mismo). La inferencia directa (`run_inference.py` y scripts sin `Evaluate`) no
-usa el envoltorio y corta ante una respuesta sin texto (deuda D-020).
+Consecuencias practicas:
 
-Nota: un error tecnico distinto (`except Exception`) en clasificador y SQL sigue
-descartando el ejemplo (deuda D-019 en `historial/sdd.md`); solo la respuesta
-sin texto puntua 0.0.
+- Un caso NE no desaparece: `evaluados + NE == tamano del lote`. Durante la
+  optimizacion recibe 0.0 solo como valor tecnico para GEPA y nunca llega al
+  Profesor como error del prompt (en `dspy_gepa_poc` el feedback dice que fue una
+  falla externa). Las metricas reportadas excluyen los NE y muestran
+  `n_evaluados / n_total`; el delta optimizado - baseline es pareado.
+- Reintentos: `num_retries=0` en LiteLLM y `CheckedLM`; solo `infraestructura` se
+  reintenta (loop propio, backoff exponencial, default 3 reintentos). Los
+  intentos intermedios (reintentos de red, fallback de `ChatAdapter` a
+  `JSONAdapter`, reintentos del juez) van a DEBUG y no cuentan.
+- Cada falla deja un unico WARNING por caso con rol, clave, atribucion, causa,
+  `finish_reason` y `case_id`. El conteo de esas lineas coincide con
+  `run.json["failures"]["counts"]` (ver `docs/METADATA_REPRODUCIBILIDAD.md`).
+- Reflexion: una propuesta con falla de cualquier clase (incluida una salida sin
+  bloque de instruccion) se descarta en el envoltorio del `reflection_lm`; GEPA
+  saltea la iteracion y el candidato vigente no cambia. El `case_id` es la
+  iteracion de GEPA.
+
+#### Aborto de la corrida
+
+La corrida pasa a "abortada" cuando ocurre una falla `configuracion`, o cuando la
+tasa de una clase en un rol supera su umbral (con un minimo de intentos). Como
+`Evaluate` y GEPA pueden tragarse excepciones, el corte es por estado: los
+envoltorios no llaman al LLM si esta abortado y los orquestadores consultan el
+estado tras cada paso y antes de `save_results()`. El error nombra clase, rol,
+conteo y causa probable; para `presupuesto` agrega que el baseline tambien se
+corta, sugiere subir `max_tokens` y, si el modelo lo soporta, bajar el effort.
+Una corrida abortada escribe `run.json` con `status: aborted` y ninguna fila de
+CSV. Umbrales por defecto y como cambiarlos: seccion `failures` en
+`docs/YAML_CONFIG_REFERENCE.md`.
+
+Como leer el conteo del aborto:
+
+- `run.json["abort"]["conteo"]` e `intentos` son los del momento del corte. En
+  `dspy_gepa_poc`, tras un aborto por umbral, la metrica puede registrar despues
+  la falla del caso que estaba en curso (el `record_attempt` va despues de la
+  llamada), por lo que `run.json["failures"]["counts"]` final puede superar
+  `abort.conteo`. No es una inconsistencia: `counts` coincide con el log y
+  `abort.conteo` es el valor que disparo el aborto.
+- En un aborto por `configuracion`, la capa de llamada fija el aborto antes de
+  que el envoltorio registre la falla, asi que `abort.conteo` puede decir 0
+  aunque `counts.configuracion` valga 1 (pendiente de decision, ver
+  `docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md`).
+
+#### Referencias a modulos anteriores (SPEC-103)
+
+`shared.llm.response_text` y `EmptyResponseError` (SPEC-103 FR-009) ya no son el
+camino de las fallas: la capa de llamada lanza `LLMCallFailure` y su subclase
+`EmptyResponseError` ante una respuesta 200 sin texto. El modulo
+`dspy_gepa_poc/empty_response.py` (`EmptyResponsePrediction`,
+`zero_on_empty_response`) fue reemplazado por `dspy_gepa_poc/call_failures.py`
+(`FailedCallPrediction`, `guard_metric`): el `forward` envuelto devuelve una
+prediccion con la falla clasificada y la metrica envuelta decide NE o score 0
+segun la tabla; ya no puntua 0.0 toda respuesta sin texto. La inferencia directa
+(`run_inference.py` y scripts sin `Evaluate`) no usa el envoltorio y corta ante
+una falla (deuda D-020).
 
 ### ¿Y los errores de parsing JSON?
 
@@ -265,4 +324,4 @@ inestable mostrará:
 | Estadísticas precisas | NO | SÍ |
 | GEPA optimiza mejor | Sesgado | Preciso |
 
-**Conclusión**: Los errores técnicos ahora se manejan correctamente, descartándolos de las estadísticas en lugar de penalizar injustamente los prompts candidatos.
+**Conclusión**: Los errores técnicos no penalizan al prompt candidato: quedan como casos no evaluados, contados y acotados por umbrales (SPEC-104, ver "Estado vigente"). La tabla compara el diseño original con el comportamiento previo a él.

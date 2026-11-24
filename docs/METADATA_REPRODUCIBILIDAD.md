@@ -153,6 +153,47 @@ guardar). Antes eran solo `model`, `temperature` y `max_tokens`.
 `max_tokens` reportan el valor efectivo de sus llamadas. `run.json` de corridas
 anteriores conserva el formato de 3 claves. `metricas_optimizacion.csv` no cambia.
 
+**Estado y fallas (SPEC-104 FR-008):** `run.json` agrega las claves siguientes.
+Una corrida abortada escribe `run.json` y NO escribe fila en
+`metricas_optimizacion.csv`. Las corridas anteriores no las tienen. Significado
+de las clases y roles: `docs/GEPA_MANEJO_ERRORES.md`.
+
+```json
+{
+  "status": "completed",
+  "abort": null,
+  "failures": {
+    "counts": {"infraestructura": {"task": 2}, "formato": {"task": 1}},
+    "attempts": {"task": 60, "judge": 0, "reflection": 8},
+    "unique_cases": {"task": 20, "judge": 0, "reflection": 8},
+    "entrada_dato": ["val:3"],
+    "aborted": false,
+    "abort": null
+  },
+  "metrics": {
+    "baseline": {"n_evaluados": 18, "n_total": 20},
+    "optimized": {"n_evaluados": 19, "n_total": 20},
+    "test": {"n_evaluados": 20, "n_total": 20}
+  }
+}
+```
+
+| Clave | Significado |
+|-------|-------------|
+| `status` | `completed` o `aborted` |
+| `abort` | `null` si completada; si abortada, `{clase, rol, conteo, causa}` |
+| `failures.counts` | `{clave: {rol: n}}`; claves: `configuracion`, `entrada_candidato`, `entrada_dato`, `entrada` (juez), `presupuesto_candidato`, `presupuesto`, `filtro_salida`, `sin_texto`, `infraestructura`, `formato`. Roles: `task`, `judge`, `reflection` |
+| `failures.attempts` | Casos intentados por rol (una vez por caso y candidato, no por llamada HTTP) |
+| `failures.unique_cases` | `case_id` unicos intentados por rol (denominador de `entrada_dato`) |
+| `failures.entrada_dato` | Lista ordenada de `case_id` con entrada rechazada por causa externa |
+| `failures.abort` | Detalle completo del aborto: `clase`, `rol`, `conteo`, `intentos`, `causa`, `motivo` |
+| `metrics` | `n_evaluados / n_total` por metrica reportada (los nombres dependen del subproyecto) |
+
+`abort.conteo` es el conteo del momento del corte: en DSPy, tras un aborto por
+umbral, `failures.counts` final puede superarlo (falla del caso en curso). El
+conteo de las lineas WARNING del log por (clave, rol) coincide con
+`failures.counts`. `baseline_only.py` no escribe `run.json`.
+
 **Nota sobre seed:** El seed se registra para documentacion, pero **no se aplica** al LLM ni a GEPA internamente. La reproducibilidad depende de caches del LLM y condiciones de API.
 
 ## Uso de MetadataManager

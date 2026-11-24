@@ -176,7 +176,56 @@ por variable de entorno en el `.env` del subproyecto (`CLASSIFIER_TEXT_MAX_LENGT
 
 ---
 
-## 3. Campos Compartidos
+## 3. Seccion `failures` (opcional, ambos subproyectos)
+
+Configura el contador de fallas y los umbrales de aborto (SPEC-104 FR-006).
+Validada en `BaseConfigValidator` antes de gastar tokens: claves, roles y rangos
+invalidos son error de configuracion. Sin la seccion (o sin un campo) rigen los
+defaults. La mezcla es parcial: solo se pisan las entradas indicadas. Que es cada
+clase y que hace el aborto: `docs/GEPA_MANEJO_ERRORES.md`.
+
+| Campo | Tipo | Default | Descripcion |
+|-------|------|---------|-------------|
+| `failures.infra_retries` | int >= 0 | 3 | Reintentos (con backoff exponencial) solo ante `infraestructura`; 3 = 4 intentos |
+| `failures.judge_retries` | int >= 0 | 2 | Reintentos del juez de RAG ante un puntaje ilegible o fuera de [0, 1], antes de clasificarlo `formato`. Solo aplica al adapter `rag` |
+| `failures.min_attempts.<rol>` | int >= 0 | `task: 20`, `judge: 20`, `reflection: 4` | Intentos minimos del rol antes de evaluar umbrales (para `entrada_dato`, casos unicos) |
+| `failures.thresholds.<clave>.<rol>` | float [0, 1] | ver tabla | Aborta si `fallas / intentos > umbral` |
+
+Roles validos: `task`, `judge`, `reflection`. Claves de umbral validas y defaults:
+
+| Clave | task | judge | reflection |
+|-------|------|-------|------------|
+| `presupuesto` | 0.05 | 0.05 | 0.25 |
+| `infraestructura` | 0.10 | 0.10 | - |
+| `sin_texto` | 0.10 | 0.10 | - |
+| `filtro_salida` | 0.10 | 0.10 | - |
+| `entrada_dato` | 0.10 | - | - |
+| `entrada` | - | 0.10 | - |
+| `formato` | - | 0.10 | - |
+| `total` (suma de todas las claves del rol) | - | - | 0.50 |
+
+`configuracion` aborta siempre (sin umbral). `formato`, `entrada_candidato` y
+`presupuesto_candidato` en `task` no tienen umbral: son score del candidato.
+
+```yaml
+failures:
+  infra_retries: 3
+  judge_retries: 2
+  min_attempts:
+    task: 30
+  thresholds:
+    presupuesto:
+      task: 0.10
+    total:
+      reflection: 0.60
+```
+
+El estado resultante (conteos, aborto) queda en `run.json`
+(`docs/METADATA_REPRODUCIBILIDAD.md`).
+
+---
+
+## 4. Campos Compartidos
 
 Ambos proyectos comparten esta estructura base:
 
