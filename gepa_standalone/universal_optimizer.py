@@ -663,6 +663,7 @@ class UniversalOptimizer:
         usage["cost_usd"] = cost
 
         # Write run-level metadata (includes real usage block)
+        delta = getattr(self, "paired_delta", None)
         self.metadata_mgr.create_run(
             run_dir=run_dir,
             experiment_name=self.config["case"]["name"],
@@ -672,6 +673,7 @@ class UniversalOptimizer:
             status="completed",
             failures=get_failure_tracker().snapshot(),
             metrics=metrics_coverage(self.metric_summaries),
+            paired_delta=delta.to_dict() if delta is not None else None,
         )
 
         # Log to master CSV (real tokens + cost; European comma decimal)

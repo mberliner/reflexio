@@ -174,6 +174,13 @@ de las clases y roles: `docs/GEPA_MANEJO_ERRORES.md`.
     "baseline": {"n_evaluados": 18, "n_total": 20},
     "optimized": {"n_evaluados": 19, "n_total": 20},
     "test": {"n_evaluados": 20, "n_total": 20}
+  },
+  "paired_delta": {
+    "delta": 0.1111,
+    "baseline_score": 0.7222,
+    "optimized_score": 0.8333,
+    "n_pareados": 18,
+    "sin_casos_evaluados": false
   }
 }
 ```
@@ -188,6 +195,7 @@ de las clases y roles: `docs/GEPA_MANEJO_ERRORES.md`.
 | `failures.entrada_dato` | Lista ordenada de `case_id` con entrada rechazada por causa externa |
 | `failures.abort` | Detalle completo del aborto: `clase`, `rol`, `conteo`, `intentos`, `causa`, `motivo` |
 | `metrics` | `n_evaluados / n_total` por metrica reportada (los nombres dependen del subproyecto) |
+| `paired_delta` | Delta pareado optimizado - baseline sobre la interseccion de casos evaluados en val (`delta`, `baseline_score`, `optimized_score`, `n_pareados`, `sin_casos_evaluados`); omitido en corridas abortadas |
 
 `abort.conteo` es el conteo del momento del corte: en DSPy, tras un aborto por
 umbral, `failures.counts` final puede superarlo (falla del caso en curso). El

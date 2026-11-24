@@ -261,11 +261,12 @@ excluyen siempre.
   registrarse a nivel `DEBUG` y MUST NOT sumar al contador.
 - FR-008 `run.json` (via `MetadataManager`) MUST guardar: estado de la corrida
   (`completed` o `aborted`, con clase, rol y causa del aborto), conteos por
-  (clase, rol), lista de casos `entrada_dato` y `n_evaluados / n_total` de cada
-  metrica. Una corrida abortada MUST NOT escribir fila en el CSV de resultados ni
-  presentar metricas como validas; los artefactos ya escritos (p. ej.
-  `candidates.json`) MAY quedar en el directorio de la corrida, que queda marcada
-  como `aborted`.
+  (clase, rol), lista de casos `entrada_dato`, `n_evaluados / n_total` de cada
+  metrica y `paired_delta` (`delta`, `baseline_score`, `optimized_score`,
+  `n_pareados` y `sin_casos_evaluados`, de FR-003) en corridas completadas. Una
+  corrida abortada MUST NOT escribir fila en el CSV de resultados ni presentar
+  metricas como validas; los artefactos ya escritos (p. ej. `candidates.json`)
+  MAY quedar en el directorio de la corrida, que queda marcada como `aborted`.
 - FR-009 El juez MUST pedir su puntaje como JSON en el prompt (sin structured
   outputs nativos), MUST validar que sea un numero en [0.0, 1.0] y MUST
   reintentar ante un puntaje ilegible o fuera de rango (default 2 reintentos)

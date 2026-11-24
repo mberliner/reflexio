@@ -40,7 +40,7 @@ from tests.orchestrator_e2e import (
 # Claves de run.json antes de SPEC-104 (MetadataManager.create_run en 35c5b1c) y
 # las que agrega FR-008.
 PRE_SPEC104_RUN_KEYS = {"experiment_name", "seed", "models", "created_at", "usage"}
-SPEC104_RUN_KEYS = {"status", "abort", "failures", "metrics"}
+SPEC104_RUN_KEYS = {"status", "abort", "failures", "metrics", "paired_delta"}
 
 # Esquema del CSV maestro (SPEC-100 FR-007): no cambia con SPEC-104.
 CSV_COLUMNS = [
@@ -108,6 +108,13 @@ def _assert_spec104_fields_without_failures(run_json, attempts_task):
         "baseline": {"n_evaluados": VAL, "n_total": VAL},
         "optimized": {"n_evaluados": VAL, "n_total": VAL},
         "test": {"n_evaluados": TEST, "n_total": TEST},
+    }
+    assert run_json["paired_delta"] == {
+        "delta": pytest.approx(0.5),
+        "baseline_score": pytest.approx(0.5),
+        "optimized_score": pytest.approx(1.0),
+        "n_pareados": VAL,
+        "sin_casos_evaluados": False,
     }
 
 

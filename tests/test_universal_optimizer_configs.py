@@ -90,7 +90,7 @@ from shared.llm import (  # noqa: E402
     get_failure_tracker,
 )
 from shared.logging.metadata import MetadataManager  # noqa: E402
-from shared.scoring import summarize  # noqa: E402
+from shared.scoring import paired_delta, summarize  # noqa: E402
 
 FAILURES_YAML = {
     "infra_retries": 1,
@@ -243,8 +243,12 @@ class TestRunJsonGepa:
         }
         opt.metric_summaries = {
             "baseline": summarize([[("a", 1.0, True), ("b", 0.0, False)]]),
+            "optimized": summarize([[("a", 1.0, True), ("b", 1.0, True)]]),
             "test": summarize([]),
         }
+        opt.paired_delta = paired_delta(
+            opt.metric_summaries["baseline"], opt.metric_summaries["optimized"]
+        )
         tracker = get_failure_tracker()
         tracker.record_attempt("task", "a")
         tracker.record(_presupuesto("b"))
@@ -257,6 +261,13 @@ class TestRunJsonGepa:
         assert data["failures"]["counts"] == {"presupuesto": {"task": 1}}
         assert data["metrics"]["baseline"] == {"n_evaluados": 1, "n_total": 2}
         assert data["metrics"]["test"] == {"n_evaluados": 0, "n_total": 0}
+        assert data["paired_delta"] == {
+            "delta": pytest.approx(0.0),
+            "baseline_score": pytest.approx(1.0),
+            "optimized_score": pytest.approx(1.0),
+            "n_pareados": 1,
+            "sin_casos_evaluados": False,
+        }
 
 
 class TestFailuresSectionWiringDspy:
@@ -350,9 +361,14 @@ class TestFailuresSectionWiringDspy:
         orchestrator.task_lm = orchestrator.reflection_lm = None
         orchestrator.logger = MagicMock()
         orchestrator.metric_summaries = {
-            "baseline": summarize([[("a", 1.0, True), ("b", 0.0, False)]]),
+            "baseline": summarize([[("a", 0.0, True), ("b", 0.0, False)]]),
+            "optimized": summarize([[("a", 1.0, True), ("b", 1.0, True)]]),
             "test": summarize([]),
         }
+        orchestrator.paired_delta = paired_delta(
+            orchestrator.metric_summaries["baseline"],
+            orchestrator.metric_summaries["optimized"],
+        )
         tracker = get_failure_tracker()
         tracker.record_attempt("task", "a")
         tracker.record(_presupuesto("b"))
@@ -365,3 +381,10 @@ class TestFailuresSectionWiringDspy:
         assert data["failures"]["counts"] == {"presupuesto": {"task": 1}}
         assert data["metrics"]["baseline"] == {"n_evaluados": 1, "n_total": 2}
         assert data["metrics"]["test"] == {"n_evaluados": 0, "n_total": 0}
+        assert data["paired_delta"] == {
+            "delta": pytest.approx(1.0),
+            "baseline_score": pytest.approx(0.0),
+            "optimized_score": pytest.approx(1.0),
+            "n_pareados": 1,
+            "sin_casos_evaluados": False,
+        }

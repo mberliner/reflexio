@@ -791,6 +791,7 @@ class ReflexioDeclarativa:
         cost = cost_from_usage(usage, self.task_config.model, self.reflection_config.model)
         usage["cost_usd"] = cost
 
+        delta = getattr(self, "paired_delta", None)
         self.metadata_mgr.create_run(
             run_dir=self.results_dir,
             experiment_name=self.config.raw_config["case"]["name"],
@@ -800,6 +801,7 @@ class ReflexioDeclarativa:
             status="completed",
             failures=get_failure_tracker().snapshot(),
             metrics=metrics_coverage(getattr(self, "metric_summaries", {})),
+            paired_delta=delta.to_dict() if delta is not None else None,
         )
 
         # Log to master CSV

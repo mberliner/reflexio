@@ -313,3 +313,29 @@ class TestCreateRunFailures:
     def test_invalid_status_is_rejected(self, manager, tmp_path):
         with pytest.raises(ValueError, match="status"):
             self._create(manager, tmp_path, status="done")
+
+    def test_paired_delta_is_saved_and_omitted_when_none(self, manager, tmp_path):
+        """H-08 (FR-008): `paired_delta` se guarda en `run.json` cuando se pasa y se
+        omite en corridas sin delta (p. ej. abortadas)."""
+        from shared.scoring import paired_delta, summarize
+
+        base = summarize([[("a", 0.0, True), ("b", 1.0, True), ("c", 0.0, False)]])
+        opt = summarize([[("a", 1.0, True), ("b", 1.0, True), ("c", 1.0, True)]])
+        delta = paired_delta(base, opt)
+
+        data = self._create(manager, tmp_path, paired_delta=delta.to_dict())
+        assert data["paired_delta"] == {
+            "delta": pytest.approx(0.5),
+            "baseline_score": pytest.approx(0.5),
+            "optimized_score": pytest.approx(1.0),
+            "n_pareados": 2,
+            "sin_casos_evaluados": False,
+        }
+
+        aborted = self._create(
+            manager,
+            tmp_path / "aborted",
+            status="aborted",
+            failures=self.SNAPSHOT_ABORTED,
+        )
+        assert "paired_delta" not in aborted

@@ -205,6 +205,7 @@ class MetadataManager:
         status: str = "completed",
         failures: dict[str, Any] | None = None,
         metrics: dict[str, Any] | None = None,
+        paired_delta: dict[str, Any] | None = None,
     ) -> Path:
         """
         Write run-level metadata (run.json) to the run directory.
@@ -223,6 +224,8 @@ class MetadataManager:
                 `failures` and `abort` (class, role, count, cause; None if completed).
             metrics: `n_evaluados / n_total` per metric, e.g.
                 {"baseline": {"n_evaluados": 9, "n_total": 10}}. Omitted when None.
+            paired_delta: PairedDelta.to_dict() over val cases evaluated with both
+                prompts (FR-003 / FR-008). Omitted when None (e.g. aborted runs).
 
         Returns:
             Path to run.json.
@@ -251,6 +254,8 @@ class MetadataManager:
             data["failures"] = failures
         if metrics is not None:
             data["metrics"] = metrics
+        if paired_delta is not None:
+            data["paired_delta"] = paired_delta
         if usage is not None:
             data["usage"] = usage
 
