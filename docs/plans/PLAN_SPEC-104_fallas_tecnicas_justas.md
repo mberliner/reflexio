@@ -42,7 +42,7 @@ aca solo se ajusta la referencia.
 | | 3b Diseno de la atribucion contra el baseline (D5) y de la prediccion NE en DSPy (D6) | FR-004, FR-012 | Opus 5.5 | hecho (6d2dec1) |
 | | 3c Adapters de `gepa_standalone`: resultado por caso (evaluado / NE / score 0 por clase), atribucion, `make_reflective_dataset` sin NE, `formato` por adapter | FR-002, FR-004, FR-010, FR-011, FR-012, SC-001, SC-008 | Sonnet 5.5 | hecho (cf21af2) |
 | | 3d Juez de RAG con JSON en el prompt, validacion de rango y reintentos | FR-009 | Sonnet 5.5 | hecho (e1a3017) |
-| | 3e `dspy_gepa_poc`: generaliza `empty_response.py` a fallas clasificadas, atribucion, feedback de falla externa, conteo una vez por caso pese al fallback de adapters | FR-002, FR-004, FR-007, FR-010, FR-012, SC-001, SC-008 | Opus 5.5 | pendiente |
+| | 3e `dspy_gepa_poc`: generaliza `empty_response.py` a fallas clasificadas, atribucion, feedback de falla externa, conteo una vez por caso pese al fallback de adapters | FR-002, FR-004, FR-007, FR-010, FR-012, SC-001, SC-008 | Opus 5.5 | hecho (HASH) |
 | 4 Metricas y orquestacion | 4a Agregacion sobre casos evaluados y delta pareado en `shared/scoring` (incluye `eval_repeats` y `n_evaluados == 0`) | FR-003, SC-002, SC-007 | Sonnet 5.5 | pendiente |
 | | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | pendiente |
 | | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | pendiente |
@@ -788,6 +788,46 @@ anota como bloqueo y no commitea.
   `dspy_gepa_poc/reflexio_declarativa.py` (solo el armado de programa y
   metrica), `tests/test_empty_response_dspy.py`,
   `tests/test_dspy_metric_feedback.py`, tests nuevos.
+- Cierre de 3e (Opus 5.5, 2026-11-23). D5 y D6 sin cambios de diseno;
+  `shared/llm/attribution.py` sin tocar. `dspy_gepa_poc/empty_response.py` se
+  reemplaza por `dspy_gepa_poc/call_failures.py`: `FailedCallPrediction`,
+  `tolerate_call_failures` (mixin de `forward`: `LLMCallFailure` y
+  `AdapterParseError` -> prediccion con la falla y el snapshot de instrucciones),
+  `guard_metric` (la llamada de puntaje cuenta el intento, atribuye con el probe,
+  registra y devuelve 0.0; la de feedback no cuenta y devuelve
+  `dspy.Prediction(score=0.0, feedback=...)`: `dspy.GEPA` lee `feedback` con
+  `hasattr`, un dict plano perderia el texto) y `guard_program_and_metric`, que
+  usa `create_module_and_metric`. `finish_reason` del baseline sano:
+  `capture_finish_reason` no aplica (solo lo publica `checked_completion_with_reason`
+  y `CheckedLM` no pasa por ahi); se toma del historial del LM con un receptor
+  agregado a `settings.caller_modules` dentro de `dspy.context` (thread-local:
+  `BaseLM.update_history` agrega cada llamada del hilo al `history` de esos
+  modulos, dspy 3.2.1). FR-007: el unico WARNING por caso es el de `record`; el
+  aviso de `JSONAdapter` "Failed to use structured output format" (intento
+  intermedio del fallback ante `formato`) se baja a DEBUG con un filtro sobre su
+  logger. Tests: `tests/test_dspy_call_failures.py` (los 99 payloads con falla
+  via `Evaluate`; atribucion candidato/externa/otra clase, cache por caso con
+  hilos e `infraestructura` sin cache; formato; feedback; `dspy.GEPA` real con
+  copias y `bootstrap_trace_data`, NE fuera del dataset reflexivo y feedback de
+  falla externa con dos predictores) y `tests/test_empty_response_dspy.py`
+  migrado (NE en vez de score 0; todo `presupuesto` aborta por umbral; error no
+  clasificado aborta tras 1 llamada). `ci_local.sh` en verde (2147 passed).
+  Notas para fases siguientes:
+  - 5b / Cierre: quedan referencias al modulo viejo fuera de la lista de 3e: el
+    docstring de `shared/llm/dspy_lm.py` (`tolerate_empty_responses`, "score
+    0.0"), el de `log_empty_response` en `shared/llm/config.py` ("la tarea de
+    `dspy_gepa_poc` queda sin WARNING hasta 3e") y `docs/GEPA_MANEJO_ERRORES.md`
+    (linea 186).
+  - 5a (SC-005): una falla `configuracion` deja un WARNING (`record`) y un ERROR
+    (el aborto que fija la capa de llamada), en ambos subproyectos; el conteo de
+    lineas de log >= WARNING debe distinguir el aborto de la falla.
+  - Hallazgo previo, fuera de los FR de 3e: las metricas con feedback de
+    `dspy_gepa_poc/metrics.py` devuelven un dict plano; `dspy.GEPA` 3.2.1
+    (`feedback_fn`) lo envuelve y el Profesor recibe "This trajectory got a score
+    of {...}" con el feedback dentro del repr. No se cambio (decision del
+    usuario si se corrige, p. ej. devolver `dspy.Prediction`).
+  - 4b: `baseline_only.py` usa `create_module_and_metric`; sus predicciones
+    siempre son del baseline (atribucion `externa` sin llamar al probe).
 - 4a. Archivos: modulo nuevo en `shared/scoring/`, `shared/scoring/__init__.py`,
   test nuevo.
 - 4b. Archivos: `gepa_standalone/universal_optimizer.py`,

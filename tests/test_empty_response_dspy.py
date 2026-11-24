@@ -7,14 +7,17 @@ contra dspy 3.2.1 y GEPA 0.0.27, interceptando `litellm_completion` de
 
 - reflexion: `CheckedLM` lanza `EmptyResponseError`; `dspy.GEPA` saltea la
   iteracion y no crea un candidato con instruccion vacia.
-- tarea (RESOLUCION B-2c-1): `CheckedLM` tambien lanza; el envoltorio de
-  `dspy_gepa_poc/empty_response.py` la convierte en prediccion fallida con 0.0
+- tarea: `CheckedLM` tambien lanza; desde SPEC-104 (3e) el envoltorio de
+  `dspy_gepa_poc/call_failures.py` la convierte en una `FailedCallPrediction`
+  que la metrica cuenta una vez y, si es NE, puntua 0.0 solo como valor tecnico,
   en las dos rutas de `DspyAdapter.evaluate`, en `dspy.GEPA` y en `Evaluate`
-  (sin "Execution cancelled" con mas de `max_errors` vacios), mientras un error
-  tecnico real sigue contando para `max_errors`.
+  (sin "Execution cancelled" con mas de `max_errors` fallas). Una excepcion no
+  clasificada es `configuracion`: aborta la corrida tras 1 llamada HTTP.
 - SPEC-104 (2b): en reflexion la propuesta sin bloque de instruccion es
   `formato` y la respuesta sin texto deja un unico WARNING (el de
   `FailureTracker.record`); el detalle esta en `tests/test_reflection_guard.py`.
+  El detalle de 3e (atribucion, feedback, conteo) esta en
+  `tests/test_dspy_call_failures.py`.
 """
 
 import logging
@@ -23,23 +26,23 @@ import dspy
 import pytest
 from dspy.evaluate import Evaluate
 from dspy.teleprompt.gepa.gepa_utils import DspyAdapter
-from litellm import ModelResponse
 
-from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
-from dspy_gepa_poc.empty_response import (
-    EmptyResponsePrediction,
-    tolerate_empty_responses,
-    zero_on_empty_response,
+from dspy_gepa_poc.call_failures import (
+    FailedCallPrediction,
+    guard_program_and_metric,
+    tolerate_call_failures,
 )
-from dspy_gepa_poc.metrics import create_dynamic_metric, create_dynamic_metric_with_feedback
+from dspy_gepa_poc.dynamic_factory import DynamicModuleFactory
 from shared.llm import (
     EmptyResponseError,
     FailureClass,
     LLMCallFailure,
     LLMConfig,
+    RunAborted,
     get_failure_tracker,
 )
 from shared.llm.dspy_lm import CheckedLM
+from tests.conftest import make_completion_response
 
 TASK_MODEL = "openai/gpt-4o-mini"
 REFLECTION_MODEL = "openai/gpt-4o"
@@ -47,20 +50,6 @@ SEED_INSTRUCTION = "Answer the question."
 VALID_INSTRUCTION = "Always answer yes."
 # LiteLLM normaliza el `stop_reason` "refusal" de Anthropic a "content_filter".
 EMPTY_CASES = [(None, "length"), ("", "content_filter"), ("  \n", "stop")]
-
-
-def _model_response(content, finish_reason="stop"):
-    return ModelResponse(
-        model="fake",
-        choices=[
-            {
-                "index": 0,
-                "finish_reason": finish_reason,
-                "message": {"role": "assistant", "content": content},
-            }
-        ],
-        usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
-    )
 
 
 def _task_text(answer):
@@ -75,7 +64,7 @@ def _patch_dspy_completion(monkeypatch, task, reflection):
         role = "reflection" if request["model"] == REFLECTION_MODEL else "task"
         calls[role] += 1
         content, reason = (reflection if role == "reflection" else task)(request)
-        return _model_response(content, reason)
+        return make_completion_response(content, reason)
 
     monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
     return calls
@@ -89,7 +78,10 @@ def _lm(model, role, *, checked=True):
 
 
 def _dataset(n=4):
-    return [dspy.Example(question=f"q{i}", answer="yes").with_inputs("question") for i in range(n)]
+    return [
+        dspy.Example(case_id=f"val:{i}", question=f"q{i}", answer="yes").with_inputs("question")
+        for i in range(n)
+    ]
 
 
 def _metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
@@ -100,16 +92,19 @@ def _plain_student():
     return dspy.Predict(dspy.Signature("question -> answer", SEED_INSTRUCTION))
 
 
+def _guarded():
+    """Programa y metrica como los arma `create_module_and_metric` (D5/D6)."""
+    return guard_program_and_metric(_plain_student(), _metric)
+
+
 def _student():
-    return tolerate_empty_responses(_plain_student())
-
-
-_guarded_metric = zero_on_empty_response(_metric)
+    return _guarded()[0]
 
 
 def _run_gepa(reflection_lm, budget=16):
+    student, metric = _guarded()
     optimizer = dspy.GEPA(
-        metric=_guarded_metric,
+        metric=metric,
         reflection_lm=reflection_lm,
         max_metric_calls=budget,
         reflection_minibatch_size=2,
@@ -117,7 +112,7 @@ def _run_gepa(reflection_lm, budget=16):
         seed=0,
     )
     data = _dataset()
-    return optimizer.compile(_student(), trainset=data, valset=data)
+    return optimizer.compile(student, trainset=data, valset=data)
 
 
 def _instructions(result):
@@ -213,13 +208,15 @@ class TestCheckedLM:
     def test_task_raises_with_cause(self, monkeypatch, caplog, content, reason):
         _patch_dspy_completion(monkeypatch, lambda r: (content, reason), None)
         lm = _lm(TASK_MODEL, "task")
-        # La capa de llamada va a DEBUG (SPEC-104 FR-007, 3c); el WARNING de la tarea de DSPy
-        # lo emite la metrica que cuenta (3e).
+        # La capa de llamada va a DEBUG y no cuenta (SPEC-104 FR-007, D4): el WARNING de la
+        # tarea de DSPy lo emite la metrica que conoce el caso (3e).
         with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
             lm("hola")
         assert exc_info.value.role == "task"
         assert exc_info.value.finish_reason == reason
         assert f"rol=task, finish_reason={reason}" in caplog.text
+        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
+        assert get_failure_tracker().snapshot()["counts"] == {}
         assert len(lm.history) == 1
 
     def test_task_empty_reaches_program_without_json_fallback(self, monkeypatch, task_lm_context):
@@ -231,11 +228,15 @@ class TestCheckedLM:
         assert calls["task"] == 1
         assert exc_info.value.failure.clase.value == "presupuesto"
 
-    def test_task_bad_format_is_still_parse_error(self, monkeypatch, task_lm_context):
-        """Un error de formato real no se confunde con la respuesta sin texto."""
+    def test_task_bad_format_is_parse_error_not_empty(self, monkeypatch, task_lm_context):
+        """Un error de formato real no se confunde con la respuesta sin texto: sin
+        envoltorio es `AdapterParseError`; envuelto es `formato` (FR-010)."""
         _patch_dspy_completion(monkeypatch, lambda r: ("texto sin formato", "stop"), None)
         with pytest.raises(dspy.utils.exceptions.AdapterParseError):
-            _student()(question="q0")
+            _plain_student()(question="q0")
+        pred = _student()(question="q0")
+        assert isinstance(pred, FailedCallPrediction)
+        assert pred.failure.clase == FailureClass.formato
 
 
 # ==================== Envoltorio del programa y guardia de metrica ====================
@@ -253,10 +254,10 @@ def _fast_gate_signature():
     }
 
 
-class TestTolerateEmptyResponses:
+class TestTolerateCallFailures:
     def test_keeps_predictors_and_does_not_modify_original(self):
         plain = _plain_student()
-        wrapped = tolerate_empty_responses(plain)
+        wrapped = tolerate_call_failures(plain)
         assert wrapped is not plain
         assert type(plain) is dspy.Predict
         assert isinstance(wrapped, dspy.Predict)
@@ -266,29 +267,34 @@ class TestTolerateEmptyResponses:
 
     def test_idempotent_and_survives_deepcopy(self):
         wrapped = _student()
-        assert tolerate_empty_responses(wrapped) is wrapped
+        assert tolerate_call_failures(wrapped) is wrapped
         assert type(wrapped.deepcopy()) is type(wrapped)
         assert type(wrapped.reset_copy()) is type(wrapped)
 
     def test_empty_task_returns_failed_prediction(self, monkeypatch, task_lm_context):
         _patch_dspy_completion(monkeypatch, lambda r: ("", "content_filter"), None)
         pred = _student()(question="q0")
-        assert isinstance(pred, EmptyResponsePrediction)
+        assert isinstance(pred, FailedCallPrediction)
         assert pred.answer is None
-        assert pred.empty_error.finish_reason == "content_filter"
+        assert pred.failure.clase == FailureClass.filtro_salida
+        assert pred.failure.finish_reason == "content_filter"
+        assert pred.instructions == {"self": SEED_INSTRUCTION}
+        # `forward` no conoce el caso: no cuenta (D4); cuenta la metrica.
+        assert get_failure_tracker().snapshot()["attempts"]["task"] == 0
 
     def test_rule_derived_module_output_fields(self, monkeypatch, task_lm_context):
         _patch_dspy_completion(monkeypatch, lambda r: (None, "length"), None)
-        module = tolerate_empty_responses(
+        module = tolerate_call_failures(
             DynamicModuleFactory.create_rule_derived_module(_fast_gate_signature())
         )
         pred = module(ficha="x")
-        assert isinstance(pred, EmptyResponsePrediction)
+        assert isinstance(pred, FailedCallPrediction)
         assert pred.p1 is None and pred.alto_impacto is None
+        assert pred.failure.clase == FailureClass.presupuesto
 
     def test_saved_program_loads_into_plain_module(self, tmp_path):
         signature = _fast_gate_signature()
-        wrapped = tolerate_empty_responses(DynamicModuleFactory.create_module(signature))
+        wrapped = tolerate_call_failures(DynamicModuleFactory.create_module(signature))
         for _, predictor in wrapped.named_predictors():
             predictor.signature = predictor.signature.with_instructions(VALID_INSTRUCTION)
         path = tmp_path / "optimized_program.json"
@@ -299,43 +305,7 @@ class TestTolerateEmptyResponses:
         assert [p.signature.instructions for _, p in plain.named_predictors()] == [
             VALID_INSTRUCTION
         ]
-        assert "EmptyTolerant" not in path.read_text()
-
-
-class TestZeroOnEmptyResponse:
-    def _empty_pred(self):
-        return EmptyResponsePrediction(EmptyResponseError("task", "length"), ["p1", "otros"])
-
-    def test_empty_gold_would_get_credit_without_guard(self):
-        """`score_field` trata None como "": sin guardia, gold vacio da credito."""
-        gold = dspy.Example(p1="", otros="")
-        metric = create_dynamic_metric_with_feedback(["p1", "otros"])
-        assert metric(gold, self._empty_pred()) == 1.0
-        assert zero_on_empty_response(metric)(gold, self._empty_pred()) == 0.0
-
-    def test_simple_metric_guarded(self):
-        gold = dspy.Example(p1="none", otros="")
-        metric = create_dynamic_metric(["p1"], match_mode="normalized")
-        assert metric(gold, self._empty_pred()) == 1.0  # str(None) == "None"
-        assert zero_on_empty_response(metric)(gold, self._empty_pred()) == 0.0
-
-    def test_feedback_path_returns_dict_with_cause(self):
-        gold = dspy.Example(p1="Si", otros="")
-        guarded = zero_on_empty_response(create_dynamic_metric_with_feedback(["p1", "otros"]))
-        result = guarded(gold, self._empty_pred(), None, "self", [])
-        assert result["score"] == 0.0
-        assert "rol=task, finish_reason=length" in result["feedback"]
-        assert guarded(gold, self._empty_pred(), pred_name="self")["score"] == 0.0
-
-    def test_three_arg_metric_and_normal_pred_pass_through(self):
-        def three_arg(gold, pred, trace=None):
-            return float(pred.answer.lower() == gold.answer)
-
-        guarded = zero_on_empty_response(three_arg)
-        gold = dspy.Example(answer="yes")
-        assert guarded(gold, dspy.Prediction(answer="YES")) == 1.0
-        empty = EmptyResponsePrediction(EmptyResponseError("task"), ["answer"])
-        assert guarded(gold, empty, None) == 0.0
+        assert "FailureTolerant" not in path.read_text()
 
 
 # ==================== (a) reflexion vacia en dspy.GEPA ====================
@@ -392,15 +362,22 @@ def _task_empty_on_q1(request):
     return _task_text("yes"), "stop"
 
 
+def _failure_warnings(caplog):
+    return [r for r in caplog.records if r.levelno >= logging.WARNING]
+
+
 class TestTaskInGepa:
     @pytest.mark.parametrize("capture_traces", [False, True])
-    def test_adapter_scores_zero_and_keeps_length(
+    def test_adapter_case_is_ne_and_counted_once(
         self, monkeypatch, caplog, task_lm_context, capture_traces
     ):
+        """Baseline cortado por `max_tokens`: `presupuesto` externa, NE con 0.0
+        tecnico, un intento por caso y un unico WARNING (FR-004, FR-007)."""
         _patch_dspy_completion(monkeypatch, _task_empty_on_q1, None)
+        student, metric = _guarded()
         adapter = DspyAdapter(
-            student_module=_student(),
-            metric_fn=_guarded_metric,
+            student_module=student,
+            metric_fn=metric,
             feedback_map={},
             failure_score=0.0,
             num_threads=1,
@@ -414,19 +391,37 @@ class TestTaskInGepa:
         assert len(result.outputs) == len(batch)
         if capture_traces:
             assert len(result.trajectories) == len(batch)
-        assert "rol=task, finish_reason=length" in caplog.text
+        failed = result.outputs[1]
+        assert isinstance(failed, FailedCallPrediction)
+        assert failed.evaluated is False
+        assert failed.failure.atribucion == "externa"
+        assert failed.failure.case_id == "val:1"
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["counts"] == {"presupuesto": {"task": 1}}
+        assert snapshot["attempts"]["task"] == len(batch)
+        warnings = _failure_warnings(caplog)
+        assert len(warnings) == 1
+        assert "rol=task clave=presupuesto atribucion=externa" in warnings[0].message
+        assert "finish_reason=length case_id=val:1" in warnings[0].message
 
-    def test_all_task_empty_does_not_stop_gepa(self, monkeypatch, caplog, task_lm_context):
-        _patch_dspy_completion(
+    def test_all_task_budget_failures_abort_by_threshold(self, monkeypatch, task_lm_context):
+        """FR-006: `presupuesto` externa en todos los casos supera el umbral de
+        tarea (0.05, minimo 20) y la corrida queda abortada sin mas llamadas."""
+        calls = _patch_dspy_completion(
             monkeypatch,
             lambda r: (None, "length"),
             lambda r: (f"```\n{VALID_INSTRUCTION}\n```", "stop"),
         )
-        with caplog.at_level(logging.DEBUG):
-            result = _run_gepa(_lm(REFLECTION_MODEL, "reflection"), budget=24)
-        assert result.detailed_results.val_aggregate_scores[0] == 0.0
-        assert result.detailed_results.total_metric_calls >= 24
-        assert "rol=task, finish_reason=length" in caplog.text
+        _run_gepa(_lm(REFLECTION_MODEL, "reflection"), budget=40)
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["aborted"] is True
+        assert snapshot["abort"]["clase"] == "presupuesto"
+        assert snapshot["abort"]["rol"] == "task"
+        assert snapshot["attempts"]["task"] == 20
+        tasks_at_abort = calls["task"]
+        with pytest.raises(RunAborted):
+            _plain_student()(question="q0")
+        assert calls["task"] == tasks_at_abort
 
 
 # ==================== Evaluate fuera de dspy.GEPA (max_errors por defecto) ====================
@@ -434,27 +429,31 @@ class TestTaskInGepa:
 EVAL_SIZE = 12  # > dspy.settings.max_errors (10)
 
 
-def _evaluate(program, metric=_guarded_metric):
+def _evaluate(program, metric):
     return Evaluate(devset=_dataset(EVAL_SIZE), metric=metric, num_threads=1)(program)
 
 
 class TestTaskInEvaluate:
-    def test_all_empty_scores_zero_without_cancel(self, monkeypatch, task_lm_context):
+    def test_all_empty_are_ne_without_cancel(self, monkeypatch, task_lm_context):
         assert dspy.settings.max_errors < EVAL_SIZE
         _patch_dspy_completion(monkeypatch, lambda r: (None, "length"), None)
-        result = _evaluate(_student())
+        result = _evaluate(*_guarded())
         assert result.score == 0.0
-        # EvaluationResult.results (fix D-016): una entrada por ejemplo.
+        # EvaluationResult.results (fix D-016): una entrada por ejemplo (FR-002).
         assert len(result.results) == EVAL_SIZE
-        assert all(isinstance(pred, EmptyResponsePrediction) for _, pred, _ in result.results)
+        assert all(isinstance(pred, FailedCallPrediction) for _, pred, _ in result.results)
+        assert all(pred.evaluated is False for _, pred, _ in result.results)
         assert [score for _, _, score in result.results] == [0.0] * EVAL_SIZE
+        assert get_failure_tracker().snapshot()["counts"] == {"presupuesto": {"task": EVAL_SIZE}}
 
-    def test_mixed_empty_counts_as_zero(self, monkeypatch, task_lm_context):
+    def test_mixed_empty_only_failed_cases_are_ne(self, monkeypatch, task_lm_context):
         _patch_dspy_completion(monkeypatch, _task_empty_on_q1, None)
-        result = _evaluate(_student())
+        result = _evaluate(*_guarded())
         empty = sum("q1" in f"q{i}" for i in range(EVAL_SIZE))  # q1, q10, q11
-        assert result.score == pytest.approx(100.0 * (EVAL_SIZE - empty) / EVAL_SIZE)
         assert len(result.results) == EVAL_SIZE
+        ne = [ex.case_id for ex, pred, _ in result.results if not getattr(pred, "evaluated", True)]
+        assert ne == ["val:1", "val:10", "val:11"]
+        assert result.score == pytest.approx(100.0 * (EVAL_SIZE - empty) / EVAL_SIZE)
 
     def test_guard_unwrapped_program_is_cancelled(self, monkeypatch, task_lm_context):
         """Sin envoltorio la tarea vacia cuenta para max_errors (B-2c-1)."""
@@ -462,13 +461,20 @@ class TestTaskInEvaluate:
         with pytest.raises(Exception, match="Execution cancelled"):
             _evaluate(_plain_student(), _metric)
 
-    def test_technical_error_still_counts_for_max_errors(self, monkeypatch, task_lm_context):
-        def broken(request):
-            raise RuntimeError("fallo de red simulado")
+    def test_unclassified_error_aborts_after_one_call(self, monkeypatch, task_lm_context):
+        """Una excepcion no clasificada es `configuracion` (regla 3): 1 llamada
+        HTTP, se registra una vez y aborta; los casos siguientes no llaman."""
 
-        _patch_dspy_completion(monkeypatch, broken, None)
+        def broken(request):
+            raise RuntimeError("fallo inesperado")
+
+        calls = _patch_dspy_completion(monkeypatch, broken, None)
         with pytest.raises(Exception, match="Execution cancelled"):
-            _evaluate(_student())
+            _evaluate(*_guarded())
+        assert calls["task"] == 1
+        snapshot = get_failure_tracker().snapshot()
+        assert snapshot["counts"] == {"configuracion": {"task": 1}}
+        assert snapshot["abort"]["clase"] == "configuracion"
 
 
 class TestReflexioDeclarativaWrapsProgram:
@@ -487,7 +493,14 @@ class TestReflexioDeclarativaWrapsProgram:
 
         assert orchestrator.student is not plain
         assert isinstance(orchestrator.student, dspy.Predict)
-        empty = EmptyResponsePrediction(EmptyResponseError("task"), ["answer"])
-        gold = dspy.Example(answer="yes")
-        assert orchestrator.metric(gold, empty) == 0.0
+        gold = dspy.Example(case_id="val:0", question="q0", answer="yes").with_inputs("question")
+        failed = FailedCallPrediction(
+            EmptyResponseError("task", "length", FailureClass.presupuesto).failure,
+            {"self": SEED_INSTRUCTION},
+            ["answer"],
+        )
+        # Prediccion del baseline: atribucion externa sin llamar al LLM.
+        assert orchestrator.metric(gold, failed) == 0.0
+        assert failed.failure.atribucion == "externa"
         assert orchestrator.metric(gold, dspy.Prediction(answer="yes")) == 1.0
+        assert get_failure_tracker().snapshot()["attempts"]["task"] == 2
