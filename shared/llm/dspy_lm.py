@@ -144,10 +144,20 @@ class CheckedLM(dspy.LM):
                 raise
             raise cut from exc
 
+    def _check_truncation(self, results: Any) -> None:
+        # SPEC-104: `raise_for_response` clasifica `finish_reason="length"` como
+        # `presupuesto` y `None` como `configuracion`. El metodo base de dspy 3.2.1
+        # lee `self.kwargs["max_tokens"]` (KeyError en modelos reasoning que usan
+        # `max_completion_tokens`), falla con TypeError si `results is None` y
+        # duplica un WARNING en `length` (FR-007).
+        return
+
     def _process_lm_response(self, response, prompt, messages, **kwargs):
-        outputs = super()._process_lm_response(response, prompt, messages, **kwargs)
-        if self._has_tool_calls(response):
-            return outputs
+        outputs: Any = []
+        if response is not None:
+            outputs = super()._process_lm_response(response, prompt, messages, **kwargs)
+            if self._has_tool_calls(response):
+                return outputs
         try:
             raise_for_response(response, self.role)
         except EmptyResponseError as exc:

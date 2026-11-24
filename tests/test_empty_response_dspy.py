@@ -238,6 +238,66 @@ class TestCheckedLM:
         assert isinstance(pred, FailedCallPrediction)
         assert pred.failure.clase == FailureClass.formato
 
+    @pytest.mark.parametrize("model", ["openai/gpt-5-mini", "openai/o3-mini"])
+    @pytest.mark.parametrize("content", [None, "texto truncado"])
+    def test_reasoning_model_length_is_presupuesto_not_configuracion(
+        self, monkeypatch, model, content
+    ):
+        """H-02: en modelos reasoning (que usan `max_completion_tokens` sin
+        `max_tokens`), `finish_reason='length'` es `presupuesto`, nunca
+        `KeyError`/`configuracion`, sin WARNING duplicado de dspy."""
+        calls = 0
+
+        def truncated(request, num_retries, cache=None):
+            nonlocal calls
+            calls += 1
+            return make_completion_response(content, "length")
+
+        monkeypatch.setattr("dspy.clients.lm.litellm_completion", truncated)
+        dspy_lm_logger = logging.getLogger("dspy.clients.lm")
+        dspy_records: list[logging.LogRecord] = []
+
+        class _Cap(logging.Handler):
+            def emit(self, record):
+                dspy_records.append(record)
+
+        handler = _Cap(level=logging.WARNING)
+        dspy_lm_logger.addHandler(handler)
+        try:
+            lm = _lm(model, "task")
+            with pytest.raises(LLMCallFailure) as exc_info:
+                lm("hola")
+        finally:
+            dspy_lm_logger.removeHandler(handler)
+
+        assert calls == 1
+        assert exc_info.value.failure.clase == FailureClass.presupuesto
+        assert exc_info.value.failure.finish_reason == "length"
+        assert not get_failure_tracker().aborted
+        assert len(lm.history) == 1
+        assert dspy_records == []
+
+    def test_none_response_is_configuracion_with_none_response_cause(self, monkeypatch):
+        """H-02: si LiteLLM devuelve `None`, es `configuracion` con causa
+        `NoneResponse` (no `TypeError` en `_check_truncation`) y corta fallback."""
+        calls = 0
+
+        def return_none(request, num_retries, cache=None):
+            nonlocal calls
+            calls += 1
+            return None
+
+        monkeypatch.setattr("dspy.clients.lm.litellm_completion", return_none)
+        lm = _lm(TASK_MODEL, "task")
+        with dspy.context(lm=lm), pytest.raises(LLMCallFailure) as exc_info:
+            _plain_student()(question="q0")
+
+        assert calls == 1
+        assert exc_info.value.failure.clase == FailureClass.configuracion
+        assert exc_info.value.failure.causa == "NoneResponse"
+        assert get_failure_tracker().aborted
+        assert len(lm.history) == 0
+
 
 # ==================== Envoltorio del programa y guardia de metrica ====================
 
