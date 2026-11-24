@@ -55,10 +55,12 @@ from shared.display import (
     print_step,
     print_summary,
 )
-from shared.llm import LLMConnectionError
+from shared.display.formatting import format_abort_error, format_metric_line
+from shared.llm import LLMConnectionError, RunAborted, get_failure_tracker
 from shared.llm.usage import get_tracker
 from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_paths
+from shared.scoring import MetricSummary, paired_delta, summarize
 
 # Total de pasos del pipeline canonico (compartido con dspy_gepa_poc).
 TOTAL_STEPS = 7
@@ -66,6 +68,11 @@ TOTAL_STEPS = 7
 ENGINE = "GEPA-STANDALONE"
 # max_tokens de la reflexion cuando el YAML no lo fija.
 _REFLECTION_DEFAULT_MAX_TOKENS = 2000
+
+
+def _csv_score(score: float | None) -> float | str:
+    """Una metrica sin casos evaluados va al CSV como "N/A", nunca como 0.0 (FR-003)."""
+    return "N/A" if score is None else score
 
 
 class UniversalOptimizer:
@@ -87,6 +94,16 @@ class UniversalOptimizer:
         self.results = None
         self.task_config = None
         self.reflection_config = None
+
+    def abort_message(self, exc: RunAborted) -> str:
+        """Mensaje de una corrida abortada (FR-006), con el modelo del rol que fallo."""
+        configs = {
+            "task": self.task_config,
+            "reflection": self.reflection_config,
+            "judge": getattr(self.adapter, "_judge_config", None),
+        }
+        config = configs.get(exc.failure.rol)
+        return format_abort_error(exc, config.model if config is not None else None)
 
     def build_llm_configs(self):
         """
@@ -162,11 +179,16 @@ class UniversalOptimizer:
         # Reset real token tracking just before any task/reflection LLM call so
         # the snapshot in save_results reflects only this run's optimization.
         get_tracker().reset()
+        # SPEC-104: contador de fallas limpio por corrida (la seccion `failures`
+        # del YAML que lo configura es de 4c).
+        get_failure_tracker().reset()
 
         # STEPS 5-7 (Baseline, Optimization, Test+Summary) ocurren dentro de
         # execute_gepa_pipeline para preservar el flujo actual.
         self.execute_gepa_pipeline(initial_prompt, verbose=verbose)
 
+        # FR-006: una corrida abortada no llega a save_results (ni al CSV).
+        get_failure_tracker().check_abort()
         run_dir = self.save_results()
 
         if self.config:
@@ -183,7 +205,11 @@ class UniversalOptimizer:
         log_ok("Optimization completed.")
 
         # Resumen final (RUN COMPLETED) como ultima salida, igual que DSPy.
-        print_summary(metrics=self._summary_metrics, config=self._summary_config)
+        print_summary(
+            metrics=self._summary_metrics,
+            config=self._summary_config,
+            delta=self._summary_delta,
+        )
 
     def load_config(self) -> dict[str, Any]:
         """
@@ -338,26 +364,35 @@ class UniversalOptimizer:
             print_kv("Judge LM", self.adapter._judge_config.describe(max_tokens=judge_max))
         log_ok(f"Adapter initialized: {adapter_type}")
 
-    def _eval_repeated(self, data, prompt) -> tuple[float, float]:
+    def _eval_repeated(self, data, prompt) -> tuple[MetricSummary, float, Any]:
         """
-        Evalua un prompt sobre un conjunto k=self.eval_repeats veces y
-        devuelve (media, rango). Si k=1 devuelve (score, 0.0).
+        Evalua un prompt sobre un conjunto k=self.eval_repeats veces y devuelve
+        `(resumen, rango, ultimo_resultado)`.
 
-        El rango es una proxy simple de la dispersion del LLM no-determinista.
-        Si el rango es mayor que la diferencia entre dos prompts, la
-        "mejora" entre ellos es indistinguible del ruido.
+        El resumen (SPEC-104 FR-003) promedia solo los casos evaluados y trae
+        `n_evaluados/n_total`; un caso NE no suma ni resta. El rango (en puntos
+        porcentuales) es la dispersion entre repeticiones de la media de sus casos
+        evaluados: una proxy simple del ruido del LLM. Si es mayor que la
+        diferencia entre dos prompts, la "mejora" es indistinguible del ruido.
+        `ultimo_resultado` es el `EvaluationBatch` de la ultima repeticion, para
+        reutilizarlo sin una evaluacion extra (FR-014).
         """
         k = max(1, int(getattr(self, "eval_repeats", 1)))
-        scores: list[float] = []
+        repeats: list[list[tuple[Any, float, bool]]] = []
+        means: list[float] = []
+        eval_result = None
         for _ in range(k):
             eval_result = self.adapter.evaluate(data, prompt)
-            if eval_result.scores:
-                scores.append(sum(eval_result.scores) / len(eval_result.scores))
-            else:
-                scores.append(0.0)
-        mean = sum(scores) / len(scores)
-        rng = max(scores) - min(scores) if len(scores) > 1 else 0.0
-        return mean, rng
+            cases = [
+                (output["case_id"], score, output.get("evaluated", True))
+                for output, score in zip(eval_result.outputs, eval_result.scores, strict=True)
+            ]
+            repeats.append(cases)
+            scored = [score for _, score, evaluated in cases if evaluated]
+            if scored:
+                means.append(sum(scored) / len(scored))
+        rng = (max(means) - min(means)) * 100 if len(means) > 1 else 0.0
+        return summarize(repeats), rng, eval_result
 
     def _has_positive_reflection(self) -> bool:
         """Determine if this run uses positive reflection."""
@@ -410,11 +445,9 @@ class UniversalOptimizer:
         # STEP 5: Baseline
         print_step(5, TOTAL_STEPS, "BASELINE PERFORMANCE")
         log_info(f"Evaluando prompt inicial en validacion (k={self.eval_repeats} repeticiones)...")
-        baseline_avg, baseline_range = self._eval_repeated(self.val_data, initial_prompt)
-        print_kv(
-            "Baseline accuracy",
-            f"{baseline_avg * 100:.1f}% (rango {baseline_range * 100:.1f} pp)",
-        )
+        baseline, baseline_range, _ = self._eval_repeated(self.val_data, initial_prompt)
+        print_kv("Baseline accuracy", format_metric_line(baseline, baseline_range))
+        get_failure_tracker().check_abort()
 
         # STEP 6: Optimization
         print_step(6, TOTAL_STEPS, "GEPA OPTIMIZATION")
@@ -437,7 +470,13 @@ class UniversalOptimizer:
             max_metric_calls=self.active_max_metric_calls,
             skip_perfect_score=self.active_skip_perfect_score,
             display_progress_bar=self.config["optimization"].get("display_progress_bar", True),
+            # FR-005 / FR-013: el envoltorio de reflexion recibe la iteracion de GEPA
+            # como case_id de sus fallas.
+            callbacks=[reflection_lm],
         )
+        # FR-006: GEPA atrapa las excepciones del reflection_lm y de la tarea; el
+        # corte es por estado, consultado tras cada paso.
+        get_failure_tracker().check_abort()
 
         optimized_prompt = result.best_candidate
 
@@ -470,27 +509,31 @@ class UniversalOptimizer:
             )
 
         log_info(f"Midiendo desempeno del mejor prompt en val (k={self.eval_repeats})...")
-        opt_avg, opt_range = self._eval_repeated(self.val_data, optimized_prompt)
-        print_kv("Optimized (val)", f"{opt_avg * 100:.1f}% (rango {opt_range * 100:.1f} pp)")
+        optimized, opt_range, _ = self._eval_repeated(self.val_data, optimized_prompt)
+        print_kv("Optimized (val)", format_metric_line(optimized, opt_range))
+        get_failure_tracker().check_abort()
 
         log_info(f"Verificando generalizacion en test (k={self.eval_repeats})...")
-        test_avg, test_range = self._eval_repeated(self.test_data, optimized_prompt)
-        print_kv("Test accuracy", f"{test_avg * 100:.1f}% (rango {test_range * 100:.1f} pp)")
+        test, test_range, eval_test = self._eval_repeated(self.test_data, optimized_prompt)
+        print_kv("Test accuracy", format_metric_line(test, test_range))
+        get_failure_tracker().check_abort()
 
-        # Detalle del ultimo test eval (para inspeccion humana)
-        eval_test = self.adapter.evaluate(self.test_data, optimized_prompt)
+        # FR-014: detalle de la ultima evaluacion de test ya calculada, sin una
+        # segunda evaluacion (ni gasto de tokens extra).
         print_detailed_results(eval_test)
 
         print_prompt("PROMPT ORIGINAL", initial_prompt["system_prompt"])
         print_prompt("PROMPT OPTIMIZADO", optimized_prompt["system_prompt"])
 
+        # FR-003: delta pareado sobre los casos de val evaluados con ambos prompts.
+        delta = paired_delta(baseline, optimized)
+        self.metric_summaries = {"baseline": baseline, "optimized": optimized, "test": test}
+        self.paired_delta = delta
+
         # Resumen final: se difiere a run() para que el bloque RUN COMPLETED
         # quede como ultima salida, despues de save_results (igual que DSPy).
-        self._summary_metrics = {
-            "Baseline": baseline_avg,
-            "Optimized": opt_avg,
-            "Test": test_avg,
-        }
+        self._summary_metrics = {"Baseline": baseline, "Optimized": optimized, "Test": test}
+        self._summary_delta = delta
         self._summary_config = {
             "Task LM": self.adapter.model,
             "Reflection LM": self.reflection_config.model,
@@ -500,20 +543,22 @@ class UniversalOptimizer:
         }
 
         # Store results for logging
-        effective_delta = (opt_avg - baseline_avg) if prompt_changed else 0.0
+        effective_delta = delta.delta if prompt_changed else 0.0
         self.results = {
             "initial_prompt": initial_prompt["system_prompt"],
             "final_prompt": optimized_prompt["system_prompt"],
-            "baseline_score": baseline_avg,
-            "baseline_range": baseline_range,
-            "optimized_score": opt_avg,
-            "optimized_range": opt_range,
-            "test_score": test_avg,
-            "test_range": test_range,
+            "baseline_score": baseline.score,
+            "baseline_range": baseline_range / 100,
+            "optimized_score": optimized.score,
+            "optimized_range": opt_range / 100,
+            "test_score": test.score,
+            "test_range": test_range / 100,
             "prompt_changed": prompt_changed,
             "effective_delta": effective_delta,
             "eval_repeats": self.eval_repeats,
             "total_metric_calls": result.total_metric_calls,
+            "metrics": {name: m.to_dict() for name, m in self.metric_summaries.items()},
+            "paired_delta": delta.to_dict(),
         }
 
     def save_results(self) -> Path:
@@ -584,9 +629,9 @@ class UniversalOptimizer:
             case_title=self.config["case"].get("title", self.config["case"]["name"]),
             task_model=task_config.model,
             reflection_model=reflect_config.model,
-            baseline_score=self.results["baseline_score"],
-            optimized_score=self.results["optimized_score"],
-            robustness_score=self.results["test_score"],
+            baseline_score=_csv_score(self.results["baseline_score"]),
+            optimized_score=_csv_score(self.results["optimized_score"]),
+            robustness_score=_csv_score(self.results["test_score"]),
             run_directory=str(run_dir),
             budget=metadata["max_metric_calls"],
             tokens_task=usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
@@ -638,6 +683,9 @@ For more info, see: gepa_standalone/experiments/configs/
     except LLMConnectionError as e:
         # Connection failure: print formatted diagnostic and terminate
         print(str(e), file=sys.stderr)
+        sys.exit(1)
+    except RunAborted as e:
+        log_error(optimizer.abort_message(e))
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n\nOptimizacion cancelada por el usuario.")

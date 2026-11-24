@@ -726,6 +726,7 @@ class TestOrchestratorSetsBaseline:
             captured["initial"] = initial_prompt
             optimizer._summary_metrics = {}
             optimizer._summary_config = {}
+            optimizer._summary_delta = None
 
         env.setattr(optimizer, "execute_gepa_pipeline", pipeline)
         env.setattr(optimizer, "save_results", lambda: tmp_path)

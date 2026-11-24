@@ -64,6 +64,10 @@ class GEPAOptimizer:
             "max_text_length": self.config.max_text_length,
             "max_positive_examples": self.config.max_positive_examples,
         }
+        # SPEC-104 FR-005 / FR-013: el envoltorio de reflexion (`CheckedLM`) recibe el
+        # callback `on_proposal_start` de GEPA para usar la iteracion como case_id.
+        if hasattr(reflection_lm, "on_proposal_start"):
+            optional_params["gepa_kwargs"] = {"callbacks": [reflection_lm]}
         supported = set(inspect.signature(dspy.GEPA.__init__).parameters)
         applied = {k: v for k, v in optional_params.items() if k in supported}
         dropped = [k for k in optional_params if k not in supported]

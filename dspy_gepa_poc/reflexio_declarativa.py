@@ -31,9 +31,12 @@ from shared.display import (
     print_step,
     print_summary,
 )
+from shared.display.formatting import format_abort_error, format_metric_line
+from shared.llm import RunAborted, get_failure_tracker
 from shared.llm.usage import get_tracker, record_dspy_history
 from shared.logging.metadata import MetadataManager, collect_model_info, generate_seed
 from shared.paths import get_dspy_paths
+from shared.scoring import MetricSummary, paired_delta, summarize
 
 # Total de pasos del pipeline canonico (compartido con gepa_standalone).
 TOTAL_STEPS = 7
@@ -42,6 +45,19 @@ ENGINE = "DSPY+GEPA"
 
 # Scores <= 1.0 are normalized (0.0-1.0), > 1.0 are raw percentages
 NORMALIZED_SCORE_MAX = 1.0
+# `Evaluate` reporta en porcentaje (score de la metrica x 100, 2 decimales): el CSV y
+# run.json conservan esa unidad (SC-006).
+_PERCENT = 100
+
+
+def _percent(score: float | None) -> float | None:
+    """Score normalizado a la unidad de `Evaluate` (porcentaje); None se conserva."""
+    return None if score is None else round(score * _PERCENT, 2)
+
+
+def _csv_score(score: float | None) -> float | str:
+    """Una metrica sin casos evaluados va al CSV como "N/A", nunca como 0.0 (FR-003)."""
+    return "N/A" if score is None else score
 
 
 def _coerce_candidate(candidate: object) -> dict[str, str]:
@@ -118,8 +134,20 @@ class ReflexioDeclarativa:
         log_ok(f"Config loaded: {_case.get('title', _case['name'])}")
         log_info(f"Results dir: {self.results_dir}")
 
+    def abort_message(self, exc: RunAborted) -> str:
+        """Mensaje de una corrida abortada (FR-006), con el modelo del rol que fallo."""
+        configs = {
+            "task": getattr(self, "task_config", None),
+            "reflection": getattr(self, "reflection_config", None),
+        }
+        config = configs.get(exc.failure.rol)
+        return format_abort_error(exc, config.model if config is not None else None)
+
     def setup_models(self):
         """Configure Task and Reflection LMs with connection validation."""
+        # SPEC-104: contador de fallas limpio por corrida (la seccion `failures` del
+        # YAML que lo configura es de 4c). Lo usan `run()` y `scripts/baseline_only.py`.
+        get_failure_tracker().reset()
         self.task_config = LLMConfig.from_env("task")
         self.reflection_config = LLMConfig.from_env("reflection")
 
@@ -473,11 +501,9 @@ class ReflexioDeclarativa:
         evaluator_val = Evaluate(
             devset=self.valset, metric=self.metric, num_threads=num_threads, display_progress=True
         )
-        baseline_score, baseline_range = self._eval_repeated(evaluator_val, self.student)
-        print_kv(
-            "Baseline accuracy",
-            f"{self._format_score(baseline_score)} (rango {baseline_range:.1f} pp)",
-        )
+        baseline, baseline_range = self._eval_repeated(evaluator_val, self.student)
+        print_kv("Baseline accuracy", format_metric_line(baseline, baseline_range))
+        get_failure_tracker().check_abort()
 
         # STEP 6: Optimization
         print_step(6, TOTAL_STEPS, "GEPA OPTIMIZATION")
@@ -488,6 +514,9 @@ class ReflexioDeclarativa:
         self.optimized_student = optimizer.compile(
             student=self.student, trainset=self.trainset, valset=self.valset
         )
+        # FR-006: GEPA atrapa las excepciones de la tarea y de la reflexion; el corte es
+        # por estado, consultado tras cada paso.
+        get_failure_tracker().check_abort()
 
         # Evolucion (mejor de cada etapa) y estadisticas de busqueda, leidas del
         # detailed_results de GEPA. Unifica la vision con gepa_standalone.
@@ -543,15 +572,11 @@ class ReflexioDeclarativa:
         print_prompt("PROMPT OPTIMIZADO", final_instructions)
 
         log_info(f"Midiendo desempeno del mejor prompt en val (k={self.eval_repeats})...")
-        optimized_score, optimized_range = self._eval_repeated(
-            evaluator_val, self.optimized_student
-        )
+        optimized, optimized_range = self._eval_repeated(evaluator_val, self.optimized_student)
         # Predicciones REALES del eval optimizado de val (para el dump fiel, sin re-llamar).
         self._val_predictions = self._last_eval_results
-        print_kv(
-            "Optimized (val)",
-            f"{self._format_score(optimized_score)} (rango {optimized_range:.1f} pp)",
-        )
+        print_kv("Optimized (val)", format_metric_line(optimized, optimized_range))
+        get_failure_tracker().check_abort()
 
         if len(self.testset) > 0:
             log_info(f"Verificando generalizacion en test (k={self.eval_repeats})...")
@@ -561,29 +586,30 @@ class ReflexioDeclarativa:
                 num_threads=num_threads,
                 display_progress=True,
             )
-            test_score, test_range = self._eval_repeated(evaluator_test, self.optimized_student)
+            test, test_range = self._eval_repeated(evaluator_test, self.optimized_student)
             # Predicciones REALES del eval de test (para el dump fiel, sin re-llamar).
             self._test_predictions = self._last_eval_results
-            print_kv(
-                "Test accuracy",
-                f"{self._format_score(test_score)} (rango {test_range:.1f} pp)",
-            )
+            print_kv("Test accuracy", format_metric_line(test, test_range))
+            get_failure_tracker().check_abort()
         else:
             log_warn("No test set available. Skipping robustness test.")
-            test_score = 0.0
-            test_range = 0.0
+            test = summarize([])
 
+        # FR-003: delta pareado sobre los casos de val evaluados con ambos prompts.
+        delta = paired_delta(baseline, optimized)
+        self.metric_summaries = {"baseline": baseline, "optimized": optimized, "test": test}
+        self.paired_delta = delta
         self.prompt_changed = prompt_changed
-        self.effective_delta = (optimized_score - baseline_score) if prompt_changed else 0.0
-        self.save_results(baseline_score, optimized_score, test_score)
+        self.effective_delta = _percent(delta.delta) if prompt_changed else 0.0
+
+        # FR-006: una corrida abortada no llega a save_results (ni al CSV).
+        get_failure_tracker().check_abort()
+        self.save_results(_percent(baseline.score), _percent(optimized.score), _percent(test.score))
 
         # Resumen final unificado (mismo formato que gepa_standalone).
         print_summary(
-            metrics={
-                "Baseline": baseline_score,
-                "Optimized": optimized_score,
-                "Test": test_score,
-            },
+            metrics={"Baseline": baseline, "Optimized": optimized, "Test": test},
+            delta=delta,
             config={
                 "Task LM": self.task_config.model,
                 "Reflection LM": self.reflection_config.model,
@@ -653,7 +679,12 @@ class ReflexioDeclarativa:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         log_ok(f"GEPA candidates saved: {path} ({payload['num_candidates']} candidatos)")
 
-    def save_results(self, baseline_score: float, optimized_score: float, test_score: float):
+    def save_results(
+        self,
+        baseline_score: float | None,
+        optimized_score: float | None,
+        test_score: float | None,
+    ):
         """Save the optimized module and config."""
         log_info(f"Saving results to {self.results_dir}...")
 
@@ -726,9 +757,9 @@ class ReflexioDeclarativa:
                 "budget_type": self.config.gepa.auto_budget,
                 "max_calls": self.config.gepa.max_metric_calls,
                 "budget": self.config.gepa.max_metric_calls,
-                "baseline_score": baseline_score,
-                "optimized_score": optimized_score,  # Best Validation Score
-                "test_score": test_score,  # Held-out Test Score
+                "baseline_score": _csv_score(baseline_score),
+                "optimized_score": _csv_score(optimized_score),  # Best Validation Score
+                "test_score": _csv_score(test_score),  # Held-out Test Score
                 "run_dir": str(self.results_dir),
                 "tokens_task": usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
                 "tokens_reflection": (
@@ -774,13 +805,31 @@ class ReflexioDeclarativa:
             return {}
         return snapshot
 
-    def _eval_repeated(self, evaluator, student) -> tuple[float, float]:
+    @staticmethod
+    def case_results(result) -> list[tuple]:
         """
-        Ejecuta evaluator(student) k veces y devuelve (media, rango). Si k=1,
-        comportamiento equivalente al legacy con rango=0.
+        `(case_id, score, evaluated)` por caso de un `EvaluationResult` (D6).
+
+        `EvaluationResult.results` es una lista de `(example, prediction, score)`. El
+        caso es NE si su prediccion es una `FailedCallPrediction` no evaluada; su
+        score 0.0 es solo el valor tecnico para GEPA y no entra a las metricas.
+        """
+        return [
+            (getattr(example, "case_id", None), float(score), getattr(pred, "evaluated", True))
+            for example, pred, score in result.results
+        ]
+
+    def _eval_repeated(self, evaluator, student) -> tuple[MetricSummary, float]:
+        """
+        Ejecuta evaluator(student) k veces y devuelve `(resumen, rango)`.
+
+        El resumen (SPEC-104 FR-003) promedia solo los casos evaluados y trae
+        `n_evaluados/n_total`. El rango (puntos porcentuales) es la dispersion entre
+        repeticiones de la media de sus casos evaluados; con k=1 es 0.
         """
         k = max(1, int(getattr(self, "eval_repeats", 1)))
-        scores: list[float] = []
+        repeats: list[list[tuple]] = []
+        means: list[float] = []
         self._last_eval_results = None
         for _ in range(k):
             result = evaluator(student)
@@ -789,10 +838,13 @@ class ReflexioDeclarativa:
             # poder volcar las predicciones REALES del eval (las que dieron el score) sin
             # re-llamar al modelo. Con k>1 corresponden a una de las pasadas (no a la media).
             self._last_eval_results = getattr(result, "results", None)
-            scores.append(self._to_float_score(result))
-        mean = sum(scores) / len(scores)
-        rng = max(scores) - min(scores) if len(scores) > 1 else 0.0
-        return mean, rng
+            cases = self.case_results(result)
+            repeats.append(cases)
+            scored = [score for _, score, evaluated in cases if evaluated]
+            if scored:
+                means.append(sum(scored) / len(scored))
+        rng = (max(means) - min(means)) * _PERCENT if len(means) > 1 else 0.0
+        return summarize(repeats), rng
 
     @staticmethod
     def _to_float_score(score_value) -> float:
@@ -829,6 +881,10 @@ def main():
     except LLMConnectionError as e:
         # Error ya formateado, solo imprimir y salir
         print(str(e), file=sys.stderr)
+        sys.exit(1)
+    except RunAborted as e:
+        # SPEC-104 FR-006: corrida abortada por el contador de fallas.
+        log_error(optimizer.abort_message(e))
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n\nOptimizacion cancelada por el usuario.")

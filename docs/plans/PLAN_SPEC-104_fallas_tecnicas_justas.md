@@ -44,7 +44,7 @@ aca solo se ajusta la referencia.
 | | 3d Juez de RAG con JSON en el prompt, validacion de rango y reintentos | FR-009 | Sonnet 5.5 | hecho (e1a3017) |
 | | 3e `dspy_gepa_poc`: generaliza `empty_response.py` a fallas clasificadas, atribucion, feedback de falla externa, conteo una vez por caso pese al fallback de adapters | FR-002, FR-004, FR-007, FR-010, FR-012, SC-001, SC-008 | Opus 5.5 | hecho (75cd319) |
 | 4 Metricas y orquestacion | 4a Agregacion sobre casos evaluados y delta pareado en `shared/scoring` (incluye `eval_repeats` y `n_evaluados == 0`) | FR-003, SC-002, SC-007 | Sonnet 5.5 | hecho (a7a3bf2) |
-| | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | pendiente |
+| | 4b Orquestadores: aborto por estado tras cada paso y antes de `save_results()`; reporte `n_evaluados / n_total`; sin segunda evaluacion de test (FR-014); `baseline_only.py` | FR-003, FR-006, FR-014, SC-004 | Sonnet 5.5 | hecho (hash pendiente) |
 | | 4c Seccion `failures` del YAML validada en `BaseConfigValidator`; `run.json` con estado, conteos y casos `entrada_dato`; corrida abortada sin fila de CSV | FR-006, FR-008, SC-004, SC-005 | Sonnet 5.5 | pendiente |
 | 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | pendiente |
 | | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | pendiente |
@@ -836,6 +836,54 @@ anota como bloqueo y no commitea.
   (cableado del callback de reflexion, decidido tras 2b),
   `shared/display/formatting.py` (solo si el reporte vive ahi), tests de los
   orquestadores.
+- Cierre de 4b (Sonnet 5.5, 2026-11-24). Sin bloqueos. `ci_local.sh` en verde
+  (2211 tests). Implementado:
+  - `shared/display/formatting.py`: `print_summary` acepta `MetricSummary` y
+    `delta` (`PairedDelta`: "Improvement (pareado)" con ambos scores y
+    `n_pareados`); `format_metric_line` y `format_abort_error` (mensaje de
+    `RunAborted` mas la sugerencia de effort solo si `resolve_anthropic_family`
+    dice que el modelo del rol lo acepta).
+  - Ambos orquestadores: `reset()` del contador al arrancar (`setup_models` en
+    DSPy, junto al reset de uso en `gepa_standalone`), `check_abort()` tras
+    baseline, optimizacion, val y test y antes de `save_results()`, metricas
+    como `MetricSummary` (`self.metric_summaries`, `self.paired_delta`),
+    `effective_delta` pareado, `main` captura `RunAborted` (mensaje y exit 1) y
+    `abort_message(exc)` por orquestador. `gepa_standalone` pasa
+    `callbacks=[reflection_lm]` a `gepa.optimize`; `dspy_gepa_poc/optimizer.py`
+    pasa `gepa_kwargs={"callbacks": [reflection_lm]}` si el LM tiene
+    `on_proposal_start` (`case_id` = iteracion de GEPA, FR-013).
+  - FR-014: `_eval_repeated` de `gepa_standalone` devuelve tambien la ultima
+    `EvaluationBatch` y `print_detailed_results` la reutiliza (se elimino la
+    evaluacion extra de test).
+  - `baseline_only.py`: val y test con `n_evaluados/n_total` (via
+    `ReflexioDeclarativa.case_results`), estado consultado tras cada paso,
+    `RunAborted` -> mensaje y codigo 1.
+  - Tests nuevos: `tests/test_universal_optimizer_failures.py` (pipeline real con
+    `litellm.completion` simulado con `make_completion_response`, GEPA real para
+    el `case_id` de reflexion) y `tests/test_dspy_orchestrator_failures.py`
+    (`Evaluate` y `dspy.GEPA` reales). Unica edicion a un test existente: una
+    linea en `tests/test_gepa_adapters_failures.py` (el pipeline simulado de
+    `TestOrchestratorSetsBaseline` fija `_summary_delta`).
+  Decisiones tomadas dentro del plan (sin tocar la spec):
+  - Unidades: en `dspy_gepa_poc` los `MetricSummary` quedan en fraccion (0-1) y
+    al CSV / `save_results` van convertidos a la unidad de `Evaluate`
+    (porcentaje, 2 decimales) para no cambiar la unidad historica (SC-006).
+    `gepa_standalone` conserva fracciones, como antes.
+  - Una metrica sin casos evaluados va al CSV como `"N/A"` (el marcador de
+    faltante que ya usa `_prepare_row`; sin cambio de esquema) y como `None` en
+    `results.json`. Con 0 intentos de test (DSPy sin test set) la metrica es
+    `summarize([])` (0/0, "sin casos evaluados"), ya no 0.0.
+  - `results.json` de `gepa_standalone` gana las claves `metrics` y
+    `paired_delta`; el resto no cambia.
+  Notas para fases siguientes:
+  - 4c: `run()` propaga `RunAborted` sin escribir `run.json`; 4c debe escribirlo
+    con estado `aborted` (en `run()`, antes de relanzar) y con `status` y
+    `n_evaluados / n_total` desde `self.metric_summaries` (ya disponible en una
+    corrida completada). La seccion `failures` del YAML llama a
+    `FailureTracker.configure` tras el `reset()` de 4b.
+  - 5a: `print_detailed_results` (tabla de test de `gepa_standalone`) muestra un
+    caso NE como 0%; no se toco (fuera de FR-003).
+  - `baseline_only.py` sigue ignorando `eval_repeats` (como antes).
 - 4c. Archivos: `shared/validation/base_validator.py`,
   `gepa_standalone/config_schema.py`, `dspy_gepa_poc/config_schema.py`,
   `shared/logging/metadata.py`, `gepa_standalone/universal_optimizer.py` y

@@ -23,10 +23,31 @@ from shared.display import (
     print_kv,
     print_section,
 )
+from shared.display.formatting import format_metric_line
+from shared.llm import RunAborted, get_failure_tracker
+from shared.scoring import MetricSummary, summarize
+
+
+def _evaluate(evaluator, student) -> MetricSummary:
+    """Baseline sobre sus casos evaluados, con `n_evaluados/n_total` (SPEC-104 FR-003)."""
+    result = evaluator(student)
+    summary = summarize([ReflexioDeclarativa.case_results(result)])
+    # FR-006: tras cada paso se consulta el estado del contador.
+    get_failure_tracker().check_abort()
+    return summary
 
 
 def run_baseline(config_path: Path) -> int:
     orchestrator = ReflexioDeclarativa(str(config_path))
+    try:
+        return _run_baseline(orchestrator)
+    except RunAborted as e:
+        # SPEC-104 FR-006: corrida abortada por el contador de fallas.
+        log_error(orchestrator.abort_message(e))
+        return 1
+
+
+def _run_baseline(orchestrator: ReflexioDeclarativa) -> int:
     orchestrator.setup_models()
     orchestrator.load_data()
     orchestrator.create_module_and_metric()
@@ -45,8 +66,8 @@ def run_baseline(config_path: Path) -> int:
         num_threads=num_threads,
         display_progress=True,
     )
-    baseline_val = ReflexioDeclarativa._to_float_score(evaluator_val(orchestrator.student))
-    print_kv("Baseline VAL", ReflexioDeclarativa._format_score(baseline_val))
+    baseline_val = _evaluate(evaluator_val, orchestrator.student)
+    print_kv("Baseline VAL", format_metric_line(baseline_val, 0.0))
 
     print_section("BASELINE EN TEST SET")
     if not orchestrator.testset:
@@ -60,12 +81,12 @@ def run_baseline(config_path: Path) -> int:
         num_threads=num_threads,
         display_progress=True,
     )
-    baseline_test = ReflexioDeclarativa._to_float_score(evaluator_test(orchestrator.student))
-    print_kv("Baseline TEST", ReflexioDeclarativa._format_score(baseline_test))
+    baseline_test = _evaluate(evaluator_test, orchestrator.student)
+    print_kv("Baseline TEST", format_metric_line(baseline_test, 0.0))
 
     print_section("RESUMEN")
-    print_kv("Val", ReflexioDeclarativa._format_score(baseline_val))
-    print_kv("Test", ReflexioDeclarativa._format_score(baseline_test))
+    print_kv("Val", f"{baseline_val.format_score()} ({baseline_val.ratio_label()})")
+    print_kv("Test", f"{baseline_test.format_score()} ({baseline_test.ratio_label()})")
     log_info("Resultados NO se guardan en results/ (modo baseline-only).")
     return 0
 

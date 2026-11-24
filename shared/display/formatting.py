@@ -21,6 +21,8 @@ import sys
 from collections.abc import Iterable
 from typing import Any
 
+from shared.scoring import MetricSummary, PairedDelta
+
 # Ancho estandar de separadores. 72 cols entra en cualquier terminal moderno.
 WIDTH = 72
 
@@ -149,9 +151,16 @@ def print_summary(
     task_model: str | None = None,
     reflection_model: str | None = None,
     budget_used: int | None = None,
+    delta: PairedDelta | None = None,
 ) -> None:
     """
     Resumen final parametrico.
+
+    SPEC-104 FR-003: un valor de `metrics` puede ser un `MetricSummary` (score
+    sobre sus casos evaluados, con `n_evaluados/n_total`; sin casos evaluados se
+    muestra "sin casos evaluados", nunca 0.0). Con `delta` (`PairedDelta`) la
+    mejora es el delta pareado sobre los casos de val evaluados con ambos prompts,
+    junto a los dos scores sobre esos casos.
 
     Modo nuevo (recomendado):
         print_summary(
@@ -191,10 +200,12 @@ def print_summary(
     if metrics:
         print("\nMetrics:")
         for label, value in metrics.items():
-            print_kv(label, _fmt_score(value))
+            print_kv(label, _fmt_metric(value))
 
         # Mejora baseline -> optimized si ambos estan presentes.
-        if "Baseline" in metrics and "Optimized" in metrics:
+        if delta is not None:
+            print_kv("Improvement (pareado)", _fmt_paired_delta(delta))
+        elif "Baseline" in metrics and "Optimized" in metrics:
             delta = (metrics["Optimized"] - metrics["Baseline"]) * (
                 100 if metrics["Baseline"] <= 1.0 else 1
             )
@@ -217,6 +228,53 @@ def _fmt_score(value: float) -> str:
     if v <= 1.0:
         return f"{v * 100:.1f}%"
     return f"{v:.1f}%"
+
+
+def _fmt_metric(value: Any) -> str:
+    """Un `MetricSummary` con su `n_evaluados/n_total`; cualquier otro valor como score."""
+    if isinstance(value, MetricSummary):
+        return f"{value.format_score()} ({value.ratio_label()} casos evaluados)"
+    return _fmt_score(value)
+
+
+def _fmt_paired_delta(delta: PairedDelta) -> str:
+    if delta.delta is None:
+        return delta.format_delta()
+    return (
+        f"{delta.format_delta()} sobre {delta.n_pareados} casos pareados "
+        f"(baseline {_fmt_score(delta.baseline_score)} -> "
+        f"optimizado {_fmt_score(delta.optimized_score)})"
+    )
+
+
+def format_metric_line(summary: MetricSummary, range_pp: float) -> str:
+    """Linea de una metrica con rango entre repeticiones y `n_evaluados/n_total` (FR-003)."""
+    ne = f", {summary.ne_repeats} repeticiones NE" if summary.ne_repeats else ""
+    if summary.score is None:
+        return f"{summary.format_score()} ({summary.ratio_label()}{ne})"
+    return (
+        f"{summary.format_score()} ({summary.ratio_label()} casos evaluados, "
+        f"rango {range_pp:.1f} pp{ne})"
+    )
+
+
+def format_abort_error(exc: Any, model: str | None = None) -> str:
+    """
+    Mensaje de una corrida abortada por el contador de fallas (SPEC-104 FR-006).
+
+    `exc` es un `RunAborted`: su mensaje ya nombra clase, rol, conteo y causa, y
+    para `presupuesto` sugiere subir `max_tokens`. Aca se agrega, solo si el
+    `model` del rol lo acepta (`docs/LLM_CONFIG.md`), la sugerencia de bajar el
+    effort.
+    """
+    from shared.llm.config import resolve_anthropic_family
+
+    message = str(exc)
+    if getattr(exc.failure.clase, "value", None) == "presupuesto" and model:
+        family = resolve_anthropic_family(model)
+        if family is not None and family.efforts is not None:
+            message += " Bajar el effort del rol (`LLM_EFFORT_<ROL>`)."
+    return message
 
 
 def print_detailed_results(eval_batch) -> None:
