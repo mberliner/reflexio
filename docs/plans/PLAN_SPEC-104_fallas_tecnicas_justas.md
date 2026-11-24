@@ -49,7 +49,7 @@ aca solo se ajusta la referencia.
 | 5 Regresion y docs | 5a Regresion sin fallas (SC-006) y logs vs `run.json` (SC-005) en ambos subproyectos con LLM simulado | SC-005, SC-006 | Opus 5.5 | hecho (6700f3f) |
 | | 5b `docs/GEPA_MANEJO_ERRORES.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md` | FR-016 | Sonnet 5.5 | hecho (8d771ab) |
 | 6 Verificacion real (sesion aparte, opcional) | Corrida corta con API real por proveedor disponible: sin fallas (SC-006) y con `max_tokens` forzado bajo (presupuesto y aborto) | SC-004, SC-006 | Sonnet 5.5 | pendiente |
-| Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | pendiente |
+| Cierre | Code review integral, `[SDD-Check]`, cierre de D-019 y D-021, spec a `active` | todos | Opus 5.5 | en progreso (code review: 0243b69, 9fc9a0d, 98c98db, d9258f8, ae7fec4, e174a4f; faltan `[SDD-Check]`, D-019/D-021 y `active` tras fase 6) |
 
 ## Dependencias
 
@@ -1134,3 +1134,28 @@ Pendientes para la parada de fin de fase 5 / Cierre (decision del usuario):
    corrige despues del Cierre, aparte.
 7. El login de `claude` (subfases Opus) vence entre 2026-11-25 y 2026-11-28:
    `claude auth login` antes del Cierre.
+
+Code review integral de SPEC-104 (2026-11-24, rango `35c5b1c..fc3b93e`, parte del
+Cierre): hallazgos aprobados resueltos con test RED previo y `ci_local.sh` verde
+(2294 passed, 98.24%):
+- `0243b69` (H-02): anular `_check_truncation` de `dspy.LM` en `CheckedLM` y
+  proteger `response is None` antes de `super()._process_lm_response`.
+- `9fc9a0d` (H-01, H-04, H-05, H-06): `run_evaluate` en `dspy_gepa_poc` (evita
+  `Execution cancelled` sobre `max_errors` y espera hilos en vuelo),
+  `_SafeChatAdapter`/`_SafeJSONAdapter` (propaga `LLMCallFailure`/`RunAborted`
+  sin caer a `json_object`), lock en `check_abort`/`aborted`/`infra_retries`/
+  `configure` y `flush_abort` en `baseline_only`, `check_abort` entre
+  repeticiones de `_eval_repeated` y antes/despues de `record_attempt`/`record`
+  en adapters de `gepa_standalone`.
+- `98c98db` (H-07): sugerencia de `presupuesto` basada en `clave` (no
+  `failure.clase`) y chequeo `_is_anthropic(model)` en `format_abort_error`.
+- `d9258f8` (H-03): `UniversalOptimizer.load_data()` delega la inferencia en
+  `load_gepa_data` y `get_dataset_info` excluye `case_id`.
+- `ae7fec4` (H-08): FR-008, `docs/METADATA_REPRODUCIBILIDAD.md` y
+  `MetadataManager.create_run` persisten `paired_delta` en `run.json` en ambos
+  subproyectos.
+- `e174a4f` (H-09): eliminado `log_empty_response` y el DEBUG duplicado en
+  `complete_text` y `CheckedLM._process_lm_response`.
+
+Pendiente tras fase 6 (API real): `[SDD-Check]`, cierre de D-019/D-021 y paso de
+`specs/SPEC-104-fallas-tecnicas-justas.md` a `active`.
