@@ -483,7 +483,7 @@ se diga otra cosa.
 |---|---|
 | FR-001 | `shared/llm/failures.py`, `shared/llm/call.py` (clasificador y contador, vigente); `tests/test_single_call_point.py` (punto unico de llamada, vigente); conteo por los adapters de `gepa_standalone` vigente (3c); envoltorio del programa y metrica de `dspy_gepa_poc` (`dspy_gepa_poc/call_failures.py`; `tests/test_dspy_call_failures.py`, vigente, 3e) |
 | FR-002 | `gepa_standalone/adapters/*.py`, `shared/llm/attribution.py`; `tests/test_gepa_adapters_failures.py` (tratamiento por clase en los cuatro adapters de `gepa_standalone`, vigente); `dspy_gepa_poc/call_failures.py` (`FailedCallPrediction`, NE o score 0 por clase); `tests/test_dspy_call_failures.py`, `tests/test_empty_response_dspy.py` (vigente, 3e) |
-| FR-003 | pendiente |
+| FR-003 | parcial: `shared/scoring/aggregation.py` (`summarize`, `paired_delta`: metrica solo sobre casos evaluados, `n_evaluados / n_total`, delta pareado, "sin casos evaluados", `eval_repeats`; `tests/test_scoring_aggregation.py`, vigente, 4a); uso en los orquestadores, reporte y `run.json` pendiente (4b, 4c) |
 | FR-004 | `gepa_standalone/adapters/*.py`, `shared/llm/attribution.py`, `shared/llm/call.py` (`capture_finish_reason`, `finish_reason` del baseline sano), `shared/llm/failures.py`; `tests/test_attribution.py`, `tests/test_gepa_adapters_failures.py` (`TestAttribution`, vigente); `dspy_gepa_poc/call_failures.py` (probe con el programa baseline, `finish_reason` del baseline sano desde el historial del LM); `tests/test_dspy_call_failures.py` (`TestAttribution`, `TestGepaEndToEnd`, vigente, 3e) |
 | FR-005 | `shared/llm/reflection.py` (`ReflectionGuard`, `reflection_format_failure`), `gepa_standalone/core/llm_factory.py` (`ReflectionLM`), `shared/llm/dspy_lm.py` (`CheckedLM` rol `reflection`); `tests/test_reflection_guard.py` (verificado contra `gepa==0.0.27` y `dspy==3.2.1`, vigente); `case_id` = iteracion de GEPA via callback, cableado en los orquestadores pendiente (4b) |
 | FR-006 | pendiente |
@@ -498,11 +498,11 @@ se diga otra cosa.
 | FR-015 | `tests/litellm_failure_payloads.py`, `tests/test_litellm_failure_mapping.py` (evidencia del comportamiento de LiteLLM, vigente); `shared/llm/failures.py`, `tests/test_failures.py` (clasificador, vigente) |
 | FR-016 | pendiente |
 | SC-001 | `tests/test_gepa_adapters_failures.py` (fallas inyectadas en los cuatro adapters de `gepa_standalone`: ningun caso desaparece, vigente); `tests/test_dspy_call_failures.py` (`TestEveryClassIsCountedOnce`: los 99 payloads con falla via `Evaluate` en `dspy_gepa_poc`, vigente, 3e) |
-| SC-002 | pendiente |
+| SC-002 | parcial: `tests/test_scoring_aggregation.py` (`test_sc002_ne_cases_do_not_change_metric`, la agregacion coincide con la de los mismos casos evaluados y da `27/30`, vigente, 4a); reporte de los orquestadores con fallas inyectadas pendiente (4b) |
 | SC-003 | `tests/test_reflection_guard.py` (`gepa.optimize` y `dspy.GEPA` reales: propuesta con respuesta 200 `presupuesto`, `filtro_salida`, `sin_texto` o `formato` (y `configuracion` en `gepa.optimize`) no crea ni evalua candidato; las 99 fallas de capa 1 se lanzan desde el envoltorio en ambos subproyectos, vigente) |
 | SC-004 | pendiente |
 | SC-005 | pendiente |
 | SC-006 | pendiente |
-| SC-007 | pendiente |
+| SC-007 | `shared/scoring/aggregation.py` (`paired_delta`); `tests/test_scoring_aggregation.py` (`TestPairedDelta`: delta sobre la interseccion, distinto del delta de promedios con fallas asimetricas, vigente, 4a) |
 | SC-008 | `tests/test_gepa_adapters_failures.py` (`TestReflectiveDatasetExcludesNE`: un caso NE nunca entra al dataset reflexivo de `gepa_standalone`, vigente); `tests/test_dspy_call_failures.py` (`TestGepaEndToEnd`: con `dspy.GEPA` real el caso NE no llega al Profesor o llega como falla externa, vigente, 3e) |
 | SC-009 | payloads en `tests/litellm_failure_payloads.py` (102 casos, campo de clase esperada incluido, vigente); `tests/test_failures.py` (clasificador sobre los 102 payloads, vigente); `tests/test_single_call_point.py` (1 llamada HTTP por caso via `dspy.Predict`, 1 + reintentos si es `infraestructura`, vigente) |

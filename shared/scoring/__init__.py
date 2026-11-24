@@ -6,6 +6,13 @@ misma logica de match sin que un paquete importe al otro (ver invariante de
 paquetes hermanos en AGENTS.md).
 """
 
+from shared.scoring.aggregation import (
+    SIN_CASOS_EVALUADOS,
+    MetricSummary,
+    PairedDelta,
+    paired_delta,
+    summarize,
+)
 from shared.scoring.field_match import (
     VALID_FIELD_MODES,
     compare_exact,
@@ -19,6 +26,11 @@ from shared.scoring.field_match import (
 )
 
 __all__ = [
+    "SIN_CASOS_EVALUADOS",
+    "MetricSummary",
+    "PairedDelta",
+    "paired_delta",
+    "summarize",
     "VALID_FIELD_MODES",
     "compare_exact",
     "compare_fuzzy",
