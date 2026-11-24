@@ -42,7 +42,7 @@ from shared.llm import (
     get_failure_tracker,
 )
 from shared.llm.dspy_lm import CheckedLM
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, project_warnings
 
 TASK_MODEL = "openai/gpt-4o-mini"
 REFLECTION_MODEL = "openai/gpt-4o"
@@ -197,7 +197,7 @@ class TestCheckedLM:
         assert [(r.levelno, r.message) for r in call_layer] == [
             (logging.DEBUG, f"Respuesta sin texto del LLM (rol=reflection, finish_reason={reason})")
         ]
-        warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        warnings = project_warnings(caplog)
         assert len(warnings) == 1
         assert "rol=reflection" in warnings[0].message
         assert f"finish_reason={reason}" in warnings[0].message
@@ -215,7 +215,7 @@ class TestCheckedLM:
         assert exc_info.value.role == "task"
         assert exc_info.value.finish_reason == reason
         assert f"rol=task, finish_reason={reason}" in caplog.text
-        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
+        assert project_warnings(caplog) == []
         assert get_failure_tracker().snapshot()["counts"] == {}
         assert len(lm.history) == 1
 
@@ -362,10 +362,6 @@ def _task_empty_on_q1(request):
     return _task_text("yes"), "stop"
 
 
-def _failure_warnings(caplog):
-    return [r for r in caplog.records if r.levelno >= logging.WARNING]
-
-
 class TestTaskInGepa:
     @pytest.mark.parametrize("capture_traces", [False, True])
     def test_adapter_case_is_ne_and_counted_once(
@@ -399,7 +395,7 @@ class TestTaskInGepa:
         snapshot = get_failure_tracker().snapshot()
         assert snapshot["counts"] == {"presupuesto": {"task": 1}}
         assert snapshot["attempts"]["task"] == len(batch)
-        warnings = _failure_warnings(caplog)
+        warnings = project_warnings(caplog)
         assert len(warnings) == 1
         assert "rol=task clave=presupuesto atribucion=externa" in warnings[0].message
         assert "finish_reason=length case_id=val:1" in warnings[0].message

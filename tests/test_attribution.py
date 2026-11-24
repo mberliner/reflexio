@@ -26,7 +26,7 @@ from shared.llm import (
     get_failure_tracker,
     is_evaluated,
 )
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, project_warnings
 from tests.litellm_failure_payloads import ALL_FAILURE_CASES
 from tests.test_litellm_failure_mapping import intercept_httpx
 
@@ -314,7 +314,7 @@ def test_attribution_logs_both_finish_reasons_once(caplog):
     )
     with caplog.at_level(logging.WARNING):
         get_failure_tracker().record(failure)
-    records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    records = project_warnings(caplog)
     assert len(records) == 1
     message = records[0].getMessage()
     assert "finish_reason=length" in message

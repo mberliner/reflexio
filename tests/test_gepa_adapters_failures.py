@@ -23,7 +23,7 @@ from gepa_standalone.adapters.simple_extractor_adapter import SimpleExtractorAda
 from gepa_standalone.adapters.simple_rag_adapter import SimpleRAGAdapter
 from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from shared.llm import RunAborted, get_failure_tracker
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, project_warnings
 from tests.litellm_failure_payloads import ALL_FAILURE_CASES
 from tests.test_litellm_failure_mapping import intercept_httpx
 
@@ -576,7 +576,7 @@ class TestFormatFailures:
         assert out["failure"]["clave"] == "formato"
         assert out["evaluated"] is True  # score 0 del candidato (tabla: formato = score 0)
         assert get_failure_tracker().snapshot()["counts"]["formato"]["task"] == 1
-        assert len([r for r in caplog.records if r.levelno == logging.WARNING]) == 1
+        assert len(project_warnings(caplog)) == 1
 
     @pytest.mark.parametrize("reply", ["GREETING", "  greeting\n", "Greeting"])
     def test_classifier_normalizes_before_deciding_format(self, env, reply):

@@ -4,6 +4,7 @@ Shared fixtures for all tests.
 
 import csv
 import json
+import logging
 from unittest.mock import MagicMock
 
 import litellm
@@ -56,6 +57,30 @@ def make_completion_response(
             "total_tokens": prompt_tokens + completion_tokens,
         },
     )
+
+
+PROJECT_LOGGER_ROOTS: frozenset[str] = frozenset({"shared", "dspy_gepa_poc", "gepa_standalone"})
+
+
+def project_warnings(
+    caplog: pytest.LogCaptureFixture,
+    *,
+    include_errors: bool = True,
+) -> list[logging.LogRecord]:
+    """
+    Registros WARNING (o >= WARNING si `include_errors=True`) emitidos por loggers
+    del proyecto (`shared`, `dspy_gepa_poc`, `gepa_standalone`).
+
+    Excluye loggers de terceros (p. ej. `dspy`, `LiteLLM`) que pytest 9.1+ captura
+    en `caplog` aunque tengan `propagate=False`, sin relajar FR-007 (un unico
+    WARNING propio por falla, el de `FailureTracker.record`).
+    """
+    return [
+        r
+        for r in caplog.records
+        if r.name.split(".", 1)[0] in PROJECT_LOGGER_ROOTS
+        and (r.levelno >= logging.WARNING if include_errors else r.levelno == logging.WARNING)
+    ]
 
 
 @pytest.fixture(autouse=True)

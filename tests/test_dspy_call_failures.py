@@ -36,7 +36,7 @@ from dspy_gepa_poc.call_failures import (
     tolerate_call_failures,
 )
 from shared.llm import FailureClass, LLMConfig, LLMFailure, RunAborted, get_failure_tracker
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, project_warnings
 from tests.litellm_failure_payloads import ALL_FAILURE_CASES, PROVIDER_KWARGS, FailurePayloadCase
 from tests.test_litellm_failure_mapping import intercept_httpx
 
@@ -169,10 +169,6 @@ def _adapter(student, metric):
     )
 
 
-def _warnings(caplog):
-    return [r for r in caplog.records if r.levelno == logging.WARNING]
-
-
 class _ListHandler(logging.Handler):
     def __init__(self):
         super().__init__(level=logging.DEBUG)
@@ -217,7 +213,7 @@ class TestEveryClassIsCountedOnce:
         snapshot = get_failure_tracker().snapshot()
         assert sum(sum(by_role.values()) for by_role in snapshot["counts"].values()) == 1
         assert snapshot["attempts"]["task"] == 1
-        warnings = _warnings(caplog)
+        warnings = project_warnings(caplog, include_errors=False)
         assert len(warnings) == 1, [r.message for r in warnings]
         assert f"case_id={example.case_id}" in warnings[0].message
         assert snapshot["aborted"] is (case.spec104_class == "configuracion")
@@ -246,7 +242,7 @@ class TestAttribution:
         assert snapshot["counts"] == {"presupuesto_candidato": {"task": 1}}
         # La llamada de atribucion no cuenta como intento (D5).
         assert snapshot["attempts"]["task"] == 4
-        [warning] = _warnings(caplog)
+        [warning] = project_warnings(caplog)
         assert "clave=presupuesto_candidato atribucion=candidato" in warning.message
         assert "finish_reason=length case_id=val:1 baseline_finish_reason=stop" in warning.message
         if capture_traces:
@@ -365,7 +361,7 @@ class TestFormat:
         # El aviso intermedio del fallback va a DEBUG (FR-007).
         fallback = [r for r in adapter_records.records if "structured output" in r.getMessage()]
         assert fallback and all(r.levelno == logging.DEBUG for r in fallback)
-        [warning] = _warnings(caplog)
+        [warning] = project_warnings(caplog)
         assert "clave=formato" in warning.message
 
 

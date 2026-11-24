@@ -37,7 +37,7 @@ from gepa_standalone.core.llm_factory import ReflectionLM, create_reflection_lm_
 from shared.llm import LLMCallFailure, LLMConfig, RunAborted, get_failure_tracker
 from shared.llm.failures import DEFAULT_INFRA_RETRIES, FailureClass, LLMFailure
 from shared.llm.reflection import reflection_format_failure
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, project_warnings
 from tests.litellm_failure_payloads import (
     ALL_FAILURE_CASES,
     PROVIDER_KWARGS,
@@ -109,9 +109,9 @@ def _assert_iterations_logged(log_text: str, iterations: list[int]) -> None:
 
 
 def _assert_single_warning(caplog: pytest.LogCaptureFixture) -> None:
-    """FR-007: un unico WARNING por falla de reflexion, el de `record`; el log de
+    """FR-007: un unico WARNING propio por falla de reflexion, el de `record`; el log de
     respuesta sin texto de la capa de llamada queda en DEBUG."""
-    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    warnings = [r.getMessage() for r in project_warnings(caplog)]
     assert len(warnings) == 1
     assert warnings[0].startswith("Falla de LLM: rol=reflection")
 

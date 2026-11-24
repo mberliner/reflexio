@@ -28,7 +28,7 @@ from shared.llm import (
     get_failure_tracker,
     response_text,
 )
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, project_warnings
 
 # (contenido, finish_reason normalizado, clase de capa 1 esperada)
 EMPTY_CASES = [
@@ -85,7 +85,7 @@ class TestLmFunctions:
         # WARNING por falla lo emite quien conoce el caso, no la capa de llamada).
         assert "rol=task" in caplog.text
         assert reason in caplog.text
-        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert not project_warnings(caplog)
 
     def test_call_llm_returns_text(self, mock_env, monkeypatch):
         _patch_completion(monkeypatch, "ok")
@@ -164,7 +164,7 @@ class TestAdapters:
         snapshot = get_failure_tracker().snapshot()
         assert snapshot["counts"][key]["task"] == 1
         assert snapshot["attempts"]["task"] == 2
-        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        warnings = project_warnings(caplog)
         assert len(warnings) == 1
         assert "rol=task" in warnings[0].getMessage()
         assert reason in warnings[0].getMessage()
