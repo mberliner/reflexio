@@ -22,6 +22,7 @@ python -m venv .venv             # opcional; necesario si el python del SO no cu
 source .venv/bin/activate        # Unix/macOS
 # .venv\Scripts\Activate.ps1     # Windows (PowerShell)
 pip install -r requirements.txt
+pip install bandit pip-audit     # security del pipeline (el CI los instala aparte)
 ```
 
 ## Pipeline de verificacion local (OBLIGATORIO tras cualquier modificacion)
@@ -37,7 +38,10 @@ cobertura minima 85%):
 
 En Windows invocarlo via git-bash; el script detecta `.venv/Scripts/python.exe` y,
 si no hay venv, usa el python del SO. Pasar el CI local equivale a pasar
-`.github/workflows/ci.yml`. MUST NOT sustituirlo por `pytest`/`ruff check` sueltos:
+`.github/workflows/ci.yml`. Una herramienta obligatoria no instalada (`ruff`,
+`bandit`, `pip-audit`, `pytest`, `coverage`) es un error del pipeline, no un paso
+omitido. La variante `--skip-security` termina en `PASO PARCIAL` y no cumple el
+MUST de arriba. MUST NOT sustituirlo por `pytest`/`ruff check` sueltos:
 eso omite `ruff format --check`, la fase de security y el umbral de cobertura.
 
 ## Comandos sueltos (uso puntual)
