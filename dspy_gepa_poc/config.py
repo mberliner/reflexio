@@ -41,11 +41,6 @@ class GEPAConfig:
     use_merge: bool = True
     max_merge_invocations: int = 5
 
-    # Adapter-specific settings (Default values, can be overridden by YAML)
-    max_text_length: int = 1000
-    max_positive_examples: int = 2
-    extractor_max_positive_examples: int = 0
-
     # Advanced features
     enable_tool_optimization: bool = False
     track_stats: bool = True
@@ -92,16 +87,6 @@ class AppConfig:
                 self.gepa.auto_budget = opt["auto_budget"]
             if "max_metric_calls" in opt:
                 self.gepa.max_metric_calls = opt["max_metric_calls"]
-
-        # Map Adapter settings from YAML
-        if "adapter" in self.raw_config:
-            adp = self.raw_config["adapter"]
-            if "max_text_length" in adp:
-                self.gepa.max_text_length = adp["max_text_length"]
-            if "max_positive_examples" in adp:
-                self.gepa.max_positive_examples = adp["max_positive_examples"]
-            if "extractor_max_positive_examples" in adp:
-                self.gepa.extractor_max_positive_examples = adp["extractor_max_positive_examples"]
 
         # Module and data settings are stored in raw_config for the optimizer/adapter to use
         print(f"Successfully loaded configuration from {path}")

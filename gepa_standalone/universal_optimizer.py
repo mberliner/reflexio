@@ -447,14 +447,6 @@ class UniversalOptimizer:
         rng = (max(means) - min(means)) * 100 if len(means) > 1 else 0.0
         return summarize(repeats), rng, eval_result
 
-    def _has_positive_reflection(self) -> bool:
-        """Determine if this run uses positive reflection."""
-        adapter_type = self.config["adapter"]["type"]
-        if adapter_type in ["extractor", "rag"]:
-            max_pos = self.config["adapter"].get("max_positive_examples", 0)
-            return max_pos > 0
-        return False
-
     def load_prompt(self) -> dict[str, str]:
         """
         Load initial prompt from JSON file.

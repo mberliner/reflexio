@@ -29,7 +29,7 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 |---------|-------|------|-------------|
 | `case` | `name` | string | Slug corto del caso (ver [Criterio unificado `case`](#criterio-unificado-case)) |
 | `case` | `title` | string | Titulo semantico del caso |
-| `module` | `type` | string | Tipo de modulo: `dynamic`, `rule_derived`, `rule_derived_alto`, `pipeline` (los unicos que `reflexio_declarativa.py` ejecuta; ver nota de tipos heredados abajo) |
+| `module` | `type` | string | Tipo de modulo: `dynamic`, `rule_derived`, `rule_derived_alto`, `pipeline` (cualquier otro valor es error de validacion) |
 | `data` | `csv_filename` | string | Archivo CSV en `datasets/` |
 | `data` | `input_column` o `input_columns` | string / list | Columna(s) de entrada del CSV. `input_column` (string, single) o `input_columns` (lista, multi-input); al menos uno requerido |
 | `optimization` | `max_metric_calls` o `auto_budget` | int / string | Al menos uno requerido |
@@ -68,17 +68,12 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 | `models.max_tokens` | int | 1000 | Override de max tokens. Requerido >= 16000 para reasoning models (gpt-5, o1, o3) |
 | `models.cache` | bool | false | Cache de respuestas DSPy (ver `docs/LLM_CONFIG.md`) |
 
-### Adapter (inertes con DSPy 3.2.1)
+### Seccion `adapter`: no soportada
 
-`config.py` lee estos campos, pero `optimizer.py` solo pasa a `dspy.GEPA` los
-parametros que su firma acepta, y la de DSPy 3.2.1 no acepta ninguno de ellos:
-se descartan con un `log_warn` y no tienen efecto. Revisar al actualizar DSPy (D-018).
-
-| Campo | Tipo | Default | Descripcion |
-|-------|------|---------|-------------|
-| `adapter.max_text_length` | int | 1000 | Sin efecto (no truncan el texto en DSPy) |
-| `adapter.max_positive_examples` | int | 2 | Sin efecto |
-| `adapter.extractor_max_positive_examples` | int | 0 | Sin efecto |
+La seccion `adapter` es de `gepa_standalone`. En DSPy el validador la rechaza
+(`dspy.GEPA` 3.2.1 no acepta `max_text_length` ni `max_positive_examples`, asi que
+nunca tuvieron efecto; D-025). Los ejemplos en el prompt se controlan con
+`optimization.use_few_shot` / `few_shot_count`.
 
 ### Parametros de GEPA no configurables por YAML
 
@@ -97,10 +92,8 @@ cambiar el codigo.
 | `rule_derived_alto` | Seccion `signature` completa; el LLM responde sub-hechos y `derive_alto_impacto` deriva `alto_impacto` antes del color (ver `docs/LECCIONES_APRENDIDAS.md`, D-015a) |
 | `pipeline` | Secciones `stages` (lista, >=2 etapas con `name` + `signature`) y `routing` |
 
-Tipos heredados: `config_schema.py` todavia acepta `sentiment`, `extractor` y
-`qa` (este ultimo exige `input_column_context` e `input_column_question`), pero
-`reflexio_declarativa.py` los rechaza en runtime con `Unsupported module type`.
-No usarlos.
+Cualquier otro tipo (incluidos los heredados `sentiment`, `extractor`, `qa`) es
+error de validacion.
 
 ### Pipeline (requerida si `module.type: "pipeline"`)
 

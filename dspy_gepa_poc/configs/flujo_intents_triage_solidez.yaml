@@ -36,9 +36,6 @@ data:
   input_columns:
     - "ficha"
 
-adapter:
-  max_text_length: 4000
-
 optimization:
   max_metric_calls: 60
   predictor_type: "cot"

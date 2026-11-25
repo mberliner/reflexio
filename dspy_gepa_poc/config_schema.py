@@ -66,18 +66,6 @@ class ConfigValidator(BaseConfigValidator):
             "required": [],
             "optional": [],
         },
-        "sentiment": {
-            "required": [],
-            "optional": [],
-        },
-        "extractor": {
-            "required": ["output_columns"],
-            "optional": [],
-        },
-        "qa": {
-            "required": ["input_column_context", "input_column_question"],
-            "optional": ["use_cot"],
-        },
     }
 
     # Dynamic signature fields
@@ -104,6 +92,13 @@ class ConfigValidator(BaseConfigValidator):
         if "signature" in config:
             signature_errors = cls._validate_signature(config["signature"])
             errors.extend(signature_errors)
+
+        # La seccion `adapter` es de gepa_standalone: en DSPy no tiene efecto (D-025).
+        if "adapter" in config:
+            errors.append(
+                "Section 'adapter' is not supported in dspy_gepa_poc (it only applies to "
+                "gepa_standalone); remove it. See docs/YAML_CONFIG_REFERENCE.md"
+            )
 
         # Pipeline-specific validation
         module_type = config.get("module", {}).get("type")

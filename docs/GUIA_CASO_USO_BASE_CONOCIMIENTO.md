@@ -74,9 +74,7 @@ case:
 adapter:
   type: "rag"
   max_positive_examples: 2
-  # El limite de contexto rag se configura por variable de entorno
-  # RAG_CONTEXT_MAX_LENGTH en el .env del subproyecto (ver docs/LLM_CONFIG.md),
-  # no como campo del YAML.
+  rag_context_max_length: 1500   # trunca el contexto en el dataset de reflexion
 
 data:
   csv_filename: "<nombre>.csv"

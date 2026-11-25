@@ -48,9 +48,6 @@ data:
   input_columns:
     - "text"
 
-adapter:
-  max_text_length: 4000
-
 optimization:
   max_metric_calls: 90
   predictor_type: "cot"

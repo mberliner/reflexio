@@ -22,10 +22,6 @@ data:
 models:
   temperature: 0.1
 
-adapter:
-  max_text_length: 1000
-  max_positive_examples: 2
-
 optimization:
   max_metric_calls: 50
   auto_budget: "medium"

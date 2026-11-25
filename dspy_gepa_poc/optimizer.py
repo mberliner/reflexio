@@ -61,8 +61,6 @@ class GEPAOptimizer:
             "candidate_selection_strategy": self.config.candidate_selection_strategy,
             "use_merge": self.config.use_merge,
             "max_merge_invocations": self.config.max_merge_invocations,
-            "max_text_length": self.config.max_text_length,
-            "max_positive_examples": self.config.max_positive_examples,
         }
         # SPEC-104 FR-005 / FR-013: el envoltorio de reflexion (`CheckedLM`) recibe el
         # callback `on_proposal_start` de GEPA para usar la iteracion como case_id.

@@ -226,9 +226,8 @@ data:
   csv_filename: "requirements_extraction.csv"
   input_column: "transcript"
 
-adapter:
-  max_text_length: 50000       # Limite de compatibilidad; NO usar como control principal de longitud
-  max_positive_examples: 1     # Solo 1 ejemplo few-shot (transcripciones largas consumen contexto)
+# Sin seccion `adapter`: en dspy_gepa_poc no tiene efecto y el validador la
+# rechaza (D-025). El control de longitud es `length_policy`.
 
 length_policy:
   enabled: true
@@ -713,7 +712,7 @@ Los criterios de evaluacion del MVP y de avance a fase de produccion se consolid
 
 **Trampa 8: Few-shot con inputs largos**
 - Con transcripciones de ~30k tokens, inyectar 2-3 ejemplos few-shot agotaria el contexto
-- Configurar `use_few_shot: false` y `max_positive_examples: 1`
+- Configurar `use_few_shot: false` (`max_positive_examples` no aplica en DSPy, D-025)
 - GEPA optimiza las instrucciones del prompt, no necesita few-shot para mejorar
 
 **Trampa 9: Confiar en limites de longitud que no se aplican en runtime**
