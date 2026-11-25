@@ -11,8 +11,11 @@ import pytest
 from shared.llm import LLMConfig
 from shared.logging.metadata import (
     _MAX_SEED,
+    FRAMEWORK_PACKAGES,
     MetadataManager,
+    collect_framework_versions,
     collect_model_info,
+    format_framework_versions,
     generate_seed,
     metrics_coverage,
 )
@@ -112,6 +115,28 @@ class TestCollectModelInfo:
         info = collect_model_info(task, _cfg("azure/gpt-4o"))
 
         assert "sk-secret" not in json.dumps(info)
+
+
+# ==================== Framework versions (SPEC-100 FR-009) ====================
+
+
+class TestFrameworkVersions:
+    def test_collects_every_package(self):
+        versions = collect_framework_versions()
+        assert set(versions) == set(FRAMEWORK_PACKAGES)
+        assert versions["dspy"]  # instalado en el entorno de tests
+
+    def test_missing_package_is_none(self, monkeypatch):
+        monkeypatch.setattr(
+            "shared.logging.metadata.FRAMEWORK_PACKAGES", ("paquete-que-no-existe-xyz",)
+        )
+        assert collect_framework_versions() == {"paquete-que-no-existe-xyz": None}
+
+    def test_format_is_sorted_and_stable(self):
+        a = format_framework_versions({"gepa": "0.1.4", "dspy": "3.5.0", "openai": None})
+        b = format_framework_versions({"openai": None, "dspy": "3.5.0", "gepa": "0.1.4"})
+        assert a == b == "dspy=3.5.0 gepa=0.1.4 openai=-"
+        assert ";" not in a  # no rompe el delimitador del CSV
 
 
 # ==================== Level 1: Environment ====================
@@ -222,6 +247,8 @@ class TestCreateRun:
         assert data["experiment_name"] == "email_urgency"
         assert data["models"]["task"]["model"] == "azure/gpt-4o"
         assert "created_at" in data
+        # SPEC-100 FR-009: las versiones de librerias quedan en cada corrida
+        assert data["frameworks"] == collect_framework_versions()
         # usage omitted when not provided
         assert "usage" not in data
 

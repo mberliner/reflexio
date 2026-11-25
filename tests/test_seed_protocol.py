@@ -105,6 +105,68 @@ class TestComparabilidadModelos:
         assert filtered == [] and excluded == 1
 
 
+class TestComparabilidadVersiones:
+    """FR-009: la referencia previa debe igualar las versiones de librerias."""
+
+    V_OLD = "dspy=3.2.1 gepa=0.0.27 litellm=1.108.5 openai=3.57.0"
+    V_NEW = "dspy=3.5.0 gepa=0.1.4 litellm=1.108.5 openai=3.57.0"
+
+    @staticmethod
+    def _row(versions):
+        return {"Versiones Librerias": versions}
+
+    def test_excluye_filas_con_otras_versiones(self):
+        before = [self._row(self.V_OLD), self._row(self.V_NEW), self._row(self.V_NEW)]
+        vf = sp.filter_reference_by_versions(before, [self._row(self.V_NEW)])
+        assert len(vf.rows) == 2 and vf.excluded == 1 and vf.cross == 0
+
+    def test_cross_versions_conserva_y_cuenta(self):
+        before = [self._row(self.V_OLD), self._row(self.V_NEW)]
+        vf = sp.filter_reference_by_versions(before, [self._row(self.V_NEW)], cross_versions=True)
+        assert len(vf.rows) == 2 and vf.excluded == 0 and vf.cross == 1
+
+    def test_filas_legacy_sin_versiones_se_conservan_como_desconocidas(self):
+        before = [self._row(""), {}]  # columna vacia o ausente (CSV previo a FR-009)
+        vf = sp.filter_reference_by_versions(before, [self._row(self.V_NEW)])
+        assert len(vf.rows) == 2 and vf.unknown == 2 and vf.excluded == 0
+
+    def test_no_filtra_si_el_lote_nuevo_no_tiene_versiones(self):
+        before = [self._row(self.V_OLD)]
+        vf = sp.filter_reference_by_versions(before, [self._row("")])
+        assert vf.rows == before and vf.excluded == vf.unknown == vf.cross == 0
+
+    def test_report_advierte_exclusion_y_cross_versions(self, capsys):
+        class _Info:
+            framework = "dspy"
+            eval_repeats = 1
+
+            def label(self):
+                return "demo"
+
+        def row(run_id, versions, rob):
+            return {
+                "Run ID": run_id,
+                "Modelo Tarea": "m",
+                "Modelo Profesor": "p",
+                "Baseline Score": "60",
+                "Optimizado Score": "80",
+                "Robustez Score": rob,
+                "Versiones Librerias": versions,
+            }
+
+        before = [row("a", self.V_OLD, "80")]
+        after = before + [row("b", self.V_NEW, "80")]
+        sp.report(_Info(), before, after)
+        out = capsys.readouterr().out
+        assert "1 fila(s) excluidas por usar versiones" in out
+        assert "SIN REFERENCIA" in out
+
+        sp.report(_Info(), before, after, cross_versions=True)
+        out = capsys.readouterr().out
+        assert "--cross-versions: 1 fila(s)" in out
+        assert "Veredicto: RUIDO" in out
+
+
 class TestEscalaYRender:
     def test_scale_lleva_gepa_0_1_a_0_100(self):
         # Mismos numeros que TECHO pero en escala 0-1; scale=100 los normaliza.

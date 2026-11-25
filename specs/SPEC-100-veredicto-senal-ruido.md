@@ -1,8 +1,9 @@
 # SPEC-100-veredicto-senal-ruido — Veredicto senal-vs-ruido del protocolo de N seeds
 
 Estado: active
-Iteracion: 2 (rev. 2026-06-03)
-Relacionada con: docs/PROTOCOLO_N_SEEDS.md (SSOT del protocolo y sus umbrales)
+Iteracion: 3 (rev. 2026-11-25)
+Relacionada con: docs/PROTOCOLO_N_SEEDS.md (SSOT del protocolo y sus umbrales);
+D-018 de `historial/sdd.md` (upgrade DSPy/GEPA: origen de FR-009)
 
 ## User Story (prioridad)
 
@@ -40,6 +41,18 @@ Prioridad: P1
   modelos invalida la conclusion: baseline confound, leccion 10). Cuando se
   excluyan filas, el protocolo MUST advertirlo (`[WARN]`) indicando cuantas. Si
   no queda ninguna fila comparable, el primario MUST ser `SIN REFERENCIA`.
+- FR-009 Cada corrida completada MUST registrar las versiones instaladas de las
+  librerias que deciden la comparabilidad (`dspy`, `gepa`, `litellm`, `openai`)
+  en su `run.json` (clave `frameworks`) y en la columna `Versiones Librerias` del
+  CSV, en forma canonica (`pkg=version` ordenado, separado por espacios). La
+  referencia previa MUST igualar ademas esas versiones: las filas previas con
+  versiones distintas MUST excluirse con `[WARN]` indicando cuantas, salvo que se
+  pida explicitamente comparar entre versiones (`--cross-versions`, regresion de
+  un upgrade), en cuyo caso MUST conservarse y advertirse que el veredicto mide
+  el cambio de librerias. Las filas sin versiones registradas (anteriores a
+  FR-009) MUST conservarse con `[WARN]` (comparabilidad no verificable), nunca
+  completarse con un valor inferido. Esta columna es la unica excepcion a FR-007:
+  la agrega el logger del CSV, no el veredicto.
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 
@@ -53,6 +66,10 @@ Prioridad: P1
 - SC-005 Dada una referencia previa con N filas de un modelo y M de otro, al
   correr seeds con el primer modelo la referencia efectiva tiene exactamente N
   filas y se reportan M exclusiones.
+- SC-006 Dada una referencia previa con N filas de las mismas versiones, M de
+  otras versiones y L sin versiones, la referencia efectiva tiene N + L filas y
+  se reportan M exclusiones y L desconocidas; con `--cross-versions` tiene
+  N + M + L filas y se advierten las M.
 
 ## Escenarios (Given/When/Then)
 
@@ -69,6 +86,11 @@ Prioridad: P1
 - Given una referencia previa con filas de `gpt-5-mini` y de `gpt-4.1-mini`, When
   se corren seeds con `gpt-5-mini`, Then las filas de `gpt-4.1-mini` se excluyen,
   se emite `[WARN]` con la cuenta y el veredicto solo usa las filas de `gpt-5-mini`.
+- Given una referencia previa corrida con `dspy=3.2.1` y un lote nuevo con
+  `dspy=3.5.0`, When se ejecuta el protocolo sin opciones, Then esas filas se
+  excluyen con `[WARN]` y el primario es `SIN REFERENCIA`; When se ejecuta con
+  `--cross-versions`, Then se conservan, se advierte que el veredicto mide el
+  cambio de librerias y el primario se calcula contra ellas.
 
 ## Coverage mapping (requisito -> derivado)
 
@@ -86,4 +108,6 @@ Prioridad: P1
 | SC-002 | `TestFlags::test_no_techo_si_hay_gradiente` |
 | SC-003 | `TestEscalaYRender::test_scale_lleva_gepa_0_1_a_0_100` |
 | SC-004 | `TestPrimario` (4) + `TestFlags` (4) cubren cada etiqueta |
+| FR-009 | `shared/logging/metadata.py::collect_framework_versions`/`format_framework_versions` + `create_run` (`frameworks`); `ExperimentLogger.log_run` (columna `Versiones Librerias`); `seed_protocol.py::filter_reference_by_versions` + WARN en `report()` + `--cross-versions`; backfill en `migrate_metrics_csv.py`; `tests/test_seed_protocol.py::TestComparabilidadVersiones`, `tests/test_shared_metadata.py::TestFrameworkVersions`, `tests/test_migrate_metrics_csv.py` |
 | SC-005 | `TestComparabilidadModelos::test_conserva_solo_filas_con_mismos_modelos` |
+| SC-006 | `TestComparabilidadVersiones` (exclusion, desconocidas, `cross_versions`, `report`) |

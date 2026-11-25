@@ -4,7 +4,7 @@ Metadata management for experiment reproducibility.
 Provides 3-level metadata tracking:
 - Level 1 (Global): Framework versions (environment.json)
 - Level 2 (Experiment): Dataset hash, run counter (experiment_name.meta.json)
-- Level 3 (Run): Seed, models, overrides (run.json)
+- Level 3 (Run): Seed, models, framework versions, overrides (run.json)
 """
 
 import hashlib
@@ -79,17 +79,32 @@ def _hash_file(path: Path) -> str:
         return ""
 
 
-def _collect_framework_versions() -> dict[str, str | None]:
-    """Collect installed versions of key frameworks."""
-    versions: dict[str, str | None] = {}
-    for pkg in ("dspy", "litellm", "gepa"):
-        try:
-            from importlib.metadata import version
+# Librerias cuya version decide si dos corridas son comparables (SPEC-100 FR-009):
+# optimizador/evaluacion (dspy, gepa) y transporte (litellm, openai; ver D-023).
+FRAMEWORK_PACKAGES = ("dspy", "gepa", "litellm", "openai")
 
+
+def collect_framework_versions() -> dict[str, str | None]:
+    """Installed version of each package in FRAMEWORK_PACKAGES (None if missing)."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    versions: dict[str, str | None] = {}
+    for pkg in FRAMEWORK_PACKAGES:
+        try:
             versions[pkg] = version(pkg)
-        except Exception:
+        except PackageNotFoundError:
             versions[pkg] = None
     return versions
+
+
+def format_framework_versions(versions: dict[str, str | None]) -> str:
+    """Canonical one-line form for the CSV, e.g. 'dspy=3.2.1 gepa=0.0.27 ...'.
+
+    Sorted by package and space-separated (the CSV delimiter is ';'), so two runs
+    with the same libraries always produce the same string. A missing package is
+    written as 'pkg=-' to keep the key stable.
+    """
+    return " ".join(f"{pkg}={versions[pkg] or '-'}" for pkg in sorted(versions))
 
 
 class MetadataManager:
@@ -118,7 +133,7 @@ class MetadataManager:
         meta_dir.mkdir(parents=True, exist_ok=True)
         env_path = meta_dir / "environment.json"
 
-        current_versions = _collect_framework_versions()
+        current_versions = collect_framework_versions()
 
         if env_path.exists():
             existing = json.loads(env_path.read_text(encoding="utf-8"))
@@ -243,6 +258,7 @@ class MetadataManager:
             "experiment_name": experiment_name,
             "seed": seed,
             "models": models,
+            "frameworks": collect_framework_versions(),
             "status": status,
             "created_at": datetime.now().isoformat(),
         }

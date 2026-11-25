@@ -12,8 +12,10 @@ leido del codigo de ese commit y derivado a mano de las respuestas fijas:
   `eval_repeats = 1`; en `dspy_gepa_poc`, en la unidad de `Evaluate` (porcentaje).
 - `run.json`: las claves de antes (`experiment_name`, `seed`, `models`,
   `created_at`, `usage`) con los mismos valores, mas las nuevas de FR-008
-  (`status`, `abort`, `failures`, `metrics`).
-- CSV maestro: mismo esquema de columnas (SPEC-100 FR-007) y mismos valores.
+  (`status`, `abort`, `failures`, `metrics`) y la de SPEC-100 FR-009
+  (`frameworks`, versiones de librerias).
+- CSV maestro: mismo esquema de columnas (SPEC-100 FR-007) y mismos valores, mas
+  la columna `Versiones Librerias` (SPEC-100 FR-009).
 - Llamadas al LLM: sin fallas, exactamente 1 llamada HTTP por caso evaluado
   (sin reintentos, sin fallback de adapters, sin llamadas de atribucion al
   baseline). Unica diferencia esperada en el gasto: `gepa_standalone` ya no
@@ -24,6 +26,7 @@ leido del codigo de ese commit y derivado a mano de las respuestas fijas:
 
 import pytest
 
+from shared.logging import collect_framework_versions, format_framework_versions
 from tests.orchestrator_e2e import (
     DSPY_OPT,
     GEPA_OPT,
@@ -41,8 +44,11 @@ from tests.orchestrator_e2e import (
 # las que agrega FR-008.
 PRE_SPEC104_RUN_KEYS = {"experiment_name", "seed", "models", "created_at", "usage"}
 SPEC104_RUN_KEYS = {"status", "abort", "failures", "metrics", "paired_delta"}
+# SPEC-100 FR-009: versiones de librerias de la corrida (comparabilidad).
+FR009_RUN_KEYS = {"frameworks"}
 
-# Esquema del CSV maestro (SPEC-100 FR-007): no cambia con SPEC-104.
+# Esquema del CSV maestro (SPEC-100 FR-007): no cambia con SPEC-104. Unica
+# columna agregada despues: `Versiones Librerias` (SPEC-100 FR-009).
 CSV_COLUMNS = [
     "Run ID",
     "Fecha",
@@ -58,6 +64,7 @@ CSV_COLUMNS = [
     "Tokens Task",
     "Tokens Reflection",
     "Costo Real USD",
+    "Versiones Librerias",
     "Notas",
 ]
 
@@ -95,7 +102,8 @@ def _dspy_rule(model, system, user):
 
 
 def _assert_spec104_fields_without_failures(run_json, attempts_task):
-    assert set(run_json) == PRE_SPEC104_RUN_KEYS | SPEC104_RUN_KEYS
+    assert set(run_json) == PRE_SPEC104_RUN_KEYS | SPEC104_RUN_KEYS | FR009_RUN_KEYS
+    assert run_json["frameworks"] == collect_framework_versions()
     assert run_json["status"] == "completed"
     assert run_json["abort"] is None
     failures = run_json["failures"]
@@ -158,6 +166,7 @@ def _assert_csv_row(rows, *, case_title, scores, task_calls, reflection_calls, n
     assert row["Tokens Reflection"] == str(TOKENS_PER_CALL * reflection_calls)
     cost = _expected_cost(task_calls, reflection_calls)
     assert row["Costo Real USD"] == f"{cost:.6f}".replace(".", ",")
+    assert row["Versiones Librerias"] == format_framework_versions(collect_framework_versions())
     assert row["Notas"] == notes
 
 

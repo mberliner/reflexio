@@ -9,6 +9,8 @@ up. This one-shot migration rewrites the file to the current header while:
 
 - preserving every existing row (matched by accent-insensitive column name),
 - backfilling token/cost columns from each run's ``run.json`` when available,
+- backfilling ``Versiones Librerias`` from ``run.json`` (empty for legacy runs
+  that did not record them: versions unknown, never guessed),
 - writing a timestamped ``.bak`` backup first.
 
 Usage (from repo root):
@@ -25,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 
 from shared.logging.csv_writer import EUROPEAN_CSV_CONFIG, STANDARD_COLUMN_MAPPING
+from shared.logging.metadata import format_framework_versions
 
 
 def _norm(text: str) -> str:
@@ -34,8 +37,8 @@ def _norm(text: str) -> str:
     return ascii_only.lower().strip()
 
 
-def _usage_from_run_json(results_dir: Path, run_dir_value: str) -> dict | None:
-    """Load the usage block from a row's run.json, or None if unavailable."""
+def _run_json(results_dir: Path, run_dir_value: str) -> dict | None:
+    """Load a row's run.json, or None if unavailable."""
     if not run_dir_value or run_dir_value.strip() in ("", "N/A"):
         return None
     rel = run_dir_value.replace("\\", "/")
@@ -46,7 +49,24 @@ def _usage_from_run_json(results_dir: Path, run_dir_value: str) -> dict | None:
         data = json.loads(run_json.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-    return data.get("usage")
+    return data if isinstance(data, dict) else None
+
+
+def _usage_from_run_json(results_dir: Path, run_dir_value: str) -> dict | None:
+    """Load the usage block from a row's run.json, or None if unavailable."""
+    data = _run_json(results_dir, run_dir_value)
+    return data.get("usage") if data else None
+
+
+def _versions_from_run_json(results_dir: Path, run_dir_value: str) -> str:
+    """Canonical library versions from a row's run.json; '' if not recorded.
+
+    Legacy run.json files (before SPEC-100 FR-009) carry no versions: the row
+    stays empty, i.e. "versions unknown", never a guessed value.
+    """
+    data = _run_json(results_dir, run_dir_value)
+    frameworks = data.get("frameworks") if data else None
+    return format_framework_versions(frameworks) if isinstance(frameworks, dict) else ""
 
 
 def migrate_csv(csv_path: Path) -> dict:
@@ -107,6 +127,11 @@ def migrate_csv(csv_path: Path) -> dict:
                 if cost is not None:
                     new_row["cost_real_usd"] = f"{cost:.6f}".replace(".", ",")
                 backfilled += 1
+
+        if not new_row.get("lib_versions"):
+            new_row["lib_versions"] = _versions_from_run_json(
+                results_dir, new_row.get("run_dir", "")
+            )
 
         out_rows.append([str(new_row.get(key, "")) for key in STANDARD_COLUMN_MAPPING])
 

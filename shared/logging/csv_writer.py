@@ -40,6 +40,7 @@ STANDARD_COLUMN_MAPPING = {
     "tokens_task": "Tokens Task",
     "tokens_reflection": "Tokens Reflection",
     "cost_real_usd": "Costo Real USD",
+    "lib_versions": "Versiones Librerias",
     "notes": "Notas",
 }
 

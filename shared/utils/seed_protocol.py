@@ -21,6 +21,10 @@ Uso (siempre como modulo desde la raiz del repo):
     # Solo agregar lo ya corrido (p. ej. tras run_cv_cases.sh), sin ejecutar:
     python -m shared.utils.seed_protocol --config <yaml> --report-only
 
+    # Regresion de un upgrade de librerias: comparar A PROPOSITO contra la
+    # referencia con otras versiones (por defecto se excluye, SPEC-100 FR-009):
+    python -m shared.utils.seed_protocol --config <yaml> --seeds 5 --cross-versions
+
 El framework (DSPy vs GEPA) y el CSV de metricas se infieren de la ruta del config.
 """
 
@@ -45,6 +49,7 @@ COL_MODELO_PROF = "Modelo Profesor"
 COL_BASE = "Baseline Score"
 COL_OPT = "Optimizado Score"
 COL_ROB = "Robustez Score"
+COL_VERSIONS = "Versiones Librerias"
 
 # Umbrales del veredicto senal-vs-ruido (escala 0-100). SSOT de su semantica:
 # docs/PROTOCOLO_N_SEEDS.md (seccion "Criterio de exito").
@@ -190,6 +195,58 @@ def filter_reference_by_models(
     return same, len(before) - len(same)
 
 
+def _versions(row: dict[str, str]) -> str:
+    """Versiones de librerias de una fila ('' si no se registraron: fila legacy)."""
+    return (row.get(COL_VERSIONS) or "").strip()
+
+
+@dataclass
+class VersionFilter:
+    """Resultado de igualar la referencia previa a las versiones del lote nuevo."""
+
+    rows: list[dict[str, str]]  # referencia que queda
+    excluded: int = 0  # filas con otras versiones, descartadas
+    unknown: int = 0  # filas conservadas sin versiones registradas (legacy)
+    cross: int = 0  # filas con otras versiones conservadas por cross_versions
+
+
+def filter_reference_by_versions(
+    before: list[dict[str, str]],
+    new_rows: list[dict[str, str]],
+    cross_versions: bool = False,
+) -> VersionFilter:
+    """Filtra la referencia previa para igualar las versiones de librerias (FR-009).
+
+    Un cambio de dspy/gepa/litellm/openai cambia el optimizador, la evaluacion o
+    el transporte: mezclar filas de versiones distintas atribuiria al cambio
+    evaluado un efecto que es de las librerias. Reglas:
+
+    - sin versiones conocidas en el lote nuevo: no filtra (nada contra que igualar);
+    - fila previa con las mismas versiones: se conserva;
+    - fila previa sin versiones registradas (legacy, anterior a FR-009): se
+      conserva y se cuenta como ``unknown`` (comparabilidad no verificable);
+    - fila previa con otras versiones: se excluye, salvo ``cross_versions=True``
+      (regresion deliberada de un upgrade), en cuyo caso se conserva como ``cross``.
+    """
+    new_versions = {_versions(r) for r in new_rows} - {""}
+    if not new_versions:
+        return VersionFilter(rows=list(before))
+    out = VersionFilter(rows=[])
+    for row in before:
+        v = _versions(row)
+        if v in new_versions:
+            out.rows.append(row)
+        elif not v:
+            out.rows.append(row)
+            out.unknown += 1
+        elif cross_versions:
+            out.rows.append(row)
+            out.cross += 1
+        else:
+            out.excluded += 1
+    return out
+
+
 def verdict(
     agg_new: dict[str, dict[str, Any]],
     agg_before: dict[str, dict[str, Any]],
@@ -316,7 +373,12 @@ def fmt(stats: dict[str, Any], scale: float) -> str:
     )
 
 
-def report(info: ConfigInfo, before: list[dict], after: list[dict]) -> None:
+def report(
+    info: ConfigInfo,
+    before: list[dict],
+    after: list[dict],
+    cross_versions: bool = False,
+) -> None:
     """Imprime resumen del caso: referencia previa, lote nuevo y veredicto."""
     before_ids = {r[COL_RUN_ID] for r in before}
     new_rows = [r for r in after if r[COL_RUN_ID] not in before_ids]
@@ -324,6 +386,9 @@ def report(info: ConfigInfo, before: list[dict], after: list[dict]) -> None:
     # Comparabilidad por modelo: solo es valido comparar contra filas previas que
     # usan los mismos modelos que el lote nuevo (baseline confound, leccion 10).
     before, excluded_ref = filter_reference_by_models(before, new_rows)
+    # Comparabilidad por versiones de librerias (SPEC-100 FR-009).
+    vf = filter_reference_by_versions(before, new_rows, cross_versions)
+    before = vf.rows
 
     # Escala: GEPA guarda 0-1; DSPy guarda 0-100. Normalizamos a 0-100 al mostrar.
     sample = new_rows or after or before
@@ -348,6 +413,27 @@ def report(info: ConfigInfo, before: list[dict], after: list[dict]) -> None:
         print(
             "  [WARN] la referencia previa mezcla modelos distintos; sin lote nuevo "
             "no se filtra. Corre seeds para comparar dentro del mismo modelo."
+        )
+
+    new_versions = sorted({_versions(r) for r in new_rows} - {""})
+    if new_versions:
+        print(f"  Versiones lote nuevo: {' | '.join(new_versions)}")
+    if vf.excluded:
+        print(
+            f"  [WARN] referencia previa: {vf.excluded} fila(s) excluidas por usar "
+            "versiones de librerias != lote nuevo; no son comparables. Para medir "
+            "a proposito un upgrade, usar --cross-versions."
+        )
+    if vf.cross:
+        print(
+            f"  [WARN] --cross-versions: {vf.cross} fila(s) de referencia con otras "
+            "versiones de librerias; el veredicto mide el efecto del cambio de librerias."
+        )
+    if vf.unknown:
+        print(
+            f"  [WARN] referencia previa: {vf.unknown} fila(s) sin versiones de "
+            "librerias registradas (anteriores a FR-009); comparabilidad de "
+            "librerias no verificable para esas filas."
         )
 
     agg_new = aggregate(new_rows) if new_rows else {}
@@ -405,6 +491,14 @@ def main() -> int:
         action="store_true",
         help="No ejecuta; solo agrega las filas ya presentes en el CSV.",
     )
+    parser.add_argument(
+        "--cross-versions",
+        action="store_true",
+        help=(
+            "Conserva en la referencia las filas con otras versiones de librerias "
+            "(por defecto se excluyen). Para la regresion de un upgrade (D-018)."
+        ),
+    )
     args = parser.parse_args()
 
     if args.seeds < 1:
@@ -422,7 +516,7 @@ def main() -> int:
                     "Es un PREREQUISITO (curar datos reales). No se ejecuta este caso.",
                     file=sys.stderr,
                 )
-                report(info, before, before)
+                report(info, before, before, args.cross_versions)
                 continue
             print(f"\n>>> Corriendo {args.seeds} seeds: {info.label()}")
             fails = run_seeds(info, args.seeds, max(1, args.jobs))
@@ -430,7 +524,7 @@ def main() -> int:
                 print(f"  [WARN] {fails}/{args.seeds} corridas fallaron.", file=sys.stderr)
 
         after = read_rows(info.summary_csv, info.case_names)
-        report(info, before, after)
+        report(info, before, after, args.cross_versions)
 
     print(
         "\nReconocer exito: el rango del lote nuevo NO debe solaparse con la "

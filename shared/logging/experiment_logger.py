@@ -8,6 +8,7 @@ Replaces the previously duplicated ``ResultsLogger`` (DSPy) and
 - Convert ``run_dir`` to a path relative to ``paths.results``.
 - Map ``max_calls`` -> ``budget`` when only the former is present.
 - Apply project-style default for ``positive_reflection``.
+- Stamp the installed library versions (``lib_versions``, SPEC-100 FR-009).
 
 Project-specific defaults are passed via constructor (no subclassing required).
 """
@@ -20,6 +21,7 @@ from shared.paths import BasePaths
 
 from .csv_writer import STANDARD_COLUMN_MAPPING, BaseCSVLogger, make_path_relative
 from .formatters import generate_run_id, get_timestamp
+from .metadata import collect_framework_versions, format_framework_versions
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,9 @@ class ExperimentLogger(BaseCSVLogger):
             data["notes"] = ""
 
         data["run_dir"] = self._resolve_run_dir(data.get("run_dir", "N/A"))
+
+        # Versiones de librerias: parte del criterio de comparabilidad (SPEC-100 FR-009).
+        data.setdefault("lib_versions", format_framework_versions(collect_framework_versions()))
 
         if "positive_reflection" not in data:
             data["positive_reflection"] = self._positive_reflection_default

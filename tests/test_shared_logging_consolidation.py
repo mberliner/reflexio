@@ -10,7 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from shared.logging import ExperimentLogger, save_run_artifacts
+from shared.logging import (
+    ExperimentLogger,
+    collect_framework_versions,
+    format_framework_versions,
+    save_run_artifacts,
+)
 from shared.paths import DSPyPaths, GEPAPaths
 
 
@@ -106,6 +111,15 @@ class TestExperimentLogger:
         assert len(rows[1]) == 12
         assert rows[1][rows[0].index("Budget")] == "30"
         assert "Tokens Task" not in rows[0]
+
+    def test_lib_versions_stamped(self, gepa_paths: GEPAPaths) -> None:
+        """SPEC-100 FR-009: cada fila lleva las versiones instaladas de las librerias."""
+        ExperimentLogger(paths=gepa_paths).log_run({"case_name": "demo", "run_dir": "N/A"})
+
+        rows = list(csv.reader(gepa_paths.summary_csv.open(encoding="utf-8"), delimiter=";"))
+        value = rows[1][rows[0].index("Versiones Librerias")]
+        assert value == format_framework_versions(collect_framework_versions())
+        assert value.startswith("dspy=")
 
     def test_run_dir_made_relative(self, gepa_paths: GEPAPaths) -> None:
         run_dir = gepa_paths.run_dir("demo", run_id="abc123")

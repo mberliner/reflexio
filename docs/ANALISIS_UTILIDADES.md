@@ -227,6 +227,8 @@ Las utilidades esperan el formato estandar de `shared/logging`:
 | Run Directory | Directorio del run |
 | Reflexion Positiva | Si el caso usa reflexion positiva |
 | Budget | Max metric calls durante la optimizacion |
+| Tokens Task / Tokens Reflection / Costo Real USD | Uso real de tokens y costo del run |
+| Versiones Librerias | `dspy`/`gepa`/`litellm`/`openai` del run (SPEC-100 FR-009) |
 | Notas | Informacion adicional (texto libre) |
 
 **Delimitador:** `;` (semicolon)

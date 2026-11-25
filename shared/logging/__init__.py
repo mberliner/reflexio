@@ -13,7 +13,13 @@ from .csv_writer import (
 )
 from .experiment_logger import ExperimentLogger
 from .formatters import fmt_score, generate_run_id, get_timestamp
-from .metadata import MetadataManager, collect_model_info, generate_seed
+from .metadata import (
+    MetadataManager,
+    collect_framework_versions,
+    collect_model_info,
+    format_framework_versions,
+    generate_seed,
+)
 from .run_artifacts import save_run_artifacts
 
 __all__ = [
@@ -26,7 +32,9 @@ __all__ = [
     "STANDARD_COLUMN_MAPPING",
     "make_path_relative",
     "MetadataManager",
+    "collect_framework_versions",
     "collect_model_info",
+    "format_framework_versions",
     "generate_seed",
     "save_run_artifacts",
 ]

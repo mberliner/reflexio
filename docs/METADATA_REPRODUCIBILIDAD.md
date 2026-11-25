@@ -100,6 +100,7 @@ results/
     "reflection": { "...": "mismas claves que task" },
     "judge": { "...": "solo en RAG; mismas claves" }
   },
+  "frameworks": {"dspy": "3.2.1", "gepa": "0.0.27", "litellm": "1.108.5", "openai": "3.57.0"},
   "created_at": "2026-02-01T10:00:00",
   "last_run_at": "2026-02-08T14:30:22",
   "dataset_hash_changed": true,
@@ -152,6 +153,12 @@ guardar). Antes eran solo `model`, `temperature` y `max_tokens`.
 `judge` aparece solo con el adapter RAG. Los adapters que fijan su propio
 `max_tokens` reportan el valor efectivo de sus llamadas. `run.json` de corridas
 anteriores conserva el formato de 3 claves. `metricas_optimizacion.csv` no cambia.
+
+**Versiones de librerias (SPEC-100 FR-009):** `run.json` guarda en `frameworks`
+las versiones de `dspy`, `gepa`, `litellm` y `openai` de esa corrida (Nivel 1 solo
+guarda las actuales y se sobrescribe). La misma informacion va a la columna
+`Versiones Librerias` del CSV, que usa el protocolo de N seeds para la
+comparabilidad (`docs/PROTOCOLO_N_SEEDS.md`). `run.json` anteriores no la tienen.
 
 **Estado y fallas (SPEC-104 FR-008):** `run.json` agrega las claves siguientes.
 Una corrida abortada escribe `run.json` y NO escribe fila en

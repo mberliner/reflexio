@@ -73,7 +73,10 @@ COMANDO: python -m shared.utils.seed_protocol --config ... --seeds 5
    COMPARABILIDAD: la referencia previa se filtra para conservar solo las filas
      con los mismos (Modelo Tarea, Modelo Profesor) que el lote nuevo; las demas
      se excluyen con [WARN] (comparar robustez entre modelos invalida la
-     conclusion -> baseline confound, leccion 10).
+     conclusion -> baseline confound, leccion 10). Ademas iguala las versiones
+     de librerias (columna Versiones Librerias, SPEC-100 FR-009): otras
+     versiones se excluyen con [WARN] salvo --cross-versions; filas sin
+     versiones (legacy) se conservan con [WARN].
    agrega Base/Opt/Robustez: media, min, max, rango, desvio
    escala GEPA 0-1 -> 0-100
    gap val-test = media(Opt) - media(Rob)   (>3 pts -> marca posible sobreajuste)
@@ -161,6 +164,18 @@ ver `LECCIONES_APRENDIDAS.md` seccion 10). El modelo lo fija el `.env`
 correr con su mismo par de modelos (se puede forzar por variable de entorno, que
 gana sobre el `.env`).
 
+**Comparabilidad de librerias (SPEC-100 FR-009).** Igual que los modelos, un
+cambio de `dspy`, `gepa`, `litellm` u `openai` cambia el optimizador, la
+evaluacion o el transporte. Cada corrida registra sus versiones (`run.json`
+clave `frameworks` y columna `Versiones Librerias` del CSV) y el protocolo
+excluye de la referencia las filas con otras versiones, avisando con `[WARN]`.
+Para medir a proposito el efecto de un upgrade (regresion, D-018) se usa
+`--cross-versions`: las conserva y advierte que el veredicto mide el cambio de
+librerias. Las filas anteriores a FR-009 no tienen versiones: se conservan con
+`[WARN]` (no se adivinan). Los CSV previos ganan la columna con
+`python -m shared.utils.migrate_metrics_csv` (rellena desde `run.json` cuando
+lo tiene; si no, la deja vacia).
+
 ### Veredicto automatico
 
 Desde 2026-06-03 el protocolo emite un veredicto que codifica las tres reglas de
@@ -224,8 +239,12 @@ veredicto de `SPEC-100`). Umbrales: `TRIAGE_VARIANCE_RANGE_PTS=5`,
 
 - No mezclar en un mismo lote de referencia corridas Claude con distinto
   `LLM_EFFORT_<ROL>` o `LLM_THINKING_<ROL>` (SPEC-103 FR-012). El criterio de
-  comparabilidad de SPEC-100 solo ve el par de modelos y no detecta esa
-  diferencia; los valores efectivos de cada corrida estan en su `run.json`.
+  comparabilidad de SPEC-100 solo ve el par de modelos y las versiones de
+  librerias, no esa diferencia; los valores efectivos de cada corrida estan en
+  su `run.json`.
+- El triaje (`seed_triage`, SPEC-101) filtra solo por modelos, no por versiones
+  de librerias: tras un upgrade puede dar por `RESUELTO` un caso medido con las
+  versiones anteriores.
 - El seed es trazable pero no reproducible (ver arriba).
 - El val sigue chico (triage 12, extraction 10): la senal de optimizacion de
   GEPA es coarse aunque el test ya sea fiable. `eval_repeats: 3` lo mitiga
