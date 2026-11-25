@@ -25,7 +25,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from shared.llm.config import _SNAPSHOT_SUFFIX, resolve_anthropic_family
+from shared.llm.config import resolve_anthropic_family, strip_snapshot_suffix
 
 from .base import (
     extract_budget_from_rows,
@@ -160,7 +160,7 @@ def normalize_model(model_name: str) -> str:
     for prefix in _PROVIDER_PREFIXES:
         name = name.replace(prefix, "")
     if resolve_anthropic_family(name) is not None:
-        name = _SNAPSHOT_SUFFIX.sub("", name)
+        name = strip_snapshot_suffix(name)
     return name
 
 

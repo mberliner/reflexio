@@ -293,6 +293,16 @@ class TestValidateConnection:
 # ==================== Resolucion de alias y snapshot (FR-001, D2) ====================
 
 
+class TestStripSnapshotSuffix:
+    def test_strips_only_eight_digit_suffix(self):
+        from shared.llm.config import strip_snapshot_suffix
+
+        assert strip_snapshot_suffix("claude-opus-5-5-20260514") == "claude-opus-5-5"
+        assert strip_snapshot_suffix("claude-opus-5-5") == "claude-opus-5-5"
+        assert strip_snapshot_suffix("claude-opus-5-5-2026") == "claude-opus-5-5-2026"
+        assert strip_snapshot_suffix("gpt-4o-123456789") == "gpt-4o-123456789"
+
+
 class TestResolveAnthropicFamily:
     @pytest.mark.parametrize("alias", ALL_ALIASES)
     def test_alias_snapshot_and_prefix_resolve_to_same_family(self, alias):

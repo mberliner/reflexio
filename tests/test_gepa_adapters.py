@@ -678,6 +678,14 @@ class TestSimpleSQLAdapter:
 
 
 class TestSimpleRAGAdapter:
+    def test_judge_config_is_public_read_only(self, mock_env):
+        """`judge_config` expone la configuracion del juez sin acceso privado (D-022)."""
+        adapter = SimpleRAGAdapter()
+        assert adapter.judge_config is adapter._judge_config
+        assert adapter.judge_config.model == adapter.judge_model
+        with pytest.raises(AttributeError):
+            adapter.judge_config = None
+
     def test_rag_evaluate_successful_generation(self, mock_env, monkeypatch, rag_batch):
         """Generates answer and Judge gives score → score from Judge."""
 

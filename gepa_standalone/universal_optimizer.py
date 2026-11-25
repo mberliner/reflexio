@@ -105,7 +105,7 @@ class UniversalOptimizer:
         configs = {
             "task": self.task_config,
             "reflection": self.reflection_config,
-            "judge": getattr(self.adapter, "_judge_config", None),
+            "judge": getattr(self.adapter, "judge_config", None),
         }
         config = configs.get(exc.failure.rol)
         return format_abort_error(exc, config.model if config is not None else None)
@@ -125,7 +125,7 @@ class UniversalOptimizer:
         return collect_model_info(
             self.task_config,
             self.reflection_config,
-            judge_config=getattr(self.adapter, "_judge_config", None),
+            judge_config=getattr(self.adapter, "judge_config", None),
             task_max_tokens=self.adapter.task_max_tokens,
             judge_max_tokens=getattr(self.adapter, "judge_max_tokens", None),
         )
@@ -413,7 +413,7 @@ class UniversalOptimizer:
         print_kv("Task LM", task_cfg.describe(max_tokens=self.adapter.task_max_tokens))
         judge_max = getattr(self.adapter, "judge_max_tokens", None)
         if judge_max is not None:
-            print_kv("Judge LM", self.adapter._judge_config.describe(max_tokens=judge_max))
+            print_kv("Judge LM", self.adapter.judge_config.describe(max_tokens=judge_max))
         log_ok(f"Adapter initialized: {adapter_type}")
 
     def _eval_repeated(self, data, prompt) -> tuple[MetricSummary, float, Any]:

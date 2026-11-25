@@ -60,6 +60,12 @@ _DEFAULT_EFFORT = "medium"
 _THINKING_VALUES: tuple[str, ...] = ("default", "off")
 _SNAPSHOT_SUFFIX = re.compile(r"-\d{8}$")
 
+
+def strip_snapshot_suffix(model: str) -> str:
+    """Quita un sufijo de snapshot `-YYYYMMDD` (exactamente 8 digitos al final)."""
+    return _SNAPSHOT_SUFFIX.sub("", model)
+
+
 ReasoningDefault = Literal["off", "adaptive", "always"]
 OffMechanism = Literal["noop", "disabled", "between_tools"]
 
@@ -136,7 +142,7 @@ def resolve_anthropic_family(model: str) -> AnthropicFamily | None:
 
     Pasos: quitar el prefijo `anthropic/` si esta; si queda otro prefijo con "/"
     (p. ej. `azure/...`) devolver None; quitar un sufijo de snapshot `-YYYYMMDD`
-    (`_SNAPSHOT_SUFFIX`, exactamente 8 digitos al final); buscar coincidencia
+    (`strip_snapshot_suffix`, exactamente 8 digitos al final); buscar coincidencia
     exacta en `AnthropicFamily.aliases`. Sin prefijos parciales:
     `claude-opus-5` no resuelve `claude-opus-5-5`, y `claude-opus-5-5-preview` o
     `claude-opus-5-5-2026` devuelven None. Acepta IDs sin prefijo (lo usa
@@ -150,7 +156,7 @@ def resolve_anthropic_family(model: str) -> AnthropicFamily | None:
         model = model[len(_ANTHROPIC_PREFIX) :]
     if "/" in model:
         return None
-    model = _SNAPSHOT_SUFFIX.sub("", model)
+    model = strip_snapshot_suffix(model)
     for family in ANTHROPIC_FAMILIES:
         if model in family.aliases:
             return family

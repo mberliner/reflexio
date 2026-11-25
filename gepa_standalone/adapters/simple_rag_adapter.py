@@ -18,7 +18,7 @@ from gepa import EvaluationBatch
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.core.llm_factory import get_reflection_config
-from shared.llm import FailureClass, LLMCallFailure, LLMFailure, get_failure_tracker
+from shared.llm import FailureClass, LLMCallFailure, LLMConfig, LLMFailure, get_failure_tracker
 from shared.llm.config import complete_text
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,11 @@ class SimpleRAGAdapter(BaseAdapter):
             self.max_positive_examples = Config.RAG_MAX_POSITIVE_EXAMPLES
         else:
             self.max_positive_examples = 2
+
+    @property
+    def judge_config(self) -> LLMConfig:
+        """Configuracion del juez (rol `judge`), de solo lectura para el orquestador."""
+        return self._judge_config
 
     def _sanitize_for_reflection(self, text: str) -> str:
         """
