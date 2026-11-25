@@ -75,6 +75,26 @@ def patch_litellm_completion(monkeypatch: pytest.MonkeyPatch, fake) -> None:
     monkeypatch.setattr("litellm.completion", completion)
 
 
+def repo_dspy_gepa(reflection_lm, probe=None, **params):
+    """
+    `dspy.GEPA` cableado como `GEPAOptimizer` (SPEC-105 FR-010): la reflexion la
+    hace el `ReflectionProposer` del repo (`instruction_proposer`), que es tambien
+    el callback `on_proposal_start`. `probe` es un callback extra opcional.
+    """
+    import dspy
+
+    from shared.llm.dspy_lm import dspy_reflection_proposer
+
+    proposer = dspy_reflection_proposer(reflection_lm)
+    callbacks = [c for c in (probe, proposer) if c is not None]
+    return dspy.GEPA(
+        reflection_lm=reflection_lm,
+        instruction_proposer=proposer,
+        gepa_kwargs={"callbacks": callbacks},
+        **params,
+    )
+
+
 PROJECT_LOGGER_ROOTS: frozenset[str] = frozenset({"shared", "dspy_gepa_poc", "gepa_standalone"})
 
 

@@ -6,7 +6,8 @@ from collections.abc import Callable
 
 import dspy
 
-from shared.display import log_info, log_warn, print_kv, print_section
+from shared.display import log_info, print_kv, print_section
+from shared.llm.dspy_lm import dspy_reflection_proposer
 
 from .config import GEPAConfig
 
@@ -34,9 +35,15 @@ class GEPAOptimizer:
 
         # Initialize GEPA optimizer with configuration
         # Use only core parameters that are universally supported
+        # SPEC-105 FR-010: la reflexion (prompt, guard de SPEC-104 FR-005 y extraccion)
+        # es del repo; dspy solo recibe el proposer por su parametro publico. Tambien
+        # es el callback `on_proposal_start` (la iteracion de GEPA como case_id, FR-013).
+        self.reflection_proposer = dspy_reflection_proposer(reflection_lm)
         gepa_params = {
             "metric": metric,
             "reflection_lm": reflection_lm,
+            "instruction_proposer": self.reflection_proposer,
+            "gepa_kwargs": {"callbacks": [self.reflection_proposer]},
         }
 
         # Priority: Manual budget > Auto budget
@@ -46,39 +53,18 @@ class GEPAOptimizer:
         else:
             gepa_params["auto"] = self.config.auto_budget
 
-        # Parametros opcionales: pasar SOLO los que esta version de GEPA soporta.
-        # Antes se hacia con un try/except todo-o-nada; como esta version no acepta
-        # max_text_length, el except tiraba TODOS los opcionales al fallback basico
-        # (track_stats, skip_perfect_score, use_merge, ... quedaban inertes). Filtrar
-        # por la firma real evita ese efecto y, en particular, deja entrar track_stats
-        # (sin el cual detailed_results queda None y no hay evolucion ni candidates.json).
-        import inspect
-
-        optional_params = {
-            "track_stats": self.config.track_stats,
-            "reflection_minibatch_size": self.config.reflection_minibatch_size,
-            "skip_perfect_score": self.config.skip_perfect_score,
-            "candidate_selection_strategy": self.config.candidate_selection_strategy,
-            "use_merge": self.config.use_merge,
-            "max_merge_invocations": self.config.max_merge_invocations,
-        }
-        # SPEC-104 FR-005 / FR-013: el envoltorio de reflexion (`CheckedLM`) recibe el
-        # callback `on_proposal_start` de GEPA para usar la iteracion como case_id.
-        if hasattr(reflection_lm, "on_proposal_start"):
-            optional_params["gepa_kwargs"] = {"callbacks": [reflection_lm]}
-        supported = set(inspect.signature(dspy.GEPA.__init__).parameters)
-        applied = {k: v for k, v in optional_params.items() if k in supported}
-        dropped = [k for k in optional_params if k not in supported]
-        if dropped:
-            log_warn(f"GEPA de esta version no soporta {dropped}; se omiten esos parametros.")
-
-        try:
-            self.optimizer = dspy.GEPA(**gepa_params, **applied)
-        except TypeError:
-            log_warn(
-                "Using basic GEPA configuration (some parameters not supported in this version)"
-            )
-            self.optimizer = dspy.GEPA(**gepa_params)
+        # Sin filtrar por firma ni fallback: si un upgrade de dspy cambia estos
+        # parametros, `dspy.GEPA` falla con TypeError en CI en vez de degradar en
+        # silencio (SPEC-105 FR-007; contrato en tests/test_lib_contracts.py).
+        self.optimizer = dspy.GEPA(
+            **gepa_params,
+            track_stats=self.config.track_stats,
+            reflection_minibatch_size=self.config.reflection_minibatch_size,
+            skip_perfect_score=self.config.skip_perfect_score,
+            candidate_selection_strategy=self.config.candidate_selection_strategy,
+            use_merge=self.config.use_merge,
+            max_merge_invocations=self.config.max_merge_invocations,
+        )
 
     def compile(
         self,

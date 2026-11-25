@@ -9,7 +9,7 @@ from collections.abc import Callable
 
 from shared.llm import LLMConfig
 from shared.llm.config import complete_text
-from shared.llm.reflection import ReflectionGuard
+from shared.llm.reflection import ReflectionProposer
 
 
 def create_task_lm_function(verbose: bool = False) -> Callable[[str], str]:
@@ -60,9 +60,9 @@ def create_reflection_lm_function(
             y se ignoran temperature, max_tokens y cache.
 
     Returns:
-        `ReflectionLM`: callable que toma un prompt y retorna la respuesta, y
-        descarta (lanzando) la propuesta con falla de capa 1 o `formato`
-        (SPEC-104 FR-005; ver `shared.llm.reflection.ReflectionGuard`).
+        Transporte del rol `reflection`: toma un prompt y retorna el texto; ante
+        una falla de capa 1 lanza `LLMCallFailure`. El guard de SPEC-104 FR-005 y
+        el prompt los pone `create_reflection_proposer`.
     """
     if config is None:
         config = LLMConfig.from_env("reflection", max_tokens=2000)
@@ -75,7 +75,7 @@ def create_reflection_lm_function(
     base_func = config.get_lm_function(role="reflection")
 
     if not verbose:
-        return ReflectionLM(base_func)
+        return base_func
 
     def lm_func(prompt: str) -> str:
         content = base_func(prompt)
@@ -86,26 +86,20 @@ def create_reflection_lm_function(
         print("=" * 80 + "\n")
         return content
 
-    return ReflectionLM(lm_func)
+    return lm_func
 
 
-class ReflectionLM:
+def create_reflection_proposer(
+    verbose: bool = False, config: LLMConfig | None = None
+) -> ReflectionProposer:
     """
-    `reflection_lm` de `gepa.optimize` con el envoltorio de SPEC-104 FR-005.
+    Proposer de reflexion del repo (SPEC-105 FR-010) sobre el transporte de
+    `create_reflection_lm_function`.
 
-    Tambien es un callback de GEPA (`on_proposal_start`): pasado en `callbacks`
-    de `gepa.optimize`, el `case_id` de la falla es la iteracion de GEPA.
+    Va a `gepa.optimize` como `custom_candidate_proposer` y en `callbacks`
+    (`on_proposal_start`: la iteracion de GEPA es el `case_id`, SPEC-104 FR-013).
     """
-
-    def __init__(self, fn: Callable[[str], str]):
-        self._fn = fn
-        self._guard = ReflectionGuard()
-
-    def __call__(self, prompt: str) -> str:
-        return self._guard.run(lambda: self._fn(prompt), lambda text: [text])
-
-    def on_proposal_start(self, event) -> None:
-        self._guard.on_proposal_start(event)
+    return ReflectionProposer(create_reflection_lm_function(verbose=verbose, config=config))
 
 
 def validate_llm_connection() -> bool:

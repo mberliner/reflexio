@@ -233,23 +233,24 @@ class TestDspyPredictOneCallPerCase:
         assert exc.failure.clase.value == case.spec104_class
         assert exc.failure.rol == "task"
 
-    def test_without_cut_fallback_would_repeat_call(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Control: sin la subclase de ContextWindowExceededError, el fallback de
-        # ChatAdapter repite la llamada (por eso CheckedLM la necesita).
-        import shared.llm.dspy_lm as dspy_lm_mod
+    def test_adapter_fallback_only_on_parse_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Contrato de dspy (SPEC-105 FR-007, SC-009 de SPEC-104): ChatAdapter cae a
+        # JSONAdapter solo ante AdapterParseError. Un texto no parseable repite la
+        # llamada una vez; una falla de capa 1 (test de arriba) no la repite. Si un
+        # upgrade vuelve a reintentar ante cualquier excepcion, el test de arriba falla.
+        calls: list[dict] = []
 
-        monkeypatch.setattr(dspy_lm_mod, "_cut_adapter_fallback", lambda exc, model: exc)
-        case = next(c for c in RETRY_CASES if c.spec104_class == "configuracion")
-        exc, calls = _predict_with_checked_lm(case)
+        def fake_completion(**kwargs):
+            calls.append(kwargs)
+            return make_completion_response("texto sin campos de salida")
 
-        assert isinstance(exc, (LLMCallFailure, RunAborted))
-        assert calls == 1  # el aborto por `configuracion` bloquea las siguientes
-        get_failure_tracker().reset()
-
-        case = next(c for c in FAILING_CASES if c.spec104_class == "presupuesto")
-        exc, calls = _predict_with_checked_lm(case)
-        assert isinstance(exc, LLMCallFailure)
-        assert calls > 1
+        monkeypatch.setattr(litellm, "completion", fake_completion)
+        lm = LLMConfig(**PROVIDER_KWARGS["openai"], role="task", cache=False).get_dspy_lm()
+        with dspy.context(lm=lm), pytest.raises(dspy.utils.exceptions.AdapterParseError):
+            dspy.Predict("question -> answer")(question="hola")
+        assert len(calls) == 2
+        assert "response_format" not in calls[0]
+        assert "response_format" in calls[1]
 
 
 # ==================== RunAborted sin HTTP ====================

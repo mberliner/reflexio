@@ -28,6 +28,7 @@ from dspy_gepa_poc.reflexio_declarativa import ReflexioDeclarativa
 from dspy_gepa_poc.scripts import baseline_only
 from shared.display import print_summary
 from shared.llm import FailureClass, LLMFailure, RunAborted, get_failure_tracker
+from shared.llm.reflection import ReflectionProposer
 from shared.scoring import paired_delta
 from tests.test_dspy_call_failures import (
     CANDIDATE,
@@ -445,15 +446,20 @@ class TestReflectionCallbackWiring:
             use_merge=False,
         )
 
-    def test_reflection_lm_is_registered_as_gepa_callback(self):
+    def test_reflection_proposer_is_instruction_proposer_and_callback(self):
+        # SPEC-105 FR-010: la reflexion es del repo; dspy.GEPA solo recibe el proposer.
         lm = _lm(REFLECTION_MODEL, "reflection")
         optimizer = GEPAOptimizer(metric=_metric, reflection_lm=lm, config=self._config())
-        assert lm in optimizer.optimizer.gepa_kwargs["callbacks"]
+        proposer = optimizer.reflection_proposer
+        assert isinstance(proposer, ReflectionProposer)
+        assert optimizer.optimizer.custom_instruction_proposer is proposer
+        assert optimizer.optimizer.gepa_kwargs["callbacks"] == [proposer]
+        assert optimizer.optimizer.reflection_lm is lm
 
-    def test_reflection_lm_without_callback_is_not_wired(self):
+    def test_any_reflection_lm_gets_the_repo_proposer(self):
         plain = MagicMock(spec=["__call__"])
         optimizer = GEPAOptimizer(metric=_metric, reflection_lm=plain, config=self._config())
-        assert not optimizer.optimizer.gepa_kwargs
+        assert isinstance(optimizer.optimizer.custom_instruction_proposer, ReflectionProposer)
 
     def test_failed_proposals_use_the_gepa_iteration_as_case_id(
         self,

@@ -12,6 +12,8 @@ contra:
 - openai==3.57.0
 - httpx==0.28.1
 - dspy==3.2.1
+Re-verificado 2026-11-25 con dspy==3.4.1 + gepa==0.1.4 (D-018 b2): mismo mapeo
+y mismos conteos de `CheckedLM` (el transporte no depende de dspy, SPEC-105).
 
 Referencias:
 - `specs/SPEC-104-fallas-tecnicas-justas.md` ("Reglas de deteccion de la capa 1",
@@ -31,7 +33,8 @@ EXPECTED_VERSIONS: dict[str, str] = {
     "litellm": "1.108.5",
     "openai": "3.57.0",
     "httpx": "0.28.1",
-    "dspy": "3.2.1",
+    "dspy": "3.4.1",
+    "gepa": "0.1.4",
 }
 
 JSON_HEADERS: dict[str, str] = {"content-type": "application/json"}
@@ -1173,11 +1176,10 @@ _RETRY_TRANSPORT_ERRORS: dict[str, tuple[str, str]] = {
 # Especificacion por (provider, slug):
 #   (expected_exception, expected_status_code, returns_none, body_preserved,
 #    body_code, exc_psf_innererror_code, spec104_class, calls_dict, d023_quirk)
-_CALLS_1_1_4_4 = {"default": 1, "num_retries_0": 1, "num_retries_3": 4, "dspy_default": 4}
-_CALLS_3_1_7_7 = {"default": 3, "num_retries_0": 1, "num_retries_3": 7, "dspy_default": 7}
-# OpenAI 422: con drop_params=True devuelve None tras 2 intentos; en dspy.LM
-# (drop_params=False) lanza BadRequestError y reintenta 3 veces (4 llamadas).
-_CALLS_OPENAI_422 = {"default": 2, "num_retries_0": 2, "num_retries_3": 2, "dspy_default": 4}
+_CALLS_1_1_4_4 = {"default": 1, "num_retries_0": 1, "num_retries_3": 4}
+_CALLS_3_1_7_7 = {"default": 3, "num_retries_0": 1, "num_retries_3": 7}
+# OpenAI 422: con drop_params=True devuelve None tras 2 intentos.
+_CALLS_OPENAI_422 = {"default": 2, "num_retries_0": 2, "num_retries_3": 2}
 
 _RETRY_SPECS: tuple[
     tuple[

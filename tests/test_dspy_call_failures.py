@@ -1,7 +1,7 @@
 """
 SPEC-104 3e: fallas clasificadas de la tarea en `dspy_gepa_poc` (D5, D6).
 
-Verifica, contra dspy 3.2.1 y GEPA 0.0.27 y sin red, el comportamiento que
+Verifica, contra dspy 3.4.1 y GEPA 0.1.4 y sin red, el comportamiento que
 fija la spec para la tarea de DSPy:
 
 - FR-002 / SC-001: con fallas inyectadas de cada clase (payloads HTTP reales de
@@ -36,7 +36,12 @@ from dspy_gepa_poc.call_failures import (
     tolerate_call_failures,
 )
 from shared.llm import FailureClass, LLMConfig, LLMFailure, RunAborted, get_failure_tracker
-from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
+from tests.conftest import (
+    make_completion_response,
+    patch_litellm_completion,
+    project_warnings,
+    repo_dspy_gepa,
+)
 from tests.litellm_failure_payloads import ALL_FAILURE_CASES, PROVIDER_KWARGS, FailurePayloadCase
 from tests.test_litellm_failure_mapping import intercept_httpx
 
@@ -356,11 +361,11 @@ class TestFormat:
         assert pred.failure.causa == "AdapterParseError"
         assert pred.evaluated is True
         assert score == 0.0
-        assert fake.calls[SEED] > 1  # hubo fallback ChatAdapter -> JSONAdapter
+        assert fake.calls[SEED] == 2  # fallback ChatAdapter -> JSONAdapter, una vez
         assert get_failure_tracker().snapshot()["counts"] == {"formato": {"task": 1}}
-        # El aviso intermedio del fallback va a DEBUG (FR-007).
-        fallback = [r for r in adapter_records.records if "structured output" in r.getMessage()]
-        assert fallback and all(r.levelno == logging.DEBUG for r in fallback)
+        # FR-007: el fallback no deja WARNING propio de dspy (desde 3.4 JSONAdapter elige
+        # el response_format antes de llamar, sin intento intermedio).
+        assert not [r for r in adapter_records.records if r.levelno >= logging.WARNING]
         [warning] = project_warnings(caplog)
         assert "clave=formato" in warning.message
 
@@ -499,9 +504,9 @@ class TestRunAbortedPropagates:
 
 def _run_gepa(student, devset, budget):
     plain_metric = guard_program_and_metric(student, _metric)
-    optimizer = dspy.GEPA(
+    optimizer = repo_dspy_gepa(
+        _lm(REFLECTION_MODEL, "reflection"),
         metric=plain_metric[1],
-        reflection_lm=_lm(REFLECTION_MODEL, "reflection"),
         max_metric_calls=budget,
         reflection_minibatch_size=2,
         track_stats=True,

@@ -259,6 +259,7 @@ El proceso itera hasta agotar el presupuesto de llamadas a métrica (ej. 50 call
 - **Actor**: El modelo **Profesor**.
 - **Input**: Prompt actual + Trazas de error del Estudiante (sobre datos de `Train`) + Respuesta esperada.
 - **Proceso**: El Profesor diagnostica la causa raíz del fallo ("Reflexión") y reescribe las instrucciones del sistema ("Mutación") para corregirlo.
+- **En este repo**: el prompt de reflexión, la extracción de la instrucción y el descarte de propuestas con falla no son los de la librería sino los de `shared/llm/reflection.py` (`ReflectionProposer`, común a los dos subproyectos; plantilla `gepa-0.0.27-default`). Se conecta por `custom_candidate_proposer` (`gepa.optimize`) e `instruction_proposer` (`dspy.GEPA`). Contrato y motivo: SPEC-105 FR-010.
 
 #### Paso D: Selección de Pareto
 - **En la Teoría**: GEPA busca un equilibrio entre la **Calidad** del prompt y su **Eficiencia** (longitud/costo en tokens).
@@ -316,6 +317,7 @@ score = result.best_score
 | `adapter` | Instancia de GEPAAdapter | MiAdapter() |
 | `task_lm` | Modelo a optimizar | "openai/gpt-4o-mini" |
 | `reflection_lm` | Modelo para reflexión | "openai/gpt-4o" |
+| `custom_candidate_proposer` | Proposer propio de instrucciones (en este repo reemplaza a `reflection_lm`, SPEC-105 FR-010) | `create_reflection_proposer(...)` |
 | `max_metric_calls` | Presupuesto de evaluaciones | 50-2000 |
 
 ---

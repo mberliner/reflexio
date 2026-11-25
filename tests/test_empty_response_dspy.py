@@ -2,11 +2,11 @@
 SPEC-103 FR-009 (2c) y SPEC-104 (2a): respuesta sin texto en el camino DSPy.
 
 `LLMConfig.get_dspy_lm()` devuelve un `CheckedLM` (D8). Se verifica sin red,
-contra dspy 3.2.1 y GEPA 0.0.27, interceptando `litellm_completion` de
-`dspy.clients.lm`:
+contra dspy 3.4.1 y GEPA 0.1.4, interceptando `litellm.completion`:
 
-- reflexion: `CheckedLM` lanza `EmptyResponseError`; `dspy.GEPA` saltea la
-  iteracion y no crea un candidato con instruccion vacia.
+- reflexion: `CheckedLM` lanza `EmptyResponseError`, el `ReflectionProposer` del
+  repo (SPEC-105 FR-010) la registra y `dspy.GEPA` saltea la iteracion sin crear
+  un candidato con instruccion vacia.
 - tarea: `CheckedLM` tambien lanza; desde SPEC-104 (3e) el envoltorio de
   `dspy_gepa_poc/call_failures.py` la convierte en una `FailedCallPrediction`
   que la metrica cuenta una vez y, si es NE, puntua 0.0 solo como valor tecnico,
@@ -41,9 +41,14 @@ from shared.llm import (
     RunAborted,
     get_failure_tracker,
 )
-from shared.llm.dspy_lm import CheckedLM
+from shared.llm.dspy_lm import CheckedLM, dspy_reflection_proposer
 from shared.llm.usage import get_tracker as get_usage_tracker
-from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
+from tests.conftest import (
+    make_completion_response,
+    patch_litellm_completion,
+    project_warnings,
+    repo_dspy_gepa,
+)
 
 TASK_MODEL = "openai/gpt-4o-mini"
 REFLECTION_MODEL = "openai/gpt-4o"
@@ -71,11 +76,8 @@ def _patch_dspy_completion(monkeypatch, task, reflection):
     return calls
 
 
-def _lm(model, role, *, checked=True):
-    config = LLMConfig(model=model, api_key="key", role=role, cache=False)
-    if checked:
-        return config.get_dspy_lm()
-    return dspy.LM(**{**config.to_kwargs(), "cache": False})
+def _lm(model, role):
+    return LLMConfig(model=model, api_key="key", role=role, cache=False).get_dspy_lm()
 
 
 def _dataset(n=4):
@@ -104,9 +106,9 @@ def _student():
 
 def _run_gepa(reflection_lm, budget=16):
     student, metric = _guarded()
-    optimizer = dspy.GEPA(
+    optimizer = repo_dspy_gepa(
+        reflection_lm,
         metric=metric,
-        reflection_lm=reflection_lm,
         max_metric_calls=budget,
         reflection_minibatch_size=2,
         track_stats=True,
@@ -148,6 +150,12 @@ def task_lm_context():
         yield
 
 
+def _propose(reflection_lm):
+    """Una propuesta del `ReflectionProposer` del repo sobre `reflection_lm`."""
+    proposer = dspy_reflection_proposer(reflection_lm)
+    return proposer({"p": SEED_INSTRUCTION}, {"p": [{"Feedback": "x"}]}, ["p"])
+
+
 # ==================== CheckedLM aislado ====================
 
 
@@ -173,9 +181,10 @@ class TestCheckedLM:
         assert _lm(REFLECTION_MODEL, "reflection")("hola") == [proposal]
 
     def test_reflection_without_block_is_format_failure(self, monkeypatch):
+        # El guard de formato es del ReflectionProposer (SPEC-105 FR-010), no del LM.
         _patch_dspy_completion(monkeypatch, None, lambda r: ("ok", "stop"))
         with pytest.raises(LLMCallFailure) as exc_info:
-            _lm(REFLECTION_MODEL, "reflection")("hola")
+            _propose(_lm(REFLECTION_MODEL, "reflection"))
         assert exc_info.value.failure.clase == FailureClass.formato
         assert get_failure_tracker().snapshot()["counts"]["formato"]["reflection"] == 1
 
@@ -191,7 +200,7 @@ class TestCheckedLM:
         _patch_dspy_completion(monkeypatch, None, lambda r: (content, reason))
         lm = _lm(REFLECTION_MODEL, "reflection")
         with caplog.at_level(logging.DEBUG), pytest.raises(EmptyResponseError) as exc_info:
-            lm("hola")
+            _propose(lm)
         assert exc_info.value.role == "reflection"
         assert exc_info.value.finish_reason == reason
         call_layer = [
@@ -404,17 +413,6 @@ class TestReflectionInGepa:
         assert recorded
         assert all("finish_reason=content_filter" in m for m in recorded)
         assert "Respuesta sin texto del LLM (rol=reflection" not in caplog.text
-
-    def test_guard_plain_lm_evaluates_empty_candidate(self, monkeypatch, task_lm_context):
-        """Guardia de GEPA sin CheckedLM: el texto vacio se evalua como candidato.
-
-        Es el gasto de evaluaciones que FR-009 evita. Si una actualizacion de
-        GEPA/DSPy (D-018) cambia esto, revisar D8 y FR-009.
-        """
-        task = _TaskByInstruction()
-        _patch_dspy_completion(monkeypatch, task, lambda r: ("", "stop"))
-        _run_gepa(_lm(REFLECTION_MODEL, "reflection", checked=False))
-        assert task.non_seed_calls > 0
 
     def test_valid_reflection_creates_candidate(self, monkeypatch, task_lm_context):
         _patch_dspy_completion(

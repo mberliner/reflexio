@@ -30,22 +30,21 @@ el artefacto `optimized_program.json` se carga igual en el modulo sin envolver.
 La metrica la guarda `dspy.GEPA` por referencia (`metric_fn`), asi que el probe
 del cierre es uno solo para toda la corrida.
 
-FR-007: el unico WARNING por falla es el de `FailureTracker.record`. El aviso de
-`JSONAdapter` "Failed to use structured output format" es un intento intermedio
-del fallback de adapters y se baja a DEBUG con un filtro sobre su logger.
+FR-007: el unico WARNING por falla es el de `FailureTracker.record`. Desde dspy
+3.4 el fallback de `ChatAdapter` a `JSONAdapter` se dispara solo con
+`AdapterParseError` y `JSONAdapter` elige el `response_format` antes de llamar
+(sin reintento con `json_object`): una falla de capa 1 nunca repite la llamada
+(SC-009 de SPEC-104) y no hace falta adapter propio (SPEC-105 FR-005).
 """
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from functools import cache
 from typing import Any
 
 import dspy
-from dspy.adapters.chat_adapter import ChatAdapter
-from dspy.adapters.json_adapter import JSONAdapter, _get_structured_outputs_response_format
-from dspy.utils.exceptions import AdapterParseError, ContextWindowExceededError
+from dspy.utils.exceptions import AdapterParseError
 
 from shared.llm import (
     BaselineOutcome,
@@ -59,9 +58,6 @@ from shared.llm import (
     is_evaluated,
 )
 from shared.llm.failures import count_key
-
-_JSON_ADAPTER_LOGGER = "dspy.adapters.json_adapter"
-_JSON_ADAPTER_FALLBACK_MSG = "Failed to use structured output format"
 
 
 class FailedCallPrediction(dspy.Prediction):
@@ -117,79 +113,12 @@ def _output_fields(program: dspy.Module) -> list[str]:
     return fields
 
 
-class _SafeJSONAdapter(JSONAdapter):
-    """`JSONAdapter` que propaga `LLMCallFailure` y `RunAborted` sin caer a `json_object` (H-04).
-
-    En dspy 3.2.1 `JSONAdapter.__call__` tiene un `except Exception:` que traga incluso
-    `ContextWindowExceededError` (`DspyLLMCallFailure`), lo que duplicaba llamadas o
-    dejaba abortos `configuracion` sin contar. Usa `_json_adapter_call_common` y
-    `_get_structured_outputs_response_format` de dspy 3.2.1 (revalidar en D-018).
-    """
-
-    def __call__(self, lm, lm_kwargs, signature, demos, inputs):
-        result = self._json_adapter_call_common(
-            lm, lm_kwargs, signature, demos, inputs, super(JSONAdapter, self).__call__
-        )
-        if result:
-            return result
-        try:
-            structured_output_model = _get_structured_outputs_response_format(
-                signature, self.use_native_function_calling
-            )
-            lm_kwargs["response_format"] = structured_output_model
-            return super(JSONAdapter, self).__call__(lm, lm_kwargs, signature, demos, inputs)
-        except (LLMCallFailure, RunAborted):
-            raise
-        except Exception:
-            logging.getLogger(_JSON_ADAPTER_LOGGER).warning(
-                "Failed to use structured output format, falling back to JSON mode."
-            )
-            lm_kwargs["response_format"] = {"type": "json_object"}
-            return super(JSONAdapter, self).__call__(lm, lm_kwargs, signature, demos, inputs)
-
-
-class _SafeChatAdapter(ChatAdapter):
-    """`ChatAdapter` cuyo fallback usa `_SafeJSONAdapter` en lugar de `JSONAdapter` (H-04)."""
-
-    def __call__(self, lm, lm_kwargs, signature, demos, inputs):
-        try:
-            return super(ChatAdapter, self).__call__(lm, lm_kwargs, signature, demos, inputs)
-        except Exception as exc:
-            if (
-                isinstance(exc, (ContextWindowExceededError, LLMCallFailure, RunAborted))
-                or isinstance(self, JSONAdapter)
-                or not self.use_json_adapter_fallback
-            ):
-                raise
-            return _SafeJSONAdapter()(lm, lm_kwargs, signature, demos, inputs)
-
-
-def _safe_adapter() -> Any:
-    current = dspy.settings.adapter
-    if current is None:
-        return _SafeChatAdapter()
-    if type(current) is ChatAdapter:
-        return _SafeChatAdapter(
-            callbacks=current.callbacks,
-            use_native_function_calling=current.use_native_function_calling,
-            native_response_types=current.native_response_types,
-            use_json_adapter_fallback=current.use_json_adapter_fallback,
-        )
-    if type(current) is JSONAdapter:
-        return _SafeJSONAdapter(
-            callbacks=current.callbacks,
-            use_native_function_calling=current.use_native_function_calling,
-        )
-    return current
-
-
 class _FailureTolerantMixin:
     """Mixin de `tolerate_call_failures`: `forward` devuelve la falla como prediccion."""
 
     def forward(self, *args: Any, **kwargs: Any):
         try:
-            with dspy.context(adapter=_safe_adapter()):
-                return super().forward(*args, **kwargs)
+            return super().forward(*args, **kwargs)
         except LLMCallFailure as exc:
             failure = exc.failure
         except AdapterParseError as exc:
@@ -228,7 +157,7 @@ def baseline_caller(baseline: dspy.Module) -> Callable[[Any], BaselineOutcome]:
     def call_baseline(example: Any) -> BaselineOutcome:
         with (
             capture_finish_reason() as sink,
-            dspy.context(trace=[], adapter=_safe_adapter()),
+            dspy.context(trace=[]),
         ):
             try:
                 baseline(**example.inputs())
@@ -379,24 +308,3 @@ def run_evaluate(evaluator: Any, program: Any) -> Any:
         raise
     tracker.check_abort()
     return result
-
-
-class _DemoteAdapterFallback(logging.Filter):
-    """Baja a DEBUG el aviso intermedio del fallback de `JSONAdapter` (FR-007)."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.levelno == logging.WARNING and str(record.msg).startswith(
-            _JSON_ADAPTER_FALLBACK_MSG
-        ):
-            record.levelno = logging.DEBUG
-            record.levelname = logging.getLevelName(logging.DEBUG)
-        return True
-
-
-def _install_fallback_filter() -> None:
-    target = logging.getLogger(_JSON_ADAPTER_LOGGER)
-    if not any(isinstance(f, _DemoteAdapterFallback) for f in target.filters):
-        target.addFilter(_DemoteAdapterFallback())
-
-
-_install_fallback_filter()

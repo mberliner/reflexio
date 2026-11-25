@@ -113,8 +113,10 @@ class TestClassifierEdgeCases:
         exc = _bad_request_with_body({"code": "content_filter"})
         assert f.classify_exception(exc) == f.FailureClass.entrada
 
-    def test_dspy_wrapped_context_window_is_entrada_via_cause(self) -> None:
-        # dspy==3.2.1 envuelve litellm.ContextWindowExceededError y lo deja en __cause__
+    def test_checked_lm_context_window_is_entrada_with_litellm_cause(self) -> None:
+        # CheckedLM (SPEC-105) clasifica la excepcion cruda de LiteLLM en el punto de
+        # llamada: lanza LLMCallFailure `entrada` con el original en __cause__, sin el
+        # disfraz de ContextWindowExceededError de dspy que hacia falta en 3.2.1.
         f = _failures()
         case = next(
             c
@@ -123,12 +125,11 @@ class TestClassifierEdgeCases:
         )
         cfg = LLMConfig(**{**PROVIDER_KWARGS[case.provider], "role": "task", "cache": False})
         lm = cfg.get_dspy_lm()
-        with (
-            intercept_httpx(case),
-            pytest.raises(dspy.utils.exceptions.ContextWindowExceededError) as exc_info,
-        ):
+        with intercept_httpx(case), pytest.raises(f.LLMCallFailure) as exc_info:
             lm("hello")
-        assert f.classify_exception(exc_info.value) == f.FailureClass.entrada
+        assert exc_info.value.failure.clase == f.FailureClass.entrada
+        assert not isinstance(exc_info.value, dspy.utils.exceptions.ContextWindowExceededError)
+        assert f.classify_exception(f.root_exception(exc_info.value)) == f.FailureClass.entrada
 
     def test_response_without_refusal_attribute_is_read_defensively(self) -> None:
         f = _failures()

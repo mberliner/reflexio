@@ -1,21 +1,23 @@
 """
-SPEC-104 subfase 2b: descarte de la propuesta de reflexion en el envoltorio
-del `reflection_lm` (FR-005, SC-003), en ambos subproyectos.
+SPEC-104 FR-005 / SC-003 sobre la reflexion propia de SPEC-105 FR-010: descarte
+de la propuesta de reflexion en el `ReflectionProposer`, en ambos subproyectos.
 
-Verificado contra `gepa==0.0.27` y `dspy==3.2.1`, sin red:
+Verificado contra `gepa==0.1.4` y `dspy==3.4.1`, sin red:
 
-- GEPA extrae la instruccion con `InstructionProposalSignature.output_extractor`,
-  que nunca falla: sin bloque de triple backtick devuelve el texto entero como
-  instruccion. Por eso el envoltorio detecta `formato` (sin bloque o instruccion
-  vacia) y lanza; `ReflectiveMutationProposer.propose` atrapa la excepcion y
+- El extractor (`extract_instruction`, el de GEPA 0.0.27) nunca falla: sin
+  bloque de triple backtick devuelve el texto entero. Por eso el guard detecta
+  `formato` (sin bloque o instruccion vacia) y lanza; GEPA atrapa la excepcion y
   saltea la iteracion: el candidato vigente no cambia.
+- GEPA 0.1.4 reintenta una vez la reflexion fallida
+  (`_propose_texts_batch_safe`); con la iteracion conocida el guard relanza la
+  falla sin llamar ni registrar: una llamada y una falla por propuesta.
 - Toda falla de capa 1 del rol `reflection` (payloads HTTP de
   `tests/litellm_failure_payloads.py`) se lanza, se cuenta una vez por
   propuesta con su clase y `case_id`, y `configuracion` deja el contador
   abortado.
-- `gepa_standalone`: `create_reflection_lm_function` -> `ReflectionLM` dentro
-  de `gepa.optimize`. `dspy_gepa_poc`: `CheckedLM` con rol `reflection` dentro
-  de `dspy.GEPA`.
+- `gepa_standalone`: `create_reflection_proposer` como `custom_candidate_proposer`
+  de `gepa.optimize`. `dspy_gepa_poc`: `dspy_reflection_proposer` sobre
+  `CheckedLM` (rol `reflection`) como `instruction_proposer` de `dspy.GEPA`.
 
 Respuestas 200 reales con `make_completion_response` (`litellm.ModelResponse`).
 """
@@ -29,14 +31,17 @@ from typing import Any
 import dspy
 import litellm
 import pytest
-from dspy.utils.exceptions import ContextWindowExceededError
 from gepa import EvaluationBatch, optimize
-from gepa.strategies.instruction_proposal import InstructionProposalSignature
 
-from gepa_standalone.core.llm_factory import ReflectionLM, create_reflection_lm_function
+from gepa_standalone.core.llm_factory import create_reflection_proposer
 from shared.llm import LLMCallFailure, LLMConfig, RunAborted, get_failure_tracker
+from shared.llm.dspy_lm import dspy_reflection_proposer
 from shared.llm.failures import DEFAULT_INFRA_RETRIES, FailureClass, LLMFailure
-from shared.llm.reflection import reflection_format_failure
+from shared.llm.reflection import (
+    ReflectionProposer,
+    extract_instruction,
+    reflection_format_failure,
+)
 from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
 from tests.litellm_failure_payloads import (
     ALL_FAILURE_CASES,
@@ -131,9 +136,9 @@ def _patch_completion(monkeypatch: pytest.MonkeyPatch, content, finish_reason="s
     return calls
 
 
-def _standalone_lm(provider: str = "openai") -> ReflectionLM:
+def _standalone_proposer(provider: str = "openai", verbose: bool = False) -> ReflectionProposer:
     cfg = LLMConfig(**PROVIDER_KWARGS[provider], role="reflection", cache=False)
-    return create_reflection_lm_function(config=cfg)
+    return create_reflection_proposer(verbose=verbose, config=cfg)
 
 
 def _dspy_lm(model: str, role: str, provider: str = "openai"):
@@ -141,7 +146,19 @@ def _dspy_lm(model: str, role: str, provider: str = "openai"):
     return LLMConfig(**kwargs, role=role, cache=False).get_dspy_lm()
 
 
-# ==================== formato: verificacion contra GEPA 0.0.27 ====================
+def _dspy_proposer(provider: str = "openai", model: str = REFLECTION_MODEL) -> ReflectionProposer:
+    return dspy_reflection_proposer(_dspy_lm(model, "reflection", provider))
+
+
+REFLECTIVE_DATASET = {"system_prompt": [{"Inputs": "q0", "Feedback": "Debe decir yes"}]}
+
+
+def _propose(proposer: ReflectionProposer) -> dict[str, str]:
+    """Una propuesta de un componente, como la pide GEPA."""
+    return proposer({"system_prompt": SEED}, REFLECTIVE_DATASET, ["system_prompt"])
+
+
+# ==================== formato: extractor propio (el de GEPA 0.0.27) ====================
 
 
 class TestFormatFailure:
@@ -155,9 +172,7 @@ class TestFormatFailure:
     )
     def test_block_with_instruction_is_valid(self, text: str) -> None:
         assert reflection_format_failure(text) is None
-        assert InstructionProposalSignature.output_extractor(text.strip()) == {
-            "new_instruction": VALID
-        }
+        assert extract_instruction(text.strip()) == VALID
 
     @pytest.mark.parametrize(
         ("text", "causa"),
@@ -175,31 +190,45 @@ class TestFormatFailure:
         assert failure == LLMFailure(FailureClass.formato, "reflection", causa)
 
     @pytest.mark.parametrize("text", [VALID, f"```\n{VALID}", f"{VALID}\n```"])
-    def test_gepa_would_adopt_text_without_block(self, text: str) -> None:
-        # Evidencia de que hace falta el envoltorio: GEPA no falla sin bloque y
+    def test_extractor_would_adopt_text_without_block(self, text: str) -> None:
+        # Evidencia de que hace falta el guard: el extractor no falla sin bloque y
         # toma el texto (o lo que queda de el) como instruccion nueva.
-        assert InstructionProposalSignature.output_extractor(text)["new_instruction"] == VALID
+        assert extract_instruction(text) == VALID
 
 
-# ==================== gepa_standalone: ReflectionLM ====================
+# ==================== ReflectionProposer (ambos subproyectos) ====================
 
 
-class TestStandaloneReflectionLM:
-    def test_valid_proposal_passes_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
+PROPOSERS = [
+    pytest.param(_standalone_proposer, id="standalone"),
+    pytest.param(_dspy_proposer, id="dspy"),
+]
+
+
+class TestReflectionProposer:
+    @pytest.mark.parametrize("make", PROPOSERS)
+    def test_valid_proposal_returns_extracted_instruction(
+        self, monkeypatch: pytest.MonkeyPatch, make
+    ) -> None:
         calls = _patch_completion(monkeypatch, VALID_PROPOSAL)
-        assert _standalone_lm()("prompt") == VALID_PROPOSAL
+        assert _propose(make()) == {"system_prompt": VALID}
         assert len(calls) == 1
         assert calls[0]["num_retries"] == 0
+        prompt = calls[0]["messages"][-1]["content"]
+        assert prompt.startswith("I provided an assistant with the following instructions")
+        assert f"```\n{SEED}\n```" in prompt
+        assert "## Feedback\nDebe decir yes" in prompt
         assert _attempts() == 1
         assert _counts() == {}
 
+    @pytest.mark.parametrize("make", PROPOSERS)
     @pytest.mark.parametrize(("content", "reason", "clase"), HTTP_200_FAILURES)
     def test_http_200_failure_raises_and_counts_once(
-        self, monkeypatch: pytest.MonkeyPatch, caplog, content, reason, clase
+        self, monkeypatch: pytest.MonkeyPatch, caplog, make, content, reason, clase
     ) -> None:
         calls = _patch_completion(monkeypatch, content, reason)
         with caplog.at_level(logging.WARNING), pytest.raises(LLMCallFailure) as exc_info:
-            _standalone_lm()("prompt")
+            _propose(make())
         failure = exc_info.value.failure
         assert (failure.clase, failure.rol) == (clase, "reflection")
         assert len(calls) == 1
@@ -210,47 +239,95 @@ class TestStandaloneReflectionLM:
         _assert_single_warning(caplog)
 
     @pytest.mark.parametrize("case", FAILING_CASES, ids=lambda c: c.id)
-    def test_layer1_payload_counts_once_per_proposal(self, case: FailurePayloadCase) -> None:
+    def test_standalone_layer1_payload_counts_once_per_proposal(
+        self, case: FailurePayloadCase
+    ) -> None:
         # get_lm_function activa litellm.drop_params: el 422 de OpenAI da 2
         # llamadas por intento y None (limite conocido), `configuracion`.
         per_attempt = (case.expected_http_calls or {}).get("num_retries_0", 1)
-        lm = _standalone_lm(case.provider)
+        proposer = _standalone_proposer(case.provider)
         with intercept_httpx(case) as calls, pytest.raises(LLMCallFailure) as exc_info:
-            lm("prompt")
+            _propose(proposer)
         assert exc_info.value.failure.clase.value == case.spec104_class
         assert len(calls) == _expected_calls(case) * per_attempt
         assert _attempts() == 1
         assert _counts() == {case.spec104_class: {"reflection": 1}}
         assert get_failure_tracker().aborted == (case.spec104_class == "configuracion")
 
-    def test_aborted_tracker_does_not_call(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    @pytest.mark.parametrize("case", FAILING_CASES, ids=lambda c: c.id)
+    def test_dspy_layer1_payload_counts_once_per_proposal(self, case: FailurePayloadCase) -> None:
+        proposer = _dspy_proposer(case.provider, PROVIDER_KWARGS[case.provider]["model"])
+        with intercept_httpx(case) as calls, pytest.raises(LLMCallFailure) as exc_info:
+            _propose(proposer)
+        assert exc_info.value.failure.clase.value == case.spec104_class
+        assert len(calls) == _expected_calls(case)
+        assert _attempts() == 1
+        assert _counts() == {case.spec104_class: {"reflection": 1}}
+
+    @pytest.mark.parametrize("make", PROPOSERS)
+    def test_aborted_tracker_does_not_call(self, monkeypatch: pytest.MonkeyPatch, make) -> None:
         calls = _patch_completion(monkeypatch, VALID_PROPOSAL)
         get_failure_tracker().abort(
             LLMFailure(FailureClass.configuracion, "task", "AuthenticationError"), "test"
         )
         with pytest.raises(RunAborted):
-            _standalone_lm()("prompt")
+            _propose(make())
         assert calls == []
         assert _attempts() == 0
         assert _counts() == {}
 
-    def test_gepa_iteration_is_case_id(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _patch_completion(monkeypatch, "sin bloque")
-        lm = _standalone_lm()
-        lm.on_proposal_start({"iteration": 7})
-        for _ in range(2):  # dos componentes en la misma iteracion
+    def test_gepa_iteration_counts_once_for_several_components(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = _patch_completion(monkeypatch, VALID_PROPOSAL)
+        proposer = _standalone_proposer()
+        proposer.on_proposal_start({"iteration": 7})
+        records = REFLECTIVE_DATASET["system_prompt"]
+        out = proposer({"a": SEED, "b": SEED}, {"a": records, "b": records}, ["a", "b"])
+        assert out == {"a": VALID, "b": VALID}
+        assert len(calls) == 2  # un prompt por componente
+        assert _attempts() == 1  # un intento por iteracion
+
+    def test_retry_of_failed_iteration_does_not_call_again(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # GEPA 0.1.4 reintenta la reflexion fallida en la misma iteracion.
+        calls = _patch_completion(monkeypatch, "sin bloque")
+        proposer = _standalone_proposer()
+        proposer.on_proposal_start({"iteration": 3})
+        for _ in range(2):
             with pytest.raises(LLMCallFailure) as exc_info:
-                lm("prompt")
-            assert exc_info.value.failure.case_id == "iteracion:7"
+                _propose(proposer)
+            assert exc_info.value.failure.case_id == "iteracion:3"
+        assert len(calls) == 1
         assert _attempts() == 1
+        assert _counts() == {"formato": {"reflection": 1}}
+        proposer.on_proposal_start({"iteration": 4})
+        with pytest.raises(LLMCallFailure):
+            _propose(proposer)
+        assert len(calls) == 2
+        assert _counts() == {"formato": {"reflection": 2}}
+
+    def test_component_without_records_is_skipped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls = _patch_completion(monkeypatch, VALID_PROPOSAL)
+        out = _standalone_proposer()({"a": SEED, "b": SEED}, {"a": [], "c": [{}]}, ["a", "b"])
+        assert out == {}
+        assert calls == []
+        assert _attempts() == 0
 
     def test_verbose_is_guarded(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
         _patch_completion(monkeypatch, "sin bloque")
-        cfg = LLMConfig(**PROVIDER_KWARGS["openai"], role="reflection", cache=False)
         with pytest.raises(LLMCallFailure):
-            create_reflection_lm_function(verbose=True, config=cfg)("prompt")
+            _propose(_standalone_proposer(verbose=True))
         assert "[REFLECTION LM]" in capsys.readouterr().out
         assert _counts() == {"formato": {"reflection": 1}}
+
+    def test_reflection_lm_alone_is_transport_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # El guard vive en el proposer: el LM de reflexion no cuenta ni valida formato.
+        _patch_completion(monkeypatch, "sin bloque")
+        assert _dspy_lm(REFLECTION_MODEL, "reflection")("prompt") == ["sin bloque"]
+        assert _attempts() == 0
+        assert _counts() == {}
 
 
 # ==================== gepa_standalone: dentro de gepa.optimize ====================
@@ -288,7 +365,8 @@ class _ProposalIterations:
         self.iterations.append(event["iteration"])
 
 
-def _optimize(reflection_lm, callbacks=None):
+def _optimize(proposer: ReflectionProposer, probe: _ProposalIterations | None = None):
+    """Como `universal_optimizer`: el proposer es `custom_candidate_proposer` y callback."""
     adapter = _YesAdapter()
     data = [f"q{i}" for i in range(4)]
     result = optimize(
@@ -296,11 +374,11 @@ def _optimize(reflection_lm, callbacks=None):
         trainset=data,
         valset=data,
         adapter=adapter,
-        reflection_lm=reflection_lm,
+        custom_candidate_proposer=proposer,
         max_metric_calls=16,
         reflection_minibatch_size=2,
         display_progress_bar=False,
-        callbacks=callbacks,
+        callbacks=[c for c in (probe, proposer) if c is not None],
         seed=0,
     )
     return result, adapter
@@ -313,7 +391,7 @@ def _candidate_texts(result) -> list[str]:
 class TestStandaloneInGepaOptimize:
     def test_valid_proposal_creates_candidate(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_completion(monkeypatch, VALID_PROPOSAL)
-        result, _ = _optimize(_standalone_lm())
+        result, _ = _optimize(_standalone_proposer())
         assert VALID in _candidate_texts(result)
         assert _counts() == {}
 
@@ -322,7 +400,7 @@ class TestStandaloneInGepaOptimize:
         self, monkeypatch: pytest.MonkeyPatch, content, reason, clase
     ) -> None:
         calls = _patch_completion(monkeypatch, content, reason)
-        result, adapter = _optimize(_standalone_lm())
+        result, adapter = _optimize(_standalone_proposer())
         # SC-003: ninguna propuesta con falla produce (ni evalua) un candidato.
         assert _candidate_texts(result) == [SEED]
         assert set(adapter.evaluated) == {SEED}
@@ -335,7 +413,7 @@ class TestStandaloneInGepaOptimize:
             if c.provider == "openai" and c.spec104_class == "configuracion"
         )
         with intercept_httpx(case) as calls:
-            result, _ = _optimize(_standalone_lm())
+            result, _ = _optimize(_standalone_proposer())
         assert len(calls) == 1
         assert _candidate_texts(result) == [SEED]
         assert get_failure_tracker().aborted
@@ -345,14 +423,13 @@ class TestStandaloneInGepaOptimize:
         self, monkeypatch: pytest.MonkeyPatch, caplog
     ) -> None:
         _patch_completion(monkeypatch, "sin bloque")
-        lm = _standalone_lm()
         probe = _ProposalIterations()
         with caplog.at_level(logging.WARNING):
-            _optimize(lm, callbacks=[probe, lm])
+            _optimize(_standalone_proposer(), probe)
         _assert_iterations_logged(caplog.text, probe.iterations)
 
 
-# ==================== dspy_gepa_poc: CheckedLM con rol reflection ====================
+# ==================== dspy_gepa_poc: dentro de dspy.GEPA ====================
 
 
 def _patch_dspy_completion(monkeypatch: pytest.MonkeyPatch, reflection, task_answer="no") -> dict:
@@ -375,16 +452,20 @@ def _metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
     return float(getattr(pred, "answer", None) == gold.answer)
 
 
-def _run_dspy_gepa(reflection_lm, gepa_kwargs=None):
+def _run_dspy_gepa(probe: _ProposalIterations | None = None) -> list[str]:
+    """Como `GEPAOptimizer`: el proposer es `instruction_proposer` y callback."""
+    reflection_lm = _dspy_lm(REFLECTION_MODEL, "reflection")
+    proposer = dspy_reflection_proposer(reflection_lm)
     data = [dspy.Example(question=f"q{i}", answer="yes").with_inputs("question") for i in range(4)]
     optimizer = dspy.GEPA(
         metric=_metric,
         reflection_lm=reflection_lm,
+        instruction_proposer=proposer,
         max_metric_calls=16,
         reflection_minibatch_size=2,
         track_stats=True,
         seed=0,
-        gepa_kwargs=gepa_kwargs,
+        gepa_kwargs={"callbacks": [c for c in (probe, proposer) if c is not None]},
     )
     student = dspy.Predict(dspy.Signature("question -> answer", SEED))
     with dspy.context(lm=_dspy_lm(TASK_MODEL, "task")):
@@ -396,59 +477,10 @@ def _run_dspy_gepa(reflection_lm, gepa_kwargs=None):
     ]
 
 
-class TestDspyCheckedLMReflection:
-    def test_valid_proposal_passes_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _patch_dspy_completion(monkeypatch, (VALID_PROPOSAL, "stop"))
-        assert _dspy_lm(REFLECTION_MODEL, "reflection")("prompt") == [VALID_PROPOSAL]
-        assert _attempts() == 1
-        assert _counts() == {}
-
-    @pytest.mark.parametrize(("content", "reason", "clase"), HTTP_200_FAILURES)
-    def test_http_200_failure_raises_and_counts_once(
-        self, monkeypatch: pytest.MonkeyPatch, caplog, content, reason, clase
-    ) -> None:
-        calls = _patch_dspy_completion(monkeypatch, (content, reason))
-        with caplog.at_level(logging.WARNING), pytest.raises(LLMCallFailure) as exc_info:
-            _dspy_lm(REFLECTION_MODEL, "reflection")("prompt")
-        # Corta el fallback de adapters de DSPy como toda falla de CheckedLM.
-        assert isinstance(exc_info.value, ContextWindowExceededError)
-        failure = exc_info.value.failure
-        assert (failure.clase, failure.rol) == (clase, "reflection")
-        assert calls["reflection"] == 1
-        assert _counts() == {clase.value: {"reflection": 1}}
-        assert "case_id=propuesta:1" in caplog.text
-        _assert_single_warning(caplog)
-
-    @pytest.mark.parametrize("case", FAILING_CASES, ids=lambda c: c.id)
-    def test_layer1_payload_counts_once_per_proposal(self, case: FailurePayloadCase) -> None:
-        lm = _dspy_lm(PROVIDER_KWARGS[case.provider]["model"], "reflection", case.provider)
-        with intercept_httpx(case) as calls, pytest.raises(LLMCallFailure) as exc_info:
-            lm("prompt")
-        assert exc_info.value.failure.clase.value == case.spec104_class
-        assert len(calls) == _expected_calls(case)
-        assert _attempts() == 1
-        assert _counts() == {case.spec104_class: {"reflection": 1}}
-
-    def test_task_role_is_not_guarded(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        _patch_dspy_completion(monkeypatch, ("sin bloque", "stop"))
-        assert _dspy_lm(REFLECTION_MODEL, "task")("prompt") == ["sin bloque"]
-        assert _attempts() == 0
-
-    def test_aborted_tracker_does_not_call(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        calls = _patch_dspy_completion(monkeypatch, (VALID_PROPOSAL, "stop"))
-        get_failure_tracker().abort(
-            LLMFailure(FailureClass.configuracion, "task", "AuthenticationError"), "test"
-        )
-        with pytest.raises(RunAborted):
-            _dspy_lm(REFLECTION_MODEL, "reflection")("prompt")
-        assert calls["reflection"] == 0
-        assert _attempts() == 0
-
-
 class TestDspyGepaReflection:
     def test_valid_proposal_creates_candidate(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _patch_dspy_completion(monkeypatch, (VALID_PROPOSAL, "stop"))
-        assert VALID in _run_dspy_gepa(_dspy_lm(REFLECTION_MODEL, "reflection"))
+        assert VALID in _run_dspy_gepa()
         assert _counts() == {}
 
     @pytest.mark.parametrize(("content", "reason", "clase"), HTTP_200_FAILURES)
@@ -456,7 +488,7 @@ class TestDspyGepaReflection:
         self, monkeypatch: pytest.MonkeyPatch, content, reason, clase
     ) -> None:
         calls = _patch_dspy_completion(monkeypatch, (content, reason))
-        instructions = _run_dspy_gepa(_dspy_lm(REFLECTION_MODEL, "reflection"))
+        instructions = _run_dspy_gepa()
         assert instructions == [SEED]
         _assert_reflection_threshold_abort(calls["reflection"], clase)
 
@@ -464,8 +496,7 @@ class TestDspyGepaReflection:
         self, monkeypatch: pytest.MonkeyPatch, caplog
     ) -> None:
         _patch_dspy_completion(monkeypatch, ("sin bloque", "stop"))
-        lm = _dspy_lm(REFLECTION_MODEL, "reflection")
         probe = _ProposalIterations()
         with caplog.at_level(logging.WARNING):
-            _run_dspy_gepa(lm, gepa_kwargs={"callbacks": [probe, lm]})
+            _run_dspy_gepa(probe)
         _assert_iterations_logged(caplog.text, probe.iterations)

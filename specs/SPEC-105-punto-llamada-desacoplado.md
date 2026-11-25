@@ -1,7 +1,7 @@
 # SPEC-105-punto-llamada-desacoplado — Punto de llamada propio, desacoplado de los internos de DSPy y GEPA
 
 Estado: draft
-Iteracion: 2 (rev. 2026-11-25)
+Iteracion: 3 (rev. 2026-11-25)
 Origen: D-018 de `historial/sdd.md` (upgrade DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (sus requisitos no cambian; cambia donde se implementan)
 Relacionada con: [[SPEC-100-veredicto-senal-ruido]] (regresion con N seeds y FR-009 de versiones),
@@ -47,6 +47,19 @@ la fila D-018):
   (interfaz de LM propio de 3.2.1) en 3.4.x corre como plugin legacy: sin
   `error_boundary`, sin reintentos ni cache de DSPy y con las excepciones crudas.
   3.5.0 elimina esa interfaz.
+- dspy 3.4.1 cambia el prompt de reflexion por defecto de `dspy.GEPA`
+  (verificado al instalarlo, D-018 b2): en lugar de la plantilla de GEPA
+  (`InstructionProposalSignature`, instruccion dentro de un bloque de triple
+  backtick) usa `dspy.teleprompt.gepa.InstructionProposer`
+  (`@experimental(version="3.4.1")`): `dspy.Predict` + `JSONAdapter` sobre la
+  signature `ProposeInstruction`, con otro texto y los ejemplos como lista
+  estructurada. Sin aviso, una actualizacion menor cambio la optimizacion.
+  `dspy.GEPA(instruction_proposer=...)` y `gepa.optimize(custom_candidate_proposer=...)`
+  aceptan un proposer propio con el protocolo publico `ProposalFn` de GEPA
+  (`(candidate, reflective_dataset, components_to_update) -> dict[str, str]`).
+- GEPA 0.1.4 reintenta una vez la reflexion fallida de cada iteracion
+  (`_propose_texts_batch_safe`: "Batched reflection failed ...; retrying per
+  task"), en los dos subproyectos; 0.0.27 no lo hacia.
 - dspy 3.4.0+ y 3.5.0 aceptan un engine propio como API publica:
   `dspy.LM(engine=<objeto con complete(Request) -> Response>)`. En 3.5.0 las
   excepciones que lanza un engine propio y que no son de dspy se propagan sin
@@ -89,14 +102,32 @@ la fila D-018):
   de DSPy no aplica: `cache: true` MUST fallar al armar el LM (`LLMConfigError`),
   no apagarse en silencio. Con el engine de FR-002 la cache de DSPy vuelve a
   aplicar (dspy la maneja en llamadas "managed") y este requisito se revisa.
-- Resuelto (2026-11-25): en dspy 3.4.1 `JSONAdapter.__call__` ya no tiene el
-  `except Exception` y `ChatAdapter` cae a `JSONAdapter` solo ante
-  `AdapterParseError`. `_SafeJSONAdapter`/`_SafeChatAdapter` siguen haciendo falta
-  sobre 3.2.1 y se eliminan al subir a 3.4.1 (D-018 b2); el corte con
-  `ContextWindowExceededError` (excepcion publica) queda sin efecto desde 3.4.
-- [NEEDS CLARIFICATION: la reflexion en `dspy.GEPA` llama al LM con texto (no con
-  `Request`); confirmar en 3.5.0 que ese camino tambien pasa por el engine propio
-  y que `on_proposal_start` sigue llegando via `gepa_kwargs={"callbacks": [...]}`.]
+- FR-010 El paso de reflexion de GEPA MUST ser del repo y unico para los dos
+  subproyectos (`shared/llm/reflection.py::ReflectionProposer`): plantilla del
+  prompt, renderizado de los ejemplos con feedback, extraccion de la instruccion
+  y deteccion de `formato` (SPEC-104 FR-005). MUST conectarse solo por los
+  parametros publicos `instruction_proposer` (`dspy.GEPA`) y
+  `custom_candidate_proposer` (`gepa.optimize`), y ser tambien el callback
+  `on_proposal_start`. MUST NOT depender de los prompts, extractores ni
+  proposers por defecto de `dspy` o `gepa`. La plantilla vigente
+  (`REFLECTION_PROMPT_ID = "gepa-0.0.27-default"`) MUST producir byte a byte el
+  prompt historico (GEPA 0.0.27 / dspy 3.2.1); cambiarla es un cambio de
+  optimizacion: id nuevo y medicion con N seeds (SPEC-100), no un ajuste.
+- FR-011 El reintento de la reflexion fallida que agrega GEPA 0.1.4 MUST NOT
+  llamar de nuevo al LLM ni registrar otra falla: con la iteracion conocida,
+  el guard relanza la falla ya registrada (SPEC-104: una propuesta, un intento,
+  una falla; el unico reintento es el de `infraestructura`).
+- Resuelto (2026-11-25, D-018 b2): en dspy 3.4.1 `ChatAdapter` cae a
+  `JSONAdapter` solo ante `AdapterParseError` y `JSONAdapter` elige el
+  `response_format` antes de llamar (sin reintento con `json_object`). Se
+  eliminaron `_SafeJSONAdapter`/`_SafeChatAdapter`, el filtro del aviso
+  "Failed to use structured output format" y el corte con
+  `ContextWindowExceededError` de `CheckedLM` (`DspyLLMCallFailure`,
+  `DspyEmptyResponseError`): ademas `dspy.ReAct` trata esa excepcion como
+  ventana excedida y truncaria la trayectoria ante cualquier falla nuestra.
+- [NEEDS CLARIFICATION: confirmar en dspy 3.5.0 que `instruction_proposer` y
+  `gepa_kwargs={"callbacks": [...]}` se conservan y que la llamada del proposer
+  al LM de reflexion (texto, no `Request`) pasa por el engine propio de FR-002.]
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 
@@ -114,6 +145,10 @@ la fila D-018):
   codigo del repo, verificado por un test que recorre los imports.
 - SC-006 Ante un cambio incompatible simulado de una superficie publica usada, al
   menos un test de contrato falla.
+- SC-007 El prompt de reflexion que llega al LLM en los dos subproyectos es
+  identico byte a byte al historico (GEPA 0.0.27 / dspy 3.2.1) para el mismo
+  dataset reflexivo, verificado contra un golden generado con el codigo real de
+  GEPA 0.0.27.
 
 ## Escenarios (Given/When/Then)
 
@@ -130,25 +165,34 @@ la fila D-018):
   corrida paga.
 - Given el codigo del repo, When se agrega un import de un simbolo privado de
   `dspy`, Then falla el test de SC-005.
+- Given un upgrade de `dspy` o `gepa` que cambia su prompt de reflexion por
+  defecto, When corre una optimizacion, Then el prompt enviado no cambia (es el
+  del repo).
+- Given una reflexion con falla de `formato` en la iteracion 3, When GEPA 0.1.4
+  la reintenta, Then no hay segunda llamada al LLM y la falla cuenta una vez.
 
 ## Coverage mapping (requisito -> derivado)
 
-Parcial: lo marcado "hecho" esta implementado sobre dspy 3.2.1 (D-018 b1).
+Parcial: lo marcado "hecho" esta implementado sobre dspy 3.4.1 + gepa 0.1.4
+(D-018 b1 sobre 3.2.1, b2 sobre 3.4.1).
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
 | FR-001 | hecho: `shared/llm/call.py::checked_response` (unica llamada a `litellm.completion`), usado por `checked_completion*` y por `CheckedLM.forward`; `tests/test_single_call_point.py` |
-| FR-002 | transicion hecha: `CheckedLM(dspy.BaseLM)` en `shared/llm/dspy_lm.py` (`num_retries=0`); pendiente el engine propio (D-018 b3) |
-| FR-003 | hecho: `raise_for_response` / `call_with_infra_retry` dentro de `checked_response`; `tests/test_litellm_failure_mapping.py` (`TestCheckedLMRaiseForResponse`, `test_retry_counts_checked_lm`) |
+| FR-002 | transicion hecha: `CheckedLM(dspy.BaseLM)` en `shared/llm/dspy_lm.py` (`num_retries=0`; plugin legacy deprecado en 3.4, aviso filtrado en `pyproject.toml`); pendiente el engine propio (D-018 b3) |
+| FR-003 | hecho: `raise_for_response` / `call_with_infra_retry` dentro de `checked_response`; `CheckedLM` propaga la `LLMCallFailure` sin disfraz; `tests/test_litellm_failure_mapping.py` (`TestCheckedLMRaiseForResponse`, `test_retry_counts_checked_lm`), `tests/test_failures.py::test_checked_lm_context_window_is_entrada_with_litellm_cause` |
 | FR-004 | hecho: `record_usage` y `capture_finish_reason` en `checked_response`; `baseline_caller` usa `capture_finish_reason`; el orquestador reinicia el tracker en `setup_models`; eliminados `record_dspy_history` y `_HistoryRecorder` |
-| FR-005 | parcial: `CheckedLM` ya no sobrescribe privados de dspy; falta quitar los adapters `_Safe*` de `dspy_gepa_poc/call_failures.py` (D-018 b2) y el test de SC-005 |
+| FR-005 | hecho: sin overrides ni imports privados de dspy; eliminados `_SafeJSONAdapter`/`_SafeChatAdapter` (`dspy_gepa_poc/call_failures.py`) y el corte de `CheckedLM`; `tests/test_lib_contracts.py::TestNoPrivateLibrarySymbols` |
 | FR-006 | `tests/test_sc006_no_failure_regression.py`, tests de SPEC-104 |
-| FR-007 | tests de contrato (a crear) sobre `dspy.LM(engine=...)`, `dspy.GEPA`, `Evaluate`, `gepa.optimize`, `EvaluationBatch`, callbacks |
-| FR-008 | `requirements.txt` |
+| FR-007 | parcial: `tests/test_lib_contracts.py` (parametros de `dspy.GEPA` y `gepa.optimize`, protocolo `ProposalFn`, `dspy.GEPA` sin filtro por firma en `GEPAOptimizer`), `tests/test_single_call_point.py::test_adapter_fallback_only_on_parse_error`, e2e de `tests/test_reflection_guard.py`; pendiente el contrato del engine (D-018 b3) y de `Evaluate` / `EvaluationBatch` |
+| FR-008 | hecho: `requirements.txt` (`dspy==3.4.1`, `gepa==0.1.4`, `litellm`, `openai`); `tests/litellm_failure_payloads.py::EXPECTED_VERSIONS` |
 | FR-009 | `LLMConfig.get_dspy_lm()`; `tests/test_shared_llm.py::TestLLMConfigGetDspyLM::test_cache_is_rejected` |
+| FR-010 | hecho: `shared/llm/reflection.py` (`REFLECTION_PROMPT_TEMPLATE`, `render_reflection_prompt`, `extract_instruction`, `ReflectionProposer`); conectores `shared/llm/dspy_lm.py::dspy_reflection_proposer` -> `GEPAOptimizer` y `gepa_standalone/core/llm_factory.py::create_reflection_proposer` -> `universal_optimizer`; `tests/test_reflection_guard.py`, `tests/test_reflection_prompt.py` |
+| FR-011 | hecho: `ReflectionGuard.run` (falla por iteracion); `tests/test_reflection_guard.py::TestReflectionProposer::test_retry_of_failed_iteration_does_not_call_again` y los e2e de umbral (3 llamadas, 4 intentos) |
 | SC-001 | diff del paso 3.4.1 -> 3.5.0 (D-018 b3) |
 | SC-002 | `python -m shared.utils.seed_protocol --cross-versions` (D-018 c2) |
-| SC-003 | `tests/test_sc006_no_failure_regression.py` + `tests/orchestrator_e2e.py` |
-| SC-004 | `tests/test_litellm_failure_mapping.py` |
-| SC-005 | test de imports privados (a crear) |
-| SC-006 | tests de contrato (a crear) |
+| SC-003 | `tests/test_sc006_no_failure_regression.py` + `tests/orchestrator_e2e.py` (verde sobre 3.4.1); la regresion real es D-018 (c1) |
+| SC-004 | `tests/test_litellm_failure_mapping.py` (re-verificado sobre 3.4.1) |
+| SC-005 | hecho: `tests/test_lib_contracts.py::TestNoPrivateLibrarySymbols` (AST de `shared`, `dspy_gepa_poc`, `gepa_standalone`) |
+| SC-006 | parcial: `tests/test_lib_contracts.py` (`test_dspy_gepa_rejects_unknown_parameters`, detector de imports privados) |
+| SC-007 | hecho: `tests/test_reflection_prompt.py` + `tests/fixtures/reflection_prompt_gepa_0_0_27.json` |

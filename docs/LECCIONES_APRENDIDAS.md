@@ -930,3 +930,21 @@ train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
   respuestas `litellm.ModelResponse` en `tests/conftest.py`) y los tests fijan el
   comportamiento que pide la spec. Regla normativa en `docs/CONTRIBUTING.md`
   (Convenciones del proyecto).
+
+## 10. Los defaults de la libreria son parte del experimento (D-018 b2, 2026-11-25)
+
+- **Hallazgo.** Al subir de dspy 3.2.1 a 3.4.1, `dspy.GEPA` cambio en silencio
+  el prompt de reflexion por defecto: dejo la plantilla de GEPA (instruccion en
+  un bloque de triple backtick) y paso a un `InstructionProposer` propio,
+  experimental, que pide JSON con otro texto. Solo se vio porque el guard de
+  formato de SPEC-104 abortaba cada propuesta; con un formato compatible la
+  regresion de scores se habria atribuido al motor o al ruido. GEPA 0.1.4,
+  ademas, empezo a reintentar la reflexion fallida (doble costo y doble conteo).
+- **Leccion.** En un laboratorio de optimizacion, el prompt de reflexion es una
+  variable del experimento, no un detalle de la libreria. Lo que define la
+  optimizacion (prompt de reflexion, extraccion, deteccion de formato) tiene que
+  ser del repo, versionado (`REFLECTION_PROMPT_ID`) y conectado por API publica
+  (`instruction_proposer` / `custom_candidate_proposer`), con un golden contra
+  la version historica. Adoptar un default nuevo de la libreria es un
+  experimento con N seeds, no un efecto colateral de un upgrade. Detalle en
+  SPEC-105 (FR-010, FR-011, SC-007).

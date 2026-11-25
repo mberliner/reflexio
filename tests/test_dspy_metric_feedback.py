@@ -1,6 +1,6 @@
 """
 Tests para metricas con feedback textual de `dspy_gepa_poc/metrics.py` y su
-integracion con `dspy.GEPA` 3.2.1 (D-024).
+integracion con `dspy.GEPA` 3.4.1 (D-024; antes 3.2.1).
 """
 
 import logging
@@ -21,7 +21,7 @@ from dspy_gepa_poc.metrics import (
     sentiment_with_feedback_metric,
 )
 from shared.llm import LLMConfig
-from tests.conftest import make_completion_response, patch_litellm_completion
+from tests.conftest import make_completion_response, patch_litellm_completion, repo_dspy_gepa
 
 
 class TestHelpers:
@@ -300,7 +300,7 @@ class TestOtherFeedbackMetricsContract:
         assert p1 < p2 and p1 <= 0.25 and p2 > 0.5 and p2 >= p1
 
 
-# ==================== Integracion real con dspy.GEPA 3.2.1 (D-024) ====================
+# ==================== Integracion real con dspy.GEPA (D-024) ====================
 
 TASK_MODEL = "openai/gpt-4o-mini"
 REFLECTION_MODEL = "openai/gpt-4o"
@@ -343,9 +343,9 @@ def _run_gepa_and_capture(monkeypatch, *, student, dataset, metric, task_reply):
     recorder = _WarningRecorder()
     gepa_logger.addHandler(recorder)
     try:
-        optimizer = dspy.GEPA(
+        optimizer = repo_dspy_gepa(
+            _lm(REFLECTION_MODEL, "reflection"),
             metric=metric,
-            reflection_lm=_lm(REFLECTION_MODEL, "reflection"),
             max_metric_calls=8,
             reflection_minibatch_size=2,
             track_stats=True,

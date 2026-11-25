@@ -71,7 +71,7 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 ### Seccion `adapter`: no soportada
 
 La seccion `adapter` es de `gepa_standalone`. En DSPy el validador la rechaza
-(`dspy.GEPA` 3.2.1 no acepta `max_text_length` ni `max_positive_examples`, asi que
+(`dspy.GEPA` 3.2.1 y 3.4.1 no aceptan `max_text_length` ni `max_positive_examples`, asi que
 nunca tuvieron efecto; D-025). Los ejemplos en el prompt se controlan con
 `optimization.use_few_shot` / `few_shot_count`.
 

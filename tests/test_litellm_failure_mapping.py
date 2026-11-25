@@ -5,7 +5,7 @@ Fija la evidencia de la verificacion del 2026-11-23 contra el stack pinned:
 - litellm==1.108.5
 - openai==3.57.0
 - httpx==0.28.1
-- dspy==3.2.1
+- dspy==3.4.1 y gepa==0.1.4 (re-verificado 2026-11-25, D-018 b2; original 3.2.1)
 
 Intercepta `httpx.Client.send` (sin red) para ejecutar la pila real completa
 (`litellm.completion` -> `@client` -> `completion_with_retries` -> SDK de
@@ -414,28 +414,6 @@ class TestRetryHTTPCounts:
         assert calls == case.expected_http_calls["num_retries_3"]
 
     @pytest.mark.parametrize("case", RETRY_CASES, ids=lambda c: c.id)
-    def test_retry_counts_dspy_lm_default(self, case: FailurePayloadCase) -> None:
-        # Comportamiento actual de dspy.LM (no de CheckedLM), no deseado: ver D-023
-        # dspy.LM usa num_retries=3 por defecto (drop_params=False): repite 4 veces
-        # un 401/400/422/filtro y 7 veces un 429/5xx/red en Azure/OpenAI.
-        # CheckedLM lo reemplaza (SPEC-104 FR-011): ver test_retry_counts_checked_lm.
-        assert case.expected_http_calls is not None
-        lm = dspy.LM(**{**PROVIDER_KWARGS[case.provider], "cache": False})
-        # dspy==3.2.1 (dspy/clients/lm.py:191-192) envuelve litellm.ContextWindowExceededError
-        # en dspy.utils.exceptions.ContextWindowExceededError (original en __cause__).
-        if case.expected_exception == "ContextWindowExceededError":
-            with (
-                intercept_httpx(case) as calls,
-                pytest.raises(dspy.utils.exceptions.ContextWindowExceededError) as exc_info,
-            ):
-                lm("hello")
-            assert isinstance(exc_info.value.__cause__, litellm.ContextWindowExceededError)
-        else:
-            with intercept_httpx(case) as calls, pytest.raises(litellm.openai.APIError):
-                lm("hello")
-        assert len(calls) == case.expected_http_calls["dspy_default"]
-
-    @pytest.mark.parametrize("case", RETRY_CASES, ids=lambda c: c.id)
     def test_retry_counts_checked_lm(self, case: FailurePayloadCase) -> None:
         # SPEC-104 FR-011 / SC-009: CheckedLM con num_retries=0 y reintento propio
         # solo de infraestructura (default 3): 1 llamada, o 1 + 3 si es infraestructura.
@@ -449,8 +427,9 @@ class TestRetryHTTPCounts:
         assert len(calls) == expected_calls
         assert exc.failure.clase.value == case.spec104_class
         assert exc.failure.rol == "task"
-        # Corta el fallback ChatAdapter -> JSONAdapter (ver shared/llm/dspy_lm.py)
-        assert isinstance(exc, dspy.utils.exceptions.ContextWindowExceededError)
+        # Sin disfraz de ventana excedida (dspy 3.4+: el fallback de adapters solo
+        # salta con AdapterParseError; ReAct truncaria ante ContextWindowExceededError).
+        assert not isinstance(exc, dspy.utils.exceptions.ContextWindowExceededError)
         # El tipo original de LiteLLM queda en la cadena __cause__ (regla 3 de D1).
         # El 422 de OpenAI que con drop_params=True devuelve None, en CheckedLM
         # (drop_params=False) lanza BadRequestError (limite conocido de la spec).

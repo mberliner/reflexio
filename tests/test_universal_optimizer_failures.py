@@ -23,9 +23,9 @@ import litellm
 import pytest
 
 from gepa_standalone.adapters.simple_classifier_adapter import SimpleClassifierAdapter
-from gepa_standalone.core.llm_factory import ReflectionLM
 from gepa_standalone.universal_optimizer import UniversalOptimizer
 from shared.llm import FailureClass, LLMFailure, RunAborted, get_failure_tracker
+from shared.llm.reflection import ReflectionProposer
 from tests.conftest import make_completion_response
 
 BASE = "BASE"
@@ -502,16 +502,18 @@ class TestAbortMessage:
 
 
 class TestReflectionCallbackWiring:
-    def test_reflection_lm_is_passed_to_gepa_as_callback(self, monkeypatch):
+    def test_reflection_proposer_is_passed_to_gepa_as_proposer_and_callback(self, monkeypatch):
         Completion(monkeypatch, lambda model, system, user: "greeting")
         seen = _fake_optimize(monkeypatch)
         opt = _optimizer(monkeypatch)
 
         _pipeline(opt)
 
-        assert len(seen["callbacks"]) == 1
-        assert seen["callbacks"][0] is seen["reflection_lm"]
-        assert isinstance(seen["reflection_lm"], ReflectionLM)
+        # SPEC-105 FR-010: la reflexion es del repo; GEPA no recibe reflection_lm.
+        proposer = seen["custom_candidate_proposer"]
+        assert isinstance(proposer, ReflectionProposer)
+        assert seen["callbacks"] == [proposer]
+        assert seen.get("reflection_lm") is None
 
     def test_failed_proposals_use_the_gepa_iteration_as_case_id(self, monkeypatch, caplog):
         def rule(model, system, user):

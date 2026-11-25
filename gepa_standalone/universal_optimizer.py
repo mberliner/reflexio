@@ -32,7 +32,7 @@ from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from gepa_standalone.config import Config
 from gepa_standalone.config_schema import ConfigValidator
 from gepa_standalone.core.llm_factory import (
-    create_reflection_lm_function,
+    create_reflection_proposer,
     get_reflection_config,
     get_task_config,
 )
@@ -499,7 +499,7 @@ class UniversalOptimizer:
         ref_cfg = self.reflection_config
         print_kv("Reflection LM", ref_cfg.describe())
 
-        reflection_lm = create_reflection_lm_function(verbose=verbose, config=ref_cfg)
+        reflection_proposer = create_reflection_proposer(verbose=verbose, config=ref_cfg)
 
         # Snapshot parameters for consistency
         self.active_max_metric_calls = self.config["optimization"]["max_metric_calls"]
@@ -511,13 +511,14 @@ class UniversalOptimizer:
             valset=self.val_data,
             adapter=self.adapter,
             task_lm=None,
-            reflection_lm=reflection_lm,
+            # SPEC-105 FR-010: prompt, guard (SPEC-104 FR-005) y extraccion del repo.
+            custom_candidate_proposer=reflection_proposer,
             max_metric_calls=self.active_max_metric_calls,
             skip_perfect_score=self.active_skip_perfect_score,
             display_progress_bar=self.config["optimization"].get("display_progress_bar", True),
-            # FR-005 / FR-013: el envoltorio de reflexion recibe la iteracion de GEPA
-            # como case_id de sus fallas.
-            callbacks=[reflection_lm],
+            # FR-005 / FR-013: el proposer recibe la iteracion de GEPA como case_id
+            # de sus fallas.
+            callbacks=[reflection_proposer],
         )
         # FR-006: GEPA atrapa las excepciones del reflection_lm y de la tarea; el
         # corte es por estado, consultado tras cada paso.
