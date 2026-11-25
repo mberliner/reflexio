@@ -58,6 +58,11 @@ y convenciones ver `docs/CONTRIBUTING.md`.
   o el dump.
 - MUST: los datasets CSV requieren columna `split` con valores `train`/`val`/`test`
   (definido en `shared/validation/csv_validator.py`, `VALID_SPLITS`).
+- MUST: un CSV con el mismo nombre en `dspy_gepa_poc/datasets/` y
+  `gepa_standalone/experiments/datasets/` es un **espejo** (copia identica; se
+  edita en los dos a la vez) o una **divergencia intencional** declarada. La lista
+  y la verificacion viven en `tests/test_dataset_mirrors.py`; un par nuevo sin
+  clasificar hace fallar el CI.
 - MUST: invocar los entry points con `python -m` desde la raiz del repo. Si se
   ejecuta el script directo, Python pone el dir del script en `sys.path` y
   `import shared` falla. Detalle y comandos en `docs/DEVELOPMENT.md`.
