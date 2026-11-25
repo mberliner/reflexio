@@ -618,9 +618,10 @@ summarizer = dspy.ChainOfThought(Summarizer)
 
 ### Cache y Rendimiento
 
-En este proyecto el cache esta **desactivado por defecto** (`LLM_CACHE=false`,
-override con `models.cache` en el YAML): cada corrida llama al modelo de nuevo
-para que la varianza medida sea real. Ver `docs/LLM_CONFIG.md`. Lo que sigue es
+En este proyecto el cache esta **desactivado** (`LLM_CACHE=false`, `models.cache`
+en el YAML): cada corrida llama al modelo de nuevo para que la varianza medida
+sea real, y el LM propio del proyecto (SPEC-105) no admite la cache de DSPy. Ver
+`docs/LLM_CONFIG.md`. Lo que sigue es
 el comportamiento de DSPy fuera del proyecto.
 
 ```python

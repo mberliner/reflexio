@@ -21,7 +21,7 @@ from dspy_gepa_poc.metrics import (
     sentiment_with_feedback_metric,
 )
 from shared.llm import LLMConfig
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, patch_litellm_completion
 
 
 class TestHelpers:
@@ -337,7 +337,7 @@ def _run_gepa_and_capture(monkeypatch, *, student, dataset, metric, task_reply):
             return make_completion_response("```\nImproved instruction.\n```", "stop")
         return make_completion_response(task_reply(request), "stop")
 
-    monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+    patch_litellm_completion(monkeypatch, fake_completion)
 
     gepa_logger = logging.getLogger("dspy.teleprompt.gepa.gepa_utils")
     recorder = _WarningRecorder()

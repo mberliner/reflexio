@@ -193,6 +193,8 @@ Configuracion por prioridad (mayor a menor):
 | Default en codigo | `shared/llm/config.py` | `cache: bool = False` |
 
 Ver `docs/LLM_CONFIG.md` para referencia completa de variables de entorno.
+Desde SPEC-105 (2026-11-25) `cache: true` se rechaza hasta el engine de dspy 3.5
+(D-018).
 
 ## 6. Comparativa Directa: DSPy+GEPA vs GEPA Standalone (Email Urgency)
 

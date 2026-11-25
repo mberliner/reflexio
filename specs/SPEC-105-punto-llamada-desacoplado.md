@@ -1,7 +1,7 @@
 # SPEC-105-punto-llamada-desacoplado — Punto de llamada propio, desacoplado de los internos de DSPy y GEPA
 
 Estado: draft
-Iteracion: 1 (rev. 2026-11-25)
+Iteracion: 2 (rev. 2026-11-25)
 Origen: D-018 de `historial/sdd.md` (upgrade DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (sus requisitos no cambian; cambia donde se implementan)
 Relacionada con: [[SPEC-100-veredicto-senal-ruido]] (regresion con N seeds y FR-009 de versiones),
@@ -40,6 +40,13 @@ la fila D-018):
     3.5.0.
   - En 3.5.0 las excepciones de LiteLLM llegan convertidas a
     `dspy.utils.exceptions.LM*Error`, no las crudas que clasifica SPEC-104.
+- dspy 3.4.1 ya rompe lo mismo que 3.5.0 para un `dspy.LM` subclaseado (verificado
+  al instalarlo, D-018): `LM.forward` corre dentro de `error_boundary` (excepciones
+  de LiteLLM convertidas a `LM*Error`), `_process_lm_response` no se llama y
+  `_json_adapter_call_common` no existe. Un `dspy.BaseLM` que implementa `forward`
+  (interfaz de LM propio de 3.2.1) en 3.4.x corre como plugin legacy: sin
+  `error_boundary`, sin reintentos ni cache de DSPy y con las excepciones crudas.
+  3.5.0 elimina esa interfaz.
 - dspy 3.4.0+ y 3.5.0 aceptan un engine propio como API publica:
   `dspy.LM(engine=<objeto con complete(Request) -> Response>)`. En 3.5.0 las
   excepciones que lanza un engine propio y que no son de dspy se propagan sin
@@ -55,6 +62,9 @@ la fila D-018):
   un engine propio pasado a `dspy.LM(engine=...)` (contrato publico
   `complete(Request) -> Response`), con los reintentos de DSPy desactivados
   (`num_retries=0`): el unico reintento es el de infraestructura de SPEC-104.
+  Transicion (D-018): sobre dspy 3.2.1 y 3.4.x, donde no hay engine o convive con
+  la interfaz vieja, el conector MAY ser un `dspy.BaseLM` cuyo `forward` llama al
+  punto de llamada; MUST reemplazarse por el engine antes de dspy 3.5.0.
 - FR-003 La deteccion y clasificacion de fallas de SPEC-104 (capa 1,
   `finish_reason`, respuesta sin texto, mapeo de excepciones de LiteLLM) MUST
   hacerse en el punto de llamada sobre la respuesta y las excepciones crudas de
@@ -75,11 +85,15 @@ la fila D-018):
   incompatible (firma, tipo devuelto o comportamiento del que dependemos).
 - FR-008 `requirements.txt` MUST fijar `dspy`, `gepa`, `litellm` y `openai` con
   version exacta (`==`).
-- [NEEDS CLARIFICATION: el corte del fallback de adapters con `_SafeJSONAdapter`
-  existe porque `JSONAdapter` de dspy 3.2.1 traga excepciones con un
-  `except Exception`. Falta verificar si 3.4.1/3.5.0 conserva ese `except`: si lo
-  conserva, decidir entre un adapter propio sobre API publica o aceptar el
-  reintento y documentarlo.]
+- FR-009 Mientras el conector sea un `dspy.BaseLM` propio, la cache de respuestas
+  de DSPy no aplica: `cache: true` MUST fallar al armar el LM (`LLMConfigError`),
+  no apagarse en silencio. Con el engine de FR-002 la cache de DSPy vuelve a
+  aplicar (dspy la maneja en llamadas "managed") y este requisito se revisa.
+- Resuelto (2026-11-25): en dspy 3.4.1 `JSONAdapter.__call__` ya no tiene el
+  `except Exception` y `ChatAdapter` cae a `JSONAdapter` solo ante
+  `AdapterParseError`. `_SafeJSONAdapter`/`_SafeChatAdapter` siguen haciendo falta
+  sobre 3.2.1 y se eliminan al subir a 3.4.1 (D-018 b2); el corte con
+  `ContextWindowExceededError` (excepcion publica) queda sin efecto desde 3.4.
 - [NEEDS CLARIFICATION: la reflexion en `dspy.GEPA` llama al LM con texto (no con
   `Request`); confirmar en 3.5.0 que ese camino tambien pasa por el engine propio
   y que `on_proposal_start` sigue llegando via `gepa_kwargs={"callbacks": [...]}`.]
@@ -119,18 +133,19 @@ la fila D-018):
 
 ## Coverage mapping (requisito -> derivado)
 
-Draft: se completa al implementar.
+Parcial: lo marcado "hecho" esta implementado sobre dspy 3.2.1 (D-018 b1).
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | `shared/llm/call.py` (punto unico) + engine de DSPy (a crear en `shared/llm/`) |
-| FR-002 | engine propio + `LLMConfig.get_dspy_lm()` (`num_retries=0`) |
-| FR-003 | `raise_for_response` / `call_with_infra_retry` en el engine; `tests/test_litellm_failure_mapping.py` |
-| FR-004 | registro de uso y `finish_reason` en el punto de llamada; reemplaza `record_dspy_history` y `_HistoryRecorder` |
-| FR-005 | eliminar `CheckedLM` (`shared/llm/dspy_lm.py`) y los adapters `_Safe*` de `dspy_gepa_poc/call_failures.py`; test de SC-005 |
+| FR-001 | hecho: `shared/llm/call.py::checked_response` (unica llamada a `litellm.completion`), usado por `checked_completion*` y por `CheckedLM.forward`; `tests/test_single_call_point.py` |
+| FR-002 | transicion hecha: `CheckedLM(dspy.BaseLM)` en `shared/llm/dspy_lm.py` (`num_retries=0`); pendiente el engine propio (D-018 b3) |
+| FR-003 | hecho: `raise_for_response` / `call_with_infra_retry` dentro de `checked_response`; `tests/test_litellm_failure_mapping.py` (`TestCheckedLMRaiseForResponse`, `test_retry_counts_checked_lm`) |
+| FR-004 | hecho: `record_usage` y `capture_finish_reason` en `checked_response`; `baseline_caller` usa `capture_finish_reason`; el orquestador reinicia el tracker en `setup_models`; eliminados `record_dspy_history` y `_HistoryRecorder` |
+| FR-005 | parcial: `CheckedLM` ya no sobrescribe privados de dspy; falta quitar los adapters `_Safe*` de `dspy_gepa_poc/call_failures.py` (D-018 b2) y el test de SC-005 |
 | FR-006 | `tests/test_sc006_no_failure_regression.py`, tests de SPEC-104 |
 | FR-007 | tests de contrato (a crear) sobre `dspy.LM(engine=...)`, `dspy.GEPA`, `Evaluate`, `gepa.optimize`, `EvaluationBatch`, callbacks |
 | FR-008 | `requirements.txt` |
+| FR-009 | `LLMConfig.get_dspy_lm()`; `tests/test_shared_llm.py::TestLLMConfigGetDspyLM::test_cache_is_rejected` |
 | SC-001 | diff del paso 3.4.1 -> 3.5.0 (D-018 b3) |
 | SC-002 | `python -m shared.utils.seed_protocol --cross-versions` (D-018 c2) |
 | SC-003 | `tests/test_sc006_no_failure_regression.py` + `tests/orchestrator_e2e.py` |

@@ -310,14 +310,20 @@ class TestLLMConfigGetDspyLM:
         )
         lm = config.get_dspy_lm()
 
-        assert isinstance(lm, dspy.LM)
+        assert isinstance(lm, dspy.BaseLM)
         assert lm.model == "azure/gpt-4"
         assert lm.kwargs["api_base"] == "https://base.com"
         assert lm.role == "task"
 
-    def test_cache_passed_to_dspy(self):
-        config = LLMConfig(model="azure/gpt-4", cache=True)
-        assert config.get_dspy_lm().cache is True
+    def test_cache_is_rejected(self):
+        """SPEC-105: el LM propio no usa la cache de DSPy; activarla falla al armarlo."""
+        from shared.llm.errors import LLMConfigError
+
+        with pytest.raises(LLMConfigError, match="cache"):
+            LLMConfig(model="azure/gpt-4", cache=True).get_dspy_lm()
+
+    def test_cache_off_keeps_dspy_cache_off(self):
+        assert LLMConfig(model="azure/gpt-4").get_dspy_lm().cache is False
 
     def test_role_passed_to_dspy(self):
         config = LLMConfig(model="azure/gpt-4", role="reflection")

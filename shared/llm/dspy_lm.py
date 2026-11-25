@@ -1,42 +1,36 @@
 """
-LM de DSPy que clasifica las fallas de la llamada (SPEC-103 FR-009, SPEC-104).
+LM de DSPy sobre el punto de llamada propio (SPEC-105 FR-001/FR-003/FR-004/FR-005).
 
-`LLMConfig.get_dspy_lm()` devuelve un `CheckedLM` en lugar de un `dspy.LM`.
-Ante una falla de capa 1 lanza `LLMCallFailure` (una respuesta sin texto,
-`EmptyResponseError`, con su causa en DEBUG) en todo rol. El tipo de excepcion
-separa la falla de la llamada de un error de formato real (`AdapterParseError`),
-sin heuristicas sobre el parseo.
+`LLMConfig.get_dspy_lm()` devuelve un `CheckedLM`: una subclase de `dspy.BaseLM`
+cuyo `forward` llama a `shared.llm.call.checked_response`, el mismo punto que usa
+`gepa_standalone`. Ahi se hacen la llamada a LiteLLM (`num_retries=0`), el
+reintento propio de `infraestructura` (SPEC-104 D3, FR-011), el registro del uso
+de tokens del rol y del `finish_reason` (FR-004 de SPEC-104) y la clasificacion
+de capa 1 sobre la respuesta y las excepciones crudas de LiteLLM. Ante una falla
+lanza `LLMCallFailure` (o `EmptyResponseError`) en todo rol.
 
-- `reflection`: en `dspy.GEPA` (GEPA 0.0.27, dspy 3.2.1) la excepcion sale de
-  `DspyAdapter.propose_new_texts`, la atrapa `ReflectiveMutationProposer.propose`
-  y la iteracion se saltea sin crear un candidato con instruccion vacia.
-  SPEC-104 (2b, FR-005): en este rol `__call__` pasa por `ReflectionGuard`
-  (`reflection.py`): cuenta un intento por propuesta, registra la falla de capa
-  1 y descarta tambien la propuesta sin bloque de instruccion (`formato`). El
-  log de capa 1 va a DEBUG en `raise_for_response` (FR-007).
+Superficie de DSPy que usa (publica): `dspy.BaseLM` con `forward(prompt,
+messages, **kwargs)` devolviendo una respuesta con forma de OpenAI (la interfaz
+de LM propio de dspy 3.2.1; dspy 3.4.x la mantiene como plugin legacy, sin
+convertir excepciones ni reintentar), `BaseLM.__call__`, y las propiedades
+`supports_*` / `supported_params`. No sobrescribe metodos privados de dspy.
+
+- `reflection`: `__call__` pasa por `ReflectionGuard` (`reflection.py`): cuenta
+  un intento por propuesta, registra la falla de capa 1 y descarta tambien la
+  propuesta sin bloque de instruccion (`formato`). En `dspy.GEPA` la excepcion
+  la atrapa GEPA y la iteracion se saltea (SPEC-104 FR-005).
 - `task`: el programa y la metrica se envuelven con
-  `dspy_gepa_poc.call_failures.guard_program_and_metric`: el `forward` devuelve
-  una `FailedCallPrediction` con la falla clasificada y la metrica decide NE o
-  score 0 segun su clase (SPEC-104 3e). Sin envoltorio, la excepcion cuenta
-  como error del ejemplo (`max_errors` de `Evaluate`).
+  `dspy_gepa_poc.call_failures.guard_program_and_metric` (SPEC-104 3e).
 
-SPEC-104 (2a, D3, FR-001/FR-011/FR-015): `CheckedLM` se construye con
-`num_retries=0` (LiteLLM no reintenta) y `forward` envuelve a `dspy.LM.forward`
-con `call_with_infra_retry` (reintento propio solo de `infraestructura`). La
-revision de la respuesta va en `_process_lm_response` (despues de que DSPy
-guarda la entrada en `history`, asi el uso de tokens se sigue contando) y
-delega en `raise_for_response`. Son metodos internos de dspy 3.2.1: si D-018
-actualiza DSPy, revalidar con `tests/test_empty_response_dspy.py` y
-`tests/test_single_call_point.py`.
-
-Corte del fallback de adapters (SC-009 por caso): `dspy.Predict` con
+Corte del fallback de adapters (SC-009 de SPEC-104): en dspy 3.2.1
 `ChatAdapter` repite la llamada con `JSONAdapter` ante cualquier excepcion salvo
-`dspy.utils.exceptions.ContextWindowExceededError` (dspy 3.2.1,
-`ChatAdapter.__call__`). Por eso toda falla que lanza `CheckedLM` es una
-subclase de esa excepcion: `DspyLLMCallFailure` y `DspyEmptyResponseError`
-siguen siendo `LLMCallFailure` / `EmptyResponseError` para el resto del repo.
-Ningun modulo de DSPy usado en el repo la trata de forma especial (solo `ReAct`
-e `infer_rules`, que el repo no usa).
+`dspy.utils.exceptions.ContextWindowExceededError`; por eso toda falla que lanza
+este LM es ademas una subclase de esa excepcion publica (`DspyLLMCallFailure`,
+`DspyEmptyResponseError`). Desde dspy 3.4 el fallback se dispara solo con
+`AdapterParseError` y el corte queda sin efecto.
+
+La cache de respuestas de DSPy no aplica a un LM propio: `cache=True` se rechaza
+en `LLMConfig.get_dspy_lm()`. Vuelve con el engine propio de dspy 3.5 (D-018).
 
 `aforward`/`acall` no se usan en el repo y este LM no los cubre.
 
@@ -48,14 +42,17 @@ from typing import Any
 import dspy
 from dspy.utils.exceptions import ContextWindowExceededError
 
-from .call import call_with_infra_retry, raise_for_response
+from .call import checked_response
 from .errors import EmptyResponseError
 from .failures import FailureClass, LLMCallFailure, LLMFailure
 from .reflection import ReflectionGuard
 
+# Kwargs de DSPy que no van al proveedor (LiteLLM ya recibe num_retries=0).
+_DSPY_ONLY_KWARGS = ("cache", "rollout_id", "num_retries")
+
 
 class DspyLLMCallFailure(LLMCallFailure, ContextWindowExceededError):  # noqa: N818 - como D1
-    """`LLMCallFailure` que `ChatAdapter` no reintenta con `JSONAdapter`."""
+    """`LLMCallFailure` que `ChatAdapter` (dspy 3.2.1) no reintenta con `JSONAdapter`."""
 
     def __init__(self, failure: LLMFailure, message: str | None = None, model: str | None = None):
         base = LLMCallFailure(failure, message)
@@ -65,7 +62,7 @@ class DspyLLMCallFailure(LLMCallFailure, ContextWindowExceededError):  # noqa: N
 
 
 class DspyEmptyResponseError(EmptyResponseError, ContextWindowExceededError):
-    """`EmptyResponseError` que `ChatAdapter` no reintenta con `JSONAdapter`."""
+    """`EmptyResponseError` que `ChatAdapter` (dspy 3.2.1) no reintenta con `JSONAdapter`."""
 
     def __init__(
         self,
@@ -92,33 +89,74 @@ def _cut_adapter_fallback(exc: LLMCallFailure, model: str) -> LLMCallFailure:
 
 
 def _output_texts(outputs: list) -> list[str]:
-    """Textos de las salidas de `dspy.LM` (str, o dict con "text", como `stripped_lm_call`)."""
+    """Textos de las salidas de un LM de DSPy (str, o dict con "text")."""
     return [(o.get("text") or "") if isinstance(o, dict) else str(o) for o in outputs]
 
 
-class CheckedLM(dspy.LM):
-    """`dspy.LM` con llamada comun de SPEC-104: sin reintento de LiteLLM y con falla clasificada."""
+class CheckedLM(dspy.BaseLM):
+    """LM de DSPy cuya unica llamada al proveedor es `checked_response` (SPEC-105)."""
 
     def __init__(
         self,
         model: str,
         role: str = "task",
         infra_retries: int | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ):
-        kwargs["num_retries"] = 0
-        super().__init__(model, **kwargs)
+        kwargs.pop("cache", None)
+        kwargs.pop("num_retries", None)
+        super().__init__(
+            model, temperature=temperature, max_tokens=max_tokens, cache=False, **kwargs
+        )
+        if "max_completion_tokens" in self.kwargs and self.kwargs.get("max_tokens") is None:
+            del self.kwargs["max_tokens"]  # como dspy.LM en reasoning models
+        self.num_retries = 0
         self.role = role
         self.infra_retries = infra_retries
         self._reflection_guard = ReflectionGuard()
 
-    def __call__(self, prompt: str | None = None, messages: list | None = None, **kwargs: Any):
+    @property
+    def _provider(self) -> str:
+        return self.model.split("/", 1)[0] if "/" in self.model else "openai"
+
+    @property
+    def supports_function_calling(self) -> bool:
+        import litellm
+
+        return litellm.supports_function_calling(model=self.model)
+
+    @property
+    def supports_reasoning(self) -> bool:
+        import litellm
+
+        return litellm.supports_reasoning(self.model)
+
+    @property
+    def supports_response_schema(self) -> bool:
+        import litellm
+
+        return litellm.supports_response_schema(
+            model=self.model, custom_llm_provider=self._provider
+        )
+
+    @property
+    def supported_params(self) -> set[str]:
+        import litellm
+
+        params = litellm.get_supported_openai_params(
+            model=self.model, custom_llm_provider=self._provider
+        )
+        return set(params) if params else set()
+
+    def __call__(self, prompt: str | None = None, *, messages: list | None = None, **kwargs: Any):
         parent = super().__call__
         if self.role != "reflection":
-            return parent(prompt, messages, **kwargs)
+            return parent(prompt, messages=messages, **kwargs)
         try:
             return self._reflection_guard.run(
-                lambda: parent(prompt, messages, **kwargs), _output_texts
+                lambda: parent(prompt, messages=messages, **kwargs), _output_texts
             )
         except LLMCallFailure as exc:
             cut = _cut_adapter_fallback(exc, self.model)
@@ -131,41 +169,20 @@ class CheckedLM(dspy.LM):
         self._reflection_guard.on_proposal_start(event)
 
     def forward(self, prompt: str | None = None, messages: list | None = None, **kwargs: Any):
+        request = {**self.kwargs, **kwargs}
+        for key in _DSPY_ONLY_KWARGS:
+            request.pop(key, None)
+        request["model"] = self.model
         try:
-            return call_with_infra_retry(
-                lambda: super(CheckedLM, self).forward(prompt=prompt, messages=messages, **kwargs),
+            return checked_response(
+                request,
+                messages or [{"role": "user", "content": prompt}],
                 self.role,
                 infra_retries=self.infra_retries,
+                allow_tool_calls=True,
             )
         except LLMCallFailure as exc:
             cut = _cut_adapter_fallback(exc, self.model)
             if cut is exc:
                 raise
             raise cut from exc
-
-    def _check_truncation(self, results: Any) -> None:
-        # SPEC-104: `raise_for_response` clasifica `finish_reason="length"` como
-        # `presupuesto` y `None` como `configuracion`. El metodo base de dspy 3.2.1
-        # lee `self.kwargs["max_tokens"]` (KeyError en modelos reasoning que usan
-        # `max_completion_tokens`), falla con TypeError si `results is None` y
-        # duplica un WARNING en `length` (FR-007).
-        return
-
-    def _process_lm_response(self, response, prompt, messages, **kwargs):
-        outputs: Any = []
-        if response is not None:
-            outputs = super()._process_lm_response(response, prompt, messages, **kwargs)
-            if self._has_tool_calls(response):
-                return outputs
-        try:
-            raise_for_response(response, self.role)
-        except LLMCallFailure as exc:
-            raise _cut_adapter_fallback(exc, self.model) from exc
-        return outputs
-
-    @staticmethod
-    def _has_tool_calls(response: Any) -> bool:
-        return any(
-            getattr(getattr(choice, "message", None), "tool_calls", None)
-            for choice in getattr(response, "choices", None) or []
-        )

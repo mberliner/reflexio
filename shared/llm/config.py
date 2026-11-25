@@ -549,19 +549,36 @@ class LLMConfig:
 
     def get_dspy_lm(self):
         """
-        Get a configured dspy.LM instance.
+        LM de DSPy sobre el punto de llamada propio (SPEC-105).
 
         For use in dspy_gepa_poc project.
 
         Returns:
-            `CheckedLM` (subclase de dspy.LM) configurado con esta config. Revisa
-            las respuestas sin texto segun `self.role` (SPEC-103 FR-009 / D8; ver
-            `shared/llm/dspy_lm.py`).
+            `CheckedLM` (subclase de `dspy.BaseLM`) configurado con esta config.
+            Clasifica las fallas segun `self.role` (ver `shared/llm/dspy_lm.py`).
+
+        Raises:
+            LLMConfigError: si `cache` esta activado. Un LM propio no usa la cache
+                de respuestas de DSPy; vuelve con el engine de dspy 3.5 (D-018).
         """
         from .dspy_lm import CheckedLM
+        from .errors import LLMConfigError
 
+        if self.cache:
+            raise LLMConfigError(
+                message=(
+                    "La cache de DSPy no esta disponible con el punto de llamada propio "
+                    "(SPEC-105, D-018)"
+                ),
+                model=self.model,
+                parameter="cache (models.cache / LLM_CACHE)",
+                accepted=("false",),
+            )
         kwargs = self.to_kwargs()
-        kwargs["cache"] = self.cache
+        # Igual que dspy.LM: en los reasoning models de OpenAI/Azure el tope va
+        # como max_completion_tokens.
+        if not _is_anthropic(self.model) and self.is_reasoning_model:
+            kwargs["max_completion_tokens"] = kwargs.pop("max_tokens", None)
         return CheckedLM(role=self.role, **kwargs)
 
     def get_lm_function(self, role: str = "task") -> Callable[[str], str]:

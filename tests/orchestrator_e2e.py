@@ -30,7 +30,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import make_completion_response
+from tests.conftest import make_completion_response, patch_litellm_completion
 
 TASK_MODEL = "azure/gpt-4.1-mini"
 REFLECTION_MODEL = "azure/gpt-4o"  # con precio en DEFAULT_PRICING: sin WARNING de costo
@@ -323,7 +323,7 @@ def run_dspy_gepa_poc(
     def litellm_completion(request, num_retries, cache=None):
         return transport.respond(request["model"], request["messages"])
 
-    monkeypatch.setattr("dspy.clients.lm.litellm_completion", litellm_completion)
+    patch_litellm_completion(monkeypatch, litellm_completion)
     orchestrator = module.ReflexioDeclarativa(str(config))
     records, error = _run_capturing(orchestrator.run)
     run_json, run_dir = _single_run_json(paths.results)

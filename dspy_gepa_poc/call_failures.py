@@ -54,6 +54,7 @@ from shared.llm import (
     LLMCallFailure,
     LLMFailure,
     RunAborted,
+    capture_finish_reason,
     get_failure_tracker,
     is_evaluated,
 )
@@ -213,20 +214,6 @@ def tolerate_call_failures(program: dspy.Module) -> dspy.Module:
     return wrapped
 
 
-class _HistoryRecorder:
-    """Receptor de `settings.caller_modules`: `dspy.LM.update_history` le agrega cada llamada."""
-
-    def __init__(self) -> None:
-        self.history: list[dict[str, Any]] = []
-
-    def last_finish_reason(self) -> str | None:
-        for entry in reversed(self.history):
-            choices = getattr(entry.get("response"), "choices", None) or []
-            if choices:
-                return getattr(choices[0], "finish_reason", None)
-        return None
-
-
 def baseline_caller(baseline: dspy.Module) -> Callable[[Any], BaselineOutcome]:
     """
     `call_baseline` del probe (D5): corre el programa baseline sobre el caso con el LM
@@ -234,20 +221,20 @@ def baseline_caller(baseline: dspy.Module) -> Callable[[Any], BaselineOutcome]:
 
     Una falla de capa 1 se propaga como `LLMCallFailure` (la atrapa el probe);
     `AdapterParseError` es "sin falla de capa 1". El `finish_reason` de la respuesta
-    sana sale del historial del LM: las llamadas hechas en este hilo dentro del bloque
-    se agregan al `history` de cada modulo de `caller_modules` (dspy 3.2.1,
-    `BaseLM.update_history`). Con `disable_history` o `max_history_size == 0` queda None.
+    sana lo publica el punto de llamada (`capture_finish_reason`, SPEC-105 FR-004),
+    no el historial de DSPy. Si ninguna llamada respondio sana queda None.
     """
 
     def call_baseline(example: Any) -> BaselineOutcome:
-        recorder = _HistoryRecorder()
-        callers = [*(dspy.settings.caller_modules or []), recorder]
-        with dspy.context(trace=[], caller_modules=callers, adapter=_safe_adapter()):
+        with (
+            capture_finish_reason() as sink,
+            dspy.context(trace=[], adapter=_safe_adapter()),
+        ):
             try:
                 baseline(**example.inputs())
             except AdapterParseError:
                 pass
-        return BaselineOutcome(finish_reason=recorder.last_finish_reason())
+        return BaselineOutcome(finish_reason=sink[-1] if sink else None)
 
     return call_baseline
 

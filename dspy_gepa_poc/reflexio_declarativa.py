@@ -33,7 +33,7 @@ from shared.display import (
 )
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import RunAborted, get_failure_tracker
-from shared.llm.usage import get_tracker, record_dspy_history
+from shared.llm.usage import get_tracker
 from shared.logging.metadata import (
     MetadataManager,
     collect_model_info,
@@ -166,11 +166,7 @@ class ReflexioDeclarativa:
         No escribe fila de CSV ni presenta metricas como validas; los artefactos que
         la corrida ya haya dejado (p. ej. `candidates.json`) quedan en el directorio.
         """
-        tracker = get_tracker()
-        tracker.reset()
-        record_dspy_history("task", getattr(self.task_lm, "history", None))
-        record_dspy_history("reflection", getattr(self.reflection_lm, "history", None))
-        usage = tracker.snapshot()
+        usage = get_tracker().snapshot()
         usage["cost_usd"] = cost_from_usage(
             usage, self.task_config.model, self.reflection_config.model
         )
@@ -190,6 +186,9 @@ class ReflexioDeclarativa:
         # seccion opcional `failures` del YAML (FR-006). Lo usan `run()` y
         # `scripts/baseline_only.py`.
         self.configure_failure_tracker()
+        # SPEC-105 FR-004: el uso de tokens se registra en cada llamada; se cuenta
+        # desde aca (la sonda de `validate_connection` no registra uso).
+        get_tracker().reset()
         self.task_config = LLMConfig.from_env("task")
         self.reflection_config = LLMConfig.from_env("reflection")
 
@@ -768,25 +767,9 @@ class ReflexioDeclarativa:
                 "optimization": opt_config,
             },
         )
-        # Real token usage: DSPy calls litellm internally, so read it from each
-        # LM's history (task LM + reflection LM) into the shared tracker.
+        # Uso real de tokens: lo registra el punto de llamada (SPEC-105 FR-004)
+        # en el tracker compartido, reiniciado en `setup_models`.
         tracker = get_tracker()
-        tracker.reset()
-        task_history = getattr(self.task_lm, "history", None)
-        reflection_history = getattr(self.reflection_lm, "history", None)
-        record_dspy_history("task", task_history)
-        record_dspy_history("reflection", reflection_history)
-        # dspy.LM.history is capped at settings.max_history_size (default 10000):
-        # once reached, oldest entries are dropped and token/cost totals would be
-        # undercounted. Warn so an incomplete count is never read as authoritative.
-        max_hist = getattr(dspy.settings, "max_history_size", None)
-        if max_hist:
-            for label, history in (("Task", task_history), ("Reflection", reflection_history)):
-                if history is not None and len(history) >= max_hist:
-                    log_warn(
-                        f"{label} LM history alcanzo el tope de {max_hist} entradas; "
-                        "los tokens/costo reales registrados pueden estar subestimados."
-                    )
         usage = tracker.snapshot()
         cost = cost_from_usage(usage, self.task_config.model, self.reflection_config.model)
         usage["cost_usd"] = cost

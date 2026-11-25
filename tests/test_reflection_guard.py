@@ -37,7 +37,7 @@ from gepa_standalone.core.llm_factory import ReflectionLM, create_reflection_lm_
 from shared.llm import LLMCallFailure, LLMConfig, RunAborted, get_failure_tracker
 from shared.llm.failures import DEFAULT_INFRA_RETRIES, FailureClass, LLMFailure
 from shared.llm.reflection import reflection_format_failure
-from tests.conftest import make_completion_response, project_warnings
+from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
 from tests.litellm_failure_payloads import (
     ALL_FAILURE_CASES,
     PROVIDER_KWARGS,
@@ -367,7 +367,7 @@ def _patch_dspy_completion(monkeypatch: pytest.MonkeyPatch, reflection, task_ans
         answer = "yes" if VALID in system else task_answer
         return make_completion_response(f"[[ ## answer ## ]]\n{answer}\n\n[[ ## completed ## ]]")
 
-    monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+    patch_litellm_completion(monkeypatch, fake_completion)
     return calls
 
 

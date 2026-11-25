@@ -116,17 +116,3 @@ def record_usage(role: str, response) -> None:
     """Extract usage from a response and record it under the given role."""
     prompt_tokens, completion_tokens = extract_usage(response)
     _tracker.record(role, prompt_tokens, completion_tokens)
-
-
-def record_dspy_history(role: str, history) -> None:
-    """Record usage from a ``dspy.LM.history`` list into the tracker.
-
-    DSPy calls litellm internally (not via this module's wrappers), so its
-    real token usage is only available after the run on each LM's ``history``.
-    Each entry is a dict carrying a ``usage`` sub-dict; entries without usage
-    are skipped so call counts stay accurate.
-    """
-    for entry in history or []:
-        prompt_tokens, completion_tokens = extract_usage(entry)
-        if prompt_tokens or completion_tokens:
-            _tracker.record(role, prompt_tokens, completion_tokens)

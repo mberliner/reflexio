@@ -66,7 +66,7 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 |-------|------|---------|-------------|
 | `models.temperature` | float | (del .env) | Override de temperatura |
 | `models.max_tokens` | int | 1000 | Override de max tokens. Requerido >= 16000 para reasoning models (gpt-5, o1, o3) |
-| `models.cache` | bool | false | Cache de respuestas DSPy (ver `docs/LLM_CONFIG.md`) |
+| `models.cache` | bool | false | Cache de respuestas DSPy; hoy solo `false` (ver `LLM_CACHE` en `docs/LLM_CONFIG.md`) |
 
 ### Seccion `adapter`: no soportada
 
@@ -196,7 +196,7 @@ ademas se pasan directo al adapter y tienen prioridad.
 |-------|------|-------------|
 | `models.temperature` | float | Override de temperatura (tarea y reflexion). Sin el campo, la tarea usa 0.0 |
 | `models.max_tokens` | int | Override de max tokens de tarea y reflexion. `classifier`, `sql` y `rag` fijan su propio maximo por llamada; `extractor` lo usa como maximo de respuesta. Sin el campo, la reflexion usa el default de `universal_optimizer.py` |
-| `models.cache` | bool | Cache de respuestas de la reflexion |
+| `models.cache` | bool | Sin efecto: se guarda en la config pero la llamada de `gepa_standalone` (`shared/llm/call.py`) no usa cache |
 
 ---
 

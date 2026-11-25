@@ -163,6 +163,30 @@ def checked_completion_with_reason(
     respuesta sana; ademas lo publica en `capture_finish_reason` si hay un bloque
     activo. Las fallas se lanzan igual que en `checked_completion`.
     """
+    response = checked_response(
+        kwargs, messages, role, infra_retries=infra_retries, backoff_base=backoff_base
+    )
+    return response.choices[0].message.content, getattr(response.choices[0], "finish_reason", None)
+
+
+def checked_response(
+    kwargs: dict[str, Any],
+    messages: list[dict[str, Any]],
+    role: str,
+    *,
+    infra_retries: int | None = None,
+    backoff_base: float = 1.0,
+    allow_tool_calls: bool = False,
+) -> Any:
+    """
+    Unico punto que invoca `litellm.completion` en produccion (SPEC-105 FR-001):
+    `num_retries=0`, reintento propio de infraestructura, uso de tokens del rol
+    (FR-004) y clasificacion de la respuesta cruda de LiteLLM (FR-003).
+
+    Devuelve la respuesta cruda sana y publica su `finish_reason` en
+    `capture_finish_reason`. Con `allow_tool_calls`, una respuesta con
+    `tool_calls` no se revisa como texto (la usa el LM de DSPy).
+    """
     import litellm
 
     def _call() -> Any:
@@ -173,9 +197,17 @@ def checked_completion_with_reason(
     )
     if response is not None:
         record_usage(role, response)
-    text = raise_for_response(response, role)
+    if not (allow_tool_calls and _has_tool_calls(response)):
+        raise_for_response(response, role)
     finish_reason = getattr(response.choices[0], "finish_reason", None)
     sink = _finish_reason_sink.get()
     if sink is not None:
         sink[:] = [finish_reason]
-    return text, finish_reason
+    return response
+
+
+def _has_tool_calls(response: Any) -> bool:
+    return any(
+        getattr(getattr(choice, "message", None), "tool_calls", None)
+        for choice in getattr(response, "choices", None) or []
+    )

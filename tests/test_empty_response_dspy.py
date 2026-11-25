@@ -42,7 +42,8 @@ from shared.llm import (
     get_failure_tracker,
 )
 from shared.llm.dspy_lm import CheckedLM
-from tests.conftest import make_completion_response, project_warnings
+from shared.llm.usage import get_tracker as get_usage_tracker
+from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
 
 TASK_MODEL = "openai/gpt-4o-mini"
 REFLECTION_MODEL = "openai/gpt-4o"
@@ -66,7 +67,7 @@ def _patch_dspy_completion(monkeypatch, task, reflection):
         content, reason = (reflection if role == "reflection" else task)(request)
         return make_completion_response(content, reason)
 
-    monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+    patch_litellm_completion(monkeypatch, fake_completion)
     return calls
 
 
@@ -154,7 +155,7 @@ class TestCheckedLM:
     def test_get_dspy_lm_returns_checked_lm_with_role(self):
         lm = _lm(REFLECTION_MODEL, "reflection")
         assert isinstance(lm, CheckedLM)
-        assert isinstance(lm, dspy.LM)
+        assert isinstance(lm, dspy.BaseLM)
         assert lm.role == "reflection"
 
     def test_from_env_role(self, mock_env):
@@ -206,8 +207,8 @@ class TestCheckedLM:
         assert len(warnings) == 1
         assert "rol=reflection" in warnings[0].message
         assert f"finish_reason={reason}" in warnings[0].message
-        # La llamada queda en history: su uso de tokens se sigue contando.
-        assert len(lm.history) == 1
+        # SPEC-105 FR-004: el uso de tokens de la respuesta fallida se cuenta igual.
+        assert get_usage_tracker().snapshot()["reflection"]["calls"] == 1
 
     @pytest.mark.parametrize(("content", "reason"), EMPTY_CASES)
     def test_task_raises_with_cause(self, monkeypatch, caplog, content, reason):
@@ -230,7 +231,7 @@ class TestCheckedLM:
         ]
         assert project_warnings(caplog) == []
         assert get_failure_tracker().snapshot()["counts"] == {}
-        assert len(lm.history) == 1
+        assert get_usage_tracker().snapshot()["task"]["calls"] == 1
 
     def test_task_empty_reaches_program_without_json_fallback(self, monkeypatch, task_lm_context):
         """La excepcion llega intacta al programa con 1 sola llamada: la falla de
@@ -266,7 +267,7 @@ class TestCheckedLM:
             calls += 1
             return make_completion_response(content, "length")
 
-        monkeypatch.setattr("dspy.clients.lm.litellm_completion", truncated)
+        patch_litellm_completion(monkeypatch, truncated)
         dspy_lm_logger = logging.getLogger("dspy.clients.lm")
         dspy_records: list[logging.LogRecord] = []
 
@@ -287,12 +288,12 @@ class TestCheckedLM:
         assert exc_info.value.failure.clase == FailureClass.presupuesto
         assert exc_info.value.failure.finish_reason == "length"
         assert not get_failure_tracker().aborted
-        assert len(lm.history) == 1
+        assert get_usage_tracker().snapshot()["task"]["calls"] == 1
         assert dspy_records == []
 
     def test_none_response_is_configuracion_with_none_response_cause(self, monkeypatch):
         """H-02: si LiteLLM devuelve `None`, es `configuracion` con causa
-        `NoneResponse` (no `TypeError` en `_check_truncation`) y corta fallback."""
+        `NoneResponse` (no `TypeError`) y corta fallback."""
         calls = 0
 
         def return_none(request, num_retries, cache=None):
@@ -300,7 +301,7 @@ class TestCheckedLM:
             calls += 1
             return None
 
-        monkeypatch.setattr("dspy.clients.lm.litellm_completion", return_none)
+        patch_litellm_completion(monkeypatch, return_none)
         lm = _lm(TASK_MODEL, "task")
         with dspy.context(lm=lm), pytest.raises(LLMCallFailure) as exc_info:
             _plain_student()(question="q0")
@@ -309,7 +310,7 @@ class TestCheckedLM:
         assert exc_info.value.failure.clase == FailureClass.configuracion
         assert exc_info.value.failure.causa == "NoneResponse"
         assert get_failure_tracker().aborted
-        assert len(lm.history) == 0
+        assert get_usage_tracker().snapshot()["task"]["calls"] == 0
 
 
 # ==================== Envoltorio del programa y guardia de metrica ====================

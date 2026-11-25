@@ -8,7 +8,6 @@ from shared.llm.usage import (
     UsageTracker,
     extract_usage,
     get_tracker,
-    record_dspy_history,
     record_usage,
 )
 
@@ -89,34 +88,6 @@ class TestUsageTracker:
         t = UsageTracker()
         t.record("task", 1, 1)
         assert t.snapshot()["total_tokens"] == 2
-
-
-class TestRecordDspyHistory:
-    def test_sums_history_entries(self, tracker):
-        history = [
-            {"usage": {"prompt_tokens": 100, "completion_tokens": 20}},
-            {"usage": {"prompt_tokens": 50, "completion_tokens": 10}},
-        ]
-        record_dspy_history("task", history)
-        snap = tracker.snapshot()
-        assert snap["task"]["calls"] == 2
-        assert snap["task"]["prompt_tokens"] == 150
-        assert snap["task"]["completion_tokens"] == 30
-
-    def test_skips_entries_without_usage(self, tracker):
-        history = [
-            {"usage": {"prompt_tokens": 10, "completion_tokens": 5}},
-            {"prompt": "no usage here"},
-            {"usage": {"prompt_tokens": 0, "completion_tokens": 0}},
-        ]
-        record_dspy_history("reflection", history)
-        snap = tracker.snapshot()
-        assert snap["reflection"]["calls"] == 1
-        assert snap["reflection"]["prompt_tokens"] == 10
-
-    def test_none_history_is_noop(self, tracker):
-        record_dspy_history("task", None)
-        assert tracker.snapshot()["total_tokens"] == 0
 
 
 class TestReasoningTokens:

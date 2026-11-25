@@ -63,7 +63,7 @@ LLM_MODEL_REFLECTION=azure/gpt-4o
 | `LLM_API_VERSION` | Version de API Azure | No (default: 2024-02-15-preview) |
 | `LLM_MODEL_TASK` | Modelo para tareas (estudiante) | No (default: azure/gpt-4.1-mini) |
 | `LLM_MODEL_REFLECTION` | Modelo para reflexion (profesor) | No (default: azure/gpt-4o) |
-| `LLM_CACHE` | Cache de respuestas DSPy (true/false). False = llamada fresca siempre | No (default: false) |
+| `LLM_CACHE` | Cache de respuestas DSPy. Solo `false`: con el punto de llamada propio (SPEC-105) `true` falla al armar el LM de DSPy; vuelve con el engine de dspy 3.5 (D-018) | No (default: false) |
 
 ### Estrategia Profesor-Estudiante
 

@@ -22,9 +22,10 @@ Verifica:
   `num_retries=0`, `num_retries=3` y `dspy.LM` por defecto (tabla 4), y el de
   `CheckedLM` tras SPEC-104 2a (1 llamada, o 1 + reintentos si es
   `infraestructura`).
-- Que `CheckedLM._process_lm_response` recibe el objeto de respuesta completo
-  con `finish_reason` y `message` intactos y rechaza las respuestas 200 con
-  falla de capa 1 con su clase.
+- Que el punto de llamada (`shared.llm.call.raise_for_response`, que usa
+  `CheckedLM` via `checked_response`, SPEC-105) recibe el objeto de respuesta
+  completo de LiteLLM con `finish_reason` y `message` intactos y rechaza las
+  respuestas 200 con falla de capa 1 con su clase.
 
 Referencias:
 - `specs/SPEC-104-fallas-tecnicas-justas.md` ("Reglas de deteccion de la capa 1",
@@ -52,10 +53,12 @@ import tenacity
 from litellm.llms.azure.common_utils import BaseAzureLLM
 from litellm.llms.openai.openai import OpenAIChatCompletion
 
+import shared.llm.call as call_module
 from shared.llm.config import LLMConfig, is_empty_text
 from shared.llm.dspy_lm import CheckedLM
 from shared.llm.errors import EmptyResponseError
 from shared.llm.failures import DEFAULT_INFRA_RETRIES, LLMCallFailure, root_exception
+from shared.llm.usage import get_tracker as get_usage_tracker
 from tests.litellm_failure_payloads import (
     ALL_FAILURE_CASES,
     ALL_HTTP_200_CASES,
@@ -455,12 +458,12 @@ class TestRetryHTTPCounts:
         assert type(root_exception(exc)).__name__ == expected
 
 
-# ================== (d) CheckedLM._process_lm_response (shared/llm/dspy_lm.py) ==================
+# ============ (d) CheckedLM -> raise_for_response del punto de llamada (SPEC-105) ============
 
 
-class TestCheckedLMProcessResponse:
+class TestCheckedLMRaiseForResponse:
     @pytest.mark.parametrize("case", ALL_HTTP_200_CASES, ids=lambda c: c.id)
-    def test_checked_lm_process_response_receives_intact_finish_reason_and_message(
+    def test_call_point_receives_intact_finish_reason_and_message(
         self, case: FailurePayloadCase, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cfg = LLMConfig(**{**PROVIDER_KWARGS[case.provider], "role": "task", "cache": False})
@@ -468,15 +471,13 @@ class TestCheckedLMProcessResponse:
         assert isinstance(lm, CheckedLM)
 
         captured_responses: list[Any] = []
-        original_process = CheckedLM._process_lm_response
+        original_raise = call_module.raise_for_response
 
-        def spy_process(
-            self: CheckedLM, response: Any, prompt: Any, messages: Any, **kwargs: Any
-        ) -> Any:
+        def spy_raise(response: Any, role: str) -> Any:
             captured_responses.append(response)
-            return original_process(self, response, prompt, messages, **kwargs)
+            return original_raise(response, role)
 
-        monkeypatch.setattr(CheckedLM, "_process_lm_response", spy_process)
+        monkeypatch.setattr(call_module, "raise_for_response", spy_raise)
 
         with intercept_httpx(case) as calls:
             if case.spec104_class == "ok":
@@ -508,6 +509,5 @@ class TestCheckedLMProcessResponse:
         assert message.content == case.expected_content
         assert hasattr(message, "refusal") is case.expected_has_refusal_attr
         assert getattr(message, "refusal", None) == case.expected_refusal
-        # El historial de DSPy tambien conserva el objeto completo intacto
-        assert len(lm.history) == 1
-        assert lm.history[-1]["response"] is raw_resp
+        # SPEC-105 FR-004: el uso se registra en el punto de llamada, falle o no.
+        assert get_usage_tracker().snapshot()["task"]["calls"] == 1

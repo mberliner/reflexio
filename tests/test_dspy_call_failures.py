@@ -36,7 +36,7 @@ from dspy_gepa_poc.call_failures import (
     tolerate_call_failures,
 )
 from shared.llm import FailureClass, LLMConfig, LLMFailure, RunAborted, get_failure_tracker
-from tests.conftest import make_completion_response, project_warnings
+from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
 from tests.litellm_failure_payloads import ALL_FAILURE_CASES, PROVIDER_KWARGS, FailurePayloadCase
 from tests.test_litellm_failure_mapping import intercept_httpx
 
@@ -115,7 +115,7 @@ class FakeLLM:
         return result
 
     def install(self, monkeypatch):
-        monkeypatch.setattr("dspy.clients.lm.litellm_completion", self)
+        patch_litellm_completion(monkeypatch, self)
         return self
 
 
@@ -379,7 +379,7 @@ class TestFormat:
                 message="bad key", llm_provider="openai", model=TASK_MODEL
             )
 
-        monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+        patch_litellm_completion(monkeypatch, fake_completion)
         student, metric = guard_program_and_metric(_seed_student(), _metric)
         with caplog.at_level(logging.DEBUG):
             result = Evaluate(devset=_dataset(1), metric=metric, num_threads=1)(student)
@@ -415,7 +415,7 @@ class TestFormat:
                 return make_completion_response("sin marcadores dspy", "stop")
             return make_completion_response(None, "length")
 
-        monkeypatch.setattr("dspy.clients.lm.litellm_completion", fake_completion)
+        patch_litellm_completion(monkeypatch, fake_completion)
         student, metric = guard_program_and_metric(_seed_student(), _metric)
         result = Evaluate(devset=_dataset(1), metric=metric, num_threads=1)(student)
 

@@ -15,6 +15,7 @@ from litellm.llms.custom_httpx.http_handler import HTTPHandler
 from openai.types.chat import ChatCompletion
 
 from shared.llm.failures import get_failure_tracker
+from shared.llm.usage import get_tracker as get_usage_tracker
 
 LLM_ENV_VARS = [
     "LLM_MODEL_TASK",
@@ -59,6 +60,21 @@ def make_completion_response(
     )
 
 
+def patch_litellm_completion(monkeypatch: pytest.MonkeyPatch, fake) -> None:
+    """
+    Simula `litellm.completion`, la unica llamada al proveedor del punto de llamada
+    (`shared.llm.call.checked_response`, SPEC-105 FR-001), tambien desde DSPy.
+
+    `fake(request, num_retries)` recibe en `request` los kwargs de la llamada
+    (`model`, `messages`, ...) y devuelve la respuesta o lanza la excepcion.
+    """
+
+    def completion(**kwargs):
+        return fake(request=kwargs, num_retries=kwargs.get("num_retries"))
+
+    monkeypatch.setattr("litellm.completion", completion)
+
+
 PROJECT_LOGGER_ROOTS: frozenset[str] = frozenset({"shared", "dspy_gepa_poc", "gepa_standalone"})
 
 
@@ -87,11 +103,14 @@ def project_warnings(
 def reset_failure_tracker():
     """
     Contador de fallas limpio en cada test (SPEC-104): es un singleton de modulo y
-    una falla `configuracion` de un test fija el aborto para los siguientes.
+    una falla `configuracion` de un test fija el aborto para los siguientes. Igual
+    el de uso de tokens, que el punto de llamada registra en cada llamada (SPEC-105).
     """
     get_failure_tracker().reset()
+    get_usage_tracker().reset()
     yield
     get_failure_tracker().reset()
+    get_usage_tracker().reset()
 
 
 @pytest.fixture
