@@ -5,16 +5,7 @@ Este proyecto es un laboratorio de experimentacion para explorar, probar y desar
 - **DSPy**: Framework de Stanford NLP para programar modelos de lenguaje mediante estructuras declarativas.
 - **GEPA**: Optimizador de evolucion reflexiva que mejora automaticamente prompts y programas.
 
-El objetivo es proporcionar un entorno completo para investigar las capacidades de optimizacion automatica en sistemas basados en LLM. Entener y probar la creación de soluciones automejoradas y su ROI directo.
-
-# Reflexio Dicta, in short Reflexio
-
-This project is an experimentation laboratory to explore, test, and develop applications using:
-
-- **DSPy**: Stanford NLP framework for programming language models via declarative structures.
-- **GEPA**: Reflexive evolution optimizer that automatically improves prompts and programs.
-
-The goal is to provide a complete environment to investigate automatic optimization capabilities in LLM-based systems. Understanding and testing the creation of self-improving solutions and their direct ROI.
+El objetivo es proporcionar un entorno completo para investigar las capacidades de optimizacion automatica en sistemas basados en LLM. Entender y probar la creación de soluciones automejoradas y su ROI directo.
 
 ---
 

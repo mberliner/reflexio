@@ -164,7 +164,7 @@ Desacuerdos en `val` (análisis inicial):
 
 **Mejores Prácticas Adoptadas:**
 - **.env (Infraestructura):** Reservado exclusivamente para secretos (API Keys), Endpoints de Azure/OpenAI y alias de modelos (Task vs Reflection).
-- **YAML (Experimento):** Contiene toda la lógica del caso de uso, incluyendo límites de truncamiento (`max_text_length`), presupuesto de optimización (`max_metric_calls`) y configuración de adapters.
+- **YAML (Experimento):** Contiene toda la lógica del caso de uso, incluyendo límites de truncamiento (`max_text_length`, efectivo solo en `gepa_standalone`), presupuesto de optimización (`max_metric_calls`) y configuración de adapters. Detalle por subproyecto en `docs/YAML_CONFIG_REFERENCE.md`.
 
 **Beneficio:** Un mismo código puede ejecutar múltiples experimentos simultáneos con parámetros lógicos distintos simplemente pasando diferentes archivos YAML, sin colisiones de variables de entorno globales.
 
@@ -265,7 +265,6 @@ La optimizacion reflexiva (GEPA) es el factor dominante en la mejora, no la infr
 ### Archivos relacionados
 
 - Configs: `dspy_gepa_poc/configs/dynamic_email_urgency.yaml`, `dynamic_email_urgency_fewshot.yaml`
-- Script batch: `dspy_gepa_poc/run_email_urgency_comparison.sh`
 - Dataset: `dspy_gepa_poc/datasets/email_urgency.csv`
 
 ## 8. CV Profile Extraction: historia completa de diagnóstico y techo
@@ -364,7 +363,7 @@ GEPA convirtió una instrucción de ~600 chars en un prompt de ~3000 chars con c
 | Clasificación multi-criterio con razonamiento | **Sí** | El prompt debe articular criterios tácitos |
 | Pipelines compuestos (extracción → razonamiento) | Solo en la etapa de razonamiento | Cada etapa tiene su propio techo |
 
-**Regla práctica:** Si el baseline en extracción está > 80%, probablemente no haya espacio para GEPA. Si la tarea requiere razonamiento o el baseline está < 70%, vale la pena.
+**Regla práctica:** Si el baseline en extracción está > 80%, probablemente no haya espacio para GEPA. Si la tarea requiere razonamiento o el baseline está < 70%, vale la pena. La regla general por rangos de baseline (independiente del tipo de tarea) está en `docs/CUANDO_APLICAR_Y_CASOS_DE_USO.md`.
 
 ### Cómo subir la robustez cuando GEPA ya no aporta
 

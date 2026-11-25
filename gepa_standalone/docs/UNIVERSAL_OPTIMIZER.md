@@ -27,34 +27,23 @@ python -m gepa_standalone.universal_optimizer \
 
 ## Jerarquía de Configuración
 
-El optimizer combina 3 fuentes de configuración con esta prioridad (mayor a menor):
+Los parámetros de los adapters salen de 2 fuentes (mayor a menor prioridad):
 
 ### 1. YAML Explícito (Mayor Prioridad)
-Parámetros especificados directamente en el archivo YAML.
+Parámetros especificados directamente en la sección `adapter` del YAML.
 
 ```yaml
 adapter:
   type: "extractor"
-  max_positive_examples: 3  # Override explícito
+  extractor_max_positive_examples: 3  # Override explícito
 ```
 
-### 2. Variables de Entorno (.env)
-Valores definidos en `.env` (o variables de sistema).
+### 2. Defaults de `config.py` (Menor Prioridad)
+Valores fijos en el código (`Config._EXTRACTOR_MAX_POSITIVE_EXAMPLES = 0`, etc.).
 
-```bash
-# .env
-LLM_API_KEY=tu-key-aqui
-LLM_MODEL_TASK=azure/gpt-4.1-mini
-EXTRACTOR_MAX_POSITIVE_EXAMPLES=1
-```
-
-### 3. Defaults de Config.py (Menor Prioridad)
-Valores por defecto si no se especifica nada.
-
-```python
-# config.py línea 47
-EXTRACTOR_MAX_POSITIVE_EXAMPLES = int(os.getenv("...", "0"))  # default: 0
-```
+El `.env` solo aporta infraestructura (API key, endpoint, modelos task/reflection);
+los parámetros de adapter NO se leen de variables de entorno. Campos y defaults:
+`docs/YAML_CONFIG_REFERENCE.md` (seccion 2).
 
 ---
 
@@ -114,7 +103,7 @@ adapter:
     - "nombre"
     - "email"
     - "años_experiencia"
-  max_positive_examples: 0           # Override: usar 0 en vez de Config
+  extractor_max_positive_examples: 0 # Override: usar 0 en vez de Config
 
 data:
   csv_filename: "cv_extraction.csv"
@@ -168,9 +157,11 @@ optimization:
 | `type` | ✓ | ✓ | ✓ | ✓ | Tipo de adaptador (REQUERIDO) |
 | `valid_classes` | ✓ | - | - | - | Lista de clases válidas (REQUERIDO en classifier) |
 | `required_fields` | - | ✓ | - | - | Campos a extraer (REQUERIDO en extractor) |
-| `max_positive_examples` | - | ✓ | - | - | Ejemplos exitosos en reflexión (0-3) |
-| `rag_context_max_length` | - | - | - | ✓ | Límite de tokens del contexto |
-| `rag_max_positive_examples` | - | - | - | ✓ | Ejemplos exitosos en reflexión |
+| `extractor_max_positive_examples` | - | ✓ | - | - | Ejemplos exitosos en reflexión (0-3) |
+| `max_positive_examples` | - | - | - | ✓ | Ejemplos exitosos en reflexión (prioritario sobre `rag_max_positive_examples`) |
+| `max_text_length` | ✓ | ✓ | - | - | Truncado del texto en el dataset de reflexión (caracteres) |
+| `rag_context_max_length` | - | - | - | ✓ | Truncado del contexto en el dataset de reflexión (caracteres) |
+| `rag_max_positive_examples` | - | - | - | ✓ | Default de ejemplos exitosos en reflexión |
 
 ---
 
@@ -292,7 +283,7 @@ En el YAML:
 adapter:
   type: "extractor"
   required_fields: [...]
-  max_positive_examples: 2         # Ignora Config y .env
+  extractor_max_positive_examples: 2   # Pisa el default de Config
 ```
 
 ---

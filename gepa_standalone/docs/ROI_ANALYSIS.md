@@ -107,6 +107,10 @@ ROI primer mes: 1,424%
 
 ### Azure OpenAI Pricing (USD por 1M tokens)
 
+Precios a la fecha del análisis; los vigentes están en `DEFAULT_PRICING`
+(`shared/analysis/roi_calculator.py`).
+
+
 | Modelo | Input | Output | Costo por llamada promedio* |
 |--------|-------|--------|---------------------------|
 | **GPT-4o** | $2.50 | $10.00 | $0.0025 - $0.0040 |

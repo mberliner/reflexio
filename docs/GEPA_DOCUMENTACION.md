@@ -144,38 +144,8 @@ gepa/
 
 ## Instalación
 
-### Instalación Básica
-
-```bash
-# Desde PyPI
-pip install gepa
-
-# Última versión desde GitHub
-pip install git+https://github.com/gepa-ai/gepa.git
-
-# Con todas las funcionalidades
-pip install "gepa[full]"
-```
-
-### Configuración de Desarrollo
-
-```bash
-# Con uv (recomendado)
-git clone https://github.com/gepa-ai/gepa
-cd gepa
-uv sync --extra dev --python 3.11
-uv run pytest tests/
-
-# Con conda + pip
-conda create -n gepa-dev python=3.11
-conda activate gepa-dev
-pip install -e ".[dev]"
-pytest tests/
-```
-
-### Dependencias
-
-Consulte `requirements.txt` para la lista completa de bibliotecas y sus versiones.
+En este proyecto GEPA se instala con `requirements.txt` (versión fijada). Setup
+y entorno: `docs/DEVELOPMENT.md`.
 
 ---
 
@@ -249,11 +219,11 @@ Contiene los parámetros que definen el comportamiento y los resultados de la op
 - **Definición de Tarea**: tipo de adapter, nombres de columnas, rutas de datasets,
   clases válidas (`valid_classes`), campos requeridos (`required_fields`).
 - **Ejemplos positivos**: `max_positive_examples` / `extractor_max_positive_examples`.
+- **Límites de longitud** (solo `gepa_standalone`): `max_text_length`,
+  `rag_context_max_length`. En `dspy_gepa_poc` no tienen efecto.
 
-Los límites de longitud de texto/contexto NO van en el YAML: se configuran por
-variable de entorno en el `.env` del subproyecto (ver `docs/LLM_CONFIG.md`). La
-referencia completa y autoritativa de campos YAML es `docs/YAML_CONFIG_REFERENCE.md`
-(SSOT); esta seccion es solo un panorama.
+La referencia completa y autoritativa de campos YAML es
+`docs/YAML_CONFIG_REFERENCE.md` (SSOT); esta seccion es solo un panorama.
 
 **Nota de Diseño:** Los parámetros lógicos en YAML tienen prioridad sobre cualquier valor por defecto en el código o variables de entorno, permitiendo que cada archivo YAML sea una "receta" completa y reproducible del experimento.
 
@@ -470,38 +440,6 @@ Usar `dspy_full_program_adapter` para evolucionar programas completos.
 
 ---
 
-## Testing
-
-### Ejecutar Tests
-
-```bash
-# Con uv
-uv run pytest tests/
-
-# Con pytest
-pytest tests/ -v
-
-# Test específico
-pytest tests/test_candidate_selector.py
-
-# Con coverage
-pytest tests/ --cov=gepa --cov-report=html
-```
-
-### Fixtures Reproducibles
-
-GEPA usa **mocked LLMs** para tests reproducibles:
-- Modo REPLAY (por defecto): usa respuestas cacheadas
-- Modo RECORD: hace llamadas reales y cachea
-
-### Type Checking
-
-```bash
-uv run pyright src/gepa/
-```
-
----
-
 ## Mejores Prácticas
 
 ### Diseño de Feedback
@@ -559,22 +497,6 @@ Implementar feedback específico y accionable en `make_reflective_dataset()`.
 - GitHub Issues: Reportar bugs
 - GitHub Discussions: Preguntas
 - DSPy Discord: Canal #gepa
-
-### Citación
-
-```bibtex
-@misc{agrawal2025gepareflectivepromptevolution,
-    title={GEPA: Reflective Prompt Evolution Can Outperform
-           Reinforcement Learning},
-    author={Lakshya A Agrawal and Shangyin Tan and Dilara Soylu
-            and Noah Ziems and others},
-    year={2025},
-    eprint={2507.19457},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL},
-    url={https://arxiv.org/abs/2507.19457}
-}
-```
 
 ---
 

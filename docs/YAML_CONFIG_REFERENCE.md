@@ -29,7 +29,7 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 |---------|-------|------|-------------|
 | `case` | `name` | string | Slug corto del caso (ver [Criterio unificado `case`](#criterio-unificado-case)) |
 | `case` | `title` | string | Titulo semantico del caso |
-| `module` | `type` | string | Tipo de modulo: `dynamic`, `rule_derived`, `pipeline`, `sentiment`, `extractor`, `qa` |
+| `module` | `type` | string | Tipo de modulo: `dynamic`, `rule_derived`, `rule_derived_alto`, `pipeline` (los unicos que `reflexio_declarativa.py` ejecuta; ver nota de tipos heredados abajo) |
 | `data` | `csv_filename` | string | Archivo CSV en `datasets/` |
 | `data` | `input_column` o `input_columns` | string / list | Columna(s) de entrada del CSV. `input_column` (string, single) o `input_columns` (lista, multi-input); al menos uno requerido |
 | `optimization` | `max_metric_calls` o `auto_budget` | int / string | Al menos uno requerido |
@@ -68,13 +68,25 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 | `models.max_tokens` | int | 1000 | Override de max tokens. Requerido >= 16000 para reasoning models (gpt-5, o1, o3) |
 | `models.cache` | bool | false | Cache de respuestas DSPy (ver `docs/LLM_CONFIG.md`) |
 
-### Adapter (opcionales)
+### Adapter (inertes con DSPy 3.2.1)
+
+`config.py` lee estos campos, pero `optimizer.py` solo pasa a `dspy.GEPA` los
+parametros que su firma acepta, y la de DSPy 3.2.1 no acepta ninguno de ellos:
+se descartan con un `log_warn` y no tienen efecto. Revisar al actualizar DSPy (D-018).
 
 | Campo | Tipo | Default | Descripcion |
 |-------|------|---------|-------------|
-| `adapter.max_text_length` | int | 1000 | Longitud maxima de texto para el adaptador |
-| `adapter.max_positive_examples` | int | 2 | Ejemplos positivos en prompt |
-| `adapter.extractor_max_positive_examples` | int | 0 | Ejemplos positivos para extractor |
+| `adapter.max_text_length` | int | 1000 | Sin efecto (no truncan el texto en DSPy) |
+| `adapter.max_positive_examples` | int | 2 | Sin efecto |
+| `adapter.extractor_max_positive_examples` | int | 0 | Sin efecto |
+
+### Parametros de GEPA no configurables por YAML
+
+`GEPAConfig` (`config.py`) fija defaults que el YAML no puede cambiar:
+`skip_perfect_score: true`, `reflection_minibatch_size: 3`,
+`candidate_selection_strategy: pareto`, `use_merge: true`,
+`max_merge_invocations: 5`, `track_stats: true`. Para modificarlos hay que
+cambiar el codigo.
 
 ### Campos por Tipo de Modulo
 
@@ -82,10 +94,13 @@ la columna `Caso` esta en `shared/logging/csv_writer.py` (`case_name -> Caso`).
 |------|-------------------------------|
 | `dynamic` | Seccion `signature` completa |
 | `rule_derived` | Seccion `signature` completa; outputs DEBEN incluir las preguntas + el campo derivado (ver abajo) |
+| `rule_derived_alto` | Seccion `signature` completa; el LLM responde sub-hechos y `derive_alto_impacto` deriva `alto_impacto` antes del color (ver `docs/LECCIONES_APRENDIDAS.md`, D-015a) |
 | `pipeline` | Secciones `stages` (lista, >=2 etapas con `name` + `signature`) y `routing` |
-| `sentiment` | Ninguno |
-| `extractor` | `output_columns` (en `module` o `data`) |
-| `qa` | `input_column_context`, `input_column_question` |
+
+Tipos heredados: `config_schema.py` todavia acepta `sentiment`, `extractor` y
+`qa` (este ultimo exige `input_column_context` e `input_column_question`), pero
+`reflexio_declarativa.py` los rechaza en runtime con `Unsupported module type`.
+No usarlos.
 
 ### Pipeline (requerida si `module.type: "pipeline"`)
 
@@ -147,11 +162,21 @@ Gobierno de IA): el LLM responde 5 preguntas Si/No + `alto_impacto`, y
 | `classifier` | `valid_classes` (list) | (ninguno) |
 | `extractor` | `required_fields` (list) | `extractor_max_positive_examples` |
 | `sql` | - | (ninguno) |
-| `rag` | - | `max_positive_examples` |
+| `rag` | - | `max_positive_examples` (prioritario sobre `rag_max_positive_examples`) |
 
-Los limites de longitud de texto/contexto NO son campos del YAML: se configuran
-por variable de entorno en el `.env` del subproyecto (`CLASSIFIER_TEXT_MAX_LENGTH`,
-`EXTRACTOR_TEXT_MAX_LENGTH`, `RAG_CONTEXT_MAX_LENGTH`). Ver `docs/LLM_CONFIG.md`.
+Limites de longitud y ejemplos positivos: se fijan en la seccion `adapter` del
+YAML. Los limites truncan el texto que recibe el Profesor en el dataset de
+reflexion, no la entrada de la tarea. `Config.apply_yaml_config` (`gepa_standalone/config.py`) los aplica sobre
+defaults del codigo; NO se leen de variables de entorno. Los campos
+`extractor_max_positive_examples` (extractor) y `max_positive_examples` (rag)
+ademas se pasan directo al adapter y tienen prioridad.
+
+| Campo | Default | Pisa en `Config` |
+|-------|---------|------------------|
+| `adapter.max_text_length` | 1000 | `CLASSIFIER_TEXT_MAX_LENGTH` y `EXTRACTOR_TEXT_MAX_LENGTH` |
+| `adapter.rag_context_max_length` | 1500 | `RAG_CONTEXT_MAX_LENGTH` |
+| `adapter.rag_max_positive_examples` | 2 | `RAG_MAX_POSITIVE_EXAMPLES` |
+| `adapter.extractor_max_positive_examples` | 0 | `EXTRACTOR_MAX_POSITIVE_EXAMPLES` |
 
 ### Prompt (opcional)
 
@@ -164,15 +189,21 @@ por variable de entorno en el `.env` del subproyecto (`CLASSIFIER_TEXT_MAX_LENGT
 | Campo | Tipo | Default | Descripcion |
 |-------|------|---------|-------------|
 | `optimization.skip_perfect_score` | bool | true | Omitir ejemplos con score perfecto en reflexion |
-| `optimization.display_progress_bar` | bool | false | Mostrar barra de progreso |
+| `optimization.display_progress_bar` | bool | true | Mostrar barra de progreso |
 | `optimization.ignore_in_metric` | list | [] | Campos de output a ignorar en la evaluacion de la metrica |
 | `optimization.eval_repeats` | int | 1 | Repeticiones de evaluacion por prompt (k) en val/test para reducir varianza del LLM |
+| `optimization.match_mode` | string | `exact` | Solo `extractor`: `exact`, `normalized`, `fuzzy` |
+| `optimization.fuzzy_threshold` | float | 0.85 | Solo `extractor`: umbral del modo fuzzy |
+| `optimization.field_configs` | dict | - | Solo `extractor`: overrides de matching por campo (mismo formato que en DSPy) |
+| `optimization.list_separators` | string | `,;` | Solo `extractor`: separadores para campos de tipo lista |
 
 ### Models (opcionales)
 
 | Campo | Tipo | Descripcion |
 |-------|------|-------------|
-| `models.temperature` | float | Override de temperatura |
+| `models.temperature` | float | Override de temperatura (tarea y reflexion). Sin el campo, la tarea usa 0.0 |
+| `models.max_tokens` | int | Override de max tokens de tarea y reflexion. `classifier`, `sql` y `rag` fijan su propio maximo por llamada; `extractor` lo usa como maximo de respuesta. Sin el campo, la reflexion usa el default de `universal_optimizer.py` |
+| `models.cache` | bool | Cache de respuestas de la reflexion |
 
 ---
 
@@ -237,7 +268,7 @@ data:
   csv_filename: "..."  # Requerido en ambos
 
 models:
-  temperature: 0.1     # Opcional en ambos
+  temperature: 0.1     # Opcional en ambos (tambien max_tokens y cache)
 
 optimization:
   max_metric_calls: 50 # Requerido en GEPA, opcional (con auto_budget) en DSPy

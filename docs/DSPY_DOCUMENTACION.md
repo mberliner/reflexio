@@ -144,51 +144,11 @@ DSPy/
 
 ---
 
-## Instalacion
+## Instalacion y configuracion
 
-### Instalacion Basica
-
-```bash
-# Desde PyPI (recomendado)
-pip install dspy
-
-# Version de desarrollo
-pip install git+https://github.com/stanfordnlp/dspy.git
-```
-
-### Dependencias
-
-Para la lista completa de dependencias y versiones exactas, consulte el archivo central `requirements.txt`.
-
-### Dependencias Opcionales
-
-```bash
-# Para Anthropic Claude
-pip install dspy[anthropic]
-
-# Para Weaviate
-pip install dspy[weaviate]
-
-# Para LangChain
-pip install dspy[langchain]
-```
-
-### Configuracion Inicial
-
-```python
-import dspy
-
-# Configurar modelo de lenguaje
-lm = dspy.LM("openai/gpt-4o", api_key="sk-...")
-dspy.configure(lm=lm)
-
-# O usar variable de entorno OPENAI_API_KEY
-import os
-
-os.environ["OPENAI_API_KEY"] = "sk-..."
-lm = dspy.LM("openai/gpt-4o")
-dspy.configure(lm=lm)
-```
+En este proyecto DSPy se instala con `requirements.txt` (version fijada) y el
+modelo se configura por `.env`, no a mano en codigo. Ver `docs/DEVELOPMENT.md`
+(setup) y `docs/LLM_CONFIG.md` (configuracion LLM).
 
 ---
 
@@ -658,8 +618,13 @@ summarizer = dspy.ChainOfThought(Summarizer)
 
 ### Cache y Rendimiento
 
+En este proyecto el cache esta **desactivado por defecto** (`LLM_CACHE=false`,
+override con `models.cache` en el YAML): cada corrida llama al modelo de nuevo
+para que la varianza medida sea real. Ver `docs/LLM_CONFIG.md`. Lo que sigue es
+el comportamiento de DSPy fuera del proyecto.
+
 ```python
-# Cache habilitado por defecto (30GB disco)
+# Cache habilitado por defecto en DSPy (30GB disco)
 lm = dspy.LM("openai/gpt-4o")
 
 # Deshabilitar cache

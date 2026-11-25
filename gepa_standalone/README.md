@@ -56,11 +56,11 @@ LLM_MODEL_TASK=azure/gpt-4.1-mini        # Modelo estudiante
 LLM_MODEL_REFLECTION=azure/gpt-4o        # Modelo profesor
 ```
 
-Para documentacion completa de configuracion LLM, ver `/docs/LLM_CONFIG.md`.
+Para documentacion completa de configuracion LLM, ver `../docs/LLM_CONFIG.md`.
 
 ## Conceptos Clave: ¿Por qué optimizar RAG?
 
-Para entender qué es GEPA y cómo funciona, ver `docs/GEPA_DOCUMENTACION.md` (filosofía, algoritmo reflexivo y arquitectura).
+Para entender qué es GEPA y cómo funciona, ver `../docs/GEPA_DOCUMENTACION.md` (filosofía, algoritmo reflexivo y arquitectura).
 
 Aunque GEPA siempre optimiza texto, existen diferencias fundamentales según la tarea:
 
@@ -92,7 +92,7 @@ Traduce lenguaje natural a consultas SQL.
 ### 4. Optimización RAG (QA Políticas)
 Mejora respuestas basadas en contexto usando evaluación "LLM-as-a-Judge".
 *   **Comando:** `python -m gepa_standalone.universal_optimizer --config gepa_standalone/experiments/configs/rag_optimization.yaml`
-*   **Guía específica:** `gepa_standalone/docs/DEMO4_RAG_GUIDE.md`
+*   **Guía específica:** `docs/DEMO4_RAG_GUIDE.md`
 
 ---
 

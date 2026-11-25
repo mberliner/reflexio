@@ -234,40 +234,11 @@ Las utilidades esperan el formato estandar de `shared/logging`:
 
 ## Precios de Modelos (ROI)
 
-Configurados en `roi_calculator.py`:
-
-| Modelo | Input (1M tokens) | Output (1M tokens) |
-|--------|-------------------|-------------------|
-| gpt-4o | $2.50 | $10.00 |
-| gpt-4o-mini | $0.15 | $0.60 |
-| gpt-4.1-mini | $0.15 | $0.60 |
-| gpt-4.1-nano | $0.10 | $0.40 |
-| gpt-5 | $1.25 | $10.00 |
-| gpt-5-mini | $0.25 | $2.00 |
-| gpt-5.4 | $2.50 | $15.00 |
-| gpt-5.4-mini | $0.75 | $4.50 |
-| gpt-5.5 | $5.00 | $30.00 |
-| claude-haiku-4-5 | $1.00 | $5.00 |
-| claude-opus-4-5 | $5.00 | $25.00 |
-| claude-sonnet-4-6 | $3.00 | $15.00 |
-| claude-opus-4-6 | $5.00 | $25.00 |
-| claude-opus-4-7 | $5.00 | $25.00 |
-| claude-opus-4-8 | $5.00 | $25.00 |
-| claude-sonnet-5 | $2.00 | $10.00 |
-| claude-opus-5 | $5.00 | $25.00 |
-| claude-haiku-5-5 | $0.10 | $0.50 |
-| claude-sonnet-5-5 | $2.00 | $10.00 |
-| claude-opus-5-5 | $4.00 | $20.00 |
-| claude-fable-5 | $10.00 | $50.00 |
-| claude-fable-5-1 | $10.00 | $50.00 |
-| claude-fable-5-2 | $8.00 | $40.00 |
-
-Precios `claude-*`: pagina oficial de precios de Anthropic, consultada el
-2026-11-22 (tarifa estandar; Haiku 5.5 con prompts de mas de 100k tokens
-cuesta $0.50 / $2.50, no modelado).
-
-Para actualizar precios, editar `DEFAULT_PRICING` en `shared/analysis/roi_calculator.py`
-(SSOT). Esta tabla debe mantenerse sincronizada con ese diccionario.
+SSOT: `DEFAULT_PRICING` en `shared/analysis/roi_calculator.py` (precios por 1M
+de tokens, con la fuente y la fecha de consulta en comentarios). Para verlos,
+`./analyze roi` imprime la tabla vigente al inicio. Un modelo sin precio emite un
+warning y se calcula con el de `gpt-4o-mini` (costo subestimado): agregarlo al
+diccionario.
 
 ## Escala de Estabilidad
 

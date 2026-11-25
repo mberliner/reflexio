@@ -35,14 +35,11 @@ LLM_API_VERSION=2024-02-15-preview
 # Modelos
 LLM_MODEL_TASK=azure/gpt-4.1-mini
 LLM_MODEL_REFLECTION=azure/gpt-4o
-
-# Adapters (opcional)
-CLASSIFIER_TEXT_MAX_LENGTH=1000
-EXTRACTOR_TEXT_MAX_LENGTH=1000
-RAG_CONTEXT_MAX_LENGTH=1500
-RAG_MAX_POSITIVE_EXAMPLES=2
-EXTRACTOR_MAX_POSITIVE_EXAMPLES=0
 ```
+
+Los limites de longitud y los ejemplos positivos de los adapters NO van en el
+`.env`: se fijan en la seccion `adapter` del YAML (ver
+`docs/YAML_CONFIG_REFERENCE.md`, seccion 2).
 
 ### dspy_gepa_poc/.env
 

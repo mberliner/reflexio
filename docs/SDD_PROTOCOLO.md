@@ -97,9 +97,9 @@ Separacion de alcance (clave para no duplicar SSOTs):
 - **Planes de implementacion** (fases, orden, estado de ejecucion de una spec o iniciativa) -> `docs/plans/*.md`, indexados en `00-INDEX.md`. La spec enlaza a su plan; el plan no repite requisitos.
 - El `00-INDEX.md` es el indice maestro: une ambos (una fila apunta al registro de capacidades, las demas a los docs).
 
-Cuando crear la primera spec: recien cuando aparezca una capacidad nueva donde
-estrenar el formato. No migrar lo existente (el testigo empezo casero y paso a
-hibrido sin reescribir lo viejo).
+Lo existente no se migra: las capacidades previas a SPEC-100 se formalizan solo
+si hace falta, en el rango reservado `SPEC-001..099` (ver
+`specs/SPECS_REGISTRY.md`).
 
 ### Plantilla de spec hibrida
 

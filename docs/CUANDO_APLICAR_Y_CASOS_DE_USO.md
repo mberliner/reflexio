@@ -25,6 +25,10 @@ secciones 8 y 10): el lift grande está en tareas **no saturadas**.
 
 - **Baseline 50-80% → aplicar.** Es donde GEPA/DSPy convierten un prototipo
   inservible en algo productivo (ej. CV Extraction: ~40% → ~97%).
+- **Baseline 80-90% → depende del tipo de tarea.** En extracción de campos
+  canónicos ya no suele haber margen; en clasificación multi-criterio con
+  razonamiento todavía puede haberlo (tabla "Cuándo GEPA aporta vs cuándo no",
+  `docs/LECCIONES_APRENDIDAS.md` sección 8).
 - **Baseline > 90% → no invertir.** Casi no se mueve la aguja, e incluso puede
   empeorar (ej. CV Triage que regresó 100% → 93% al optimizar un caso saturado).
 
