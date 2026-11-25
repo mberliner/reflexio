@@ -1,5 +1,5 @@
 # DSPy and GEPA
-dspy==3.4.1
+dspy==3.5.0
 gepa==0.1.4
 
 # Unified LLM Interface (transporte openai/httpx fijado junto a litellm por D-023 / SPEC-104 SC-009)

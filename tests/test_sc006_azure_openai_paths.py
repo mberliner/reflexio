@@ -100,11 +100,12 @@ class TestDspyLmAzure:
         lm = _azure("azure/gpt-4.1-mini", temperature=0.3, max_tokens=300).get_dspy_lm()
 
         assert lm.model == "azure/gpt-4.1-mini"
-        assert lm.kwargs["temperature"] == 0.3
-        assert lm.kwargs["max_tokens"] == 300
-        assert lm.kwargs["api_base"] == AZURE_BASE
-        assert lm.kwargs["api_version"] == AZURE_VERSION
-        _assert_no_new_keys(lm.kwargs)
+        params = lm.engine.params
+        assert params["temperature"] == 0.3
+        assert params["max_tokens"] == 300
+        assert params["api_base"] == AZURE_BASE
+        assert params["api_version"] == AZURE_VERSION
+        _assert_no_new_keys(params)
 
     def test_dspy_lm_wire_body_unchanged(self, capture_azure_post):
         lm = _azure("azure/gpt-4o", temperature=0.7, max_tokens=200).get_dspy_lm()

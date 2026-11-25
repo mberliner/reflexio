@@ -948,3 +948,12 @@ train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
   la version historica. Adoptar un default nuevo de la libreria es un
   experimento con N seeds, no un efecto colateral de un upgrade. Detalle en
   SPEC-105 (FR-010, FR-011, SC-007).
+- **Se repitio en dspy 3.5.0 (D-018 b3).** El adapter por defecto paso de
+  `ChatAdapter` a `XMLAdapter`: otro formato del prompt de la tarea, sin aviso.
+  Mismo remedio: el repo fija `ChatAdapter` (`configure_dspy`, SPEC-105 FR-012)
+  y un golden contra dspy 3.4.1 verifica los mensajes de la tarea (SC-008).
+  En el mismo upgrade, una premisa leida en el codigo ("las excepciones de un
+  engine propio pasan sin convertir") resulto falsa al instalar: dspy disfraza
+  como `LMUnexpectedError` todo lo que no sea `dspy.LMError`. Leer el wheel no
+  alcanza; la premisa se verifica con un test de contrato contra la version
+  instalada (`tests/test_dspy_engine.py::TestDspyEngineContract`).

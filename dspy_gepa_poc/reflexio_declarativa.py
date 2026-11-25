@@ -3,7 +3,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import dspy
 from dspy.evaluate import Evaluate
 
 from dspy_gepa_poc import AppConfig, CSVDataLoader, GEPAOptimizer, LLMConfig, LLMConnectionError
@@ -33,6 +32,7 @@ from shared.display import (
 )
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import RunAborted, get_failure_tracker
+from shared.llm.dspy_lm import configure_dspy
 from shared.llm.usage import get_tracker
 from shared.logging.metadata import (
     MetadataManager,
@@ -217,7 +217,7 @@ class ReflexioDeclarativa:
         self.task_config.validate_connection()
         log_ok("Task LM conectado")
 
-        dspy.configure(lm=lm)
+        configure_dspy(lm)
 
         print_kv("Reflection LM", self.reflection_config.describe())
         self.reflection_lm = self.reflection_config.get_dspy_lm()

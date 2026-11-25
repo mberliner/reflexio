@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from dspy_gepa_poc import DynamicModuleFactory, LLMConfig
 from shared.display import print_header
+from shared.llm.dspy_lm import configure_dspy
 
 
 def build_inference_module(raw_config: dict) -> dspy.Module:
@@ -63,7 +64,7 @@ def run_production_inference(run_dir_path: str):
     print("Configurando Modelo Estudiante (Inferencia)...")
     task_config = LLMConfig.from_env("task")
     lm = task_config.get_dspy_lm()
-    dspy.configure(lm=lm)
+    configure_dspy(lm)
     print(f"Modelo cargado: {task_config.model}")
 
     # 4. Reconstruir la Arquitectura del Módulo

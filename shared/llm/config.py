@@ -554,32 +554,36 @@ class LLMConfig:
         For use in dspy_gepa_poc project.
 
         Returns:
-            `CheckedLM` (subclase de `dspy.BaseLM`) configurado con esta config.
-            Clasifica las fallas segun `self.role` (ver `shared/llm/dspy_lm.py`).
+            `dspy.LM` con un `CheckedEngine` (engine propio, SPEC-105 FR-002) que
+            lleva los kwargs de esta config y clasifica las fallas segun
+            `self.role` (ver `shared/llm/dspy_lm.py`). El engine es `lm.engine`.
 
         Raises:
-            LLMConfigError: si `cache` esta activado. Un LM propio no usa la cache
-                de respuestas de DSPy; vuelve con el engine de dspy 3.5 (D-018).
+            LLMConfigError: si `cache` esta activado. Una respuesta de la cache de
+                DSPy no pasa por el punto de llamada: sin uso de tokens ni
+                `finish_reason` para la atribucion del baseline (SPEC-105 FR-009).
         """
-        from .dspy_lm import CheckedLM
+        from .dspy_lm import CheckedEngine, checked_lm
         from .errors import LLMConfigError
 
         if self.cache:
             raise LLMConfigError(
                 message=(
                     "La cache de DSPy no esta disponible con el punto de llamada propio "
-                    "(SPEC-105, D-018)"
+                    "(SPEC-105 FR-009): una respuesta cacheada no pasa por el punto de llamada"
                 ),
                 model=self.model,
                 parameter="cache (models.cache / LLM_CACHE)",
                 accepted=("false",),
             )
         kwargs = self.to_kwargs()
+        model = kwargs.pop("model")
         # Igual que dspy.LM: en los reasoning models de OpenAI/Azure el tope va
         # como max_completion_tokens.
         if not _is_anthropic(self.model) and self.is_reasoning_model:
             kwargs["max_completion_tokens"] = kwargs.pop("max_tokens", None)
-        return CheckedLM(role=self.role, **kwargs)
+        params = {key: value for key, value in kwargs.items() if value is not None}
+        return checked_lm(CheckedEngine(model, role=self.role, params=params))
 
     def get_lm_function(self, role: str = "task") -> Callable[[str], str]:
         """

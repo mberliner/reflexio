@@ -19,12 +19,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import dspy
 import yaml
 from dotenv import load_dotenv
 from dspy.teleprompt import LabeledFewShot
 
 from dspy_gepa_poc import CSVDataLoader, DynamicModuleFactory, LLMConfig
+from shared.llm.dspy_lm import configure_dspy
 
 _CONFIG = (
     Path(__file__).resolve().parent.parent
@@ -40,7 +40,7 @@ def run() -> int:
     env_path = project_dir / ".env"
     load_dotenv(env_path if env_path.exists() else None)
     task = LLMConfig.from_env("task")
-    dspy.configure(lm=task.get_dspy_lm())
+    configure_dspy(task.get_dspy_lm())
     print(f"Task LM: {task.model}")
 
     sig = cfg["signature"]

@@ -17,12 +17,12 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import dspy
 import yaml
 from dotenv import load_dotenv
 
 from dspy_gepa_poc import CSVDataLoader, DynamicModuleFactory, LLMConfig
 from dspy_gepa_poc.metrics import _score_field
+from shared.llm.dspy_lm import configure_dspy
 
 
 def _resolve_eval_fields(raw_config: dict) -> tuple[list[str], dict, dict]:
@@ -74,7 +74,7 @@ def evaluate(run_dir: Path, show_all: bool = False) -> int:
     env_path = project_dir / ".env"
     load_dotenv(env_path if env_path.exists() else None)
     task_config = LLMConfig.from_env("task")
-    dspy.configure(lm=task_config.get_dspy_lm())
+    configure_dspy(task_config.get_dspy_lm())
     print(f"  Task LM: {task_config.model}")
 
     # Module

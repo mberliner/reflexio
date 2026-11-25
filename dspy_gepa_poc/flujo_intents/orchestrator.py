@@ -136,13 +136,12 @@ def main() -> None:
     if not args.ficha_file:
         parser.error("Indicar --ficha-file con una ficha serializada (ver serialize_ficha).")
 
-    import dspy
-
     from dspy_gepa_poc import LLMConfig
+    from shared.llm.dspy_lm import configure_dspy
 
     task_config = LLMConfig.from_env("task")
     task_config.validate()
-    dspy.configure(lm=task_config.get_dspy_lm())
+    configure_dspy(task_config.get_dspy_lm())
 
     modules = build_stage_modules(flujo_cfg, repo_root)
     runner = make_stage_runner(flujo_cfg, modules)

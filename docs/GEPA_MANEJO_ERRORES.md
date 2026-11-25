@@ -210,7 +210,8 @@ Consecuencias practicas:
   Profesor como error del prompt (en `dspy_gepa_poc` el feedback dice que fue una
   falla externa). Las metricas reportadas excluyen los NE y muestran
   `n_evaluados / n_total`; el delta optimizado - baseline es pareado.
-- Reintentos: `num_retries=0` en LiteLLM y `CheckedLM`; solo `infraestructura` se
+- Reintentos: `num_retries=0` en LiteLLM y en el LM de DSPy (engine propio,
+  SPEC-105); solo `infraestructura` se
   reintenta (loop propio, backoff exponencial, default 3 reintentos). Los
   intentos intermedios (reintentos de red, fallback de `ChatAdapter` a
   `JSONAdapter`, reintentos del juez) van a DEBUG y no cuentan.

@@ -1,0 +1,41 @@
+{
+ "source": "dspy==3.4.1 ChatAdapter().format / JSONAdapter().format (mensajes que CheckedLM.forward enviaba a LiteLLM); firma, demo e input de tests/test_dspy_engine.py::CVSig",
+ "messages": {
+  "ChatAdapter": [
+   {
+    "role": "system",
+    "content": "Your input fields are:\n1. `cv_text` (str): texto del CV\nYour output fields are:\n1. `nombre` (str): nombre completo\n2. `anios` (int): anios de experiencia\n3. `nivel` (Literal['junior', 'senior']): \n4. `skills` (list[str]):\nAll interactions will be structured in the following way, with the appropriate values filled in.\n\n[[ ## cv_text ## ]]\n{cv_text}\n\n[[ ## nombre ## ]]\n{nombre}\n\n[[ ## anios ## ]]\n{anios}        # note: the value you produce must be a single int value\n\n[[ ## nivel ## ]]\n{nivel}        # note: the value you produce must exactly match (no extra characters) one of: junior; senior\n\n[[ ## skills ## ]]\n{skills}        # note: the value you produce must adhere to the JSON schema: {\"type\": \"array\", \"items\": {\"type\": \"string\"}}\n\n[[ ## completed ## ]]\nIn adhering to this structure, your objective is: \n        Extrae los datos del CV."
+   },
+   {
+    "role": "user",
+    "content": "[[ ## cv_text ## ]]\nAna, 3 anios"
+   },
+   {
+    "role": "assistant",
+    "content": "[[ ## nombre ## ]]\nAna\n\n[[ ## anios ## ]]\n3\n\n[[ ## nivel ## ]]\njunior\n\n[[ ## skills ## ]]\n[\"python\"]\n\n[[ ## completed ## ]]\n"
+   },
+   {
+    "role": "user",
+    "content": "[[ ## cv_text ## ]]\nJuan, 10 anios\n\nRespond with the corresponding output fields, starting with the field `[[ ## nombre ## ]]`, then `[[ ## anios ## ]]` (must be formatted as a valid Python int), then `[[ ## nivel ## ]]` (must be formatted as a valid Python Literal['junior', 'senior']), then `[[ ## skills ## ]]` (must be formatted as a valid Python list[str]), and then ending with the marker for `[[ ## completed ## ]]`."
+   }
+  ],
+  "JSONAdapter": [
+   {
+    "role": "system",
+    "content": "Your input fields are:\n1. `cv_text` (str): texto del CV\nYour output fields are:\n1. `nombre` (str): nombre completo\n2. `anios` (int): anios de experiencia\n3. `nivel` (Literal['junior', 'senior']): \n4. `skills` (list[str]):\nAll interactions will be structured in the following way, with the appropriate values filled in.\n\nInputs will have the following structure:\n\n[[ ## cv_text ## ]]\n{cv_text}\n\nOutputs will be a JSON object with the following fields.\n\n{\n  \"nombre\": \"{nombre}\",\n  \"anios\": \"{anios}        # note: the value you produce must be a single int value\",\n  \"nivel\": \"{nivel}        # note: the value you produce must exactly match (no extra characters) one of: junior; senior\",\n  \"skills\": \"{skills}        # note: the value you produce must adhere to the JSON schema: {\\\"type\\\": \\\"array\\\", \\\"items\\\": {\\\"type\\\": \\\"string\\\"}}\"\n}\nIn adhering to this structure, your objective is: \n        Extrae los datos del CV."
+   },
+   {
+    "role": "user",
+    "content": "[[ ## cv_text ## ]]\nAna, 3 anios"
+   },
+   {
+    "role": "assistant",
+    "content": "{\n  \"nombre\": \"Ana\",\n  \"anios\": 3,\n  \"nivel\": \"junior\",\n  \"skills\": [\n    \"python\"\n  ]\n}"
+   },
+   {
+    "role": "user",
+    "content": "[[ ## cv_text ## ]]\nJuan, 10 anios\n\nRespond with a JSON object in the following order of fields: `nombre`, then `anios` (must be formatted as a valid Python int), then `nivel` (must be formatted as a valid Python Literal['junior', 'senior']), then `skills` (must be formatted as a valid Python list[str])."
+   }
+  ]
+ }
+}

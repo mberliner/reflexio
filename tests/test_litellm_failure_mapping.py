@@ -55,7 +55,7 @@ from litellm.llms.openai.openai import OpenAIChatCompletion
 
 import shared.llm.call as call_module
 from shared.llm.config import LLMConfig, is_empty_text
-from shared.llm.dspy_lm import CheckedLM
+from shared.llm.dspy_lm import CheckedEngine
 from shared.llm.errors import EmptyResponseError
 from shared.llm.failures import DEFAULT_INFRA_RETRIES, LLMCallFailure, root_exception
 from shared.llm.usage import get_tracker as get_usage_tracker
@@ -447,7 +447,7 @@ class TestCheckedLMRaiseForResponse:
     ) -> None:
         cfg = LLMConfig(**{**PROVIDER_KWARGS[case.provider], "role": "task", "cache": False})
         lm = cfg.get_dspy_lm()
-        assert isinstance(lm, CheckedLM)
+        assert isinstance(lm.engine, CheckedEngine)
 
         captured_responses: list[Any] = []
         original_raise = call_module.raise_for_response

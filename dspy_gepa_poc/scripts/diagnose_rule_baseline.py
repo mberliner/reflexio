@@ -156,10 +156,10 @@ def _run_pilot(config_path: Path, splits: list[str], repeats: int) -> int:
     """
     import csv as _csv
 
-    import dspy
     import yaml
 
     from dspy_gepa_poc import DynamicModuleFactory, LLMConfig
+    from shared.llm.dspy_lm import configure_dspy
     from shared.paths import get_dspy_paths
 
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
@@ -182,7 +182,7 @@ def _run_pilot(config_path: Path, splits: list[str], repeats: int) -> int:
         task_config.max_tokens = models_cfg["max_tokens"]
     if "cache" in models_cfg:
         task_config.cache = models_cfg["cache"]
-    dspy.configure(lm=task_config.get_dspy_lm())
+    configure_dspy(task_config.get_dspy_lm())
     log_info(f"Task LM: {task_config.describe()} | zero-shot (sin few-shot)")
 
     student = DynamicModuleFactory.create_module(raw["signature"], predictor_type="cot")

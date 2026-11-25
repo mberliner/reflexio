@@ -310,10 +310,13 @@ class TestLLMConfigGetDspyLM:
         )
         lm = config.get_dspy_lm()
 
-        assert isinstance(lm, dspy.BaseLM)
+        assert isinstance(lm, dspy.LM)
         assert lm.model == "azure/gpt-4"
-        assert lm.kwargs["api_base"] == "https://base.com"
-        assert lm.role == "task"
+        assert lm.engine.params["api_base"] == "https://base.com"
+        assert lm.engine.role == "task"
+        # SPEC-105 FR-002: el engine es dueno de la conexion; dspy no reintenta.
+        assert "api_base" not in lm.kwargs
+        assert lm.num_retries == 0
 
     def test_cache_is_rejected(self):
         """SPEC-105: el LM propio no usa la cache de DSPy; activarla falla al armarlo."""
@@ -327,7 +330,7 @@ class TestLLMConfigGetDspyLM:
 
     def test_role_passed_to_dspy(self):
         config = LLMConfig(model="azure/gpt-4", role="reflection")
-        assert config.get_dspy_lm().role == "reflection"
+        assert config.get_dspy_lm().engine.role == "reflection"
 
 
 # ==================== LLMConfig.get_lm_function ====================

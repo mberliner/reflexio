@@ -33,7 +33,7 @@ EXPECTED_VERSIONS: dict[str, str] = {
     "litellm": "1.108.5",
     "openai": "3.57.0",
     "httpx": "0.28.1",
-    "dspy": "3.4.1",
+    "dspy": "3.5.0",
     "gepa": "0.1.4",
 }
 

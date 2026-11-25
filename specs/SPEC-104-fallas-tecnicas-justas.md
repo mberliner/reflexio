@@ -163,7 +163,8 @@ Sin falla en la capa 1, la respuesta pasa a la capa 2. La deteccion MUST
 aplicarse sobre el objeto de respuesta completo en ambos subproyectos: en
 `gepa_standalone` en `shared/llm` y en `dspy_gepa_poc` en
 `CheckedLM._process_lm_response`, que recibe la respuesta con `finish_reason` y
-`message` intactos (hoy solo revisa contenido vacio).
+`message` intactos (hoy solo revisa contenido vacio). Desde SPEC-105 la deteccion
+de ambos subproyectos vive en `shared/llm/call.py::checked_response`.
 
 `entrada` y `presupuesto` en el rol tarea llevan una atribucion contra el
 baseline (FR-004): `candidato` (el prompt candidato la provoco: el baseline no
@@ -277,15 +278,15 @@ excluyen siempre.
   (texto libre).
 - FR-011 Reintentos:
   - Toda llamada de `shared/llm` MUST pasar `num_retries=0` a LiteLLM, y el LM
-    de DSPy (`CheckedLM` / `get_dspy_lm`) MUST construirse con `num_retries=0`.
+    de DSPy (`get_dspy_lm`; desde SPEC-105, `dspy.LM` con engine propio) MUST construirse con `num_retries=0`.
     Verificado: `num_retries=0` tambien fija `max_retries=0` en el SDK de
     openai y da exactamente 1 llamada HTTP por intento en los 3 proveedores.
     `num_retries` de LiteLLM MUST NOT usarse para reintentar: reintenta todas
     las clases (incluidos 401 y filtros) y se apila sobre el SDK.
   - `shared/llm` MUST reintentar con un loop propio solo cuando el clasificador
     de la capa 1 devuelve `infraestructura`, con backoff exponencial, en todos
-    los roles y en ambos subproyectos (en `dspy_gepa_poc`, dentro de
-    `CheckedLM`). Numero de reintentos configurable, default 3 (4 intentos), el
+    los roles y en ambos subproyectos (en `dspy_gepa_poc`, dentro del punto
+    de llamada que usa el engine propio, SPEC-105). Numero de reintentos configurable, default 3 (4 intentos), el
     mismo para los 3 proveedores. Los intentos intermedios van a `DEBUG`
     (FR-007); solo el resultado final se clasifica y se cuenta.
   - Las demas clases MUST NOT reintentarse. El reintento actual de
@@ -342,7 +343,7 @@ actualizacion de LiteLLM o del SDK (SC-009, D-023).
   conservador y visible (el error muestra el mensaje original).
 - Con `openai/` y `drop_params=True`, un HTTP 422 hace que `litellm.completion`
   devuelva `None` en vez de lanzar: se clasifica como `configuracion`. Con
-  `drop_params=False` (CheckedLM por defecto) lanza `BadRequestError(422)`, que
+  `drop_params=False` (el LM de DSPy por defecto) lanza `BadRequestError(422)`, que
   tambien es `configuracion`. `litellm.drop_params` es global y lo activan
   `get_lm_function` y `LLMConfig.validate()`, asi que tras `validate()` el bug
   puede alcanzar tambien a `dspy_gepa_poc` en el mismo proceso; en ambos casos

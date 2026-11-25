@@ -41,7 +41,7 @@ from shared.llm import (
     RunAborted,
     get_failure_tracker,
 )
-from shared.llm.dspy_lm import CheckedLM, dspy_reflection_proposer
+from shared.llm.dspy_lm import CheckedEngine, dspy_reflection_proposer
 from shared.llm.usage import get_tracker as get_usage_tracker
 from tests.conftest import (
     make_completion_response,
@@ -159,19 +159,19 @@ def _propose(reflection_lm):
 # ==================== CheckedLM aislado ====================
 
 
-class TestCheckedLM:
+class TestCheckedEngine:
     def test_get_dspy_lm_returns_checked_lm_with_role(self):
         lm = _lm(REFLECTION_MODEL, "reflection")
-        assert isinstance(lm, CheckedLM)
-        assert isinstance(lm, dspy.BaseLM)
-        assert lm.role == "reflection"
+        assert isinstance(lm, dspy.LM)
+        assert isinstance(lm.engine, CheckedEngine)
+        assert lm.engine.role == "reflection"
 
     def test_from_env_role(self, mock_env):
-        assert LLMConfig.from_env("reflection").get_dspy_lm().role == "reflection"
-        assert LLMConfig.from_env("task").get_dspy_lm().role == "task"
+        assert LLMConfig.from_env("reflection").get_dspy_lm().engine.role == "reflection"
+        assert LLMConfig.from_env("task").get_dspy_lm().engine.role == "task"
 
     def test_copy_keeps_role(self):
-        assert _lm(REFLECTION_MODEL, "reflection").copy(rollout_id=1).role == "reflection"
+        assert _lm(REFLECTION_MODEL, "reflection").copy(rollout_id=1).engine.role == "reflection"
 
     def test_text_passes_through(self, monkeypatch):
         """SPEC-104 FR-005: en reflexion pasa la propuesta con bloque de

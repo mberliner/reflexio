@@ -133,6 +133,20 @@ def reset_failure_tracker():
     get_usage_tracker().reset()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def repo_dspy_adapter():
+    """
+    Adapter del repo en todos los tests (SPEC-105 FR-012), como `configure_dspy`
+    en los entry points: dspy 3.5 usa `XMLAdapter` por defecto y los tests que
+    arman el LM con `dspy.context(lm=...)` no lo fijan. Que los entry points usen
+    `configure_dspy` lo verifica `tests/test_lib_contracts.py`.
+    """
+    import dspy
+
+    dspy.configure(adapter=dspy.ChatAdapter())
+    yield
+
+
 @pytest.fixture
 def mock_env(monkeypatch):
     """Set standard LLM environment variables."""
