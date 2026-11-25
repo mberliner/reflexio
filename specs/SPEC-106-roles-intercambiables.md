@@ -1,4 +1,4 @@
-# SPEC-105-roles-intercambiables — Profesor y estudiante intercambiables entre proveedores
+# SPEC-106-roles-intercambiables — Profesor y estudiante intercambiables entre proveedores
 
 Estado: draft
 Iteracion: 1 (rev. 2026-11-23)

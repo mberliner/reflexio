@@ -857,4 +857,4 @@ o al diff solo cuando un control falla.
 SPEC-103 cerrada el 2026-11-23 (spec `active`; detalle en `historial/sdd.md`,
 "Cierre de SPEC-103"). Este plan queda como registro. Lo siguiente es
 SPEC-104 (fallas tecnicas justas): resolver sus `[NEEDS CLARIFICATION]` y
-armar su plan; despues SPEC-105 (roles intercambiables).
+armar su plan; despues SPEC-106 (roles intercambiables).

@@ -23,7 +23,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-006 | Reducir duplicacion restante: ~70 lineas de data loading (60% similitud) y ~200 de orquestacion (50%) entre subproyectos. Riesgo bajo. Esfuerzo medio | `docs/MEJORAS_PENDIENTES_DSPY_GEPA_POC.md` (T3-4, eliminado) | Abierta |
 | D-014 | Etapas nuevas diferidas de flujo-intents (decision del usuario, 2026-06-16): (a) **admisibilidad** que absorba §9.2 (atributos protegidos en decisiones de acceso) y §7.4 (duplicado), hoy sin etapa tras sacarlas de factibilidad — reasignar TC-REJ-09/TC-REJ-10; (b) etapa para **valor real** ("resuelve un dolor de negocio") hoy no cubierta por solidez; (c) reubicar **`devolucion_no_ia`** ("no requiere IA") fuera de solidez a esa etapa nueva. Hasta entonces `no_ia` se deja en solidez para no romper el holdout (TC-REJ-06) | Alineacion al Marco de Gobierno (Solidez/Factibilidad), 2026-06-16 | Abierta |
 | D-015 | Residuales del fast_gate determinista (post D-013): (a) **alto_impacto es el cuello** (~80% sobre el test, varianza alta 56-80% entre corridas; sobre-escala a Negro en casos acotados/reversibles) -> medir con N seeds y/o curar demos few-shot de casos limite; (b) **`run_inference.py` usa `create_module` generico**, no `rule_derived` -> en produccion no derivaria el color; (c) el **gold de `alto_impacto` del test es aproximado** (=Negro) para casos P5=No (no afecta el color, si la metrica del campo); (d) GEPA con VAL chico no aporta -> evaluar VAL mayor si se busca exprimir GEPA (**actualizado 2026-06-18**: val ampliado a 22 sigue en techo 86-91%; GEPA+gpt-5 N=3 elige baseline 3/3 con budget completo -> el cuello es senal en val, no budget; pendiente val ~40-50 con casos borde donde el baseline falle) | Cierre de D-013 (2026-06-16) | **Abierta solo por (c).** **(a) cerrada 2026-06-20** (descomposicion `rule_derived_alto`: el LLM responde 8 sub-hechos objetivos y `derive_alto_impacto` aplica la precedencia; baseline color TEST 83,3% = no-inferior al ~81-82% y AUDITABLE; el techo ~80% es estructural de la tarea, no atacable por esta via); **(b) cerrada 2026-06-20** (`run_inference.py` ramifica por `module.type`: `rule_derived`/`rule_derived_alto` derivan en produccion); **(c) avanza 2026-06-20** (alto_impacto medido sobre P5=Si con gold fiable; train+val anotados al 100% en `_FG_SUBHECHOS` -- invariante 0 mismatches; el few-shot libre que esto habilita se midio y quedo REFUTADO como mejora (= techo en color, peor en alto_impacto, GEPA delta negativo en 3+3 runs); resta solo curar el gold aproximado P5=No del TEST + hallazgo de gold inconsistente R02 vs R15/R19); **(d) cerrada 2026-06-18** — VAL ampliado a 46 casos borde, refutado a N=3 con gpt-5-mini Y gpt-4.1-mini (ambos RUIDO[SOBREAJUSTE]): el VAL sigue en techo 89-93% con los dos modelos y GEPA no generaliza (gap val-test +10/+14). El cuello es la REPRESENTATIVIDAD val-vs-test (los casos borde sinteticos no capturan la dificultad del TEST), no el tamaño/budget/modelo. Dataset ampliado conservado como banco de medicion |
-| D-018 | Actualizar DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4 **juntos** (dspy 3.2.1 fija `gepa[dspy]==0.0.27`; dspy 3.5.0 exige `gepa>=0.1.4,<0.2`). Va separado de LiteLLM y de SPEC-103 porque cambia el optimizador y la evaluacion, no solo el transporte: mezclarlo impide atribuir cambios de score. Riesgo de API: `gepa_standalone` usa `EvaluationBatch` y el contrato de adapter de GEPA; `dspy_gepa_poc` depende de la firma de `dspy.GEPA` (`optimizer.py`), `detailed_results` y `EvaluationResult.results` (fix de D-016). Requiere: (a) agregar versiones de librerias al criterio de comparabilidad de SPEC-100 (hoy solo estan en `run.json`, no en el CSV); (b) regresion de resultados, no solo tests: N seeds en casos de referencia comparados contra su historico con el veredicto de SPEC-100. Prerequisito: LiteLLM fijado en version exacta (actualizacion separada) | Analisis de dependencias para SPEC-103 (2026-11-22) | Abierta |
+| D-018 | Actualizar DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4 (dspy 3.2.1 fija `gepa[dspy]==0.0.27`; dspy 3.4.x fija `gepa[dspy]==0.1.4`; dspy 3.5.0 exige `gepa>=0.1.4,<0.2`). Va separado de LiteLLM y de SPEC-103 porque cambia el optimizador y la evaluacion: mezclarlo impide atribuir cambios de score. Riesgo de API: `gepa_standalone` usa `EvaluationBatch` y el contrato de adapter de GEPA; `dspy_gepa_poc` depende de la firma de `dspy.GEPA` (`optimizer.py`), `detailed_results`, `EvaluationResult.results` (fix de D-016) y de internos de dspy en la capa de SPEC-104. Requiere regresion de resultados, no solo tests: N seeds en casos de referencia contra historico con el veredicto de SPEC-100. Prerequisito cumplido: LiteLLM fijado en version exacta | Analisis de dependencias para SPEC-103 (2026-11-22) | Abierta. **Replanteada 2026-11-25** tras leer el codigo de los wheels de dspy 3.2.1, 3.4.1 y 3.5.0: dspy 3.5.0 reescribe la capa de LM (elimina `forward()`, `_process_lm_response`, `_check_truncation` y `messages=`; el LM habla `lm15.Request`/`Response` aun con `engine="litellm"`; reintentos e historial pasan a `clients/execution.py` con otro formato de `history`; las excepciones de LiteLLM llegan como `dspy.utils.exceptions.LM*Error`; el fallback a `JSONAdapter` solo se dispara con `AdapterParseError`). Forzar el motor LiteLLM no alcanza: SPEC-104 del lado DSPy (`CheckedLM`, `call_failures.py`, `record_dspy_history`) habria que reimplementarlo. GEPA 0.1.4 conserva la API publica que usa `gepa_standalone`. dspy 3.4.1 trae `gepa==0.1.4` y conserva la API vieja del LM como capa legacy deprecada. Decision del usuario: desacoplar en vez de parchear (SPEC-105) y separar el cambio de optimizador del de transporte. **Orden:** (a) versiones de librerias en la comparabilidad de SPEC-100 -- **hecho 2026-11-25** (SPEC-100 iter 3, FR-009, `--cross-versions`; las 1279 filas historicas quedan con versiones desconocidas); (b1) dspy 3.4.1 + gepa 0.1.4 en `.venv` (creado 2026-11-25 con 3.2.1, CI verde) + ajustes minimos + CI, sin costo de API; (c1) regresion del optimizador: N=5 seeds en 2-3 casos de referencia con `--cross-versions` (corridas pagas: pedir OK). La referencia historica mezcla dspy 3.1.x y 3.2.1 sin versiones registradas: propuesta, correr antes una referencia nueva con 3.2.1 en el `.venv` (pagas: pedir OK); (b2) SPEC-105: engine propio de DSPy sobre 3.4.1 sin cambio de scores (SC-003 de SPEC-105); (b3) dspy 3.5.0 + (c2) regresion del transporte (SC-001 y SC-002 de SPEC-105); despues SPEC-106 (roles), para que sus mediciones por combinacion de roles no caduquen. Fijar `gepa==` exacto en (b1) |
 | D-023 | Limites de deteccion de LiteLLM 1.108.5 + openai 3.57.0 que SPEC-104 no puede cubrir sin parchear LiteLLM: (a) Anthropic `stop_reason="model_context_window_exceeded"` llega como `finish_reason="stop"` sin rastro (texto parcial evaluado como completo); (b) 400 de politica de Anthropic con texto no reconocido llega como `BadRequestError` sin `body` y aborta como `configuracion`; (c) bug de 422 con `openai/` + `drop_params=True` (global, lo activa `validate()`) que devuelve `None`; (d) HTTP 413 generico mapeado distinto por proveedor (`RateLimitError` en OpenAI, `APIError(413)` en Azure, `BadRequestError(400)` en Anthropic). Evidencia y regresion: `tests/test_litellm_failure_mapping.py` (320 tests, fallan si una actualizacion cambia el mapeo). Re-verificar con SC-009 de SPEC-104 en cada actualizacion de LiteLLM o del SDK de openai (relacionada con D-018) y reportar upstream si sigue | Verificacion de LiteLLM para SPEC-104 (2026-11-23) | Abierta |
 
 ## Deuda resuelta
@@ -34,7 +34,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-025 | Restos de codigo detectados al cerrar D-008: (a) `config_schema.py` de DSPy acepta los tipos `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (el error llega tarde, despues de validar); (b) `adapter.max_text_length`/`max_positive_examples`/`extractor_max_positive_examples` de DSPy se leen en `config.py` pero `dspy.GEPA` 3.2.1 no los acepta y se descartan; (c) `UniversalOptimizer._has_positive_reflection` (`gepa_standalone`) no tiene llamadores y lee `max_positive_examples` en vez de `extractor_max_positive_examples` para extractor. Decidir: quitar del schema/codigo o hacerlos efectivos (revisar (b) con D-018) | 2026-11-25 | Decision del usuario: quitar. (a) `TYPE_SCHEMAS` de DSPy sin `sentiment`/`extractor`/`qa`: fallan al validar, antes de gastar tokens; (b) `GEPAConfig` sin los tres campos `adapter.*`, `optimizer.py` deja de pasarlos, el validador de DSPy rechaza la seccion `adapter` y se quito de los 31 configs que la tenian (sin cambio de comportamiento: nunca llegaban a `dspy.GEPA`); (c) `_has_positive_reflection` eliminado. Tests en `tests/test_dspy_config_schema.py` (incluye validar todos los configs de `dspy_gepa_poc/configs/`) |
 | D-020 | Respuesta sin texto en inferencia directa de `dspy_gepa_poc` (`run_inference.py` y scripts que llaman al programa sin `Evaluate`): el `EmptyResponseError` de tarea (SPEC-103 FR-009, opcion 2 de B-2c-1) sale sin atrapar y corta el script. Fuera del alcance de SPEC-103 (decision del usuario): una corrida unica de inferencia puede fallar en forma visible. Si se quiere tolerancia, reutilizar el envoltorio de 2c | 2026-11-25 | Cerrada como aceptada (decision del usuario): en una corrida unica de inferencia, fallar a la vista ante una respuesta sin texto es el comportamiento correcto; no se agrega tolerancia |
 | D-010 | Datasets espejo entre subproyectos sin convencion registrada: 5 CSV son copias byte-identicas deliberadas (`cv_extraction_v3`, `cv_profile_v3`, `email_urgency`, `fast_gate_v1`, `triage_v1`) pero nada documenta ni protege la sincronizacion (riesgo de divergencia silenciosa); ademas `cv_triage_v3.csv` tiene mismo nombre y esquema distinto en cada engine (intencional pero indistinguible de un drift). Registrar la convencion en el SSOT que corresponda o validar en CI | 2026-11-25 | Convencion registrada como invariante en `docs/ARCHITECTURE.md` (espejo o divergencia intencional declarada) y verificada en CI por `tests/test_dataset_mirrors.py`: los 5 espejos deben ser identicos (normalizando fin de linea), `cv_triage_v3.csv` queda declarado divergente con su motivo (GEPA admite un solo input y la JD va en el prompt) y todo par nuevo con el mismo nombre sin clasificar hace fallar el test |
-| D-022 | Acceso a simbolos privados entre modulos (severidad baja): `universal_optimizer.py` lee `adapter._judge_config` (se resuelve con el juez como rol de SPEC-105 FR-004) y `shared/analysis/roi_calculator.py` importa `_SNAPSHOT_SUFFIX` de `shared/llm/config.py` (exponer un helper publico) | 2026-11-25 | `shared/llm/config.py` expone `strip_snapshot_suffix` (lo usan `resolve_anthropic_family` y `roi_calculator.normalize_model`); `SimpleRAGAdapter` expone la propiedad de solo lectura `judge_config` y `universal_optimizer.py` la usa en lugar de `_judge_config`. Compatible con SPEC-105 FR-004 (el juez como rol cambia de donde sale la config, no como se lee). Tests en `test_anthropic_matrix.py` y `test_gepa_adapters.py` |
+| D-022 | Acceso a simbolos privados entre modulos (severidad baja): `universal_optimizer.py` lee `adapter._judge_config` (se resuelve con el juez como rol de SPEC-106 FR-004) y `shared/analysis/roi_calculator.py` importa `_SNAPSHOT_SUFFIX` de `shared/llm/config.py` (exponer un helper publico) | 2026-11-25 | `shared/llm/config.py` expone `strip_snapshot_suffix` (lo usan `resolve_anthropic_family` y `roi_calculator.normalize_model`); `SimpleRAGAdapter` expone la propiedad de solo lectura `judge_config` y `universal_optimizer.py` la usa en lugar de `_judge_config`. Compatible con SPEC-106 FR-004 (el juez como rol cambia de donde sale la config, no como se lee). Tests en `test_anthropic_matrix.py` y `test_gepa_adapters.py` |
 | D-008 | Inconsistencias de criterio entre docs: regla de baseline (>80% en `LECCIONES_APRENDIDAS.md` seccion 8 vs >90% en `CUANDO_APLICAR_Y_CASOS_DE_USO.md`); donde viven los limites de longitud de texto (env-only segun `YAML_CONFIG_REFERENCE.md` vs YAML segun `UNIVERSAL_OPTIMIZER.md` y `LECCIONES_APRENDIDAS.md` seccion 4); campos soportados en codigo sin documentar (`models.max_tokens` GEPA, `skip_perfect_score` DSPy); `YAML_CONFIG_REFERENCE.md` lista module types `sentiment`/`extractor`/`qa` que `reflexio_declarativa.py` rechaza en runtime (solo `dynamic`/`pipeline`) | 2026-11-25 | Docs alineados al codigo. Limites de longitud: en `gepa_standalone` se fijan en la seccion `adapter` del YAML (nunca se leyeron de `.env`; corregidos `LLM_CONFIG.md`, `GEPA_DOCUMENTACION.md`, `UNIVERSAL_OPTIMIZER.md`) y solo truncan el dataset de reflexion; en DSPy son inertes. `YAML_CONFIG_REFERENCE.md`: tipos de modulo reales (+`rule_derived_alto`, heredados marcados), defaults GEPA no configurables (`skip_perfect_score` incluido), `models.max_tokens`/`cache` y campos de matching de `gepa_standalone`, `display_progress_bar` default `true`. Regla del baseline: no era contradiccion sino un hueco 80-90%; `CUANDO_APLICAR_Y_CASOS_DE_USO.md` lo cubre por tipo de tarea y enlaza con `LECCIONES_APRENDIDAS.md` seccion 8. Restos de codigo -> D-025 |
 | D-009 | Redundancia documental: `DSPY_DOCUMENTACION.md` y `GEPA_DOCUMENTACION.md` contienen material del framework upstream (instalacion, testing, citacion) que duplica SSOTs propios y una nota de cache contraria al default del proyecto; tabla de precios duplicada (`ANALISIS_UTILIDADES.md` vs `ROI_ANALYSIS.md` vs `DEFAULT_PRICING` en codigo); links relativos rotos en `gepa_standalone/README.md` y referencia `docs/GEPA_DOCUMENTACION.md` con base ambigua en el listado final de `gepa_standalone/docs/demo.sh`; referencia muerta `run_email_urgency_comparison.sh` en `LECCIONES_APRENDIDAS.md` seccion 7; intro duplicada ES/EN en `README.md` raiz; parrafo obsoleto "cuando crear la primera spec" en `docs/SDD_PROTOCOLO.md` Tramo 2 (SPEC-100/101 ya existen) | 2026-11-25 | Instalacion/dev/testing/citacion upstream reemplazados por enlaces a `DEVELOPMENT.md`/`LLM_CONFIG.md`; nota de cache aclarada (default del proyecto `false`); tabla de precios de `ANALISIS_UTILIDADES.md` reemplazada por puntero a `DEFAULT_PRICING` y `./analyze roi`, `ROI_ANALYSIS.md` marcada como foto fechada; links de `gepa_standalone/README.md` y listado de `demo.sh` con base explicita; referencia muerta eliminada; intro EN del `README.md` eliminada; parrafo obsoleto de `SDD_PROTOCOLO.md` reemplazado |
 | D-017 | Linea de investigacion (fast_gate): curar un VAL **representativo del TEST** para que GEPA tenga gradiente real. Hipotesis: un VAL sembrado con casos donde el modelo realmente falla (de la dificultad del TEST) daria gradiente (origen: Cierre de D-015d (2026-06-18)) | 2026-06-19 | **Refutada 2026-06-19** — se ejecuto el ciclo completo: diagnostico por-caso (`diagnose_rule_baseline.py`), 14 casos `VAR-FG-T01..T14` calibrados a las 5 confusiones del TEST con textura rica y fichas NEUTRALES (se corrigio una fuga de juicio en `supuesto_riesgo`). Gate: el gap de color bajo +22,6 -> +14,1 pp (no cerro <5; residuo = confusion Rojo->Negro). GEPA N=3 con DOS modelos (gpt-5* retirado; nuevos gpt-5.4*): gpt-4.1-mini RUIDO[SOBREAJUSTE][TECHO][ESTABILIZA] (Opt-Base -1,4; Rob TEST 80,0), gpt-5.4-mini SIN REF[SOBREAJUSTE][TECHO] (Opt-Base -2,5; Rob TEST 77,8). Causa raiz nueva: el VAL es representativo en COLOR pero GEPA optimiza la metrica COMBINADA (alto_impacto+color), saturada en techo (87-89%) porque alto_impacto se acierta ~90% y diluye el cuello. El modelo mas nuevo (gpt-5.4-mini) NO mejora -> techo del enfoque, no del modelo. Mejor sistema sigue siendo baseline sin GEPA. Dataset (val 60) y script de diagnostico conservados. Sub-linea abierta: probar metrica solo-color (la sub-linea "metrica solo-color" queda como nota, no bloqueante) |
@@ -52,6 +52,55 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-25 (cont.) — D-018 replanteada: SPEC-105 (desacople) y renumeracion
+
+- Renumeracion: la spec de roles intercambiables pasa de SPEC-105 a
+  `SPEC-106-roles-intercambiables` (referencias actualizadas en specs, docs e
+  historial). SPEC-105 queda para el desacople.
+- Alta de `SPEC-105-punto-llamada-desacoplado` (draft): toda llamada al LLM por
+  un punto propio; en DSPy via engine propio (`dspy.LM(engine=...)`), sin
+  internos de dspy/gepa, con tests de contrato y versiones exactas. Su SC clave:
+  el paso 3.4.1 -> 3.5.0 sin tocar codigo fuera del punto de llamada.
+- Fila D-018 reescrita con el orden (a) hecho, (b1) 3.4.1, (c1) regresion del
+  optimizador, (b2) SPEC-105, (b3) 3.5.0 + (c2), despues SPEC-106.
+- `.venv` creado con `requirements.txt` actual (dspy 3.2.1): CI local verde.
+
+```
+[SDD-Check]
+- Spec/doc leido: docs/SDD_PROTOCOLO.md (plantilla), specs/SPEC-104-fallas-tecnicas-justas.md, specs/SPECS_REGISTRY.md, historial/sdd.md (fila D-018); codigo de los wheels de dspy 3.2.1/3.4.1/3.5.0 y gepa 0.1.4
+- Incluye/Excluye verificado: incluye spec draft, renumeracion y replanteo de D-018; excluye implementacion (b1 en adelante)
+- Validaciones aplicadas: sin referencias a SPEC-105 viejas (grep), sin emoticones; sin cambios de codigo en este paso
+- SSOT afectado: specs/SPEC-105-punto-llamada-desacoplado.md, specs/SPEC-106-roles-intercambiables.md, specs/SPECS_REGISTRY.md, historial/sdd.md, docs/LLM_CONFIG.md, docs/plans/PLAN_SPEC-103_proveedor_anthropic.md
+- Derivados a revisar: SPEC-106 deberia declarar `Depende de: [[SPEC-105-...]]` al retomarla
+- Deuda arrastrada: D-018 replanteada; sin deuda nueva
+- Riesgos/reservas: dos [NEEDS CLARIFICATION] en SPEC-105 (except de `JSONAdapter` y camino de la reflexion en 3.5.0), a resolver en (b1)/(b2)
+```
+
+### 2026-11-25 (cont.) — D-018 (a): versiones de librerias en la comparabilidad de SPEC-100
+
+- SPEC-100 iteracion 3, FR-009 / SC-006: `run.json` guarda `frameworks`
+  (`dspy`, `gepa`, `litellm`, `openai`) y el CSV gana la columna
+  `Versiones Librerias` (forma canonica `pkg=version`). `seed_protocol` excluye
+  de la referencia las filas con otras versiones (`[WARN]`), conserva las legacy
+  sin versiones (`[WARN]`, nunca inferidas) y `--cross-versions` las admite a
+  proposito para la regresion de un upgrade.
+- `migrate_metrics_csv` agrega la columna y la rellena desde `run.json`; se
+  migraron los dos CSV locales (backup `.bak-20261125_*`): 599 + 680 filas, todas
+  con versiones desconocidas (ningun `run.json` previo las tenia).
+- D-018 (b): relevado el codigo de dspy 3.5.0 / gepa 0.1.4; en pausa por
+  alcance (ver fila D-018).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-100-veredicto-senal-ruido.md, docs/PROTOCOLO_N_SEEDS.md, docs/METADATA_REPRODUCIBILIDAD.md, historial/sdd.md (fila D-018)
+- Incluye/Excluye verificado: incluye registro de versiones (run.json + CSV), filtro y WARN en seed_protocol, `--cross-versions`, migracion del CSV; excluye el triaje (SPEC-101 sigue filtrando solo por modelos) y el upgrade (b)
+- Validaciones aplicadas: tests nuevos (TestComparabilidadVersiones, TestFrameworkVersions, test_migrate_metrics_csv, columna en el logger) y SC-006 de SPEC-104 actualizado al campo nuevo; ./shared/utils/ci_local.sh verde; sin emoticones
+- SSOT afectado: specs/SPEC-100-veredicto-senal-ruido.md, specs/SPECS_REGISTRY.md, docs/PROTOCOLO_N_SEEDS.md, docs/METADATA_REPRODUCIBILIDAD.md, docs/ANALISIS_UTILIDADES.md, historial/sdd.md
+- Derivados a revisar: SPEC-101 (triaje) si se quiere que tambien iguale versiones
+- Deuda arrastrada: D-018 avanza ((a) hecho, (b) en pausa); sin deuda nueva
+- Riesgos/reservas: la referencia historica entera es "versiones desconocidas" y mezcla dspy 3.1.2 / 3.1.3 / 3.2.1 (pins de requirements.txt por fecha); para (c) conviene acotar a filas posteriores a 2026-05-17 o correr una referencia nueva con 3.2.1 antes del upgrade
+```
 
 ### 2026-11-25 (cont.) — Cierre de D-011 (tests del modo pipeline)
 
@@ -115,8 +164,8 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ```
 [SDD-Check]
-- Spec/doc leido: historial/sdd.md, specs/SPEC-105-roles-intercambiables.md (FR-004)
-- Incluye/Excluye verificado: incluye solo la exposicion publica de los dos simbolos; excluye el juez como rol configurable (SPEC-105 FR-004, sigue en draft)
+- Spec/doc leido: historial/sdd.md, specs/SPEC-106-roles-intercambiables.md (FR-004)
+- Incluye/Excluye verificado: incluye solo la exposicion publica de los dos simbolos; excluye el juez como rol configurable (SPEC-106 FR-004, sigue en draft)
 - Validaciones aplicadas: tests nuevos (strip_snapshot_suffix, judge_config de solo lectura), ./shared/utils/ci_local.sh verde, sin emoticones
 - SSOT afectado: historial/sdd.md
 - Derivados a revisar: ninguno
@@ -237,7 +286,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 - Incluye/Excluye verificado: correcciones del review dentro de FR-001 a FR-016; run_inference.py sigue fuera (D-020)
 - Validaciones aplicadas: ci_local.sh verde tras cada commit (2294 passed, cobertura 98%), fase 6 con API real, sin emoticones
 - SSOT afectado: specs/SPEC-104 (active, it. 3), specs/SPECS_REGISTRY.md, historial/sdd.md, docs de FR-016
-- Derivados a revisar: SPEC-105 (roles intercambiables, depende de SPEC-104), D-024 (feedback de metricas DSPy)
+- Derivados a revisar: SPEC-106 (roles intercambiables, depende de SPEC-104), D-024 (feedback de metricas DSPy)
 - Deuda arrastrada: D-020, D-022, D-023, D-024 abiertas; D-019 y D-021 cerradas
 - Riesgos/reservas: CheckedLM anula `_check_truncation` y `_process_lm_response` de dspy 3.2.1 (revalidar con D-018); umbrales por defecto sin recalibrar con corridas reales largas
 ```
@@ -297,10 +346,10 @@ desvios registrados:
   clasificador/SQL (D-019), el juez RAG que convierte sus fallas en 0.0, los
   avisos con `print` y los cortes por `max_tokens` (D-021) se derivan a la spec
   nueva SPEC-104 (fallas tecnicas justas). La spec de roles intercambiables
-  pasa a SPEC-105 y depende de SPEC-104.
+  pasa a SPEC-106 y depende de SPEC-104.
 - `ci_local.sh` verde: 816 passed, cobertura 98%.
 - Spec a `active` (iteracion 3); Coverage mapping sin `pendiente`; quedan tres
-  `[NEEDS CLARIFICATION]` derivados a SPEC-105, SPEC-100 y una iteracion futura.
+  `[NEEDS CLARIFICATION]` derivados a SPEC-106, SPEC-100 y una iteracion futura.
 
 ```
 [SDD-Check]
@@ -308,7 +357,7 @@ desvios registrados:
 - Incluye/Excluye verificado: el review cubre el diff de la spec; las fallas preexistentes quedan fuera (SPEC-104)
 - Validaciones aplicadas: ci_local.sh (816 passed, cobertura 98%), refs internas, sin emoticones
 - SSOT afectado: specs/SPEC-103 (active), specs/SPECS_REGISTRY.md, historial/sdd.md
-- Derivados a revisar: SPEC-104 (FR-009 y SC-004 de SPEC-103), SPEC-105
+- Derivados a revisar: SPEC-104 (FR-009 y SC-004 de SPEC-103), SPEC-106
 - Deuda arrastrada: D-019 y D-021 derivadas a SPEC-104; D-020 y D-022 abiertas
 - Riesgos/reservas: CheckedLM depende de un metodo interno de dspy 3.2.1 (revalidar con D-018)
 ```

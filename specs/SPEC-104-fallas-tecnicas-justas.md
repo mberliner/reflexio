@@ -9,7 +9,7 @@ fallas"). El rol reflexion de SPEC-103 FR-009 se conserva y se generaliza en
 FR-005. Motivo registrado en `historial/sdd.md` (2026-11-23, SPEC-104 iteracion 2).
 Relacionada con: [[SPEC-103-proveedor-anthropic]] (completa la parte de "cortadas
 por `max_tokens`" de su SC-004), [[SPEC-100-veredicto-senal-ruido]],
-[[SPEC-105-roles-intercambiables]], `docs/GEPA_MANEJO_ERRORES.md`,
+[[SPEC-106-roles-intercambiables]], `docs/GEPA_MANEJO_ERRORES.md`,
 `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/YAML_CONFIG_REFERENCE.md`,
 `docs/ARCHITECTURE.md`
 Plan de implementacion: docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md
