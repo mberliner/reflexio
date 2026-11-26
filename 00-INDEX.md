@@ -48,7 +48,7 @@ Cada archivo de `docs/` actua como SSOT (single source of truth) para su dominio
 | Tema | SSOT |
 |---|---|
 | Setup, comandos, pipeline local, invocacion de entry points | `docs/DEVELOPMENT.md` |
-| Patrones de arquitectura (Factory, Adapter, BasePaths...) e invariantes | `docs/ARCHITECTURE.md` |
+| Patrones de arquitectura (Factory, Adapter, BasePaths...), agnosticismo de framework (DSPy/GEPA) e invariantes | `docs/ARCHITECTURE.md` |
 | Convenciones de codigo/docs y workflow (incl. resumen SDD) | `docs/CONTRIBUTING.md` |
 | Configuracion LLM unificada (variables, formatos, uso) | `docs/LLM_CONFIG.md` |
 | Campos de configuracion YAML de ambos proyectos | `docs/YAML_CONFIG_REFERENCE.md` |

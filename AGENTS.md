@@ -29,7 +29,7 @@ un SSOT ya define.
 |---|---|
 | Orientarte: estructura del repo y mapa completo de SSOTs | `00-INDEX.md` |
 | Correr el proyecto, comandos, pipeline local, entry points, setup `.venv` | `docs/DEVELOPMENT.md` |
-| Patrones de arquitectura (Factory, Adapter, BasePaths, ...) e invariantes | `docs/ARCHITECTURE.md` |
+| Patrones de arquitectura (Factory, Adapter, BasePaths, ...), agnosticismo de framework (DSPy/GEPA) e invariantes | `docs/ARCHITECTURE.md` |
 | Convenciones de codigo/docs y workflow (incl. protocolo SDD) | `docs/CONTRIBUTING.md` |
 | Detalle y plantilla del protocolo SDD, `[SDD-Check]`, deuda arrastrada | `docs/SDD_PROTOCOLO.md` |
 | Configuracion LLM unificada (variables, formatos) | `docs/LLM_CONFIG.md` |

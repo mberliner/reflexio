@@ -41,6 +41,55 @@ y convenciones ver `docs/CONTRIBUTING.md`.
   `experiment.meta.json` (dataset hash, contador), `run.json` (seed, modelos).
   Integracion automatica en entry points. Ver `docs/METADATA_REPRODUCIBILIDAD.md`.
 
+## Agnosticismo de framework (DSPy y GEPA)
+
+Principio: DSPy y GEPA son **motores intercambiables**, no el lugar donde vive lo
+que define un experimento. Todo lo que determina el resultado de una
+optimizacion (prompts, parseo, deteccion de fallas, medicion, reglas de negocio)
+MUST ser del repo; de las librerias se usa solo su API publica. Asi un upgrade
+no cambia la optimizacion en silencio y una incompatibilidad falla en CI, no en
+una corrida paga. Origen: D-018 en `historial/sdd.md`; requisitos y criterios en
+`specs/SPEC-105-punto-llamada-desacoplado.md`.
+
+Reglas para cualquier construccion nueva:
+
+- MUST: usar solo API publica de `dspy`, `gepa` y `litellm`. MUST NOT
+  sobrescribir metodos ni importar simbolos privados (prefijo `_`) o no
+  documentados (verificado por `tests/test_lib_contracts.py`).
+- MUST: toda superficie publica que se empiece a usar entra al inventario de
+  contratos (`SURFACES` en `tests/test_lib_contracts.py`) con al menos una
+  mutacion que lo ponga rojo.
+- MUST: toda llamada al LLM, en cualquier rol, pasa por el punto de llamada
+  propio de `shared/llm/` (`call.py`; en DSPy via el engine `CheckedEngine` de
+  `dspy_lm.py`). Ningun otro modulo llama a LiteLLM
+  (`tests/test_single_call_point.py`).
+- MUST NOT depender de defaults de la libreria que afecten la optimizacion: el
+  repo fija los suyos. Vigentes: reflexion propia (`shared/llm/reflection.py`,
+  `ReflectionProposer`, comun a los dos subproyectos), adapter de tarea
+  (`configure_dspy` fija `ChatAdapter`) y tipo de `reasoning` de CoT
+  (`chain_of_thought`). Un default nuevo que aparezca tras un upgrade se
+  inventaria y se fija igual.
+- MUST: la deteccion de fallas, el uso de tokens y el `finish_reason` se toman en
+  el punto de llamada, sobre la respuesta cruda; MUST NOT leerse de estructuras
+  internas del framework (p. ej. `dspy.LM.history`).
+- SHOULD: la logica de dominio (reglas, metricas, derivaciones) se escribe como
+  funciones puras sin importar `dspy`/`gepa`, y el framework solo la invoca. Ej.:
+  `flujo_intents/fast_gate_rule.derive_color` en el patron Rule-Derived. Hoy en
+  `shared/` solo `shared/llm/dspy_lm.py` importa `dspy`; mantenerlo asi.
+- MUST: cambiar un componente fijado (plantilla de reflexion, adapter, version
+  de libreria) es un **cambio de optimizacion**, no un ajuste: id/version nueva
+  registrada y medicion con N seeds (`docs/PROTOCOLO_N_SEEDS.md`, comparabilidad
+  por versiones de SPEC-100 FR-009). Se verifica con golden contra lo historico
+  (SC-007 y SC-008 de SPEC-105: `tests/test_reflection_prompt.py`,
+  `tests/test_dspy_call_failures.py`).
+- MUST: versiones exactas (`==`) de `dspy`, `gepa`, `litellm` y `openai` en
+  `requirements.txt`.
+
+Limites conocidos del desacople (traduccion del engine solo texto, prompt de
+reflexion como variable de experimento) en la Deuda arrastrada de
+`historial/sdd.md` (D-026, D-027). Hallazgo que lo motivo: seccion "Los defaults
+de la libreria son parte del experimento" de `docs/LECCIONES_APRENDIDAS.md`.
+
 ## Invariantes
 
 - MUST: cada subproyecto (`dspy_gepa_poc/`, `gepa_standalone/`) tiene su propio
