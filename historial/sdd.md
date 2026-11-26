@@ -55,6 +55,44 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-26 — SPEC-105 cerrada: contratos con mutacion simulada (SC-006), spec active
+
+- Inventario de las superficies publicas de `dspy`, `gepa` y `litellm` que usa el
+  codigo de produccion (`tests/test_lib_contracts.py::SURFACES`, 30): `dspy.LM`
+  con engine, contrato `complete(Request) -> Response`, regla de identidad de
+  `dspy.LMError`, pistas de capacidad, tipos y `Config` de `dspy.lm15`,
+  excepciones, `dspy.GEPA` (parametros, proposer, callbacks, resultado),
+  `ChainOfThought(rationale_field_type)`, `ChatAdapter`/`JSONAdapter` y su
+  fallback, `dspy.context`, `Evaluate`, `named_predictors`, `LabeledFewShot`;
+  `gepa.optimize`, `ProposalFn`, `on_proposal_start`, `EvaluationBatch`,
+  `GEPAAdapter`, `GEPAResult`; `litellm.completion`, sus excepciones y respuesta
+  200, `supports_*` / `get_supported_openai_params`, `drop_params`.
+- Contratos nuevos donde faltaban (FR-007): `TestDspyContracts`,
+  `TestGepaContracts`, `TestLitellmContracts`. Incluye el pendiente de
+  `Evaluate` / `EvaluationBatch`. `test_lm15_config_fields_are_known` falla en CI
+  ante un campo nuevo de `Config` (antes solo fallaba en la corrida, D-027).
+- SC-006: `MUTATIONS` simula con `monkeypatch` 31 cambios incompatibles (al menos
+  uno por superficie) y `test_contract_turns_red` exige que el contrato falle con
+  la excepcion esperada. Los contratos que ya existian en otros modulos
+  (`test_dspy_engine`, `test_single_call_point`, `test_reflection_guard`,
+  `test_litellm_failure_mapping`) se invocan tal cual. Se verifico el mensaje de
+  cada falla: todas fallan por el cambio simulado, ninguna por un efecto colateral.
+- Ajuste: `test_dspy_gepa_rejects_unknown_parameters` pasa `reflection_lm`; sin
+  el, un `dspy.GEPA` que ignorara parametros desconocidos fallaba igual por su
+  assert de reflection LM y el test no distinguia el cambio.
+- SPEC-105 pasa a `active` (spec y registro).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-105-punto-llamada-desacoplado.md (FR-005, FR-007, SC-005, SC-006, traza), specs/SPECS_REGISTRY.md, tests/test_lib_contracts.py, tests/test_dspy_engine.py, tests/test_single_call_point.py, tests/test_reflection_guard.py, tests/test_litellm_failure_mapping.py; codigo de dspy 3.5.0 (`clients/execution.py`, `clients/errors.py`, `clients/lm.py`, `lm15`, `teleprompt/gepa/gepa.py`) y gepa 0.1.4 (`core/adapter.py`, `core/result.py`, `core/callbacks.py`, `proposer/reflective_mutation`)
+- Incluye/Excluye verificado: incluye inventario, contratos faltantes, mutaciones por superficie y cierre de SPEC-105; excluye cambios de codigo de produccion y ampliar D-027
+- Validaciones aplicadas: 31 mutaciones rojas con motivo verificado, ./shared/utils/ci_local.sh verde, sin emoticones
+- SSOT afectado: specs/SPEC-105-punto-llamada-desacoplado.md (estado active, traza FR-007 y SC-006), specs/SPECS_REGISTRY.md, historial/sdd.md
+- Derivados a revisar: ninguno
+- Deuda arrastrada: D-026 y D-027 siguen abiertas
+- Riesgos/reservas: las mutaciones simulan cambios plausibles, no todos los posibles; una superficie nueva que use el repo MUST sumarse a `SURFACES` con su mutacion (no hay deteccion automatica del uso de API publica nueva, solo de la privada, SC-005)
+```
+
 ### 2026-11-25 (cont.) — D-018 (c2): regresion del transporte dspy 3.4.1 -> 3.5.0 (RUIDO), D-018 cerrada
 
 - Diseno (OK del usuario): referencia = lote b2 de (c1) (`b3da61c`, dspy 3.4.1,

@@ -1,7 +1,7 @@
 # SPEC-105-punto-llamada-desacoplado — Punto de llamada propio, desacoplado de los internos de DSPy y GEPA
 
-Estado: draft
-Iteracion: 5 (rev. 2026-11-25)
+Estado: active
+Iteracion: 5 (rev. 2026-11-26)
 Origen: D-018 de `historial/sdd.md` (upgrade DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (sus requisitos no cambian; cambia donde se implementan)
 Relacionada con: [[SPEC-100-veredicto-senal-ruido]] (regresion con N seeds y FR-009 de versiones),
@@ -241,9 +241,9 @@ la fila D-018):
 
 ## Coverage mapping (requisito -> derivado)
 
-Parcial: lo marcado "hecho" esta implementado sobre dspy 3.5.0 + gepa 0.1.4
-(D-018 b1 sobre 3.2.1, b2 sobre 3.4.1, b3 sobre 3.5.0). Falta la regresion
-paga (SC-002, D-018 c2).
+Completo: implementado sobre dspy 3.5.0 + gepa 0.1.4 (D-018 b1 sobre 3.2.1, b2
+sobre 3.4.1, b3 sobre 3.5.0), regresion paga (SC-002) en D-018 c2 y contratos
+con mutacion simulada por superficie (SC-006, 2026-11-26).
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
@@ -253,7 +253,7 @@ paga (SC-002, D-018 c2).
 | FR-004 | hecho: `record_usage` y `capture_finish_reason` en `checked_response`; `baseline_caller` usa `capture_finish_reason`; el orquestador reinicia el tracker en `setup_models`; eliminados `record_dspy_history` y `_HistoryRecorder` |
 | FR-005 | hecho: sin overrides ni imports privados de dspy; eliminados `_SafeJSONAdapter`/`_SafeChatAdapter` (`dspy_gepa_poc/call_failures.py`) el corte de `CheckedLM` y despues `CheckedLM` (b3); `tests/test_lib_contracts.py::TestNoPrivateLibrarySymbols` |
 | FR-006 | `tests/test_sc006_no_failure_regression.py`, tests de SPEC-104 |
-| FR-007 | parcial: `tests/test_lib_contracts.py` (parametros de `dspy.GEPA` y `gepa.optimize`, protocolo `ProposalFn`, `dspy.GEPA` sin filtro por firma en `GEPAOptimizer`), `tests/test_single_call_point.py::test_adapter_fallback_only_on_parse_error`, e2e de `tests/test_reflection_guard.py`; `tests/test_dspy_engine.py::TestDspyEngineContract` (engine propio, conversion de excepciones de dspy 3.5, pistas de capacidad); pendiente el de `Evaluate` / `EvaluationBatch` |
+| FR-007 | hecho: inventario `tests/test_lib_contracts.py::SURFACES` (30 superficies de `dspy`, `gepa` y `litellm`); contratos en `tests/test_lib_contracts.py` (`TestOptimizerConstructionContracts`, `TestDspyContracts`: tipos y `Config` de `dspy.lm15`, excepciones, `compile`/`DspyGEPAResult`, `Evaluate`, `named_predictors`, `LabeledFewShot`; `TestGepaContracts`: `EvaluationBatch`, `GEPAAdapter`, `GEPAResult`, `ProposalStartEvent`; `TestLitellmContracts`: firma de `completion`, pistas de capacidad, `drop_params`), `tests/test_dspy_engine.py` (`TestDspyEngineContract`, `TestTaskPromptUnchanged`), `tests/test_single_call_point.py` (fallback de adapters, una llamada por falla), e2e de `tests/test_reflection_guard.py` (proposer y callbacks en `dspy.GEPA` y `gepa.optimize`), `tests/test_litellm_failure_mapping.py` (excepciones y respuesta 200) |
 | FR-008 | hecho: `requirements.txt` (`dspy==3.5.0`, `gepa==0.1.4`, `litellm`, `openai`); `tests/litellm_failure_payloads.py::EXPECTED_VERSIONS` |
 | FR-009 | `LLMConfig.get_dspy_lm()`; `tests/test_shared_llm.py::TestLLMConfigGetDspyLM::test_cache_is_rejected` |
 | FR-010 | hecho: `shared/llm/reflection.py` (`REFLECTION_PROMPT_TEMPLATE`, `render_reflection_prompt`, `extract_instruction`, `ReflectionProposer`); conectores `shared/llm/dspy_lm.py::dspy_reflection_proposer` -> `GEPAOptimizer` y `gepa_standalone/core/llm_factory.py::create_reflection_proposer` -> `universal_optimizer`; `tests/test_reflection_guard.py`, `tests/test_reflection_prompt.py` |
@@ -264,6 +264,6 @@ paga (SC-002, D-018 c2).
 | SC-003 | `tests/test_sc006_no_failure_regression.py` + `tests/orchestrator_e2e.py` (verde sobre 3.4.1 y 3.5.0); la regresion real es D-018 (c1) y (c2) |
 | SC-004 | `tests/test_litellm_failure_mapping.py` (re-verificado sobre 3.5.0) |
 | SC-005 | hecho: `tests/test_lib_contracts.py::TestNoPrivateLibrarySymbols` (AST de `shared`, `dspy_gepa_poc`, `gepa_standalone`) |
-| SC-006 | parcial: `tests/test_lib_contracts.py` (`test_dspy_gepa_rejects_unknown_parameters`, detector de imports privados) |
+| SC-006 | hecho (2026-11-26): `tests/test_lib_contracts.py::TestContractsDetectIncompatibleChanges`: `MUTATIONS` simula con `monkeypatch` 31 cambios incompatibles (al menos uno por cada superficie de `SURFACES`, verificado por `test_every_surface_has_a_mutation`) y `test_contract_turns_red` exige que el contrato de esa superficie falle con la excepcion esperada; verificado que cada uno falla por el motivo simulado y no por un efecto colateral |
 | SC-007 | hecho: `tests/test_reflection_prompt.py` + `tests/fixtures/reflection_prompt_gepa_0_0_27.json` |
 | SC-008 | hecho: `tests/test_dspy_engine.py::TestTaskPromptUnchanged` (incluye `test_chain_of_thought_messages_match_dspy_3_4_1` y `test_json_adapter_messages_match_dspy_3_4_1` con `openai/gpt-4o-mini` y `azure/gpt-5.4-mini`), `TestChatResponseFormat` + `tests/fixtures/task_prompt_dspy_3_4_1.json` |
