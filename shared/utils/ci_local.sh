@@ -2,7 +2,7 @@
 # Replica local del pipeline CI de GitHub Actions.
 # Uso: ./shared/utils/ci_local.sh [--skip-security]
 #
-# Orden: lint -> security -> tests (igual que CI)
+# Orden: dependencias -> lint -> security -> tests (igual que CI)
 #
 # Un paso obligatorio que no puede correr (herramienta no instalada) cuenta como
 # error: el pipeline nunca termina en "PASO" sin haber corrido todos los pasos.
@@ -63,6 +63,19 @@ require_tool() {
     ERRORS=$((ERRORS + 1))
     return 1
 }
+
+# ---- 0. DEPENDENCIAS --------------------------------------------------------
+# El entorno MUST ser el que instala el CI desde cero: sin huerfanos de versiones
+# previas, pins exactos e imports declarados (shared/utils/check_env_deps.py).
+step_header "DEPENDENCIAS"
+
+info "check_env_deps contra requirements.txt ..."
+if "$PYTHON" -m shared.utils.check_env_deps; then
+    ok "dependencias OK"
+else
+    error "entorno desalineado con requirements.txt (ver arriba como alinearlo)"
+    ERRORS=$((ERRORS + 1))
+fi
 
 # ---- 1. LINT ----------------------------------------------------------------
 step_header "LINT"

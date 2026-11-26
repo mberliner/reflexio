@@ -969,3 +969,10 @@ train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
   como `LMUnexpectedError` todo lo que no sea `dspy.LMError`. Leer el wheel no
   alcanza; la premisa se verifica con un test de contrato contra la version
   instalada (`tests/test_dspy_engine.py::TestDspyEngineContract`).
+- **Tambien cambian las dependencias, no solo la API (2026-11-26).** dspy 3.5.0
+  movio `tenacity` a un extra. El `.venv` local la conservaba de dspy 3.2.1 y el
+  pipeline local paso; el CI, que instala desde cero, fallo al importar los
+  tests. Leccion: el entorno local no es el del CI despues de un upgrade. El
+  remedio es un chequeo, no una costumbre: `shared/utils/check_env_deps.py`
+  corre primero en `ci_local.sh` y en el CI y falla ante huerfanos, pins
+  desalineados e imports no declarados (`docs/DEVELOPMENT.md`).

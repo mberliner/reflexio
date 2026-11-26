@@ -28,8 +28,8 @@ pip install bandit pip-audit     # security del pipeline (el CI los instala apar
 ## Pipeline de verificacion local (OBLIGATORIO tras cualquier modificacion)
 
 MUST: antes de dar por cerrado cualquier cambio de codigo, ejecutar el pipeline
-local que replica el CI (orden `lint -> security -> tests`, mismos comandos y
-cobertura minima 85%):
+local que replica el CI (orden `dependencias -> lint -> security -> tests`,
+mismos comandos y cobertura minima 85%):
 
 ```bash
 ./shared/utils/ci_local.sh                 # CI local completo (lint + security + tests)
@@ -40,7 +40,21 @@ En Windows invocarlo via git-bash; el script detecta `.venv/Scripts/python.exe` 
 si no hay venv, usa el python del SO. Pasar el CI local equivale a pasar
 `.github/workflows/ci.yml`. Una herramienta obligatoria no instalada (`ruff`,
 `bandit`, `pip-audit`, `pytest`, `coverage`) es un error del pipeline, no un paso
-omitido. La variante `--skip-security` termina en `PASO PARCIAL` y no cumple el
+omitido.
+
+Paso de dependencias (`python -m shared.utils.check_env_deps`, tambien en el job
+de tests del CI): el CI instala desde cero con `uv pip install -r
+requirements.txt`, pero el `.venv` local se actualiza encima de versiones previas
+y conserva paquetes que la version nueva ya no exige; con eso los tests pasan en
+local y fallan en CI (dspy 3.5.0 movio `tenacity` a un extra). El paso falla si
+un pin de `requirements.txt` no coincide con lo instalado, si falta una
+dependencia transitiva, si el repo (`shared`, `dspy_gepa_poc`, `gepa_standalone`,
+`tests`) importa un paquete que `requirements.txt` no instala, o si hay un
+paquete huerfano (fuera del cierre de `requirements.txt` y de las herramientas
+del pipeline, `PIPELINE_TOOLS`: `pip`, `bandit`, `pip-audit`). Para alinear:
+`pip install -r requirements.txt` y `pip uninstall <huerfano>`. MUST: una
+dependencia que el repo importa va en `requirements.txt` con version exacta, aunque
+hoy llegue como transitiva de otra. La variante `--skip-security` termina en `PASO PARCIAL` y no cumple el
 MUST de arriba. MUST NOT sustituirlo por `pytest`/`ruff check` sueltos:
 eso omite `ruff format --check`, la fase de security y el umbral de cobertura.
 

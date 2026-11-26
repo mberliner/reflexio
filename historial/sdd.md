@@ -55,6 +55,33 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-26 (cont.) — Chequeo de dependencias en el pipeline (check_env_deps)
+
+- Origen: el CI de GitHub fallo con 11 errores de coleccion tras `9769795`. Causa
+  real en `8d0a37c`: dspy 3.5.0 movio `tenacity` a su extra `litellm`; el `.venv`
+  local la conservaba de dspy 3.2.1 y `ci_local.sh` pasaba. Fix puntual en
+  `961cf40` (`tenacity==9.2.1`).
+- Mecanismo para que no se repita: `shared/utils/check_env_deps.py`, primer paso
+  de `ci_local.sh` y paso del job de tests del CI. Falla ante pin desalineado,
+  transitiva faltante o fuera de rango, import del repo no instalado por
+  `requirements.txt` (aunque llegue por una herramienta del pipeline) y paquete
+  huerfano. Offline (metadatos instalados), sin dependencias nuevas (`packaging`).
+- Verificado contra el caso real: con el `requirements.txt` previo a `961cf40`
+  reporta el import de `tenacity` y el huerfano. Encontro ademas 3 huerfanos de
+  dspy 3.2.1 en el `.venv` (`asyncer`, `typeguard`, `xxhash`), desinstalados (la
+  suite completa ya pasaba sin ellos en un venv limpio).
+
+```
+[SDD-Check]
+- Spec/doc leido: docs/DEVELOPMENT.md (pipeline local), shared/utils/ci_local.sh, .github/workflows/ci.yml, metadatos de dspy 3.5.0 y litellm 1.108.5
+- Incluye/Excluye verificado: incluye el chequeo, su integracion en ci_local.sh y CI, tests y docs; excluye lockfile (`uv pip compile`) y cambiar como se instala el CI
+- Validaciones aplicadas: tests/test_check_env_deps.py (20), chequeo contra el requirements previo al fix (rojo), venv limpio con uv (alineado, tests verdes), ./shared/utils/ci_local.sh verde (2455 tests, cov 98,35%), sin emoticones
+- SSOT afectado: docs/DEVELOPMENT.md (paso de dependencias), docs/LECCIONES_APRENDIDAS.md (seccion 10), historial/sdd.md
+- Derivados a revisar: ninguno
+- Deuda arrastrada: D-026 y D-027 siguen abiertas
+- Riesgos/reservas: no es una capacidad del producto sino del pipeline, por eso no tiene spec en SPECS_REGISTRY. Los pins transitivos siguen sin fijar (sin lockfile): una version nueva de una transitiva puede cambiar el CI sin cambiar requirements.txt; el chequeo detecta desalineacion local, no deriva del indice. Un import dentro de un `try/except ImportError` se trata como obligatorio
+```
+
 ### 2026-11-26 — SPEC-105 cerrada: contratos con mutacion simulada (SC-006), spec active
 
 - Inventario de las superficies publicas de `dspy`, `gepa` y `litellm` que usa el
