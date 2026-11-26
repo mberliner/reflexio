@@ -26,6 +26,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-023 | Limites de deteccion de LiteLLM 1.108.5 + openai 3.57.0 que SPEC-104 no puede cubrir sin parchear LiteLLM: (a) Anthropic `stop_reason="model_context_window_exceeded"` llega como `finish_reason="stop"` sin rastro (texto parcial evaluado como completo); (b) 400 de politica de Anthropic con texto no reconocido llega como `BadRequestError` sin `body` y aborta como `configuracion`; (c) bug de 422 con `openai/` + `drop_params=True` (global, lo activa `validate()`) que devuelve `None`; (d) HTTP 413 generico mapeado distinto por proveedor (`RateLimitError` en OpenAI, `APIError(413)` en Azure, `BadRequestError(400)` en Anthropic). Evidencia y regresion: `tests/test_litellm_failure_mapping.py` (320 tests, fallan si una actualizacion cambia el mapeo). Re-verificar con SC-009 de SPEC-104 en cada actualizacion de LiteLLM o del SDK de openai (relacionada con D-018) y reportar upstream si sigue | Verificacion de LiteLLM para SPEC-104 (2026-11-23) | Abierta |
 | D-026 | Prompt de reflexion como variable de experimento (SPEC-105 FR-010): hoy hay una sola plantilla (`gepa-0.0.27-default`). Antes de introducir otra (p. ej. adaptar el `ProposeInstruction` de dspy 3.4.1, o sus `skills` / `max_chars`) MUST registrarse `REFLECTION_PROMPT_ID` en `run.json` y en el CSV y entrar en la comparabilidad de SPEC-100 (como las versiones de librerias, FR-009), y la plantilla nueva se mide con N seeds contra la vigente | D-018 (b2), 2026-11-25 | Abierta. No bloquea (c1): con un unico prompt, el id es constante en todas las corridas |
 | D-027 | Alcance de la traduccion `Request` -> Chat Completions del engine propio (`shared/llm/dspy_lm.py::request_to_chat`, SPEC-105 FR-002): solo cubre texto (mensajes `user`/`assistant`, `system` de texto y los campos de `Config` de `_CONFIG_PARAMS`). Herramientas (`Request.tools`, `ToolCallPart`/`ToolResultPart`, function calling nativo de `JSONAdapter`/`XMLAdapter`/`ReAct`), partes no textuales (`dspy.Image`, audio, documentos), `continuation` (firmas de thinking), `Config.reasoning`, `tool_choice`, `logprobs`, `top_k`, cache de prompt y todo campo nuevo de `Config` lanzan `dspy.lm15.UnsupportedFeatureError` antes de llamar. Ademas la `Response` que ve dspy lleva siempre `finish_reason="stop"` y solo texto (sin `reasoning_content`; el `finish_reason` crudo queda en el punto de llamada). Hoy el repo no usa nada de eso (verificado: sin `ReAct`, `dspy.Tool`, `dspy.Image` ni `reasoning_effort` en `dspy_gepa_poc`/`shared`), asi que no hay perdida silenciosa: falla fuerte. Si un caso nuevo los necesita, ampliar la traduccion con su test y revisar el `allow_tool_calls` de `checked_response` (hoy sin uso desde DSPy) | D-018 (b3), 2026-11-25 | Abierta. No bloquea SPEC-106. Revision 2026-11-25 (D-018 c2): `Config.reasoning` si llegaba desde dspy (CoT por defecto de 3.5.0 con gpt-5.x) y fallo fuerte como estaba previsto; ya no llega (`chain_of_thought`). `response_format` ahora se traduce a la forma de Chat Completions (`chat_response_format`) |
+| D-028 | La comparabilidad de SPEC-100 (FR-008 modelos, FR-009 versiones de librerias) y el triaje de SPEC-101 no distinguen `LLM_EFFORT_<ROL>` ni `LLM_THINKING_<ROL>` (SPEC-103 FR-012): una referencia puede mezclar corridas Claude con distinto effort o razonamiento sin `[WARN]`. Los valores efectivos ya estan en el `run.json` de cada corrida; falta que `seed_protocol.py` / `seed_triage.py` los lean (o una columna en el CSV, que toca SPEC-100 FR-007). Mitigacion vigente: advertencia en `docs/PROTOCOLO_N_SEEDS.md` (Limitaciones conocidas) | SPEC-103 FR-012 (marcador abierto desde 2026-11-23; D-018 (a) agrego solo las versiones) | Abierta. Sin impacto hoy: 2 corridas Claude en los CSV (smoke de fase 6, 2026-11-24). Resolver antes del primer lote de referencia con Claude (SPEC-106) |
 
 ## Deuda resuelta
 
@@ -54,6 +55,30 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-26 (cont. 3) — SPEC-103 iter 4: dos NEEDS CLARIFICATION resueltos
+
+- Origen: auditoria de estado de specs. SPEC-103 tenia 3 marcadores abiertos.
+- `api_base` propio para Anthropic: no era una ambiguedad sino una decision ya
+  tomada (sin override en SPEC-103; mecanismo en SPEC-106). Pasa a "Decisiones".
+  La pregunta abierta real queda solo en SPEC-106 FR-003.
+- Comparabilidad sin effort/thinking: hueco real, sin impacto hoy (2 corridas
+  Claude en los CSV). El marcador citaba D-018 (a), que se cerro sin cubrirlo.
+  Pasa a deuda D-028; la advertencia de `docs/PROTOCOLO_N_SEEDS.md` la enlaza.
+- Queda abierto el marcador de "Decisiones" (`models:` del YAML y
+  `run_inference.py` desde `run.json`), pendiente de decidir si va a SPEC-106 o
+  a deuda.
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-103-proveedor-anthropic.md, specs/SPEC-106-roles-intercambiables.md (Alcance, FR-001, FR-003), specs/SPEC-100-veredicto-senal-ruido.md (FR-008, FR-009), docs/PROTOCOLO_N_SEEDS.md, docs/SDD_PROTOCOLO.md
+- Incluye/Excluye verificado: incluye FR-007 y FR-012 de SPEC-103 y la deuda D-028; excluye implementar el filtro por effort/thinking y el marcador de `models:`
+- Validaciones aplicadas: corridas Claude contadas en ambos metricas_optimizacion.csv (2), ./shared/utils/ci_local.sh verde, sin emoticones
+- SSOT afectado: specs/SPEC-103-proveedor-anthropic.md, specs/SPECS_REGISTRY.md, docs/PROTOCOLO_N_SEEDS.md, historial/sdd.md
+- Derivados a revisar: SPEC-106 Depende de: [[SPEC-105-punto-llamada-desacoplado]] (sigue pendiente)
+- Deuda arrastrada: nueva D-028 (abierta); D-026 y D-027 siguen abiertas
+- Riesgos/reservas: D-028 debe cerrarse antes del primer lote de referencia con Claude
+```
 
 ### 2026-11-26 (cont. 2) — SPEC-104 iter 4: reglas de capa 1 alineadas con SPEC-105
 

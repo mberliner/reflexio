@@ -1,7 +1,7 @@
 # SPEC-103-proveedor-anthropic — Anthropic como proveedor verificado
 
 Estado: active
-Iteracion: 3 (rev. 2026-11-23)
+Iteracion: 4 (rev. 2026-11-26)
 Relacionada con: [[SPEC-104-fallas-tecnicas-justas]] (reemplaza FR-009 en los roles tarea y juez y cubre los cortes de SC-004), [[SPEC-106-roles-intercambiables]], [[SPEC-100-veredicto-senal-ruido]],
 [[SPEC-101-triaje-casos-nseeds]], docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md,
 docs/ANALISIS_UTILIDADES.md, docs/GEPA_MANEJO_ERRORES.md, docs/PROTOCOLO_N_SEEDS.md
@@ -132,9 +132,6 @@ Notas de la matriz:
   `LLM_API_VERSION`; `api_version` MUST NOT enviarse; y un `LLM_API_BASE`
   presente en el `.env` MUST NOT enviarse y MUST producir un aviso al arrancar
   (evita redirigir el pedido al endpoint Azure que quedo en un `.env` editado).
-  [NEEDS CLARIFICATION: si hace falta un `api_base` propio para Anthropic (proxy,
-  gateway), el mecanismo se define en [[SPEC-106-roles-intercambiables]] FR-003
-  (`LLM_API_BASE_<ROL>`); en esta spec no hay override.]
   `validate_connection()` MUST funcionar con todos los modelos de la matriz (la
   prueba de conexion respeta FR-003 a FR-006).
 - FR-008 Variables `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>`: el parseo MUST
@@ -194,13 +191,11 @@ Notas de la matriz:
   razonamiento, `max_tokens`), tomados de las configuraciones realmente usadas
   (no recreadas con defaults al guardar). MUST NOT alterarse el formato de
   `metricas_optimizacion.csv` ([[SPEC-100-veredicto-senal-ruido]] FR-007).
-  [NEEDS CLARIFICATION: el criterio de comparabilidad de SPEC-100 (FR-008, hoy
-  solo el par de modelos) y de [[SPEC-101-triaje-casos-nseeds]] no ve estos
-  parametros. Extenderlo (leer `run.json` desde `seed_protocol.py` /
-  `seed_triage.py`, o migrar el CSV) es un cambio a SPEC-100 que conviene hacer
-  junto con D-018 (a). Hasta entonces, `docs/PROTOCOLO_N_SEEDS.md` MUST advertir
-  que corridas Claude con distinto effort/razonamiento no deben mezclarse en un
-  mismo lote de referencia.]
+  El criterio de comparabilidad de SPEC-100 (FR-008 modelos, FR-009 versiones
+  de librerias) y de [[SPEC-101-triaje-casos-nseeds]] no ve estos parametros
+  (deuda D-028 en `historial/sdd.md`). Mientras D-028 este abierta,
+  `docs/PROTOCOLO_N_SEEDS.md` MUST advertir que corridas Claude con distinto
+  effort/razonamiento no deben mezclarse en un mismo lote de referencia.
 - FR-013 `docs/LLM_CONFIG.md` MUST documentar el formato, las variables
   `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>` con IDs vigentes y el tratamiento de
   `LLM_API_BASE` para `anthropic/`, y MUST enlazar a la matriz de esta spec en
@@ -213,6 +208,10 @@ Notas de la matriz:
   cambiando solo el `.env`. Esto se aparta de `docs/LECCIONES_APRENDIDAS.md` §4
   (parametros de comportamiento en YAML); la reproducibilidad se cubre
   registrando los valores efectivos en `run.json` (FR-012).
+- Esta spec no define un `api_base` propio para `anthropic/` (FR-007: el
+  `LLM_API_BASE` global no se envia). Si hace falta uno (proxy, gateway), el
+  mecanismo es la conexion por rol de [[SPEC-106-roles-intercambiables]]
+  (`LLM_API_BASE_<ROL>`, FR-001 y FR-003).
   [NEEDS CLARIFICATION: si en una iteracion futura `models:` del YAML puede
   sobreescribirlos, y si `dspy_gepa_poc/run_inference.py` debe reconstruirlos
   desde `run.json` en lugar del `.env` vigente.]
