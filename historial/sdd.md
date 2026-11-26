@@ -55,6 +55,34 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-26 (cont. 2) — SPEC-104 iter 4: reglas de capa 1 alineadas con SPEC-105
+
+- Origen: auditoria de estado de specs. SPEC-104 conservaba texto normativo de
+  antes de SPEC-105: verificacion solo contra `dspy==3.2.1`, un MUST para el
+  `ContextWindowExceededError` con que dspy 3.2.1 envolvia la excepcion de
+  LiteLLM, y la deteccion ubicada en `CheckedLM._process_lm_response` (la clase
+  ya no existe).
+- Cambio (solo texto, sin cambio de comportamiento): la regla 1 nombra solo las
+  clases de LiteLLM; la nota de dspy 3.2.1 pasa a un MUST general (clasificar la
+  excepcion cruda en el punto de llamada; si llega envuelta, recorrer `__cause__`
+  con `root_exception`), con el caso de 3.2.1 como antecedente; la capa 2 se
+  ubica en `shared/llm/call.py::checked_response`; se agrega la re-verificacion
+  sobre dspy 3.5.0 / gepa 0.1.4 (SPEC-105 SC-004). Registro: iteracion 4.
+- Verificado contra el codigo: `shared/llm/failures.py::root_exception` (usado en
+  `classify_exception` y `call.py`) y
+  `tests/test_failures.py::test_checked_lm_context_window_is_entrada_with_litellm_cause`.
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-104-fallas-tecnicas-justas.md, specs/SPEC-105-punto-llamada-desacoplado.md (FR-002, FR-003, SC-004), shared/llm/failures.py, shared/llm/dspy_lm.py, shared/llm/call.py
+- Incluye/Excluye verificado: incluye las reglas de deteccion de la capa 1 y la ubicacion de la capa 2; excluye la seccion "Contexto (estado al 2026-11-23)" y los escenarios, que describen el problema de origen y quedan como historia, y los planes en docs/plans
+- Validaciones aplicadas: grep sin `CheckedLM` ni `_process_lm_response` normativos en SPEC-104, ./shared/utils/ci_local.sh verde, sin emoticones
+- SSOT afectado: specs/SPEC-104-fallas-tecnicas-justas.md, specs/SPECS_REGISTRY.md
+- Derivados a revisar: SPEC-106 deberia declarar Depende de: [[SPEC-105-punto-llamada-desacoplado]] (pendiente desde 2026-11-25)
+- Deuda arrastrada: sin cambios (D-026 y D-027 siguen abiertas)
+- Riesgos/reservas: ninguno; sin cambio de requisitos ni de codigo
+```
+
 ### 2026-11-26 (cont.) — Chequeo de dependencias en el pipeline (check_env_deps)
 
 - Origen: el CI de GitHub fallo con 11 errores de coleccion tras `9769795`. Causa

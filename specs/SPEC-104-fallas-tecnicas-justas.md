@@ -1,7 +1,7 @@
 # SPEC-104-fallas-tecnicas-justas — Fallas tecnicas visibles y medicion justa
 
 Estado: active
-Iteracion: 3 (rev. 2026-11-24)
+Iteracion: 4 (rev. 2026-11-26)
 Cierra: D-019 y D-021 (`historial/sdd.md`)
 Reemplaza: SPEC-103 FR-009 en los roles tarea y juez (la respuesta sin texto deja
 de puntuar 0.0 y pasa a clasificarse por su causa, ver "Clasificacion de
@@ -129,7 +129,8 @@ del rol (tabla de tratamiento). La clase sale de una de dos capas:
 
 Verificadas el 2026-11-23 contra `litellm==1.108.5`, `openai==3.57.0`,
 `httpx==0.28.1` y `dspy==3.2.1`, con payloads HTTP de Azure, OpenAI y
-Anthropic. Las reglas MUST evaluarse en este orden (la primera que aplica
+Anthropic, y re-verificadas el 2026-11-25 sobre `dspy==3.5.0` y `gepa==0.1.4`
+(SPEC-105 SC-004). Las reglas MUST evaluarse en este orden (la primera que aplica
 decide). Todas las excepciones de LiteLLM heredan de `openai.APIError` y las
 especializadas de `BadRequestError`, por eso `entrada` e `infraestructura` van
 antes que `configuracion`. `exc.body` MUST leerse en forma defensiva (puede ser
@@ -137,7 +138,7 @@ antes que `configuracion`. `exc.body` MUST leerse en forma defensiva (puede ser
 
 | # | Clase | Regla |
 |---|---|---|
-| 1 | `entrada` | `ContentPolicyViolationError` o `ContextWindowExceededError` (de LiteLLM, o el de DSPy que lo envuelve, ver abajo); o `BadRequestError` con `body["code"]` en {`content_filter`, `content_policy_violation`, `context_length_exceeded`} o `body["innererror"]["code"] == "ResponsibleAIPolicyViolation"`; o `request_too_large` en el mensaje (HTTP 413 de Anthropic) |
+| 1 | `entrada` | `ContentPolicyViolationError` o `ContextWindowExceededError` de LiteLLM; o `BadRequestError` con `body["code"]` en {`content_filter`, `content_policy_violation`, `context_length_exceeded`} o `body["innererror"]["code"] == "ResponsibleAIPolicyViolation"`; o `request_too_large` en el mensaje (HTTP 413 de Anthropic) |
 | 2 | `infraestructura` | `RateLimitError`, `Timeout`, `APIConnectionError`, `InternalServerError`, `ServiceUnavailableError`, `BadGatewayError`; o `APIError` de cualquier subclase (incluido `BadRequestError`) con `status_code` en {408, 409, 429} o `>= 500` (cubre 529, el 409 de Azure/OpenAI como `APIError` y el de Anthropic como `BadRequestError(409)`) |
 | 3 | `configuracion` | `AuthenticationError`, `PermissionDeniedError`, `NotFoundError`, `UnsupportedParamsError`, `UnprocessableEntityError`, `BadRequestError` restante; `APIError` con `400 <= status_code < 500` restante (cubre el 403 de Azure/OpenAI); `litellm.completion` que devuelve `None` (bug de 422 con `openai/` y `drop_params`); cualquier excepcion de la llamada no clasificada por las reglas anteriores, con su tipo y mensaje en el error |
 | 4 | `filtro_salida` | HTTP 200 con `finish_reason == "content_filter"` o `bool(getattr(message, "refusal", None))`, con o sin texto. `refusal` MUST leerse con `getattr` (el atributo puede no existir: siempre en Anthropic, y en OpenAI cuando el JSON omite la clave; cuando existe vale `None` en respuestas normales) |
@@ -151,20 +152,22 @@ Notas de la verificacion (detalle en `tests/test_litellm_failure_mapping.py`):
   Azure LiteLLM simplifica `body` y mueve `innererror` a
   `exc.provider_specific_fields`. Por eso la regla 1 chequea primero la clase y
   usa `body` solo para los `BadRequestError` genericos, donde si se preserva.
-- `dspy==3.2.1` atrapa `litellm.ContextWindowExceededError` en `dspy.LM.forward`
-  y relanza `dspy.utils.exceptions.ContextWindowExceededError`, que no hereda de
-  `openai.APIError` y conserva el original en `__cause__`. En `dspy_gepa_poc` el
-  clasificador MUST reconocer esa excepcion (o recorrer `__cause__`) antes de la
-  regla 3; si no, caeria en "excepcion no clasificada" y abortaria la corrida.
-  `shared/` mantiene diferido el import de `dspy` (`docs/ARCHITECTURE.md`): el
-  chequeo vive en `shared/llm/dspy_lm.py` o se hace por `__cause__`.
+- Las reglas MUST aplicarse a la excepcion de LiteLLM tal como la lanza la
+  llamada, antes de que una libreria la envuelva. Desde SPEC-105 la unica llamada
+  de ambos subproyectos es `shared/llm/call.py::checked_response`, que clasifica
+  la excepcion cruda (en `dspy_gepa_poc`, dentro del engine propio de `dspy.LM`).
+  Si la excepcion llega envuelta, el clasificador MUST recorrer `__cause__` hasta
+  la primera excepcion de `openai`/LiteLLM (`shared/llm/failures.py::root_exception`);
+  si no, caeria en "excepcion no clasificada" y abortaria la corrida. (Con
+  `dspy==3.2.1` el caso existia: `dspy.LM.forward` relanzaba
+  `litellm.ContextWindowExceededError` como
+  `dspy.utils.exceptions.ContextWindowExceededError`, que no hereda de
+  `openai.APIError`.)
 
 Sin falla en la capa 1, la respuesta pasa a la capa 2. La deteccion MUST
-aplicarse sobre el objeto de respuesta completo en ambos subproyectos: en
-`gepa_standalone` en `shared/llm` y en `dspy_gepa_poc` en
-`CheckedLM._process_lm_response`, que recibe la respuesta con `finish_reason` y
-`message` intactos (hoy solo revisa contenido vacio). Desde SPEC-105 la deteccion
-de ambos subproyectos vive en `shared/llm/call.py::checked_response`.
+aplicarse sobre el objeto de respuesta completo de LiteLLM, con `finish_reason` y
+`message` intactos, en el punto de llamada comun a ambos subproyectos
+(`shared/llm/call.py::checked_response`, SPEC-105 FR-002 y FR-003).
 
 `entrada` y `presupuesto` en el rol tarea llevan una atribucion contra el
 baseline (FR-004): `candidato` (el prompt candidato la provoco: el baseline no
