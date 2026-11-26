@@ -6,6 +6,9 @@ gepa==0.1.4
 litellm==1.108.5
 openai==3.57.0
 httpx==0.28.1
+# dspy 3.5.0 la movio al extra `litellm`; LiteLLM la importa al reintentar y los
+# tests de SC-009 parchean su `sleep` (tests/test_litellm_failure_mapping.py)
+tenacity==9.2.1
 
 # Configuration and Environment
 python-dotenv>=1.2.1
