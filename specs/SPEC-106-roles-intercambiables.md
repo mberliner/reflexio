@@ -1,138 +1,266 @@
-# SPEC-106-roles-intercambiables — Profesor y estudiante intercambiables entre proveedores
+# SPEC-106-roles-intercambiables — Profesor, estudiante y juez intercambiables entre proveedores
 
 Estado: draft
-Iteracion: 1 (rev. 2026-11-26)
-Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas y metricas sobre casos evaluados), [[SPEC-105-punto-llamada-desacoplado]] (la conexion por rol se aplica en el punto de llamada comun, `shared/llm/call.py`)
-Relacionada con: [[SPEC-103-proveedor-anthropic]], [[SPEC-100-veredicto-senal-ruido]], docs/LLM_CONFIG.md
+Iteracion: 2 (rev. 2026-11-26)
+Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas), [[SPEC-105-punto-llamada-desacoplado]] (punto de llamada comun y sonda de conexion)
+Enmienda: [[SPEC-103-proveedor-anthropic]] FR-007 (FR-003 de esta spec), [[SPEC-100-veredicto-senal-ruido]] FR-007 y FR-008, [[SPEC-101-triaje-casos-nseeds]] FR-002 (FR-006 de esta spec)
+Relacionada con: [[SPEC-107-costo-real-por-resolucion]] (evaluacion economica de cada combinacion, separada en la iteracion 2), docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md
 
 ## User Story (prioridad)
 
 Como persona que experimenta con DSPy y GEPA, quiero asignar a cada rol
-(estudiante, profesor, juez) un modelo de cualquier proveedor soportado, de forma
-independiente, en los dos subproyectos, para medir cuanto aporta cambiar un solo
-rol (por ejemplo, profesor Claude con el mismo estudiante Azure) y que combinacion
-resuelve los casos de prueba al menor costo real.
+(estudiante, profesor y, donde exista, juez) un modelo de cualquier proveedor
+soportado, de forma independiente y en los dos subproyectos, para medir cuanto
+aporta cambiar un solo rol (por ejemplo, profesor Claude con el mismo estudiante
+Azure) sin que la configuracion de un rol contamine a otro.
 Prioridad: P1
 
-## Contexto (estado al 2026-11-22)
+El juez existe solo en el adapter RAG de `gepa_standalone`; `dspy_gepa_poc` no
+tiene rol juez. Cuanto cuesta cada combinacion es [[SPEC-107-costo-real-por-resolucion]].
 
-Cada rol ya elige su modelo (`LLM_MODEL_TASK`, `LLM_MODEL_REFLECTION`), pero la
-credencial y el endpoint son unicos (`LLM_API_KEY`, `LLM_API_BASE`,
-`LLM_API_VERSION`): hoy los dos roles deben ser del mismo proveedor. El juez
-(LLM-as-judge, `gepa_standalone/adapters/simple_rag_adapter.py`) usa la
-configuracion del profesor. El uso real de tokens ya se mide por rol
-(`shared/llm/usage.py`) en ambos subproyectos.
+## Contexto (estado al 2026-11-26)
+
+- Cada rol elige su modelo (`LLM_MODEL_TASK`, `LLM_MODEL_REFLECTION`) y, desde
+  SPEC-103, su effort y razonamiento (`LLM_EFFORT_<ROL>`, `LLM_THINKING_<ROL>`).
+  La conexion es unica: `LLMConfig.from_env` lee `LLM_API_KEY`, `LLM_API_BASE` y
+  `LLM_API_VERSION` (default `2024-02-15-preview`) globales para todos los roles
+  (`shared/llm/config.py`). Hoy todos los roles deben ser del mismo proveedor.
+- Consecuencia hoy: un rol `anthropic/` con un `LLM_API_KEY` global de Azure
+  recibe esa clave y la envia a Anthropic en la sonda de conexion.
+- `apply_constraints` quita `api_base` y `api_version` a todo modelo `anthropic/`
+  (SPEC-103 FR-007) y `_warn_once` avisa siempre que haya un `api_base`.
+- El juez del RAG toma la configuracion del profesor
+  (`SimpleRAGAdapter._judge_config = get_reflection_config()`), se construye en el
+  Step 4, despues de la validacion de conexiones (Step 2), y no se valida aparte.
+  Su uso se suma al bucket `reflection` (`shared/llm/usage.py::_REFLECTION_ROLES`).
+  `run.json` ya registra `models.judge` en RAG (docs/METADATA_REPRODUCIBILIDAD.md).
+- La sonda de conexion (`LLMConfig.validate_connection`) llama a
+  `litellm.completion` directo (excepcion en `tests/test_single_call_point.py`),
+  sin `num_retries=0`, y clasifica errores buscando subcadenas del mensaje
+  (`"401"`, `"404"`, `"429"`); `LLMConnectionError` no lleva el rol y los
+  mensajes nombran `LLM_API_KEY` / `LLM_API_BASE` aunque el rol use otra variable.
+- `dspy_gepa_poc/scripts/baseline_only.py` valida tambien el rol de reflexion
+  aunque no lo usa.
+- La comparabilidad de SPEC-100 FR-008 y SPEC-101 FR-002 compara el par
+  (`Modelo Tarea`, `Modelo Profesor`) por la cadena cruda del CSV: `azure/gpt-4o`
+  y `openai/gpt-4o` ya son modelos distintos. `normalize_model` solo interviene
+  en precios y en ROI, no en comparabilidad.
+- La deteccion de proveedor sin prefijo difiere: `shared/llm/config.py` devuelve
+  `unknown` y `shared/llm/dspy_lm.py` devuelve `openai`.
+- `shared/utils/check_deployments.py` asume que tarea y reflexion comparten el
+  endpoint Azure.
 
 ## Alcance
 
-Incluye: resolucion de modelo, credencial, endpoint y version por rol;
-validacion de cada rol al arrancar; registro del proveedor por rol; medicion del
-costo por resolucion sobre los casos de prueba. Ambos subproyectos.
+Incluye: resolucion de modelo, credencial, endpoint y version por rol; regla de
+no fuga entre proveedores; juez como rol configurable con su bucket de uso;
+validacion de cada rol al arrancar, por el punto de llamada comun; registro del
+proveedor y modelo por rol y su comparabilidad; documentacion. Ambos
+subproyectos (el juez solo donde existe).
 
-Excluye: restricciones de parametros de un proveedor concreto (las de Anthropic
-son [[SPEC-103-proveedor-anthropic]]); balanceo, fallback o reintentos entre
-proveedores; seleccion automatica de la mejor combinacion.
+Excluye: evaluacion economica por combinacion (costos medidos por fase, costo por
+resolucion, ROI y leaderboard con magnitudes medidas):
+[[SPEC-107-costo-real-por-resolucion]]. Restricciones de parametros de un
+proveedor concreto ([[SPEC-103-proveedor-anthropic]]). Balanceo, fallback o
+reintentos entre proveedores. Seleccion automatica de la mejor combinacion.
+Variables nativas de LiteLLM (`ANTHROPIC_API_KEY`, `AZURE_API_KEY`, ...) como
+fuente de credenciales.
 
-Deuda a revisar al implementarla (`historial/sdd.md`): D-028 (la comparabilidad
-de SPEC-100 y SPEC-101 no ve effort/thinking; cerrarla antes del primer lote de
-referencia con Claude) y D-029 (`dspy_gepa_poc/run_inference.py` reconstruye la
-configuracion desde el `.env` vigente: con conexion por rol, decidir si la
-reconstruccion desde `run.json` incluye modelo y endpoint de cada rol).
+Deuda a revisar (`historial/sdd.md`):
+- D-028 (comparabilidad sin effort/thinking): fuera de alcance, pero MUST
+  cerrarse antes de verificar SC-002 con un profesor Claude (ver SC-002).
+- D-029 (a) (`run_inference.py` arma la configuracion desde el `.env` vigente):
+  fuera de alcance. FR-006 deja en `run.json` lo necesario (proveedor, modelo y
+  host del endpoint por rol) para que la reconstruccion o el `[WARN]` sean
+  posibles.
 
 ## Requisitos funcionales
 
-- FR-001 Cada rol MUST resolver su propia conexion: `LLM_API_KEY_<ROL>`,
-  `LLM_API_BASE_<ROL>` y `LLM_API_VERSION_<ROL>`, con fallback a la variable
-  global correspondiente cuando la del rol no esta definida. Aplica a todo rol
-  que use `LLMConfig.from_env` (task, reflection y los adicionales).
-- FR-002 Un `.env` sin variables por rol MUST comportarse exactamente igual que
-  hoy (compatibilidad hacia atras).
-- FR-003 Los valores globales MUST NOT filtrarse a un rol de otro proveedor de
-  forma que rompa la llamada (ejemplo: un `LLM_API_BASE` global de Azure no MUST
-  aplicarse a un rol `anthropic/` u `openai/` que no define el suyo).
-  [NEEDS CLARIFICATION: si un rol no-Azure no define `LLM_API_BASE_<ROL>`, se
-  ignora el global siempre, o solo cuando el proveedor del rol difiere del
-  proveedor "global"? La primera es mas simple y predecible.]
-- FR-004 El juez MUST ser un rol configurable (`LLM_MODEL_JUDGE` y su conexion),
-  con fallback a la configuracion del profesor si no se define, y su uso MUST
-  seguir contando en el bucket de reflexion.
-- FR-005 Al arrancar, cada subproyecto MUST validar configuracion y conexion de
-  todos los roles que la corrida va a usar, y los errores MUST indicar rol,
-  proveedor y modelo. Un error de credenciales o de modelo de un rol es una
-  falla de clase `configuracion` de [[SPEC-104-fallas-tecnicas-justas]]: no se
-  define aca otra clasificacion.
-- FR-006 El registro de cada corrida (CSV y `run.json`) MUST guardar proveedor y
-  modelo de cada rol, de modo que [[SPEC-100-veredicto-senal-ruido]] y
-  [[SPEC-101-triaje-casos-nseeds]] solo comparen corridas con la misma
-  combinacion.
-  [NEEDS CLARIFICATION: `azure/gpt-4o` y `openai/gpt-4o` cuentan como el mismo
-  modelo a efectos de comparabilidad? Hoy `normalize_model` los iguala.]
-- FR-007 La evaluacion economica de una combinacion MUST basarse en uso real
-  sobre los casos de prueba, no en el precio por token. Por corrida MUST
-  reportarse, con tokens reales y precios por rol:
-  - costo de optimizacion (estudiante + profesor + juez durante la optimizacion);
-  - costo por llamada del estudiante en la evaluacion de test (incluye el prompt
-    optimizado y los tokens de razonamiento);
-  - costo por resolucion correcta en test = costo de evaluacion de test /
-    casos resueltos correctamente. Los casos resueltos se cuentan sobre los
-    evaluados ([[SPEC-104-fallas-tecnicas-justas]] FR-003), pero el costo
-    incluye las llamadas de los casos no evaluados, porque se pagaron.
-  Para eso el uso de la evaluacion de test MUST medirse separado del uso de la
-  optimizacion.
-- FR-008 El calculo de ROI y el leaderboard MUST usar esas magnitudes medidas
-  cuando existan, y caer a las estimaciones por caso solo para corridas antiguas
-  sin medicion (indicandolo).
-- FR-009 `docs/LLM_CONFIG.md` MUST documentar las variables por rol y un ejemplo
-  de combinacion entre proveedores.
+- FR-001 Cada rol que use `LLMConfig.from_env` (task, reflection, judge y los
+  adicionales) MUST resolver su conexion desde `LLM_API_KEY_<ROL>`,
+  `LLM_API_BASE_<ROL>` y `LLM_API_VERSION_<ROL>`. Cuando la variable del rol no
+  esta definida, MAY usarse la global correspondiente solo si FR-003 lo permite.
+  Una variable presente pero vacia (`VAR=`) MUST tratarse como no definida (mismo
+  criterio que SPEC-103 FR-008).
+- FR-002 Un `.env` sin variables por rol y con todos los roles del mismo
+  proveedor (unica configuracion posible hoy) MUST producir exactamente los
+  mismos parametros de llamada que antes del cambio, incluido `openai/` con un
+  `LLM_API_BASE` global hacia un endpoint compatible.
+- FR-003 Regla de no fuga. Las variables globales (`LLM_API_KEY`,
+  `LLM_API_BASE`, `LLM_API_VERSION` y su default) forman la conexion por defecto,
+  que pertenece al proveedor del rol `task` (proveedor ancla).
+  - Un rol cuyo proveedor coincide con el ancla MAY heredar cada variable global
+    que no define.
+  - Un rol de otro proveedor MUST NOT heredar ninguna de las tres ni el default de
+    `LLM_API_VERSION`. Si le falta la credencial, la validacion local MUST fallar
+    antes de cualquier llamada, nombrando el rol, el proveedor y la variable
+    esperada (`LLM_API_KEY_<ROL>`).
+  - `azure`, `openai` y `anthropic` MUST contarse como proveedores distintos.
+  - El proveedor de un rol MUST salir de una sola funcion compartida por
+    `shared/llm/config.py` y `shared/llm/dspy_lm.py`. Un modelo sin prefijo MUST
+    contarse como `openai` (convencion de LiteLLM).
+  - Enmienda a SPEC-103 FR-007: en `anthropic/`, un `LLM_API_BASE_<ROL>`
+    explicito MUST enviarse (proxy o gateway) y no debe generar aviso. El global
+    sigue sin enviarse, y ahora tampoco se hereda. `api_version` sigue sin
+    enviarse a `anthropic/`.
+- FR-004 El juez MUST ser un rol configurable (`LLM_MODEL_JUDGE` y sus
+  variables por rol), solo en el adapter RAG de `gepa_standalone`:
+  - Sin `LLM_MODEL_JUDGE`, el juez MUST usar la configuracion resuelta del
+    profesor completa (modelo, conexion, effort, razonamiento), como hoy. Las
+    variables `LLM_*_JUDGE` MUST ignorarse en ese caso, con un `[WARN]` si alguna
+    esta definida.
+  - Con `LLM_MODEL_JUDGE`, el juez MUST resolverse como un rol mas (FR-001,
+    FR-003; `LLM_EFFORT_JUDGE` y `LLM_THINKING_JUDGE` segun SPEC-103). Los
+    overrides del YAML (`models:`) MUST aplicarse al juez igual que hoy se
+    aplican al profesor.
+  - La configuracion del juez MUST construirse junto a las de tarea y profesor
+    (`build_llm_configs`), validarse en el mismo paso e inyectarse al adapter. El
+    adapter MUST NOT reconstruirla desde el entorno.
+  - El uso del juez MUST registrarse en un bucket propio `judge` en
+    `UsageTracker`. Por compatibilidad, la columna `Tokens Reflection` del CSV
+    MUST seguir mostrando reflexion + juez, y el detalle por bucket MUST quedar
+    en `run.json`.
+  - Los casos sin juez MUST NOT registrar un rol `judge` (ni en `run.json` ni en
+    el CSV).
+- FR-005 Al arrancar, cada entry point MUST validar la configuracion y la
+  conexion de los roles que esa corrida usa, y solo de esos: el optimizador usa
+  tarea y profesor, mas el juez en RAG; `baseline_only.py` usa solo tarea. Ademas:
+  - La sonda de conexion MUST pasar por el punto de llamada comun de SPEC-105
+    (sin la excepcion de `test_single_call_point.py`), con `num_retries=0`.
+  - Su falla MUST clasificarse con las reglas de SPEC-104 (capa 1, sin depender
+    del texto del mensaje, SPEC-104 FR-015): credencial o modelo invalido es
+    `configuracion`; 429 o timeout es `infraestructura`.
+  - `LLMConnectionError` MUST llevar el rol y mostrarlo junto al proveedor, el
+    modelo y la variable concreta del rol (`LLM_API_KEY_REFLECTION`, no
+    `LLM_API_KEY`) cuando la credencial salio de ella.
+  - La falla al arrancar MUST abortar antes de la primera llamada de
+    optimizacion y MUST NOT escribir `run.json` (todavia no hay corrida). La
+    clasificacion de SPEC-104 se usa aca solo para el diagnostico, y su FR-008
+    (abortar con `status: "aborted"`) rige solo durante la corrida.
+  - La carga de `LLM_ENV_FILE` MUST dispararse cuando no hay ninguna credencial
+    definida (ni global ni por rol), no solo cuando falta `LLM_API_KEY`
+    (`shared/llm/config.py`, `shared/utils/check_deployments.py`).
+- FR-006 Registro y comparabilidad:
+  - `run.json` MUST guardar, por cada rol usado, el modelo con prefijo de
+    proveedor, el proveedor y el host del endpoint efectivo (nunca la credencial).
+  - El CSV maestro MUST agregar la columna `Modelo Juez`: modelo efectivo del juez
+    en RAG, vacia en los demas casos.
+  - Enmienda a SPEC-100 FR-007 y FR-009: segunda excepcion al formato congelado
+    del CSV, agregada por el logger y no por el veredicto.
+  - `migrate_metrics_csv.py` MUST completar `Modelo Juez` en filas previas de
+    casos RAG con el valor de `Modelo Profesor` (antes el juez era el profesor) y
+    dejarla vacia en el resto.
+  - El logger MUST escribir la columna nueva tambien sobre un CSV existente sin
+    migrar (hoy `_sync_active_keys_to_file` descarta columnas nuevas en silencio),
+    o fallar con un mensaje que pida migrar. Nunca descartarla en silencio.
+  - Enmienda a SPEC-100 FR-008 y SPEC-101 FR-002: la clave de comparabilidad
+    MUST ser la terna (`Modelo Tarea`, `Modelo Profesor`, `Modelo Juez`), con la
+    cadena cruda: `azure/gpt-4o` y `openai/gpt-4o` MUST contar como modelos
+    distintos (pueden diferir en version de despliegue y filtros).
+    `seed_triage.target_models` MUST incluir el juez en casos RAG.
+- FR-007 El arranque MUST imprimir, por cada rol usado, rol, proveedor, modelo y
+  host del endpoint (nunca la credencial), para que el endpoint de cada rol sea
+  verificable en el log.
+- FR-008 `shared/utils/check_deployments.py` MUST verificar cada rol contra su
+  propio endpoint. Un rol no Azure MUST informarse como "no aplica", no como
+  error.
+- FR-009 MUST documentarse:
+  - `docs/LLM_CONFIG.md`: variables por rol, regla de proveedor ancla y un ejemplo
+    de combinacion entre proveedores;
+  - `docs/METADATA_REPRODUCIBILIDAD.md`: proveedor y host por rol, bucket `judge`;
+  - `docs/PROTOCOLO_N_SEEDS.md`: terna de comparabilidad;
+  - los `.env.example` de ambos subproyectos.
+
+## Decisiones
+
+- Proveedor ancla en lugar de "ignorar siempre los globales" (opcion 1 de la
+  iteracion 1): ignorar siempre rompe FR-002 para `openai/` con proxy en
+  `LLM_API_BASE`. Tampoco hacia falta un "proveedor global" nuevo: el ancla es el
+  proveedor de `task`, que hoy coincide con el de todos los roles. La regla cubre
+  clave, endpoint y version a la vez, que es donde estaba la fuga real.
+- `azure/X` y `openai/X` son modelos distintos para la comparabilidad
+  (cierra el `[NEEDS CLARIFICATION]` de FR-006 de la iteracion 1, cuya premisa,
+  que `normalize_model` los igualaba, era falsa).
+- El proveedor va en el prefijo del modelo, que ya esta en el CSV: no hace falta
+  una columna de proveedor. La unica columna nueva es `Modelo Juez`.
+- Sin variables nativas de LiteLLM: la credencial de cada rol es explicita en
+  `LLM_*`, para que la validacion local pueda nombrar lo que falta.
+- La iteracion 1 incluia la evaluacion economica (FR-007 y FR-008). Paso a
+  [[SPEC-107-costo-real-por-resolucion]]: es otro dominio (uso por fase, formula
+  de costo con metricas continuas y `eval_repeats`, ROI) y sus decisiones
+  abiertas no deben bloquear la conexion por rol.
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 
-- SC-001 Una corrida con estudiante `azure/gpt-4.1-mini` y profesor Claude
-  completa de punta a punta en cada subproyecto, con cada rol llamando a su
-  propio endpoint (verificable en el log y en el uso por rol).
-- SC-002 Con el mismo caso, dataset y estudiante, cambiar solo el profesor de
-  proveedor produce filas que SPEC-100 compara entre si y no contra la
-  combinacion anterior.
-- SC-003 El 100% de las corridas nuevas reportan los tres costos de FR-007, y el
-  costo por resolucion correcta coincide con el calculado a mano desde el uso
-  por rol, las predicciones de test y la tabla de precios.
-- SC-004 Los tests y corridas existentes pasan sin cambios en sus `.env`
-  (sin regresion).
-- SC-005 Un error de credenciales en un solo rol se reporta antes de la primera
-  llamada de optimizacion, nombrando ese rol.
+- SC-001 Una corrida con estudiante `azure/gpt-4.1-mini` y profesor Claude con
+  acceso real (`anthropic/claude-sonnet-5-5`) completa de punta a punta en cada
+  subproyecto. El log de arranque (FR-007) y el `run.json` muestran un endpoint
+  distinto por rol, y el uso por bucket muestra llamadas de los dos roles.
+- SC-002 Con el mismo caso, dataset y estudiante, cambiar solo el proveedor del
+  profesor (o solo el juez en RAG) produce filas que SPEC-100 y SPEC-101 comparan
+  entre si y no contra la combinacion anterior. Precondicion para un profesor
+  Claude: D-028 cerrada o el lote con effort/thinking constantes.
+- SC-003 Un rol `anthropic/` sin `LLM_API_KEY_<ROL>`, con un `LLM_API_KEY`
+  global de Azure, falla en la validacion local sin ninguna llamada de red, y la
+  clave global no aparece en los parametros de ese rol.
+- SC-004 Los tests y corridas existentes pasan sin cambios en sus `.env`, con
+  parametros de llamada identicos por rol (sin regresion);
+  `./shared/utils/ci_local.sh` verde.
+- SC-005 Un error de credenciales en un solo rol (tarea, profesor o juez) se
+  reporta antes de la primera llamada de optimizacion, nombrando ese rol y su
+  variable, y sin crear `run.json`.
+- SC-006 Sobre una copia del CSV maestro actual, la primera corrida RAG tras el
+  cambio deja `Modelo Juez` escrito (con o sin migracion previa) y las filas
+  RAG previas migradas siguen siendo comparables con una corrida nueva cuyo juez
+  es el profesor.
 
 ## Escenarios (Given/When/Then)
 
 - Given `LLM_MODEL_TASK=azure/gpt-4.1-mini` con `LLM_API_KEY`/`LLM_API_BASE`
-  globales de Azure, y `LLM_MODEL_REFLECTION=anthropic/claude-opus-5-5` con
+  globales de Azure y `LLM_MODEL_REFLECTION=anthropic/claude-sonnet-5-5` con
   `LLM_API_KEY_REFLECTION`, When arranca una corrida, Then el estudiante usa
-  Azure, el profesor usa Anthropic sin `api_base` de Azure y ambos se validan.
-- Given un `.env` actual sin variables por rol, When arranca una corrida, Then
-  los parametros enviados son identicos a los de antes del cambio.
-- Given `LLM_API_KEY_REFLECTION` invalida, When arranca la corrida, Then falla en
-  la validacion con un mensaje que nombra el rol `reflection` y su proveedor.
-- Given una corrida terminada, When se consulta su registro, Then muestra
-  proveedor y modelo por rol, costo de optimizacion, costo por llamada en test y
-  costo por resolucion correcta.
-- Given dos combinaciones con el mismo caso, When una tiene precio por token mas
-  bajo pero resuelve menos casos o consume mas tokens por llamada, Then el costo
-  por resolucion correcta lo refleja y puede ser mayor.
+  Azure, el profesor usa Anthropic sin `api_base`, sin `api_version` y sin aviso
+  de `LLM_API_BASE` ignorado, y ambos se validan.
+- Given la misma combinacion sin `LLM_API_KEY_REFLECTION`, When arranca, Then
+  falla en la validacion local nombrando `reflection`, `anthropic` y
+  `LLM_API_KEY_REFLECTION`, sin llamada de red.
+- Given un `.env` actual sin variables por rol (todos `azure/`, o todos `openai/`
+  con `LLM_API_BASE` de proxy), When arranca, Then los parametros enviados son
+  identicos a los de antes del cambio.
+- Given `LLM_MODEL_REFLECTION=anthropic/...` con
+  `LLM_API_BASE_REFLECTION=https://gateway.interno`, When arranca, Then el
+  profesor envia ese `api_base`.
+- Given `LLM_API_KEY_REFLECTION` invalida, When arranca, Then falla en la
+  validacion con clase `configuracion`, un mensaje que nombra `reflection` y su
+  proveedor, y sin `run.json`.
+- Given la sonda de un rol recibe 429, When arranca, Then el error se reporta
+  como `infraestructura` del rol, no como credencial invalida.
+- Given un caso RAG sin `LLM_MODEL_JUDGE`, When corre, Then el juez usa la
+  configuracion del profesor, su uso cae en el bucket `judge`, `Tokens Reflection`
+  suma reflexion + juez y `Modelo Juez` = `Modelo Profesor`.
+- Given un caso RAG con `LLM_MODEL_JUDGE` distinto del profesor, When corre,
+  Then el juez se valida en el Step 2 y llama a su propio endpoint.
+- Given un caso no RAG con `LLM_MODEL_JUDGE` definido, When corre, Then el juez
+  no se valida ni se registra.
+- Given `baseline_only.py` con el profesor mal configurado, When corre, Then no
+  falla por el profesor.
 
 ## Coverage mapping (requisito -> derivado)
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
 | FR-001 | `shared/llm/config.py::LLMConfig.from_env`; `tests/test_shared_llm.py` (pendiente) |
-| FR-002 | test de regresion con `.env` actual (pendiente) |
-| FR-003 | `LLMConfig.from_env`; test (pendiente) |
-| FR-004 | `gepa_standalone/adapters/simple_rag_adapter.py`, `gepa_standalone/core/llm_factory.py`; test (pendiente) |
-| FR-005 | `gepa_standalone/universal_optimizer.py::validate_llm_connections`, `dspy_gepa_poc/reflexio_declarativa.py::setup_models`; test (pendiente) |
-| FR-006 | `shared/logging/csv_writer.py`, `shared/utils/seed_protocol.py`, `shared/analysis/roi_calculator.py::normalize_model` (pendiente) |
-| FR-007 | `shared/llm/usage.py` (uso por fase), `shared/analysis/roi_calculator.py`, registro de corrida en ambos subproyectos (pendiente) |
-| FR-008 | `shared/analysis/roi_calculator.py`, `shared/analysis/leaderboard.py` (pendiente) |
-| FR-009 | `docs/LLM_CONFIG.md` |
+| FR-002 | test de regresion de parametros con `.env` actuales por proveedor (pendiente) |
+| FR-003 | `shared/llm/config.py` (`from_env`, `apply_constraints`, `_warn_once`, funcion de proveedor), `shared/llm/dspy_lm.py`; `tests/test_anthropic_matrix.py` (ajustar caso `api_base`), test de no fuga (pendiente) |
+| FR-004 | `shared/llm/usage.py`, `shared/llm/config.py`, `gepa_standalone/universal_optimizer.py::build_llm_configs`, `gepa_standalone/adapters/simple_rag_adapter.py`, `gepa_standalone/core/llm_factory.py`; test (pendiente) |
+| FR-005 | `shared/llm/config.py::validate_connection`, `shared/llm/errors.py::LLMConnectionError`, `shared/llm/call.py`, `gepa_standalone/universal_optimizer.py::validate_llm_connections`, `dspy_gepa_poc/reflexio_declarativa.py::setup_models`, `dspy_gepa_poc/scripts/baseline_only.py`, `tests/test_single_call_point.py`; test de validacion por rol (pendiente) |
+| FR-006 | `shared/logging/metadata.py`, `shared/logging/csv_writer.py` (`STANDARD_COLUMN_MAPPING`, `_sync_active_keys_to_file`), `shared/utils/migrate_metrics_csv.py`, `shared/utils/seed_protocol.py`, `shared/utils/seed_triage.py`; tests (pendiente) |
+| FR-007 | `shared/llm/config.py::describe`, entry points (pendiente) |
+| FR-008 | `shared/utils/check_deployments.py` (pendiente) |
+| FR-009 | `docs/LLM_CONFIG.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md`, `.env.example` de ambos subproyectos |
 | SC-001 | corrida manual con API real por subproyecto (pendiente) |
-| SC-002 | `seed_triage` / `seed_protocol` sobre las filas resultantes (pendiente) |
-| SC-003 | test con uso y predicciones sinteticas + verificacion sobre una corrida real (pendiente) |
+| SC-002 | `seed_protocol` / `seed_triage` sobre las filas resultantes (pendiente) |
+| SC-003 | test de no fuga sin red (pendiente) |
 | SC-004 | `./shared/utils/ci_local.sh` |
 | SC-005 | test de validacion con credencial invalida por rol (pendiente) |
+| SC-006 | test sobre copia del CSV con y sin migracion (pendiente) |

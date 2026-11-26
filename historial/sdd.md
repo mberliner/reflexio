@@ -57,6 +57,39 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-26 (cont. 5) — SPEC-106 iter 2 y SPEC-107 (draft) separada
+
+- Origen: revision de SPEC-106 iter 1, contrastada con el codigo. Hallazgos
+  confirmados: el juez comparte bucket con el profesor (`usage.py`), el
+  `LLM_API_KEY` global se hereda a cualquier rol (fuga de clave de Azure hacia
+  Anthropic), `apply_constraints` quita todo `api_base` de `anthropic/`, la sonda
+  de conexion clasifica por subcadenas del mensaje, y `eval_repeats` infla k
+  veces un costo por resolucion sin normalizar. La premisa del NEEDS
+  CLARIFICATION de FR-006 (que `normalize_model` iguala `azure/` y `openai/` en
+  comparabilidad) era falsa.
+- SPEC-106 iter 2: regla de proveedor ancla (FR-003) para clave, endpoint y
+  version, y cierra los dos NEEDS CLARIFICATION. Juez con bucket propio y
+  construido/validado en el Step 2 (FR-004). Sonda por el punto de llamada comun
+  con clasificacion de SPEC-104 y sin `run.json` al arrancar (FR-005). Columna
+  `Modelo Juez` y terna de comparabilidad, que enmiendan SPEC-100 FR-007/FR-008 y
+  SPEC-101 FR-002 (FR-006). Log de endpoint por rol (FR-007).
+  `check_deployments.py` por rol (FR-008).
+- SPEC-107 (draft, nueva): FR-007/FR-008 de la iter 1 de SPEC-106 (costo por
+  fase, costo por resolucion con metricas continuas y k, ROI sin mezclar medido
+  con estimado). Quedan 2 NEEDS CLARIFICATION (persistencia en CSV vs `run.json`;
+  ROI de produccion medido).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-106-roles-intercambiables.md (iter 1), specs/SPEC-100-veredicto-senal-ruido.md (FR-007..FR-009), specs/SPEC-101-triaje-casos-nseeds.md (FR-002), specs/SPEC-103-proveedor-anthropic.md (Decisiones), specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, shared/llm/usage.py, shared/llm/config.py, shared/utils/seed_protocol.py, gepa_standalone/universal_optimizer.py, gepa_standalone/adapters/simple_rag_adapter.py, dspy_gepa_poc/reflexio_declarativa.py
+- Incluye/Excluye verificado: incluye redaccion de specs y registro; excluye implementacion
+- Validaciones aplicadas: hallazgos de la revision contrastados en el codigo, referencias externas a numeros de FR de SPEC-106 preservadas (FR-003, FR-004), sin emoticones
+- SSOT afectado: specs/SPEC-106-roles-intercambiables.md, specs/SPEC-107-costo-real-por-resolucion.md, specs/SPECS_REGISTRY.md, historial/sdd.md
+- Derivados a revisar: al implementar SPEC-106, anotar las enmiendas en SPEC-100 FR-007/FR-009 ("unica excepcion"), FR-008 y SPEC-101 FR-002, y en SPEC-103 FR-007 y docs/LLM_CONFIG.md (api_base por rol en anthropic/)
+- Deuda arrastrada: D-028 (precondicion de SC-002 de SPEC-106) y D-029 siguen abiertas
+- Riesgos/reservas: la regla de ancla toma el proveedor de `task`; una corrida sin rol task (no existe hoy) necesitaria otra ancla
+```
+
 ### 2026-11-26 (cont. 4) — Ultimo NEEDS CLARIFICATION de SPEC-103 a deuda D-029; SPEC-106 depende de SPEC-105
 
 - El marcador de "Decisiones" de SPEC-103 juntaba dos preguntas que no son de
