@@ -103,6 +103,24 @@ def _text(parts: tuple, where: str) -> str | list[dict[str, str]]:
     return [{"type": "text", "text": part.text} for part in parts]
 
 
+def chat_response_format(value: dict[str, Any]) -> dict[str, Any]:
+    """
+    `response_format` canonico de lm15 -> el de Chat Completions.
+
+    lm15 lo escribe `{"type": "json_schema", "schema", "name"?, "strict"?}`; Chat
+    Completions (y LiteLLM, que lo pasa tal cual) espera el esquema dentro de
+    `json_schema`. Mismo dict, con el mismo orden de claves, que LiteLLM armaba
+    desde el modelo pydantic que mandaba `JSONAdapter` en dspy 3.4.1
+    (`schema`, `name`, `strict`; golden SC-008, D-018 c2).
+    """
+    if value.get("type") != "json_schema":
+        return value
+    inner: dict[str, Any] = {"schema": value["schema"], "name": value.get("name") or "response"}
+    if "strict" in value:
+        inner["strict"] = value["strict"]
+    return {"type": "json_schema", "json_schema": inner}
+
+
 def request_to_chat(
     request: Request, max_tokens_param: str = "max_tokens"
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -139,6 +157,8 @@ def request_to_chat(
             raise UnsupportedFeatureError(
                 f"CheckedEngine no envia Config.{field.name} (valor {value!r})"
             )
+        if field.name == "response_format":
+            value = chat_response_format(value)
         if field.name in _CONFIG_PARAMS:
             params[_CONFIG_PARAMS[field.name]] = value
     if config.max_tokens is not None:
@@ -297,6 +317,20 @@ def checked_lm(engine: CheckedEngine) -> dspy.LM:
 def configure_dspy(lm: dspy.LM, **settings: Any) -> None:
     """`dspy.configure` con el LM y el adapter del repo (`dspy.ChatAdapter()`, FR-012)."""
     dspy.configure(lm=lm, adapter=dspy.ChatAdapter(), **settings)
+
+
+def chain_of_thought(signature: Any, **config: Any) -> dspy.ChainOfThought:
+    """
+    `dspy.ChainOfThought` con el campo `reasoning` de texto (`str`), como en dspy
+    3.4.1 (FR-012).
+
+    dspy 3.5.0 cambia sin aviso el tipo por defecto del campo a `dspy.Reasoning`:
+    con un LM que declara `supports_reasoning` (gpt-5.x) quita el campo del prompt
+    y pide razonamiento nativo (`reasoning_effort="low"`, `Config.reasoning`), que
+    es otro prompt de tarea y otro parametro de generacion. Con `str` el prompt es
+    el de 3.4.1 (golden SC-008) y el `Request` no lleva `reasoning`.
+    """
+    return dspy.ChainOfThought(signature, rationale_field_type=str, **config)
 
 
 def _output_texts(outputs: list) -> list[str]:

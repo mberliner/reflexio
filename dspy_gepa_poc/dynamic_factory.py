@@ -2,6 +2,8 @@ from typing import Any
 
 import dspy
 
+from shared.llm.dspy_lm import chain_of_thought
+
 
 class DynamicModuleFactory:
     """
@@ -64,7 +66,7 @@ class DynamicModuleFactory:
             def __init__(self):
                 super().__init__()
                 if predictor_type == "cot":
-                    self.predictor = dspy.ChainOfThought(signature_class)
+                    self.predictor = chain_of_thought(signature_class)
                 else:
                     self.predictor = dspy.Predict(signature_class)
 
@@ -118,7 +120,7 @@ class DynamicModuleFactory:
                 self._predicted = predicted_outputs
                 self._derived_field = derived_field
                 if predictor_type == "cot":
-                    self.predictor = dspy.ChainOfThought(signature_class)
+                    self.predictor = chain_of_thought(signature_class)
                 else:
                     self.predictor = dspy.Predict(signature_class)
 
@@ -183,7 +185,7 @@ class DynamicModuleFactory:
                 super().__init__()
                 self._predicted = predicted_outputs
                 if predictor_type == "cot":
-                    self.predictor = dspy.ChainOfThought(signature_class)
+                    self.predictor = chain_of_thought(signature_class)
                 else:
                     self.predictor = dspy.Predict(signature_class)
 
@@ -279,7 +281,7 @@ class DynamicModuleFactory:
                 # reflexionar sobre cada uno por separado.
                 for spec in stage_specs:
                     if spec["predictor_type"] == "cot":
-                        predictor = dspy.ChainOfThought(spec["sig_cls"])
+                        predictor = chain_of_thought(spec["sig_cls"])
                     else:
                         predictor = dspy.Predict(spec["sig_cls"])
                     setattr(self, spec["name"], predictor)

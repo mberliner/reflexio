@@ -1,7 +1,7 @@
 # SPEC-105-punto-llamada-desacoplado — Punto de llamada propio, desacoplado de los internos de DSPy y GEPA
 
 Estado: draft
-Iteracion: 4 (rev. 2026-11-25)
+Iteracion: 5 (rev. 2026-11-25)
 Origen: D-018 de `historial/sdd.md` (upgrade DSPy 3.2.1 -> 3.5.0 y GEPA 0.0.27 -> 0.1.4)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (sus requisitos no cambian; cambia donde se implementan)
 Relacionada con: [[SPEC-100-veredicto-senal-ruido]] (regresion con N seeds y FR-009 de versiones),
@@ -76,6 +76,25 @@ la fila D-018):
   prompt de la tarea, sin aviso. `ChatAdapter` y `JSONAdapter` producen en 3.5.0
   los mismos mensajes que en 3.4.1 (verificado con el codigo real de ambas
   versiones).
+- dspy 3.5.0 cambia tambien el tipo por defecto del campo `reasoning` de
+  `ChainOfThought` de `str` a `dspy.Reasoning` (y su descripcion a "A short plan
+  for solving the task."). Con un LM que declara `supports_reasoning` (gpt-5.x)
+  el adapter quita el campo del prompt y pide razonamiento nativo
+  (`reasoning_effort="low"` -> `Config.reasoning`); dspy 3.4.1 lo evitaba para
+  gpt-5 en Chat Completions y el campo era `str`. Los tests de b3 usaban un
+  modelo sin reasoning y no lo vieron: aparecio en la primera corrida real de
+  (c2) como `UnsupportedFeatureError` del engine (D-027) en cada ejemplo, antes
+  de llamar al proveedor (falla fuerte, sin gasto).
+- lm15 guarda `Config.response_format` en su forma canonica
+  (`{"type": "json_schema", "schema", "name"?, "strict"?}`), no en la de Chat
+  Completions (`{"type": "json_schema", "json_schema": {...}}`). La traduccion de
+  b3 la copiaba tal cual: con `JSONAdapter` (el fallback de `ChatAdapter` ante un
+  parseo fallido) Azure respondia 400 `Missing required parameter:
+  'response_format.json_schema'`, que SPEC-104 aborta como `configuracion`. El
+  golden de b3 verificaba los mensajes pero no el `response_format`. Lo mostro
+  el segundo intento de (c2); la conversion propia
+  (`chat_response_format`) deja el mismo dict, en el mismo orden, que LiteLLM
+  armaba en dspy 3.4.1 desde el modelo pydantic de `JSONAdapter`.
 - lm15 (incluido en dspy 3.5.0) no expone un conversor publico de `Request` a
   Chat Completions (`clients/lm15_boundary.py::request_kwargs` usa internos del
   dialecto); si expone los tipos (`dspy.lm15.Request`, `Message`, `TextPart`,
@@ -157,7 +176,10 @@ la fila D-018):
   points configuran dspy solo con `shared/llm/dspy_lm.py::configure_dspy`, que
   fija `dspy.ChatAdapter()`. MUST NOT depender del adapter por defecto de
   `dspy`. Cambiar de adapter es un cambio de optimizacion (medicion con N seeds,
-  como FR-010), no un ajuste.
+  como FR-010), no un ajuste. Igual con el campo `reasoning` de
+  `ChainOfThought`: el codigo de produccion crea CoT solo con
+  `shared/llm/dspy_lm.py::chain_of_thought`, que lo fija como texto (`str`, el de
+  dspy 3.4.1); MUST NOT depender del tipo por defecto de `dspy` (iter 5, D-018 c2).
 - Resuelto (2026-11-25, D-018 b3): en dspy 3.5.0 `dspy.GEPA` conserva
   `instruction_proposer` y `gepa_kwargs` (el diff de `teleprompt/gepa/` contra
   3.4.1 solo quita `@experimental` y cambia docstrings y el adapter del
@@ -186,9 +208,10 @@ la fila D-018):
   dataset reflexivo, verificado contra un golden generado con el codigo real de
   GEPA 0.0.27.
 - SC-008 Los mensajes de la tarea que llegan a LiteLLM con `ChatAdapter` y con
-  `JSONAdapter` son identicos byte a byte a los de dspy 3.4.1 para la misma
-  firma, demos e input, verificado contra un golden generado con el codigo real
-  de dspy 3.4.1.
+  `JSONAdapter` (incluido el `response_format` de `JSONAdapter`), y los de
+  `ChainOfThought` con `ChatAdapter` (con un modelo con y sin reasoning, sin
+  `reasoning_effort` en la llamada), son identicos byte a byte a los de dspy 3.4.1 para la misma firma, demos e input, verificado contra
+  un golden generado con el codigo real de dspy 3.4.1.
 
 ## Escenarios (Given/When/Then)
 
@@ -235,12 +258,12 @@ paga (SC-002, D-018 c2).
 | FR-009 | `LLMConfig.get_dspy_lm()`; `tests/test_shared_llm.py::TestLLMConfigGetDspyLM::test_cache_is_rejected` |
 | FR-010 | hecho: `shared/llm/reflection.py` (`REFLECTION_PROMPT_TEMPLATE`, `render_reflection_prompt`, `extract_instruction`, `ReflectionProposer`); conectores `shared/llm/dspy_lm.py::dspy_reflection_proposer` -> `GEPAOptimizer` y `gepa_standalone/core/llm_factory.py::create_reflection_proposer` -> `universal_optimizer`; `tests/test_reflection_guard.py`, `tests/test_reflection_prompt.py` |
 | FR-011 | hecho: `ReflectionGuard.run` (falla por iteracion); `tests/test_reflection_guard.py::TestReflectionProposer::test_retry_of_failed_iteration_does_not_call_again` y los e2e de umbral (3 llamadas, 4 intentos) |
-| FR-012 | hecho: `shared/llm/dspy_lm.py::configure_dspy` en los entry points de `dspy_gepa_poc` (orquestadores, `run_inference`, scripts); `tests/test_dspy_engine.py::TestEntryPointsUseConfigureDspy`, `TestTaskPromptUnchanged`; `tests/conftest.py::repo_dspy_adapter` |
+| FR-012 | hecho: `shared/llm/dspy_lm.py::configure_dspy` en los entry points de `dspy_gepa_poc` (orquestadores, `run_inference`, scripts) y `chain_of_thought` en `dspy_gepa_poc/dynamic_factory.py`; `tests/test_dspy_engine.py::TestEntryPointsUseConfigureDspy` (incluye `test_no_bare_chain_of_thought_in_production`), `TestTaskPromptUnchanged`; `tests/conftest.py::repo_dspy_adapter` |
 | SC-001 | cumplido (D-018 b3): fuera del punto de llamada (`shared/llm/dspy_lm.py`, `config.py::get_dspy_lm`) y sus tests, el paso 3.4.1 -> 3.5.0 solo cambio la version fijada y la llamada a `dspy.configure` de los entry points (FR-012, hallazgo del upgrade) |
-| SC-002 | `python -m shared.utils.seed_protocol --cross-versions` (D-018 c2) |
+| SC-002 | cumplido (D-018 c2, 2026-11-25): `seed_protocol.report(..., cross_versions=True)` en `CV Extraction v3` de `dspy_gepa_poc`, N=5 vs el lote dspy 3.4.1 de (c1): RUIDO (delta Rob -0,33) |
 | SC-003 | `tests/test_sc006_no_failure_regression.py` + `tests/orchestrator_e2e.py` (verde sobre 3.4.1 y 3.5.0); la regresion real es D-018 (c1) y (c2) |
 | SC-004 | `tests/test_litellm_failure_mapping.py` (re-verificado sobre 3.5.0) |
 | SC-005 | hecho: `tests/test_lib_contracts.py::TestNoPrivateLibrarySymbols` (AST de `shared`, `dspy_gepa_poc`, `gepa_standalone`) |
 | SC-006 | parcial: `tests/test_lib_contracts.py` (`test_dspy_gepa_rejects_unknown_parameters`, detector de imports privados) |
 | SC-007 | hecho: `tests/test_reflection_prompt.py` + `tests/fixtures/reflection_prompt_gepa_0_0_27.json` |
-| SC-008 | hecho: `tests/test_dspy_engine.py::TestTaskPromptUnchanged` + `tests/fixtures/task_prompt_dspy_3_4_1.json` |
+| SC-008 | hecho: `tests/test_dspy_engine.py::TestTaskPromptUnchanged` (incluye `test_chain_of_thought_messages_match_dspy_3_4_1` y `test_json_adapter_messages_match_dspy_3_4_1` con `openai/gpt-4o-mini` y `azure/gpt-5.4-mini`), `TestChatResponseFormat` + `tests/fixtures/task_prompt_dspy_3_4_1.json` |

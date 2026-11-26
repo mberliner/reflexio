@@ -952,6 +952,18 @@ train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
   `ChatAdapter` a `XMLAdapter`: otro formato del prompt de la tarea, sin aviso.
   Mismo remedio: el repo fija `ChatAdapter` (`configure_dspy`, SPEC-105 FR-012)
   y un golden contra dspy 3.4.1 verifica los mensajes de la tarea (SC-008).
+  Y otra vez en el mismo upgrade: `ChainOfThought` paso el campo `reasoning` de
+  `str` a `dspy.Reasoning`, que con un modelo con reasoning (gpt-5.x) quita el
+  campo del prompt y pide razonamiento nativo. El golden solo cubria `Predict`
+  con un modelo sin reasoning y no lo vio; lo mostro la primera corrida real de
+  la regresion (D-018 c2). Remedio: `chain_of_thought` fija `str` y el golden
+  cubre CoT con y sin reasoning. Un golden de prompt tiene que cubrir los
+  predictores y las familias de modelo que el repo usa de verdad. En el
+  intento siguiente aparecio otro hueco del mismo tipo: el golden comparaba los
+  mensajes pero no el `response_format`, y la forma canonica de lm15 llegaba a
+  Azure sin `json_schema` (400, abortado como `configuracion`). El golden tiene
+  que cubrir todo lo que sale hacia el proveedor, no solo los mensajes, y antes
+  de un lote pago conviene un smoke real de una llamada por adapter.
   En el mismo upgrade, una premisa leida en el codigo ("las excepciones de un
   engine propio pasan sin convertir") resulto falsa al instalar: dspy disfraza
   como `LMUnexpectedError` todo lo que no sea `dspy.LMError`. Leer el wheel no

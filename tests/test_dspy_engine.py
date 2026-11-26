@@ -40,6 +40,8 @@ from dspy.lm15 import (
 from shared.llm import LLMCallFailure, LLMConfig, RunAborted, get_failure_tracker
 from shared.llm.dspy_lm import (
     CheckedEngine,
+    chain_of_thought,
+    chat_response_format,
     checked_lm,
     configure_dspy,
     dspy_reflection_proposer,
@@ -55,6 +57,7 @@ GOLDEN = json.loads(
     (Path(__file__).parent / "fixtures" / "task_prompt_dspy_3_4_1.json").read_text(encoding="utf-8")
 )
 MODEL = "openai/gpt-4o-mini"
+REASONING_MODEL = "azure/gpt-5.4-mini"
 
 
 def _lm(role: str = "task", **kwargs: Any) -> dspy.LM:
@@ -345,11 +348,38 @@ def _cv_predict() -> dspy.Predict:
     return predict
 
 
+COT_ANSWER = (
+    "[[ ## reasoning ## ]]\nTiene 10 anios.\n\n"
+    "[[ ## nombre ## ]]\nJuan\n\n[[ ## anios ## ]]\n10\n\n"
+    '[[ ## nivel ## ]]\nsenior\n\n[[ ## skills ## ]]\n["go"]\n\n[[ ## completed ## ]]'
+)
 CHAT_ANSWER = (
     "[[ ## nombre ## ]]\nJuan\n\n[[ ## anios ## ]]\n10\n\n[[ ## nivel ## ]]\nsenior\n\n"
     '[[ ## skills ## ]]\n["go"]\n\n[[ ## completed ## ]]'
 )
 JSON_ANSWER = '{"nombre": "Juan", "anios": 10, "nivel": "senior", "skills": ["go"]}'
+
+
+class TestChatResponseFormat:
+    def test_json_object_passes_unchanged(self) -> None:
+        assert chat_response_format({"type": "json_object"}) == {"type": "json_object"}
+
+    def test_json_schema_goes_inside_json_schema(self) -> None:
+        schema = {"type": "object", "properties": {}}
+        out = chat_response_format(
+            {"type": "json_schema", "schema": schema, "name": "Out", "strict": True}
+        )
+        assert out == {
+            "type": "json_schema",
+            "json_schema": {"schema": schema, "name": "Out", "strict": True},
+        }
+
+    def test_json_schema_without_name_or_strict(self) -> None:
+        out = chat_response_format({"type": "json_schema", "schema": {"type": "object"}})
+        assert out == {
+            "type": "json_schema",
+            "json_schema": {"schema": {"type": "object"}, "name": "response"},
+        }
 
 
 class TestTaskPromptUnchanged:
@@ -370,30 +400,71 @@ class TestTaskPromptUnchanged:
         assert len(calls) == 1
         assert calls[0]["messages"] == GOLDEN["messages"]["ChatAdapter"]
 
-    def test_json_adapter_messages_match_dspy_3_4_1(self, monkeypatch) -> None:
+    @pytest.mark.parametrize("model", [MODEL, REASONING_MODEL])
+    def test_json_adapter_messages_match_dspy_3_4_1(self, monkeypatch, model) -> None:
         calls = _record(monkeypatch, _ok(JSON_ANSWER))
-        with dspy.context(lm=_lm(), adapter=dspy.JSONAdapter()):
+        lm = LLMConfig(model=model, api_key="key", cache=False).get_dspy_lm()
+        with dspy.context(lm=lm, adapter=dspy.JSONAdapter()):
             pred = _cv_predict()(cv_text="Juan, 10 anios")
         assert pred.nivel == "senior"
         assert len(calls) == 1
         assert calls[0]["messages"] == GOLDEN["messages"]["JSONAdapter"]
-        assert "response_format" in calls[0]
+        # Forma de Chat Completions, con el orden de claves de LiteLLM en 3.4.1:
+        # la canonica de lm15 (`schema` sin `json_schema`) la rechaza Azure (D-018 c2).
+        assert json.dumps(calls[0]["response_format"]) == json.dumps(
+            GOLDEN["response_format"]["JSONAdapter"]
+        )
+
+    @pytest.mark.parametrize("model", [MODEL, REASONING_MODEL])
+    def test_chain_of_thought_messages_match_dspy_3_4_1(self, monkeypatch, model) -> None:
+        # dspy 3.5.0 cambia el campo `reasoning` de CoT a `dspy.Reasoning`: con un
+        # modelo con reasoning lo quitaria del prompt y pediria `reasoning_effort`
+        # (D-018 c2). `chain_of_thought` conserva el prompt de 3.4.1.
+        calls = _record(monkeypatch, _ok(COT_ANSWER))
+        lm = LLMConfig(model=model, api_key="key", cache=False).get_dspy_lm()
+        assert lm.supports_reasoning is (model == REASONING_MODEL)
+        cot = chain_of_thought(CVSig)
+        cot.predict.demos = _cv_predict().demos
+        with dspy.context(lm=lm, adapter=dspy.ChatAdapter()):
+            pred = cot(cv_text="Juan, 10 anios")
+        assert pred.reasoning == "Tiene 10 anios."
+        assert pred.anios == 10
+        assert len(calls) == 1
+        assert calls[0]["messages"] == GOLDEN["messages"]["ChainOfThought"]
+        assert "reasoning_effort" not in calls[0]
+        assert "reasoning" not in calls[0]
+
+    def test_default_chain_of_thought_is_native_reasoning_in_dspy(self) -> None:
+        # Testigo del cambio de dspy 3.5.0 que obliga a usar `chain_of_thought`:
+        # si dspy vuelve a `str`, este test avisa que el helper sobra.
+        assert (
+            dspy.ChainOfThought(CVSig).predict.signature.output_fields["reasoning"].annotation
+            is dspy.Reasoning
+        )
+        assert (
+            chain_of_thought(CVSig).predict.signature.output_fields["reasoning"].annotation is str
+        )
 
 
 # ==================== Entry points: solo configure_dspy ====================
 
 
-def _bare_dspy_configure_calls(path: Path) -> list[int]:
+def _bare_dspy_calls(path: Path, attr: str) -> list[int]:
+    """Lineas con `dspy.<attr>(...)` en el archivo."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     return [
         node.lineno
         for node in ast.walk(tree)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "configure"
+        and node.func.attr == attr
         and isinstance(node.func.value, ast.Name)
         and node.func.value.id == "dspy"
     ]
+
+
+def _bare_dspy_configure_calls(path: Path) -> list[int]:
+    return _bare_dspy_calls(path, "configure")
 
 
 class TestEntryPointsUseConfigureDspy:
@@ -404,6 +475,16 @@ class TestEntryPointsUseConfigureDspy:
             for d in ("shared", "dspy_gepa_poc", "gepa_standalone")
             for f in sorted((REPO / d).rglob("*.py"))
             if f != allowed and (lines := _bare_dspy_configure_calls(f))
+        }
+        assert offenders == {}
+
+    def test_no_bare_chain_of_thought_in_production(self) -> None:
+        allowed = REPO / "shared" / "llm" / "dspy_lm.py"
+        offenders = {
+            str(f.relative_to(REPO)): lines
+            for d in ("shared", "dspy_gepa_poc", "gepa_standalone")
+            for f in sorted((REPO / d).rglob("*.py"))
+            if f != allowed and (lines := _bare_dspy_calls(f, "ChainOfThought"))
         }
         assert offenders == {}
 
