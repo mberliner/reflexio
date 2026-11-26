@@ -207,14 +207,13 @@ Notas de la matriz:
   modelo y del rol, que ya viven en `.env`, y la User Story pide comparar modelos
   cambiando solo el `.env`. Esto se aparta de `docs/LECCIONES_APRENDIDAS.md` §4
   (parametros de comportamiento en YAML); la reproducibilidad se cubre
-  registrando los valores efectivos en `run.json` (FR-012).
+  registrando los valores efectivos en `run.json` (FR-012). Si `models:` del
+  YAML puede sobreescribirlos, y que la inferencia los tome del `run.json` en
+  lugar del `.env` vigente, quedan en la deuda D-029 (`historial/sdd.md`).
 - Esta spec no define un `api_base` propio para `anthropic/` (FR-007: el
   `LLM_API_BASE` global no se envia). Si hace falta uno (proxy, gateway), el
   mecanismo es la conexion por rol de [[SPEC-106-roles-intercambiables]]
   (`LLM_API_BASE_<ROL>`, FR-001 y FR-003).
-  [NEEDS CLARIFICATION: si en una iteracion futura `models:` del YAML puede
-  sobreescribirlos, y si `dspy_gepa_poc/run_inference.py` debe reconstruirlos
-  desde `run.json` en lugar del `.env` vigente.]
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 

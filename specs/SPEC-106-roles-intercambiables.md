@@ -1,8 +1,8 @@
 # SPEC-106-roles-intercambiables — Profesor y estudiante intercambiables entre proveedores
 
 Estado: draft
-Iteracion: 1 (rev. 2026-11-23)
-Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas y metricas sobre casos evaluados)
+Iteracion: 1 (rev. 2026-11-26)
+Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas y metricas sobre casos evaluados), [[SPEC-105-punto-llamada-desacoplado]] (la conexion por rol se aplica en el punto de llamada comun, `shared/llm/call.py`)
 Relacionada con: [[SPEC-103-proveedor-anthropic]], [[SPEC-100-veredicto-senal-ruido]], docs/LLM_CONFIG.md
 
 ## User Story (prioridad)
@@ -32,6 +32,12 @@ costo por resolucion sobre los casos de prueba. Ambos subproyectos.
 Excluye: restricciones de parametros de un proveedor concreto (las de Anthropic
 son [[SPEC-103-proveedor-anthropic]]); balanceo, fallback o reintentos entre
 proveedores; seleccion automatica de la mejor combinacion.
+
+Deuda a revisar al implementarla (`historial/sdd.md`): D-028 (la comparabilidad
+de SPEC-100 y SPEC-101 no ve effort/thinking; cerrarla antes del primer lote de
+referencia con Claude) y D-029 (`dspy_gepa_poc/run_inference.py` reconstruye la
+configuracion desde el `.env` vigente: con conexion por rol, decidir si la
+reconstruccion desde `run.json` incluye modelo y endpoint de cada rol).
 
 ## Requisitos funcionales
 

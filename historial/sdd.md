@@ -27,6 +27,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-026 | Prompt de reflexion como variable de experimento (SPEC-105 FR-010): hoy hay una sola plantilla (`gepa-0.0.27-default`). Antes de introducir otra (p. ej. adaptar el `ProposeInstruction` de dspy 3.4.1, o sus `skills` / `max_chars`) MUST registrarse `REFLECTION_PROMPT_ID` en `run.json` y en el CSV y entrar en la comparabilidad de SPEC-100 (como las versiones de librerias, FR-009), y la plantilla nueva se mide con N seeds contra la vigente | D-018 (b2), 2026-11-25 | Abierta. No bloquea (c1): con un unico prompt, el id es constante en todas las corridas |
 | D-027 | Alcance de la traduccion `Request` -> Chat Completions del engine propio (`shared/llm/dspy_lm.py::request_to_chat`, SPEC-105 FR-002): solo cubre texto (mensajes `user`/`assistant`, `system` de texto y los campos de `Config` de `_CONFIG_PARAMS`). Herramientas (`Request.tools`, `ToolCallPart`/`ToolResultPart`, function calling nativo de `JSONAdapter`/`XMLAdapter`/`ReAct`), partes no textuales (`dspy.Image`, audio, documentos), `continuation` (firmas de thinking), `Config.reasoning`, `tool_choice`, `logprobs`, `top_k`, cache de prompt y todo campo nuevo de `Config` lanzan `dspy.lm15.UnsupportedFeatureError` antes de llamar. Ademas la `Response` que ve dspy lleva siempre `finish_reason="stop"` y solo texto (sin `reasoning_content`; el `finish_reason` crudo queda en el punto de llamada). Hoy el repo no usa nada de eso (verificado: sin `ReAct`, `dspy.Tool`, `dspy.Image` ni `reasoning_effort` en `dspy_gepa_poc`/`shared`), asi que no hay perdida silenciosa: falla fuerte. Si un caso nuevo los necesita, ampliar la traduccion con su test y revisar el `allow_tool_calls` de `checked_response` (hoy sin uso desde DSPy) | D-018 (b3), 2026-11-25 | Abierta. No bloquea SPEC-106. Revision 2026-11-25 (D-018 c2): `Config.reasoning` si llegaba desde dspy (CoT por defecto de 3.5.0 con gpt-5.x) y fallo fuerte como estaba previsto; ya no llega (`chain_of_thought`). `response_format` ahora se traduce a la forma de Chat Completions (`chat_response_format`) |
 | D-028 | La comparabilidad de SPEC-100 (FR-008 modelos, FR-009 versiones de librerias) y el triaje de SPEC-101 no distinguen `LLM_EFFORT_<ROL>` ni `LLM_THINKING_<ROL>` (SPEC-103 FR-012): una referencia puede mezclar corridas Claude con distinto effort o razonamiento sin `[WARN]`. Los valores efectivos ya estan en el `run.json` de cada corrida; falta que `seed_protocol.py` / `seed_triage.py` los lean (o una columna en el CSV, que toca SPEC-100 FR-007). Mitigacion vigente: advertencia en `docs/PROTOCOLO_N_SEEDS.md` (Limitaciones conocidas) | SPEC-103 FR-012 (marcador abierto desde 2026-11-23; D-018 (a) agrego solo las versiones) | Abierta. Sin impacto hoy: 2 corridas Claude en los CSV (smoke de fase 6, 2026-11-24). Resolver antes del primer lote de referencia con Claude (SPEC-106) |
+| D-029 | Configuracion de la inferencia y de effort/thinking: (a) hueco real: `dspy_gepa_poc/run_inference.py` arma la configuracion con `LLMConfig.from_env("task")`, del `.env` vigente y no de lo que registro la corrida en `run.json` (SPEC-103 FR-012): si el `.env` cambio entre la optimizacion y la inferencia (modelo, effort, razonamiento, `max_tokens`; con SPEC-106 tambien conexion por rol), la inferencia corre con otra configuracion sin aviso. Opciones: reconstruir desde `run.json` o, como minimo, comparar y emitir `[WARN]` ante diferencias. (b) decision de diseno pendiente: si `models:` del YAML puede sobreescribir `LLM_EFFORT_<ROL>` / `LLM_THINKING_<ROL>` (hoy solo `.env`, Decisiones de SPEC-103); seria una iteracion de SPEC-103, no de SPEC-106 (su Alcance excluye parametros de un proveedor concreto) | SPEC-103 Decisiones (marcador abierto desde 2026-11-23) | Abierta. (a) aplica a cualquier proveedor; revisarla al implementar SPEC-106. (b) sin pedido de uso |
 
 ## Deuda resuelta
 
@@ -55,6 +56,32 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-26 (cont. 4) — Ultimo NEEDS CLARIFICATION de SPEC-103 a deuda D-029; SPEC-106 depende de SPEC-105
+
+- El marcador de "Decisiones" de SPEC-103 juntaba dos preguntas que no son de
+  SPEC-106 (su Alcance excluye parametros de un proveedor concreto): (a)
+  `run_inference.py` reconstruye la configuracion desde el `.env` vigente y no
+  desde `run.json` (hueco real, cualquier proveedor); (b) si `models:` del YAML
+  puede sobreescribir effort/thinking (decision de diseno, sin pedido). Pasan a
+  D-029. SPEC-103 queda sin marcadores abiertos.
+- Correccion del commit anterior (`025f8f2`): el bullet nuevo de `api_base` se
+  inserto antes del marcador, que quedo colgado de el. Ahora el texto de D-029
+  cierra el bullet de effort/razonamiento.
+- SPEC-106 (draft): declara `Depende de: [[SPEC-105-punto-llamada-desacoplado]]`
+  (derivado pendiente desde 2026-11-25) y enlaza D-028 y D-029 en su Alcance
+  para revisarlas al implementarla.
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-103-proveedor-anthropic.md (Decisiones), specs/SPEC-106-roles-intercambiables.md (Alcance), dspy_gepa_poc/run_inference.py
+- Incluye/Excluye verificado: incluye mover el marcador a deuda, la dependencia de SPEC-106 y el enlace a D-028/D-029; excluye implementar D-029
+- Validaciones aplicadas: grep sin `NEEDS CLARIFICATION` en SPEC-103, ./shared/utils/ci_local.sh verde, sin emoticones
+- SSOT afectado: specs/SPEC-103-proveedor-anthropic.md, specs/SPEC-106-roles-intercambiables.md, historial/sdd.md
+- Derivados a revisar: ninguno
+- Deuda arrastrada: nueva D-029 (abierta); D-028 sigue abierta
+- Riesgos/reservas: D-029 (a) hoy puede hacer que una inferencia corra con otra configuracion sin aviso si el `.env` cambio desde la optimizacion
+```
 
 ### 2026-11-26 (cont. 3) — SPEC-103 iter 4: dos NEEDS CLARIFICATION resueltos
 
