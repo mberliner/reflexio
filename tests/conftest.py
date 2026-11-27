@@ -5,6 +5,7 @@ Shared fixtures for all tests.
 import csv
 import json
 import logging
+import os
 from unittest.mock import MagicMock
 
 import litellm
@@ -14,17 +15,23 @@ from litellm.llms.azure.common_utils import BaseAzureLLM
 from litellm.llms.custom_httpx.http_handler import HTTPHandler
 from openai.types.chat import ChatCompletion
 
+import dspy_gepa_poc.config  # noqa: F401  (carga su .env al importarse)
+import gepa_standalone.config  # noqa: F401  (carga su .env al importarse)
 from shared.llm.failures import get_failure_tracker
 from shared.llm.usage import get_tracker as get_usage_tracker
 
-LLM_ENV_VARS = [
-    "LLM_MODEL_TASK",
-    "LLM_MODEL_REFLECTION",
-    "LLM_API_KEY",
-    "LLM_API_BASE",
-    "LLM_API_VERSION",
-    "LLM_CACHE",
-]
+
+def _strip_llm_env() -> None:
+    """Quita del proceso toda variable `LLM_*` (globales, por rol y `LLM_ENV_FILE`)."""
+    for name in [n for n in os.environ if n.startswith("LLM_")]:
+        del os.environ[name]
+
+
+# Tests hermeticos frente al `.env` real del desarrollador: cada subproyecto carga
+# el suyo al importar su `config.py` (`load_dotenv`, una sola vez por proceso). Se
+# fuerza esa carga aca y despues se quita todo `LLM_*`, para que ningun test vea
+# credenciales ni roles (p. ej. `LLM_MODEL_JUDGE`, SPEC-106) que en CI no existen.
+_strip_llm_env()
 
 
 def make_completion_response(
@@ -160,8 +167,8 @@ def mock_env(monkeypatch):
 
 @pytest.fixture
 def clear_env(monkeypatch):
-    """Remove all LLM environment variables."""
-    for var in LLM_ENV_VARS:
+    """Remove all LLM environment variables (globales y por rol, SPEC-106 FR-001)."""
+    for var in [n for n in os.environ if n.startswith("LLM_")]:
         monkeypatch.delenv(var, raising=False)
 
 
