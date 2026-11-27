@@ -209,7 +209,7 @@ def resolve_judge_config(reflection_config: "LLMConfig") -> "LLMConfig":
             "configuracion del profesor.",
             ", ".join(ignored),
         )
-    judge = replace(reflection_config, role="judge")
+    judge = replace(reflection_config, role="judge", env_role="reflection")
     judge._global_base_ignored = reflection_config._global_base_ignored
     return judge
 
@@ -249,6 +249,9 @@ class LLMConfig:
     # SPEC-106 FR-003: False si el proveedor del rol difiere del ancla (`task`) y por
     # tanto no hereda las variables globales.
     inherits_global: bool = field(default=True, repr=False, compare=False)
+    # SPEC-106 D13: rol cuyas variables de entorno se usaron (None = el propio `role`).
+    # El juez heredado del profesor lo fija en "reflection".
+    env_role: str | None = field(default=None, repr=False, compare=False)
     # True si hay LLM_API_BASE global que este rol `anthropic/` no hereda (aviso D3).
     _global_base_ignored: bool = field(default=False, init=False, repr=False, compare=False)
     # Aviso de arranque una sola vez por config (D5).
@@ -260,7 +263,7 @@ class LLMConfig:
         return _is_reasoning(self.model)
 
     def _param_names(self) -> tuple[str, str]:
-        suffix = self.role.upper()
+        suffix = (self.env_role or self.role).upper()
         return f"LLM_EFFORT_{suffix}", f"LLM_THINKING_{suffix}"
 
     def _check_params(self) -> None:
@@ -745,7 +748,7 @@ class LLMConfig:
         """
         from .errors import LLMConnectionError
 
-        role_var = self.role.upper()
+        role_var = (self.env_role or self.role).upper()
 
         def _expected(name: str) -> str:
             # El rol que no hereda solo puede usar su variable propia (FR-003).
@@ -868,7 +871,7 @@ class LLMConfig:
         source = self.env_sources.get(field_name)
         if source and source not in ("unset", "default"):
             return source
-        role_var = f"LLM_{suffix}_{self.role.upper()}"
+        role_var = f"LLM_{suffix}_{(self.env_role or self.role).upper()}"
         if field_name != "model" and self.inherits_global:
             return f"{role_var} or LLM_{suffix}"
         return role_var

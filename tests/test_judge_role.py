@@ -167,6 +167,81 @@ class TestJudgeWithoutOwnModel:
         assert opt.judge_config.api_key == REFLECTION_KEY
         assert opt.judge_config.effort == opt.reflection_config.effort
 
+    def test_inherited_judge_is_not_probed_apart(
+        self,
+        provider: list[dict],
+        caplog: pytest.LogCaptureFixture,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        opt = _optimizer()
+
+        with caplog.at_level(logging.INFO):
+            opt.validate_llm_connections()
+
+        # Una sonda por endpoint: tarea y profesor; el juez comparte el del profesor.
+        assert [c["model"] for c in provider] == [
+            "azure/gpt-4.1-mini",
+            "anthropic/claude-sonnet-5-5",
+        ]
+        out = capsys.readouterr()
+        text = out.out + out.err + caplog.text
+        assert "judge | anthropic | anthropic/claude-sonnet-5-5" in text
+        assert "conexion del profesor" in text
+
+    def test_inherited_judge_local_errors_name_the_teacher_variables(self) -> None:
+        opt = _optimizer()
+        judge = opt.judge_config
+        judge.api_key = None
+
+        with pytest.raises(LLMConnectionError) as exc_info:
+            judge.validate()
+
+        err = exc_info.value
+        assert err.role == "judge"
+        assert "LLM_API_KEY_REFLECTION" in err.variable
+        assert "JUDGE" not in err.variable
+        assert all("JUDGE" not in s for s in err.suggestions)
+
+        judge.api_key = REFLECTION_KEY
+        judge.model = ""
+        with pytest.raises(LLMConnectionError) as exc_info:
+            judge.validate()
+        assert exc_info.value.variable == "LLM_MODEL_REFLECTION"
+
+    def test_inherited_judge_param_errors_name_the_teacher_variables(self) -> None:
+        from shared.llm.errors import LLMConfigError
+
+        opt = _optimizer()
+        judge = opt.judge_config
+        judge.effort = "bogus"
+
+        with pytest.raises(LLMConfigError) as exc_info:
+            judge.validate()
+
+        assert "LLM_EFFORT_REFLECTION" in str(exc_info.value)
+        assert "LLM_EFFORT_JUDGE" not in str(exc_info.value)
+
+    def test_inherited_judge_source_variables_are_the_teacher_ones(self) -> None:
+        opt = _optimizer()
+        judge = opt.judge_config
+        judge.env_sources = {}
+
+        # El profesor Anthropic no hereda los globales (FR-003): el juez, tampoco.
+        assert judge._source_variable("api_key", "API_KEY") == "LLM_API_KEY_REFLECTION"
+        assert judge._source_variable("model", "MODEL") == "LLM_MODEL_REFLECTION"
+
+    def test_inherited_judge_with_yaml_override_is_still_validated(
+        self, provider: list[dict]
+    ) -> None:
+        opt = _optimizer()
+        opt.judge_config.api_key = None
+
+        with pytest.raises(LLMConnectionError) as exc_info:
+            opt.validate_llm_connections()
+
+        assert exc_info.value.role == "judge"
+        assert provider == []
+
     def test_no_warning_without_judge_vars(self, caplog: pytest.LogCaptureFixture) -> None:
         with caplog.at_level(logging.WARNING, logger="shared.llm.config"):
             _optimizer()
@@ -204,6 +279,7 @@ class TestJudgeWithOwnModel:
         opt.validate_llm_connections()
 
         probes = [c for c in provider if c["model"] == "openai/gpt-4.1"]
+        # Con LLM_MODEL_JUDGE el juez se sondea como un rol mas (tarea, profesor y juez).
         assert len(probes) == 1 and probes[0]["api_key"] == JUDGE_KEY
         assert len(provider) == 3
         out = capsys.readouterr()

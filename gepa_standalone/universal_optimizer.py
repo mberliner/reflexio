@@ -374,6 +374,10 @@ class UniversalOptimizer:
             log_info(f"Rol: {cfg.connection_summary()}")
 
         for label, cfg in roles:
+            if cfg.role == "judge" and cfg.env_role is not None:
+                # Juez heredado (D13): misma conexion que el profesor, ya sondeada.
+                log_info("Juez usa la conexion del profesor ya sondeada: sin sonda propia")
+                continue
             log_info(f"Validando conexion con {label} LM...")
             cfg.validate_connection()
             log_ok(f"{label} LM conectado: {cfg.describe()}")
