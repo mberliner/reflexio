@@ -76,7 +76,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 1 Conexion por rol (`shared/llm`) | 1a Tests: golden de regresion de parametros (verde hoy) y tests RED de resolucion por rol, no fuga y validacion local | FR-001, FR-002, FR-003, SC-003, SC-004 | D1, D2, D3, D4 | Sonnet 5.5 | hecho (404af1d) |
 | | 1b Funcion de proveedor, resolucion por rol con proveedor ancla, `api_base` explicito en `anthropic/`, validacion local por rol, `LLM_ENV_FILE`, `endpoint_host` y `connection_summary` (GREEN) | FR-001, FR-002, FR-003, FR-005 (ultimo punto), FR-007 (metodo) | D1 a D4, D7 | Sonnet 5.5 | hecho (c0f7c64) |
 | 1 (correccion) | 1b-fix-1 Modelo sin default: `LLM_MODEL_<ROL>` ausente o vacio falla en `validate()` nombrando rol y variable (test RED previo) | FR-001 (enmienda), FR-003 (ancla) | D12 | Sonnet 5.5 | hecho (1e23351) |
-| 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | pendiente |
+| 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | hecho (7cc3840) |
 | | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | pendiente |
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | pendiente |
 | | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | pendiente |
@@ -577,5 +577,16 @@ Plan aprobado por el usuario el 2026-11-27, con H1 resuelta. 1a hecha
 ajustados en 1b-fix-1: `mock_env` (agrega `LLM_MODEL_REFLECTION`),
 `test_shared_llm.py::test_defaults_without_env` (asevera el default, pasa a D12)
 y `TestEnvSources` (la igualdad de `env_sources` incluye `model`).
+2a hecha (7cc3840): `_raw_completion` es el unico sitio de `litellm.completion`
+en `shared/llm/call.py`; `probe_completion` y `validate_connection` sin ramas
+por subcadena. Notas para la revision de la sonda: (1) `variable` del error es
+siempre la de la credencial (`env_sources["api_key"]`, o la esperada si no hay
+fuente), tambien en `infraestructura`; las sugerencias de `configuracion` nombran
+ademas la variable de endpoint y de modelo. (2) Una respuesta 200 no sana con
+texto parcial (`length` con texto) tambien cuenta como conexion valida con
+`[WARN]`, igual que sin texto. (3) `test_shared_llm.py`: los tests por subcadena
+(401/404/429/VNet/generico) pasan a excepciones tipadas de LiteLLM; el de VNet
+se reemplaza por uno que fija que el texto "429" no decide la clase. Parada
+obligatoria: el usuario revisa la sonda antes de 2b.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
