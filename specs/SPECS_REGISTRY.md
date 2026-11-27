@@ -39,7 +39,8 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 | SPEC-104-fallas-tecnicas-justas | Fallas tecnicas visibles y medicion justa | active | 4 | `SPEC-104-fallas-tecnicas-justas.md` |
 | SPEC-105-punto-llamada-desacoplado | Punto de llamada propio, desacoplado de los internos de DSPy y GEPA | active | 5 | `SPEC-105-punto-llamada-desacoplado.md` |
 | SPEC-106-roles-intercambiables | Profesor, estudiante y juez intercambiables entre proveedores | active | 2 | `SPEC-106-roles-intercambiables.md` |
-| SPEC-107-costo-real-por-resolucion | Costo real de cada combinacion de roles | draft | 1 | `SPEC-107-costo-real-por-resolucion.md` |
+| SPEC-107-limite-de-tasa-proveedor | Espera ante limite de tasa del proveedor (429) | draft | 2 | `SPEC-107-limite-de-tasa-proveedor.md` |
+| SPEC-108-costo-real-por-resolucion | Costo real de cada combinacion de roles | draft | 1 | `SPEC-108-costo-real-por-resolucion.md` |
 
 ## Roadmap de iteraciones
 

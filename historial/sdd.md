@@ -61,6 +61,65 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-27 (cont. 2) — SPEC-107 iter 2: matriz de proporcionalidad y cierre de clarificaciones
+
+- Revision externa de la spec contrastada con el entorno instalado (litellm 1.108.5,
+  openai 3.57.0, httpx 0.28.1). Verificado en el repo: `litellm_response_headers`
+  existe y `exc.response.headers` no sirve; la regla "Request too large" de LiteLLM
+  (`exception_mapping_utils.py`); `reflection` sin umbral de `infraestructura`;
+  `snapshot()` de `FailureTracker`; orden de sonda y contador en
+  `universal_optimizer.py`. No verificado por mi lado: el contenido de las cabeceras
+  por proveedor y el cuerpo de `insufficient_quota` (SC-002 y SC-004 los fijan con
+  `httpx` interceptado).
+- Cambios: matriz de proporcionalidad (0 s perdidos en fallas permanentes); espera con
+  cabecera sin jitter hacia abajo y lectura por `litellm_response_headers`; 429 no
+  transitorios sin espera (`Retry-After` > tope, `insufficient_quota`, "request too
+  large"), que reemplazan las opciones (a), (b) y (c) de FR-011 de la iteracion 1;
+  `failures.rate_limit_waits` en `run.json`; `EXIT_RATE_LIMIT = 75` con regla de
+  causa dominante que cubre `reflection` (clave `total`); aviso `INFO` visible y con
+  modelo; cooldown compartido por rol con `num_threads > 1`; sonda de conexion y
+  `seed_protocol.py::run_seeds` dentro del alcance.
+- Decision tomada por defecto, a confirmar: el cooldown compartido entre hilos
+  (FR-007) se incluye, por el objetivo de minimizar tiempo; si se descarta, se
+  elimina FR-007 y SC-007.
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-107-limite-de-tasa-proveedor.md (iter 1), shared/llm/failures.py, shared/llm/call.py, gepa_standalone/universal_optimizer.py, dspy_gepa_poc/reflexio_declarativa.py, shared/utils/seed_protocol.py, tests/test_lib_contracts.py, litellm 1.108.5 instalado
+- Incluye/Excluye verificado: incluye la spec y el registro; excluye implementar, el plan de fases y las enmiendas a SPEC-104, SPEC-106 y docs (quedan listadas en la spec)
+- Validaciones aplicadas: sin `[NEEDS CLARIFICATION]` abiertos, sin emoticones, verificacion puntual de las afirmaciones empiricas contra el codigo instalado
+- SSOT afectado: specs/SPEC-107-limite-de-tasa-proveedor.md (iter 2), specs/SPECS_REGISTRY.md
+- Derivados a revisar: SPEC-104 (FR-007, FR-011, FR-015), SPEC-106 (FR-005), docs/GEPA_MANEJO_ERRORES.md, docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md, tests listados en la spec
+- Deuda arrastrada: ninguna nueva
+- Riesgos/reservas: cabeceras por proveedor e `insufficient_quota` no verificados por mi; FR-007 incluido por defecto
+```
+
+### 2026-11-27 (cont.) — SPEC-107 (limite de tasa, draft) y renumeracion de la spec de costo a SPEC-108
+
+- Origen: dos corridas de un batch abortaron por 429 de Azure (`gpt-4.1-mini`, eastus,
+  limite de tokens por minuto). SPEC-104 FR-011 reintenta el 429 con la espera generica
+  de 1, 2 y 4 s (7 s en total), insuficiente para un limite por minuto.
+- SPEC-107-limite-de-tasa-proveedor (draft, iter 1): presupuesto propio para el 429,
+  espera por `Retry-After` o backoff con tope, aviso `INFO`, sin fallback de modelo,
+  codigo de salida propio y `BATCH_COOLDOWN` en los runners batch. Iteracion 1 con
+  cuatro `[NEEDS CLARIFICATION]` (cabecera accesible, campo de `run.json`, codigo de
+  salida y 413 generico), cerrados en la iteracion 2 (entrada siguiente).
+- Renumeracion: la spec de costo real por combinacion de roles pasa de SPEC-107 a
+  SPEC-108 (archivo, registro, SPEC-106, su plan y las entradas previas de este log).
+  El numero 107 queda para la espera ante limite de tasa por ser el siguiente en la
+  secuencia de capacidades de infraestructura de llamada (104, 105, 106).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-104-fallas-tecnicas-justas.md (FR-011, FR-007, FR-015, tabla de reglas), shared/llm/call.py, shared/llm/failures.py, docs/SDD_PROTOCOLO.md, specs/SPECS_REGISTRY.md
+- Incluye/Excluye verificado: incluye la spec nueva, su registro y la renumeracion; excluye implementar (sin plan de fases ni codigo aun)
+- Validaciones aplicadas: grep sin referencias restantes a SPEC-107 como spec de costo, sin emoticones
+- SSOT afectado: specs/SPEC-107-limite-de-tasa-proveedor.md (nueva), specs/SPEC-108-costo-real-por-resolucion.md (renumerada), specs/SPECS_REGISTRY.md, specs/SPEC-106-roles-intercambiables.md, docs/plans/PLAN_SPEC-106_roles_intercambiables.md
+- Derivados a revisar: SPEC-104 FR-007 (enmienda del aviso INFO) al aprobar SPEC-107; tres tests que esperan 1 + DEFAULT_INFRA_RETRIES para el 429
+- Deuda arrastrada: ninguna nueva (los NEEDS CLARIFICATION viven en la spec)
+- Riesgos/reservas: la accesibilidad de `Retry-After` en LiteLLM 1.108.5 no esta verificada
+```
+
 ### 2026-11-27 — Cierre de SPEC-106 (roles intercambiables)
 
 - Fases 1 a 6 implementadas por sesiones `-p` supervisadas y fase 7 con API real
@@ -97,15 +156,15 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ```
 [SDD-Check]
 - Spec/doc leido: specs/SPEC-106-roles-intercambiables.md, docs/plans/PLAN_SPEC-106_roles_intercambiables.md (tabla de fases, Hallazgos, Verificacion real, Proxima sesion), specs/SPECS_REGISTRY.md, specs/SPEC-100-veredicto-senal-ruido.md (FR-007 a FR-009), specs/SPEC-101-triaje-casos-nseeds.md (FR-002), specs/SPEC-103-proveedor-anthropic.md (FR-007), historial/sdd.md (D-028, D-029 y derivados de 2026-11-26 cont. 5)
-- Incluye/Excluye verificado: incluye estado de la spec, Coverage mapping, enmiendas en specs relacionadas, revision de D-028/D-029 y registro de la deuda nueva; excluye corregir R4, R6, R7 y `variable` en `infraestructura` (decision del usuario, 2026-11-27) y la evaluacion economica (SPEC-107)
+- Incluye/Excluye verificado: incluye estado de la spec, Coverage mapping, enmiendas en specs relacionadas, revision de D-028/D-029 y registro de la deuda nueva; excluye corregir R4, R6, R7 y `variable` en `infraestructura` (decision del usuario, 2026-11-27) y la evaluacion economica (SPEC-108)
 - Validaciones aplicadas: todas las subfases `hecho` con hash, ./shared/utils/ci_local.sh verde en el Cierre (2636 passed, cobertura 98%), SC-001 y SC-002 con API real (fase 7), sin emoticones
 - SSOT afectado: specs/SPEC-106-roles-intercambiables.md (active, it. 2), specs/SPECS_REGISTRY.md, specs/SPEC-100-veredicto-senal-ruido.md, specs/SPEC-101-triaje-casos-nseeds.md, specs/SPEC-103-proveedor-anthropic.md, docs/plans/PLAN_SPEC-106_roles_intercambiables.md (cerrado), historial/sdd.md
-- Derivados a revisar: SPEC-107 (costo por combinacion de roles, draft) puede apoyarse en el bucket `judge` y el costo por rol de FR-004
+- Derivados a revisar: SPEC-108 (costo por combinacion de roles, draft) puede apoyarse en el bucket `judge` y el costo por rol de FR-004
 - Deuda arrastrada: D-028 y D-029 siguen abiertas; nuevas D-030, D-031, D-032 y D-033 (abiertas)
 - Riesgos/reservas: la terna de comparabilidad usa la cadena cruda del modelo, asi que las filas con profesor Claude no tienen referencia previa (N=1 por caso tras la fase 7); el primer lote de referencia con Claude que varie effort o thinking requiere cerrar D-028
 ```
 
-### 2026-11-26 (cont. 5) — SPEC-106 iter 2 y SPEC-107 (draft) separada
+### 2026-11-26 (cont. 5) — SPEC-106 iter 2 y SPEC-108 (draft) separada
 
 - Origen: revision de SPEC-106 iter 1, contrastada con el codigo. Hallazgos
   confirmados: el juez comparte bucket con el profesor (`usage.py`), el
@@ -122,7 +181,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
   `Modelo Juez` y terna de comparabilidad, que enmiendan SPEC-100 FR-007/FR-008 y
   SPEC-101 FR-002 (FR-006). Log de endpoint por rol (FR-007).
   `check_deployments.py` por rol (FR-008).
-- SPEC-107 (draft, nueva): FR-007/FR-008 de la iter 1 de SPEC-106 (costo por
+- SPEC-108 (draft, nueva): FR-007/FR-008 de la iter 1 de SPEC-106 (costo por
   fase, costo por resolucion con metricas continuas y k, ROI sin mezclar medido
   con estimado). Quedan 2 NEEDS CLARIFICATION (persistencia en CSV vs `run.json`;
   ROI de produccion medido).
@@ -132,7 +191,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 - Spec/doc leido: specs/SPEC-106-roles-intercambiables.md (iter 1), specs/SPEC-100-veredicto-senal-ruido.md (FR-007..FR-009), specs/SPEC-101-triaje-casos-nseeds.md (FR-002), specs/SPEC-103-proveedor-anthropic.md (Decisiones), specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, shared/llm/usage.py, shared/llm/config.py, shared/utils/seed_protocol.py, gepa_standalone/universal_optimizer.py, gepa_standalone/adapters/simple_rag_adapter.py, dspy_gepa_poc/reflexio_declarativa.py
 - Incluye/Excluye verificado: incluye redaccion de specs y registro; excluye implementacion
 - Validaciones aplicadas: hallazgos de la revision contrastados en el codigo, referencias externas a numeros de FR de SPEC-106 preservadas (FR-003, FR-004), sin emoticones
-- SSOT afectado: specs/SPEC-106-roles-intercambiables.md, specs/SPEC-107-costo-real-por-resolucion.md, specs/SPECS_REGISTRY.md, historial/sdd.md
+- SSOT afectado: specs/SPEC-106-roles-intercambiables.md, specs/SPEC-108-costo-real-por-resolucion.md, specs/SPECS_REGISTRY.md, historial/sdd.md
 - Derivados a revisar: al implementar SPEC-106, anotar las enmiendas en SPEC-100 FR-007/FR-009 ("unica excepcion"), FR-008 y SPEC-101 FR-002, y en SPEC-103 FR-007 y docs/LLM_CONFIG.md (api_base por rol en anthropic/)
 - Deuda arrastrada: D-028 (precondicion de SC-002 de SPEC-106) y D-029 siguen abiertas
 - Riesgos/reservas: la regla de ancla toma el proveedor de `task`; una corrida sin rol task (no existe hoy) necesitaria otra ancla

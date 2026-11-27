@@ -4,7 +4,7 @@ Estado: active
 Iteracion: 2 (rev. 2026-11-27)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas), [[SPEC-105-punto-llamada-desacoplado]] (punto de llamada comun y sonda de conexion)
 Enmienda: [[SPEC-103-proveedor-anthropic]] FR-007 (FR-003 de esta spec), [[SPEC-100-veredicto-senal-ruido]] FR-007 y FR-008, [[SPEC-101-triaje-casos-nseeds]] FR-002 (FR-006 de esta spec)
-Relacionada con: [[SPEC-107-costo-real-por-resolucion]] (evaluacion economica de cada combinacion, separada en la iteracion 2), docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md
+Relacionada con: [[SPEC-108-costo-real-por-resolucion]] (evaluacion economica de cada combinacion, separada en la iteracion 2), docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md
 Plan de implementacion: docs/plans/PLAN_SPEC-106_roles_intercambiables.md
 
 ## User Story (prioridad)
@@ -17,7 +17,7 @@ Azure) sin que la configuracion de un rol contamine a otro.
 Prioridad: P1
 
 El juez existe solo en el adapter RAG de `gepa_standalone`; `dspy_gepa_poc` no
-tiene rol juez. Cuanto cuesta cada combinacion es [[SPEC-107-costo-real-por-resolucion]].
+tiene rol juez. Cuanto cuesta cada combinacion es [[SPEC-108-costo-real-por-resolucion]].
 
 ## Contexto (estado al 2026-11-26)
 
@@ -61,7 +61,7 @@ subproyectos (el juez solo donde existe).
 
 Excluye: evaluacion economica por combinacion (costos medidos por fase, costo por
 resolucion, ROI y leaderboard con magnitudes medidas):
-[[SPEC-107-costo-real-por-resolucion]]. Restricciones de parametros de un
+[[SPEC-108-costo-real-por-resolucion]]. Restricciones de parametros de un
 proveedor concreto ([[SPEC-103-proveedor-anthropic]]). Balanceo, fallback o
 reintentos entre proveedores. Seleccion automatica de la mejor combinacion.
 Variables nativas de LiteLLM (`ANTHROPIC_API_KEY`, `AZURE_API_KEY`, ...) como
@@ -202,7 +202,7 @@ Deuda a revisar (`historial/sdd.md`):
 - Sin variables nativas de LiteLLM: la credencial de cada rol es explicita en
   `LLM_*`, para que la validacion local pueda nombrar lo que falta.
 - La iteracion 1 incluia la evaluacion economica (FR-007 y FR-008). Paso a
-  [[SPEC-107-costo-real-por-resolucion]]: es otro dominio (uso por fase, formula
+  [[SPEC-108-costo-real-por-resolucion]]: es otro dominio (uso por fase, formula
   de costo con metricas continuas y `eval_repeats`, ROI) y sus decisiones
   abiertas no deben bloquear la conexion por rol.
 

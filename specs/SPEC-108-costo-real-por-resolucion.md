@@ -1,4 +1,4 @@
-# SPEC-107-costo-real-por-resolucion — Costo real de cada combinacion de roles
+# SPEC-108-costo-real-por-resolucion — Costo real de cada combinacion de roles
 
 Estado: draft
 Iteracion: 1 (rev. 2026-11-26)
