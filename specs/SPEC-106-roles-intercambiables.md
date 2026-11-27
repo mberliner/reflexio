@@ -253,9 +253,9 @@ Deuda a revisar (`historial/sdd.md`):
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | `shared/llm/config.py::LLMConfig.from_env`; `tests/test_shared_llm.py` (pendiente) |
-| FR-002 | test de regresion de parametros con `.env` actuales por proveedor (pendiente) |
-| FR-003 | `shared/llm/config.py` (`from_env`, `apply_constraints`, `_warn_once`, funcion de proveedor), `shared/llm/dspy_lm.py`; `tests/test_anthropic_matrix.py` (ajustar caso `api_base`), test de no fuga (pendiente) |
+| FR-001 | `shared/llm/config.py::LLMConfig.from_env`; `tests/test_role_connection.py` (RED, xfail hasta 1b) |
+| FR-002 | `tests/test_role_connection_golden.py` (vigente, verde) |
+| FR-003 | `shared/llm/config.py` (`from_env`, `apply_constraints`, `_warn_once`, funcion de proveedor), `shared/llm/dspy_lm.py`; `tests/test_anthropic_matrix.py` (ajustar caso `api_base`); `tests/test_role_connection.py` (no fuga, RED hasta 1b) |
 | FR-004 | `shared/llm/usage.py`, `shared/analysis/roi_calculator.py::cost_from_usage`, `shared/llm/config.py`, `gepa_standalone/universal_optimizer.py::build_llm_configs`, `gepa_standalone/adapters/simple_rag_adapter.py`, `gepa_standalone/core/llm_factory.py`; test (pendiente) |
 | FR-005 | `shared/llm/config.py::validate_connection`, `shared/llm/errors.py::LLMConnectionError`, `shared/llm/call.py`, `gepa_standalone/universal_optimizer.py::validate_llm_connections`, `dspy_gepa_poc/reflexio_declarativa.py::setup_models`, `dspy_gepa_poc/scripts/baseline_only.py`, `tests/test_single_call_point.py`; test de validacion por rol (pendiente) |
 | FR-006 | `shared/logging/metadata.py`, `shared/logging/csv_writer.py` (`STANDARD_COLUMN_MAPPING`, `_sync_active_keys_to_file`), `shared/utils/migrate_metrics_csv.py`, `shared/utils/seed_protocol.py`, `shared/utils/seed_triage.py`; tests (pendiente) |
@@ -264,7 +264,7 @@ Deuda a revisar (`historial/sdd.md`):
 | FR-009 | `docs/LLM_CONFIG.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md`, `.env.example` de ambos subproyectos |
 | SC-001 | corrida manual con API real por subproyecto (pendiente) |
 | SC-002 | `seed_protocol` / `seed_triage` sobre las filas resultantes (pendiente) |
-| SC-003 | test de no fuga sin red (pendiente) |
-| SC-004 | `./shared/utils/ci_local.sh` |
+| SC-003 | `tests/test_role_connection.py::TestNoLeakBetweenProviders` (RED hasta 1b, sin red) |
+| SC-004 | `./shared/utils/ci_local.sh`; `tests/test_role_connection_golden.py` |
 | SC-005 | test de validacion con credencial invalida por rol (pendiente) |
 | SC-006 | test sobre copia del CSV con y sin migracion (pendiente) |
