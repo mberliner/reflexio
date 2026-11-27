@@ -802,5 +802,21 @@ ajustados. Archivos: solo los de la lista (sin cambios en `test_role_startup.py`
 6-fix-3 hecha (36e9ec8). `from_env` lanza `ValueError` ante overrides `model`, `api_key`,
 `api_base`, `api_version` (D14); `max_tokens` sigue. Borrada `validate_llm_connection`. Tests nuevos en
 `tests/test_role_connection.py::TestConnectionOverridesRejected` (5); sin tests existentes ajustados.
-Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
-docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
+Estado al 2026-11-27 (fin de la supervision de las fases 1 a 6): todas las subfases de
+1a a 6-fix-3 `hecho`, `ci_local.sh` verde (2633 tests), spec en `draft`, sin bloqueos.
+`.env.example` de ambos subproyectos revisados contra el codigo (332c569). Los `.env`
+reales (no versionados) quedaron listos para la fase 7: estudiante `azure/gpt-4.1-mini`
+con la conexion global de Azure, profesor `anthropic/claude-sonnet-5-5` con
+`LLM_API_KEY_REFLECTION`, y en `gepa_standalone` juez propio (`LLM_MODEL_JUDGE` y
+`LLM_API_KEY_JUDGE`); validacion local verde por rol, sin red. Effort y thinking sin
+definir (default constante en todo el lote, precondicion de SC-002 con D-028 abierta).
+No hace falta `.env` en la raiz del repo: cada subproyecto carga el suyo.
+
+Siguiente: fase 7, sesion interactiva (gasta API). Pasos previos:
+1. `python -m shared.utils.check_deployments --env-file gepa_standalone/.env`
+   (y con `dspy_gepa_poc/.env`): una llamada minima por rol; confirma claves y el
+   deployment `gpt-4.1-mini`.
+2. `python -m shared.utils.migrate_metrics_csv` sobre el CSV maestro antes de la primera
+   corrida, para que las filas RAG previas tengan `Modelo Juez` y sean comparables.
+3. Corridas cortas segun el Detalle de la fase 7 y registro en este plan.
+Arrancar con: "Fase 7 de SPEC-106 segun docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
