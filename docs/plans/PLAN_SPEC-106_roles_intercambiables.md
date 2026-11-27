@@ -79,7 +79,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | hecho (7cc3840) |
 | | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | hecho (27f111f) |
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | hecho (890d343) |
-| | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | pendiente |
+| | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | hecho (e9fbb0f) |
 | 4 Registro y comparabilidad | 4a `run.json` con proveedor y host por rol; columna `Modelo Juez`; logger sobre CSV sin migrar; migracion | FR-006, SC-006 | D7, D10 | Sonnet 5.5 | pendiente |
 | | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | pendiente |
 | 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | pendiente |
@@ -612,5 +612,12 @@ existente ajustado: `test_failure_call.py::test_success_records_token_usage`
 Fuera de la lista de Archivos de 3a: desvio aceptado por el usuario
 (2026-11-27) como correccion de una asercion que contradice FR-004; el archivo
 se agrega a la lista de 3a.
+3b hecha (e9fbb0f). `resolve_judge_config` en `shared/llm/config.py`; `build_llm_configs` arma
+`self.judge_config` solo en RAG (overrides del YAML sin el max_tokens por defecto de la
+reflexion) y `initialize_adapter` lo inyecta: `SimpleRAGAdapter(judge_config, ...)` es
+obligatorio. `get_reflection_config` sigue en uso (profesor). Tests existentes ajustados
+solo en la construccion del adapter (pasan `LLMConfig`): `test_anthropic_matrix`,
+`test_describe_effective`, `test_empty_response`, `test_gepa_adapters`,
+`test_gepa_adapters_failures`, `test_rag_judge_json`, `test_single_call_point`.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
