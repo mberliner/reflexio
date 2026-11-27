@@ -75,7 +75,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 |---|---|---|---|---|---|
 | 1 Conexion por rol (`shared/llm`) | 1a Tests: golden de regresion de parametros (verde hoy) y tests RED de resolucion por rol, no fuga y validacion local | FR-001, FR-002, FR-003, SC-003, SC-004 | D1, D2, D3, D4 | Sonnet 5.5 | hecho (404af1d) |
 | | 1b Funcion de proveedor, resolucion por rol con proveedor ancla, `api_base` explicito en `anthropic/`, validacion local por rol, `LLM_ENV_FILE`, `endpoint_host` y `connection_summary` (GREEN) | FR-001, FR-002, FR-003, FR-005 (ultimo punto), FR-007 (metodo) | D1 a D4, D7 | Sonnet 5.5 | hecho (c0f7c64) |
-| 1 (correccion) | 1b-fix-1 Modelo sin default: `LLM_MODEL_<ROL>` ausente o vacio falla en `validate()` nombrando rol y variable (test RED previo) | FR-001 (enmienda), FR-003 (ancla) | D12 | Sonnet 5.5 | pendiente |
+| 1 (correccion) | 1b-fix-1 Modelo sin default: `LLM_MODEL_<ROL>` ausente o vacio falla en `validate()` nombrando rol y variable (test RED previo) | FR-001 (enmienda), FR-003 (ancla) | D12 | Sonnet 5.5 | hecho (1e23351) |
 | 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | pendiente |
 | | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | pendiente |
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | pendiente |
@@ -573,6 +573,9 @@ log completo o el diff solo cuando un control falla.
 Plan aprobado por el usuario el 2026-11-27, con H1 resuelta. 1a hecha
 (404af1d) y 1b hecha (c0f7c64). Revision del nucleo por el usuario
 (2026-11-27): aprobado con una correccion, el modelo sin default (D12, subfase
-1b-fix-1). Siguiente subfase: 1b-fix-1 (Sonnet 5.5), luego 2a (Opus 5.5).
+1b-fix-1, hecha en 1e23351). Siguiente subfase: 2a (Opus 5.5). Tests existentes
+ajustados en 1b-fix-1: `mock_env` (agrega `LLM_MODEL_REFLECTION`),
+`test_shared_llm.py::test_defaults_without_env` (asevera el default, pasa a D12)
+y `TestEnvSources` (la igualdad de `env_sources` incluye `model`).
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".

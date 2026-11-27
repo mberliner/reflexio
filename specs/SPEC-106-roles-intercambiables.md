@@ -262,7 +262,7 @@ Deuda a revisar (`historial/sdd.md`):
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | `shared/llm/config.py::LLMConfig.from_env`; `tests/test_role_connection.py` (vigente, verde desde 1b) |
+| FR-001 | `shared/llm/config.py::LLMConfig.from_env`; `tests/test_role_connection.py` (vigente, verde desde 1b); modelo sin default: `LLMConfig.validate`, `tests/test_role_connection.py::TestModelWithoutDefault` (vigente, verde desde 1b-fix-1) |
 | FR-002 | `tests/test_role_connection_golden.py` (vigente, verde) |
 | FR-003 | `shared/llm/config.py` (`from_env`, `apply_constraints`, `_warn_once`, `provider_of`), `shared/llm/dspy_lm.py`; `tests/test_anthropic_matrix.py` (caso `api_base` ajustado); `tests/test_role_connection.py` (no fuga, vigente desde 1b) |
 | FR-004 | `shared/llm/usage.py`, `shared/analysis/roi_calculator.py::cost_from_usage`, `shared/llm/config.py`, `gepa_standalone/universal_optimizer.py::build_llm_configs`, `gepa_standalone/adapters/simple_rag_adapter.py`, `gepa_standalone/core/llm_factory.py`; test (pendiente) |
