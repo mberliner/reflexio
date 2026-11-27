@@ -588,5 +588,9 @@ texto parcial (`length` con texto) tambien cuenta como conexion valida con
 (401/404/429/VNet/generico) pasan a excepciones tipadas de LiteLLM; el de VNet
 se reemplaza por uno que fija que el texto "429" no decide la clase. Parada
 obligatoria: el usuario revisa la sonda antes de 2b.
+Revision de la sonda por el usuario (2026-11-27): nota (2) aceptada. Nota (1)
+aceptada para esta spec; mejora posterior, fuera de SPEC-106: en
+`infraestructura` el campo `variable` no deberia nombrar la credencial (no es
+la causa). Registrarla como deuda en el Cierre.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
