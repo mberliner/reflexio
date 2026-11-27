@@ -102,21 +102,6 @@ def create_reflection_proposer(
     return ReflectionProposer(create_reflection_lm_function(verbose=verbose, config=config))
 
 
-def validate_llm_connection() -> bool:
-    """
-    Valida la conexion con el LLM.
-
-    Returns:
-        True si la conexion es exitosa.
-
-    Raises:
-        LLMConnectionError: Si la conexion falla.
-    """
-    config = LLMConfig.from_env("task")
-    config.validate()
-    return config.validate_connection()
-
-
 def get_task_config() -> LLMConfig:
     """
     Obtiene la configuracion del modelo de tarea.

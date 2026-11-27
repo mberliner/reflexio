@@ -451,3 +451,30 @@ class TestModelWithoutDefault:
         reflection = LLMConfig.from_env("reflection", load_env=False)
         assert reflection.env_sources["model"] == "unset"
         assert reflection.model == ""
+
+
+class TestConnectionOverridesRejected:
+    """D14 (FR-003): los overrides de conexion desalinearian `env_sources`."""
+
+    @pytest.mark.parametrize(
+        ("name", "value"),
+        [
+            ("model", "azure/otro"),
+            ("api_key", "key-otra"),
+            ("api_base", "https://otro.openai.azure.com/"),
+            ("api_version", "2025-01-01"),
+        ],
+    )
+    def test_connection_override_raises(self, monkeypatch, name, value):
+        _set_env(monkeypatch, _AZURE_TASK)
+
+        with pytest.raises(ValueError, match=name):
+            LLMConfig.from_env("task", load_env=False, **{name: value})
+
+    def test_max_tokens_override_still_works(self, monkeypatch):
+        _set_env(monkeypatch, _AZURE_TASK)
+
+        config = LLMConfig.from_env("task", load_env=False, max_tokens=123)
+
+        assert config.max_tokens == 123
+        assert config.env_sources["model"] == "LLM_MODEL_TASK"

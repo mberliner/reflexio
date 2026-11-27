@@ -214,6 +214,9 @@ def resolve_judge_config(reflection_config: "LLMConfig") -> "LLMConfig":
     return judge
 
 
+_CONNECTION_FIELDS = frozenset({"model", "api_key", "api_base", "api_version"})
+
+
 @dataclass
 class LLMConfig:
     """
@@ -524,10 +527,16 @@ class LLMConfig:
             model_name: Name of the model to load (e.g., "task", "reflection", "embedding").
                        Reads from LLM_MODEL_{NAME} environment variable.
             load_env: If True, attempts to load .env files automatically.
-            **overrides: Override any config attribute.
+            **overrides: Override de atributos que no son de conexion (p. ej.
+                `max_tokens`, `temperature`). Los de conexion (`model`, `api_key`,
+                `api_base`, `api_version`) se rechazan con `ValueError`: se
+                resuelven solo por variables de entorno (FR-003, D14).
 
         Returns:
             LLMConfig instance with values from environment.
+
+        Raises:
+            ValueError: Si `overrides` incluye un campo de conexion.
 
         Precedencia (de mayor a menor): variables YA presentes en el entorno
         (proceso/CI) > `LLM_ENV_FILE` (ruta explicita a un .env) > `.env` del
@@ -542,6 +551,13 @@ class LLMConfig:
         corriendo desde la raiz, cargaba el `.env` equivocado (bug de precedencia):
         se reemplazo por `LLM_ENV_FILE`, un override explicito y sin nombres.
         """
+        rejected = sorted(set(overrides) & _CONNECTION_FIELDS)
+        if rejected:
+            raise ValueError(
+                f"from_env no admite overrides de conexion ({', '.join(rejected)}): "
+                "se resuelven por variables LLM_*_<ROL> para no desalinear env_sources"
+            )
+
         if load_env:
             from dotenv import load_dotenv
 
