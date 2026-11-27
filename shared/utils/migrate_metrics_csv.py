@@ -76,13 +76,12 @@ def _versions_from_run_json(results_dir: Path, run_dir_value: str) -> str:
 def _is_rag_run(results_dir: Path, run_dir_value: str) -> bool | None:
     """Whether a row is a RAG run: True, False, or None when it cannot be known.
 
-    RAG if its ``run.json`` has ``models.judge``; without that, if its
-    ``config_snapshot.yaml`` has ``adapter.type: rag`` (SPEC-106 D10).
+    RAG if its ``run.json`` has ``models.judge``; without that (or without
+    ``run.json``), if its ``config_snapshot.yaml`` has ``adapter.type: rag``
+    (SPEC-106 D10).
     """
     data = _run_json(results_dir, run_dir_value)
-    if data is None:
-        return None
-    models = data.get("models")
+    models = data.get("models") if data else None
     if isinstance(models, dict) and "judge" in models:
         return True
     snapshot = results_dir / run_dir_value.replace("\\", "/") / "config_snapshot.yaml"

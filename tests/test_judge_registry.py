@@ -322,6 +322,45 @@ class TestMigrationOfJudgeModel:
         assert rows[1]["Modelo Juez"] == ""
         assert result["judge_unknown"] == 1
 
+    def test_without_run_json_a_rag_snapshot_gets_the_teacher(self, tmp_path):
+        results = tmp_path / "results"
+        run = _make_run(results, "r6", run_json=None, snapshot="adapter:\n  type: rag\n")
+        _write_pre_106(
+            self._csv(tmp_path),
+            [{"Run ID": "r6", "Modelo Profesor": "azure/gpt-4o", "Run Directory": run}],
+        )
+
+        result = migrate_csv(self._csv(tmp_path))
+
+        assert _read(self._csv(tmp_path))[0]["Modelo Juez"] == "azure/gpt-4o"
+        assert result["judge_unknown"] == 0
+
+    def test_without_run_json_a_non_rag_snapshot_stays_empty(self, tmp_path):
+        results = tmp_path / "results"
+        run = _make_run(results, "r7", run_json=None, snapshot="adapter:\n  type: classifier\n")
+        _write_pre_106(
+            self._csv(tmp_path),
+            [{"Run ID": "r7", "Modelo Profesor": "p", "Run Directory": run}],
+        )
+
+        result = migrate_csv(self._csv(tmp_path))
+
+        assert _read(self._csv(tmp_path))[0]["Modelo Juez"] == ""
+        assert result["judge_unknown"] == 0
+
+    def test_without_run_json_nor_snapshot_is_empty_and_counted_unknown(self, tmp_path):
+        results = tmp_path / "results"
+        run = _make_run(results, "r8", run_json=None, snapshot=None)
+        _write_pre_106(
+            self._csv(tmp_path),
+            [{"Run ID": "r8", "Modelo Profesor": "p", "Run Directory": run}],
+        )
+
+        result = migrate_csv(self._csv(tmp_path))
+
+        assert _read(self._csv(tmp_path))[0]["Modelo Juez"] == ""
+        assert result["judge_unknown"] == 1
+
     def test_existing_judge_is_never_overwritten(self, tmp_path):
         results = tmp_path / "results"
         run = _make_run(results, "r5", run_json={"models": {"judge": {}}}, snapshot=None)
