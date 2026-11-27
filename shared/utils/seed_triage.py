@@ -57,7 +57,7 @@ class Diagnosis:
     config_path: str
     status: str  # RESUELTO | DUDOSO | SIN DATOS
     n_comparable: int
-    target: tuple[str, str] = ("", "")  # (modelo tarea, profesor) que usaria una corrida nueva
+    target: tuple[str, str, str] = ("", "", "")  # (tarea, profesor, juez) de una corrida nueva
     reasons: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)  # impiden correr (dataset)
     warnings: list[str] = field(default_factory=list)  # gold, etc. (no bloquean)
@@ -68,19 +68,13 @@ class Diagnosis:
         return not self.blockers
 
 
-def _matches(row_models: tuple[str, str], target: tuple[str, str]) -> bool:
-    """Una fila es comparable si su par (tarea, profesor) iguala al objetivo.
+def _matches(row_models: tuple[str, str, str], target: tuple[str, str, str]) -> bool:
+    """Una fila es comparable si su terna (tarea, profesor, juez) iguala al objetivo.
 
     Un componente vacio en el objetivo actua como comodin (p. ej. si el .env no
     declara el modelo de reflexion, no se filtra por el).
     """
-    rt, rr = row_models
-    tt, tr = target
-    if tt and rt != tt:
-        return False
-    if tr and rr != tr:
-        return False
-    return True
+    return all(not t or r == t for r, t in zip(row_models, target, strict=True))
 
 
 def _scale_for(rows: list[dict[str, str]]) -> float:
@@ -90,8 +84,11 @@ def _scale_for(rows: list[dict[str, str]]) -> float:
     return 100.0 if (opt and max(opt) <= 1.0) else 1.0
 
 
-def target_models(framework: str) -> tuple[str, str]:
-    """(modelo tarea, modelo profesor) que usaria una corrida nueva.
+def target_models(framework: str, adapter_type: str = "") -> tuple[str, str, str]:
+    """(tarea, profesor, juez) que usaria una corrida nueva (SPEC-106 D11).
+
+    El juez solo cuenta en casos RAG: ``LLM_MODEL_JUDGE`` o, si falta, el
+    profesor (FR-004). Fuera de RAG es '' (comodin).
 
     Precedencia: variable de entorno gana sobre el .env del subproyecto (igual
     que dotenv con override=False). Componente ausente -> '' (comodin al matchear).
@@ -103,7 +100,12 @@ def target_models(framework: str) -> tuple[str, str]:
     vals = dotenv_values(env_path) if env_path.exists() else {}
     task = os.environ.get("LLM_MODEL_TASK") or vals.get("LLM_MODEL_TASK") or ""
     refl = os.environ.get("LLM_MODEL_REFLECTION") or vals.get("LLM_MODEL_REFLECTION") or ""
-    return (task.strip(), refl.strip())
+    task, refl = task.strip(), refl.strip()
+    judge = ""
+    if adapter_type == "rag":
+        judge = (os.environ.get("LLM_MODEL_JUDGE") or vals.get("LLM_MODEL_JUDGE") or "").strip()
+        judge = judge or refl
+    return (task, refl, judge)
 
 
 def gold_is_unverified(dataset_path: Path | None) -> bool:
@@ -124,7 +126,7 @@ def diagnose(
     framework: str,
     config_path: str,
     rows: list[dict[str, str]],
-    target: tuple[str, str],
+    target: tuple[str, str, str],
     dataset_exists: bool,
     gold_unverified: bool,
 ) -> Diagnosis:
@@ -164,8 +166,13 @@ def diagnose(
     if n_comp == 0:
         reasons.append(
             f"sin referencia comparable: {n_other} fila(s) previa(s) usan otro modelo "
-            f"(objetivo {target[0] or '?'}/{target[1] or '?'})"
+            f"(objetivo {target[0] or '?'}/{target[1] or '?'}/{target[2] or '-'})"
         )
+        if target[2] and any(not _models(r)[2] for r in rows):
+            reasons.append(
+                "hay filas sin Modelo Juez (CSV sin migrar): correr "
+                "python -m shared.utils.migrate_metrics_csv"
+            )
         return Diagnosis(
             name,
             framework,
@@ -249,7 +256,7 @@ def collect_diagnoses() -> list[Diagnosis]:
                 print(f"  [WARN] {path.name}: no se pudo leer ({exc})", file=sys.stderr)
                 continue
             rows = read_rows(info.summary_csv, info.case_names)
-            target = target_models(info.framework)
+            target = target_models(info.framework, info.adapter_type)
             dataset_exists = info.dataset_path is None or info.dataset_path.exists()
             gold_unv = gold_is_unverified(info.dataset_path)
             out.append(
@@ -296,26 +303,27 @@ def print_legend() -> None:
     print("  !  advertencia: no bloquea pero exige confirmar (p.ej. gold_verificado=no, D-001)")
     print("  x  bloqueante: impide correr (dataset ausente -> la corrida haria [SKIP])")
     print()
-    print("Columna N = nro de filas previas COMPARABLES (mismo par Modelo Tarea/Profesor")
+    print("Columna N = nro de filas previas COMPARABLES (misma terna Modelo Tarea/Profesor/Juez")
     print("que usaria una corrida nueva); las de otro modelo no cuentan como referencia.")
     print()
 
 
 def print_targets(diags: list[Diagnosis]) -> None:
-    """Muestra el par de modelos objetivo por engine (Modelo Tarea / Profesor).
+    """Muestra la terna de modelos objetivo por engine (Tarea / Profesor / Juez).
 
     Es el contexto imprescindible para leer el tablero: cuando un caso sale
     'sin referencia comparable', es respecto a ESTE par (de .env o env var). Sin
     el par, 'no hay pruebas' no se sabe contra que modelo se afirma.
     """
-    targets: dict[str, tuple[str, str]] = {}
+    targets: dict[str, tuple[str, str, str]] = {}
     for d in diags:
         targets.setdefault(d.framework, d.target)
     print("Modelo objetivo de una corrida nueva (de .env / env var), por engine:")
-    for eng, (task, refl) in sorted(targets.items()):
+    for eng, (task, refl, judge) in sorted(targets.items()):
         t = task or "(sin definir)"
         r = refl or "(sin definir)"
-        print(f"  {eng:<5} Tarea: {t}  |  Profesor: {r}")
+        j = judge or "(no aplica)"
+        print(f"  {eng:<5} Tarea: {t}  |  Profesor: {r}  |  Juez (RAG): {j}")
     print()
 
 

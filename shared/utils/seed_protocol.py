@@ -46,6 +46,7 @@ COL_RUN_ID = "Run ID"
 COL_CASO = "Caso"
 COL_MODELO_TASK = "Modelo Tarea"
 COL_MODELO_PROF = "Modelo Profesor"
+COL_MODELO_JUEZ = "Modelo Juez"
 COL_BASE = "Baseline Score"
 COL_OPT = "Optimizado Score"
 COL_ROB = "Robustez Score"
@@ -91,6 +92,7 @@ class ConfigInfo:
 
         self.case_names = {case.get("title"), case.get("name")} - {None}
         self.summary_csv = paths.summary_csv
+        self.adapter_type = str((raw.get("adapter") or {}).get("type") or "")
         self.eval_repeats = int(opt.get("eval_repeats", 1))
         csv_filename = data.get("csv_filename")
         self.dataset_path = (paths.datasets / csv_filename) if csv_filename else None
@@ -170,11 +172,16 @@ def _scaled(stats: dict[str, Any], key: str, scale: float) -> float | None:
     return val * scale if val is not None else None
 
 
-def _models(row: dict[str, str]) -> tuple[str, str]:
-    """Par (modelo tarea, modelo profesor) de una fila; '' si falta la columna."""
+def _models(row: dict[str, str]) -> tuple[str, str, str]:
+    """Terna (tarea, profesor, juez) de una fila, con la cadena cruda.
+
+    SPEC-106 FR-006: sin normalizar, ``azure/gpt-4o`` y ``openai/gpt-4o`` son
+    modelos distintos. '' si falta la columna (p. ej. CSV sin migrar).
+    """
     return (
         (row.get(COL_MODELO_TASK) or "").strip(),
         (row.get(COL_MODELO_PROF) or "").strip(),
+        (row.get(COL_MODELO_JUEZ) or "").strip(),
     )
 
 
@@ -185,7 +192,7 @@ def filter_reference_by_models(
 
     Comparar robustez entre modelos distintos invalida la conclusion (baseline
     confound, leccion 10). Solo son comparables las filas previas que usan el
-    mismo par (tarea, profesor) que el lote nuevo. Devuelve la referencia
+    misma terna (tarea, profesor, juez) que el lote nuevo. Devuelve la referencia
     filtrada y cuantas filas se excluyeron. Sin lote nuevo, no filtra.
     """
     if not new_rows:
@@ -404,7 +411,11 @@ def report(
     print(f"\n=== {info.label()} ({info.framework}, eval_repeats={info.eval_repeats}) ===")
 
     if excluded_ref:
-        nm = ", ".join(sorted(f"{t or '?'}/{p or '?'}" for t, p in {_models(r) for r in new_rows}))
+        nm = ", ".join(
+            sorted(
+                f"{t or '?'}/{p or '?'}/{j or '-'}" for t, p, j in {_models(r) for r in new_rows}
+            )
+        )
         print(
             f"  [WARN] referencia previa: {excluded_ref} fila(s) excluidas por usar "
             f"modelos != lote nuevo ({nm}); no son comparables."

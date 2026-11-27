@@ -83,6 +83,33 @@ class TestComparabilidadModelos:
     def _row(task, prof):
         return {"Modelo Tarea": task, "Modelo Profesor": prof}
 
+    def test_modelos_devuelve_la_terna_cruda(self):
+        row = {
+            "Modelo Tarea": " azure/gpt-4o ",
+            "Modelo Profesor": "openai/gpt-4o",
+            "Modelo Juez": "azure/gpt-4o",
+        }
+        assert sp._models(row) == ("azure/gpt-4o", "openai/gpt-4o", "azure/gpt-4o")
+        assert sp._models({}) == ("", "", "")
+
+    def test_azure_y_openai_del_mismo_modelo_son_distintos(self):
+        before = [self._row("azure/gpt-4o", "p")]
+        filtered, excluded = sp.filter_reference_by_models(
+            before, [self._row("openai/gpt-4o", "p")]
+        )
+        assert filtered == [] and excluded == 1
+
+    def test_cambiar_solo_el_juez_excluye_la_referencia(self):
+        before = [{**self._row("t", "p"), "Modelo Juez": "azure/j1"}]
+        new = [{**self._row("t", "p"), "Modelo Juez": "azure/j2"}]
+        filtered, excluded = sp.filter_reference_by_models(before, new)
+        assert filtered == [] and excluded == 1
+
+    def test_fila_rag_sin_migrar_no_es_comparable_con_fila_nueva(self):
+        before = [self._row("t", "p")]  # sin Modelo Juez
+        new = [{**self._row("t", "p"), "Modelo Juez": "p"}]
+        assert sp.filter_reference_by_models(before, new) == ([], 1)
+
     def test_no_filtra_sin_lote_nuevo(self):
         before = [self._row("azure/gpt-5-mini", "azure/gpt-5")]
         filtered, excluded = sp.filter_reference_by_models(before, [])
