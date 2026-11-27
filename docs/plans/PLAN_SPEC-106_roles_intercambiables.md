@@ -78,7 +78,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 1 (correccion) | 1b-fix-1 Modelo sin default: `LLM_MODEL_<ROL>` ausente o vacio falla en `validate()` nombrando rol y variable (test RED previo) | FR-001 (enmienda), FR-003 (ancla) | D12 | Sonnet 5.5 | hecho (1e23351) |
 | 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | hecho (7cc3840) |
 | | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | hecho (27f111f) |
-| 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | pendiente |
+| 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | hecho (890d343) |
 | | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | pendiente |
 | 4 Registro y comparabilidad | 4a `run.json` con proveedor y host por rol; columna `Modelo Juez`; logger sobre CSV sin migrar; migracion | FR-006, SC-006 | D7, D10 | Sonnet 5.5 | pendiente |
 | | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | pendiente |
@@ -602,5 +602,11 @@ existentes ajustados: `test_dspy_orchestrator_failures.py` (los stubs de
 `reflection_config is None`; `baseline_only.py` no lo llama, asi que no hay
 fallo hoy. En `save_aborted_run` de DSPy la reflexion tampoco es None porque el
 optimizador usa ambos roles.
+3a hecha (890d343). `UsageTracker` con bucket `judge`; `reflection_tokens_for_csv`
+en ambos orquestadores; `cost_from_usage(..., judge_model=None)`. En GEPA el
+modelo del juez sale de `adapter.judge_config` (`_judge_model()`; None sin juez
+-> tarifa con el profesor). En DSPy no hay juez, no pasa `judge_model`. Test
+existente ajustado: `test_failure_call.py::test_success_records_token_usage`
+(asevera el pliegue viejo del juez en `reflection`; pasa al bucket `judge`).
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
