@@ -92,7 +92,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | hecho (d516fcf) |
 | 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | hecho (35ec0a6) |
 | 6 (correcciones) | 6-fix-1 (R1) Migracion: sin `run.json`, clasificar la fila por `config_snapshot.yaml` | FR-006, SC-006 | D10 | Sonnet 5.5 | hecho (b6b4102) |
-| | 6-fix-2 (R2) Juez heredado: sin sonda propia y mensajes con las variables del profesor | FR-004, FR-005 | D8, D13 | Sonnet 5.5 | pendiente |
+| | 6-fix-2 (R2) Juez heredado: sin sonda propia y mensajes con las variables del profesor | FR-004, FR-005 | D8, D13 | Sonnet 5.5 | hecho (dcd48c9) |
 | | 6-fix-3 (R3, R5) `from_env` rechaza overrides de conexion; borrar `validate_llm_connection` | FR-003 | D14 | Sonnet 5.5 | pendiente |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |
 | Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
@@ -794,5 +794,10 @@ framework segun el orden de los casos), R6 (`BaseAdapter` reconstruye la config
 de tarea desde el entorno), R7 (supervisor: `save_aborted_run` y
 `collect_model_info` no toleran `reflection_config is None`; hoy no alcanzable) y
 `variable` en `infraestructura` (revision de la sonda 2a). Siguiente: 6-fix-1.
+6-fix-2 hecha (dcd48c9). `LLMConfig.env_role` (D13); `validate`, `_source_variable` y
+`_param_names` nombran las variables del profesor para el juez heredado;
+`validate_llm_connections` valida el juez heredado pero no lo sondea. Con `LLM_MODEL_JUDGE`
+sigue sondeandose. Tests nuevos en `tests/test_judge_role.py`; sin tests existentes
+ajustados. Archivos: solo los de la lista (sin cambios en `test_role_startup.py`).
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
