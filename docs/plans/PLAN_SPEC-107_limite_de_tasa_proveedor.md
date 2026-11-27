@@ -101,7 +101,7 @@ sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 3 Runners | 3a `BATCH_COOLDOWN` y corte ante 75 en `run_dspy_total.sh` y `run_demos_gepa.sh` (helper comun), tests con python simulado | FR-012 (runners), SC-010 (runners) | D12, D13 | Sonnet 5.5 | pendiente |
 | | 3b `run_seeds`: corte ante 75 y `BATCH_COOLDOWN` con `--jobs 1` | FR-012 (`run_seeds`), SC-010 (`run_seeds`) | D14 | Sonnet 5.5 | pendiente |
 | 4 Docs y enmiendas | 4a Docs: `GEPA_MANEJO_ERRORES.md`, `LLM_CONFIG.md`, `YAML_CONFIG_REFERENCE.md`, `METADATA_REPRODUCIBILIDAD.md`, `DEVELOPMENT.md`, `PROTOCOLO_N_SEEDS.md` | FR-004, FR-005, FR-009, FR-010, FR-011, FR-012 (docs) | todas | Sonnet 5.5 | pendiente |
-| | 4b Enmiendas de SPEC-104 (FR-007, FR-011, FR-015) y SPEC-106 (FR-005) con traza en `historial/sdd.md`; enmiendas aprobadas de SPEC-107 (H1 a H5) | FR-003, FR-005, FR-011 | - | Opus 5.5 | pendiente |
+| | 4b Enmiendas de SPEC-104 (FR-007, FR-011, FR-015) y SPEC-106 (FR-005) con traza en `historial/sdd.md`; enmiendas aprobadas de SPEC-107 (H1 a H6 y las decisiones C2, C4, C5, C6) | FR-003, FR-005, FR-011 | - | Opus 5.5 | pendiente |
 | 5 Revision | 5 Revision integral sin red contra la spec (diff `e1a97e8..HEAD`); hallazgos al plan | todos | todas | Opus 5.5 | pendiente |
 | 6 Verificacion (sesion interactiva, opcional) | Corrida corta real por subproyecto sin 429 forzado (regresion: `rate_limit_waits` en cero, salida 0); el 429 se verifica simulado | SC-005, SC-006 (regresion) | - | Sonnet 5.5 | pendiente |
 | Cierre (sesion interactiva) | `[SDD-Check]`, spec y registro a `active`, Coverage mapping vigente, deuda | todos | - | Opus 5.5 | pendiente |
@@ -123,7 +123,7 @@ Entorno `.venv`: litellm 1.108.5, openai 3.57.0, httpx 0.28.1, dspy 3.5.0,
 gepa 0.1.4. Sin red: `httpx.Client.send` interceptado con el mismo mecanismo de
 `tests/test_litellm_failure_mapping.py::intercept_httpx`, llamando a
 `litellm.completion(..., num_retries=0)` como `_raw_completion`. Scripts y salida
-fuera del repo (`C:/Users/fmartinez3/spec107_logs/`: `test_verify_headers.py`,
+fuera del repo (`$HOME/spec107_logs/`: `test_verify_headers.py`,
 `test_verify_azure_quota.py`, `test_verify_runner_fake_python.py`), corridos con
 `.venv/Scripts/python.exe -m pytest <script> -s -p no:cacheprovider
 --rootdir=<dir>`; no dejan archivos en el arbol.
@@ -203,6 +203,18 @@ No se edito la spec. Cada enmienda la aplica 4b si el usuario la aprueba.
   acota solo el `Retry-After` (FR-003 (i)), no el backoff sin cabecera. Con los
   defaults no importa (60 < 120); con `rate_limit_max_wait: 10` el backoff
   llegaria igual a 60 s. La enmienda de FR-004 lo deja escrito en 4b.
+- H6 (baja, matriz de proporcionalidad, redaccion). "195 s como maximo por
+  caso" vale por llamada: un caso con varias llamadas (tarea y juez en RAG, o
+  sonda de atribucion contra el baseline) puede sumar mas de una espera
+  completa. Enmienda: "por llamada" en la matriz y en SC-003 donde aplique.
+
+Decisiones del plan que interpretan o extienden la letra de la spec y que 4b
+MUST llevar al texto de SPEC-107 (para que al Cierre la spec describa la
+conducta implementada): C2 (FR-012: `seed_protocol` salta tambien los
+`--config` restantes y devuelve 75), C4 (FR-005 y FR-009: las esperas por
+cooldown emiten linea `INFO` y cuentan en `waits`/`seconds`), C5 (FR-009 y
+FR-011: las esperas de la sonda cuentan en `rate_limit_waits`) y C6 (FR-012:
+los runners salen con 75 al detenerse por limite del proveedor).
 
 ## Decisiones de diseno
 
@@ -305,7 +317,13 @@ D5. Cooldown por rol (FR-007, confirmado por el usuario):
 - Antes de cada llamada (`fn()` en `call_with_infra_retry`), mientras
   `cooldown_until(rol) - monotonic() > 0`: espera ese resto con D4 (linea `INFO`
   con `fuente=cooldown`, cuenta en `waits` y `seconds`; C4). El hilo que fijo el
-  cooldown no espera dos veces: al despertar, `monotonic() >= until`.
+  cooldown no espera dos veces: al despertar, `monotonic() >= until`. La espera
+  por cooldown MUST NOT consumir `attempt_rl` ni `attempt_infra`: el hilo no
+  recibio un 429, solo difiere su llamada.
+- Limitacion aceptada (letra de FR-007, "por rol"): el cooldown no se comparte
+  entre roles aunque usen el mismo deployment (SPEC-106 permite, p. ej., tarea y
+  juez sobre el mismo modelo); el 429 de un rol no difiere las llamadas del
+  otro. Queda como deuda en el Cierre.
 - Es reactivo: no limita hilos ni tasa (fuera de alcance de la spec). En
   `gepa_standalone` no hay hilos (no existe `num_threads`); aplica a
   `dspy_gepa_poc` (`dspy.Evaluate` y `dspy.GEPA` con `num_threads`).
@@ -315,7 +333,9 @@ D6. Aviso visible (FR-005, H3):
   Mensaje fijo (lo parsea SC-006): `Limite de tasa: rol=<rol> modelo=<modelo>
   intento <n>/<m> espera <s>s fuente=<retry-after-ms|x-ms-retry-after-ms|
   retry-after|backoff|cooldown>`, con `n` = intento que se va a hacer y `m = 1 +
-  rate_limit_retries`; `s` con un decimal.
+  rate_limit_retries`; `s` con un decimal. En una espera por cooldown (D5) el
+  hilo no recibio un 429: `n = attempt_rl + 1` de esa llamada (la llamada que
+  difiere), sin consumir intento.
 - `enable_rate_limit_console()` en `rate_limit.py`, exportada: agrega a ese
   logger (y solo a ese) un handler `INFO` que escribe en el `sys.stdout`
   vigente al emitir (subclase de `StreamHandler` con `stream` resuelto en
@@ -457,11 +477,18 @@ cabeceras por proveedor, `insufficient_quota` OpenAI y Azure, "Request too large
 `expected_retry_after` (segundos y cabecera de origen). `RETRY_CASES` no cambia:
 sus `expected_http_calls` miden a LiteLLM, no al punto de llamada.
 
-D17. Mensaje del aborto: `shared/display/formatting.py::format_abort_error` (o
-el `abort_message` de cada orquestador) agrega, cuando
-`is_rate_limit_abort()`, "Causa: limite de tasa del proveedor; el batch se
-detiene (codigo 75)". Sin cambiar el resto del texto (lo parsea SC-005 de
-SPEC-104 solo en la linea ERROR del contador, que no cambia).
+D17. Mensaje del aborto: `shared/display/formatting.py::format_abort_error`
+gana el parametro `rate_limited: bool = False` y, con `True`, agrega "Causa:
+limite de tasa del proveedor; el batch se detiene (codigo 75)". Quien decide es
+el `abort_message` de cada orquestador, que llama a
+`get_failure_tracker().is_rate_limit_abort()` y pasa el flag: `shared/display`
+MUST NOT leer el estado del contador (hoy solo importa `shared.scoring`). Sin
+cambiar el resto del texto (lo parsea SC-005 de SPEC-104 solo en la linea ERROR
+del contador, que no cambia).
+
+`dspy_gepa_poc/scripts/baseline_only.py` (decision explicita): recibe el handler
+de D6 pero sigue saliendo con 1 ante cualquier aborto. FR-010 nombra solo los dos
+entry points y ningun runner invoca `baseline_only.py`.
 
 ## Tests existentes que la spec obliga a ajustar (con su FR)
 
@@ -675,7 +702,8 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 - Archivos: `specs/SPEC-104-fallas-tecnicas-justas.md`,
   `specs/SPEC-106-roles-intercambiables.md`,
   `specs/SPEC-107-limite-de-tasa-proveedor.md` (solo texto de FR/Contexto
-  aprobado, sigue `draft`), `historial/sdd.md`.
+  aprobado, sigue `draft`), `historial/sdd.md`. Las enmiendas de SPEC-107
+  incluyen H1 a H6 y las decisiones C2, C4, C5 y C6 (ver "Hallazgos").
 
 ### 5 Revision integral — Opus 5.5
 
@@ -703,7 +731,8 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 
 - `[SDD-Check]` en `historial/sdd.md`; Coverage mapping de "previsto" a vigente
   en todas las filas; spec y `specs/SPECS_REGISTRY.md` a `active`; deuda nueva
-  (p. ej. H1 si queda como limite, winpty sin test); plan marcado cerrado.
+  (p. ej. H1 si queda como limite, winpty sin test, cooldown por rol y no por
+  deployment, D5); plan marcado cerrado.
 
 ## Lanzamiento por CLI (modo no interactivo)
 
