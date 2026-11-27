@@ -15,7 +15,7 @@ from pathlib import Path
 try:
     import litellm
 
-    from shared.llm import LLMConfig
+    from shared.llm import LLMConfig, provider_of
 except ImportError:
     print(
         "Error: Could not import required modules. Make sure you are running from the project root."
@@ -232,78 +232,109 @@ def print_deployments_list(deployments):
     print(f"{'=' * 70}\n")
 
 
-def check_config(available_deployments, base_config):
-    """Verifica la configuración actual."""
+def _has_any_credential() -> bool:
+    """True si hay `LLM_API_KEY` o alguna `LLM_API_KEY_<ROL>` no vacia (D2)."""
+    return any(
+        name.startswith("LLM_API_KEY") and value.strip() for name, value in os.environ.items()
+    )
+
+
+_ROLE_LABELS = {
+    "task": "Task Model (estudiante)",
+    "reflection": "Reflection Model (Prof)",
+    "judge": "Judge Model (juez)",
+}
+
+
+def role_configs() -> list[LLMConfig]:
+    """
+    Configuracion resuelta de cada rol a verificar (SPEC-106 FR-008, D2): `task`,
+    `reflection` y `judge` solo si `LLM_MODEL_JUDGE` esta definido. Cada rol usa su
+    propia conexion (variables por rol y proveedor ancla).
+    """
+    roles = ["task", "reflection"]
+    if (os.getenv("LLM_MODEL_JUDGE") or "").strip():
+        roles.append("judge")
+    return [LLMConfig.from_env(role) for role in roles]
+
+
+def _deployment_name(config: LLMConfig) -> str:
+    model = config.model
+    return model[len("azure/") :] if model.startswith("azure/") else model
+
+
+def _endpoint_key(config: LLMConfig) -> tuple:
+    """Identifica el endpoint de un rol (los deployments escaneados valen por endpoint)."""
+    return (config.api_base, config.api_key, config.api_version)
+
+
+def check_config(available_by_endpoint, role_confs=None):
+    """
+    Verifica la configuracion actual, cada rol contra su propio endpoint y credencial
+    (SPEC-106 FR-008). Un rol que no es Azure se informa "no aplica", no como error.
+
+    `available_by_endpoint` mapea la clave de endpoint (`_endpoint_key`) a los
+    deployments activos ya escaneados en ese endpoint; se completa con las
+    verificaciones manuales.
+    """
     print(f"{'=' * 70}")
-    print("CONFIGURACIÓN ACTUAL (dspy_gepa_poc)")
+    print("CONFIGURACIÓN ACTUAL (por rol)")
     print(f"{'=' * 70}\n")
 
-    # Load configs from env
-    task_conf = LLMConfig.from_env("task")
-    ref_conf = LLMConfig.from_env("reflection")
+    if role_confs is None:
+        role_confs = role_configs()
 
-    # Extract plain names (removing azure/ prefix if present)
-    task_raw = task_conf.model
-    ref_raw = ref_conf.model
+    failed = []
+    for conf in role_confs:
+        label = _ROLE_LABELS.get(conf.role, conf.role)
+        print(f"{label}:  {conf.model or '(sin modelo)'}")
+        print(f"  -> Conexion:               {conf.connection_summary()}")
 
-    task_name = task_raw.replace("azure/", "") if task_raw.startswith("azure/") else task_raw
-    ref_name = ref_raw.replace("azure/", "") if ref_raw.startswith("azure/") else ref_raw
+        if not conf.model or provider_of(conf.model) != "azure":
+            print("  -> Estado:                 no aplica (no es un deployment Azure)\n")
+            continue
 
-    task_ok = task_name in available_deployments
-    ref_ok = ref_name in available_deployments
+        name = _deployment_name(conf)
+        available = available_by_endpoint.setdefault(_endpoint_key(conf), [])
+        ok = name in available
+        if not ok:
+            print(f"  Verificando '{name}' manualmente...")
+            if test_deployment(conf, name, verbose=True):
+                ok = True
+                available.append(name)
+        print(f"  -> Deployment Name:        {name}")
+        print(f"  -> Estado:                 {'[OK] Activo' if ok else '[X] NO ENCONTRADO'}\n")
+        if not ok:
+            failed.append((conf, available))
 
-    # Check individually if not found in scan list
-    if not task_ok:
-        print(f"Verificando Task Model '{task_name}' manualmente...")
-        if test_deployment(base_config, task_name, verbose=True):
-            task_ok = True
-            available_deployments.append(task_name)
-
-    if not ref_ok and ref_name != task_name:
-        print(f"Verificando Reflection Model '{ref_name}' manualmente...")
-        if test_deployment(base_config, ref_name, verbose=True):
-            ref_ok = True
-            available_deployments.append(ref_name)
-
-    print(f"\nTask Model (estudiante):      {task_raw}")
-    print(f"  -> Deployment Name:        {task_name}")
-    print(f"  -> Estado:                 {'[OK] Activo' if task_ok else '[X] NO ENCONTRADO'}\n")
-
-    print(f"Reflection Model (Prof):  {ref_raw}")
-    print(f"  -> Deployment Name:        {ref_name}")
-    print(f"  -> Estado:                 {'[OK] Activo' if ref_ok else '[X] NO ENCONTRADO'}\n")
-
-    if not task_ok or not ref_ok:
+    if failed:
         print(f"{'=' * 70}")
         print("RECOMENDACIONES")
         print(f"{'=' * 70}\n")
 
-        # Sugerir replacements
-        if not task_ok:
-            suggestions = [
-                d for d in available_deployments if "mini" in d or "3.5" in d or "4.1" in d
-            ]
+        for conf, available in failed:
+            if conf.role == "task":
+                suggestions = [d for d in available if "mini" in d or "3.5" in d or "4.1" in d]
+                limit = 3
+            else:
+                suggestions = [
+                    d
+                    for d in available
+                    if any(x in d for x in ["gpt-5", "gpt-4o", "gpt-4.5", "o3", "o1"])
+                ]
+                limit = 5
             if suggestions:
-                print("Para Task Model, considera usar uno de estos deployments detectados:")
-                for s in suggestions[:3]:
-                    print(f"  - azure/{s}")
-                print()
-
-        if not ref_ok:
-            suggestions = [
-                d
-                for d in available_deployments
-                if any(x in d for x in ["gpt-5", "gpt-4o", "gpt-4.5", "o3", "o1"])
-            ]
-            if suggestions:
-                print("Para Reflection Model, considera usar uno de estos deployments detectados:")
-                for s in suggestions[:5]:
+                print(
+                    f"Para {_ROLE_LABELS.get(conf.role, conf.role)}, considera usar uno de "
+                    "estos deployments detectados:"
+                )
+                for s in suggestions[:limit]:
                     print(f"  - azure/{s}")
                 print()
 
         print("Actualiza tu archivo .env con el prefijo azure/ + el nombre del deployment.\n")
     else:
-        print("[OK] Todos los deployments configurados estan activos.\n")
+        print("[OK] Todos los deployments configurados estan activos o no aplican.\n")
 
 
 def main():
@@ -333,7 +364,8 @@ def main():
     # fallback hardcodeado); esta herramienta declara su default (dspy_gepa_poc) y lo
     # expone via LLM_ENV_FILE, respetando lo que ya este en el entorno.
     # Precedencia: entorno actual > --env-file > LLM_ENV_FILE > .env de dspy_gepa_poc.
-    if not os.getenv("LLM_API_KEY"):
+    # La carga se dispara sin ninguna credencial (global ni por rol), SPEC-106 FR-005.
+    if not _has_any_credential():
         env_file = args.env_file or os.getenv("LLM_ENV_FILE")
         if not env_file:
             default_env = Path(__file__).resolve().parents[2] / "dspy_gepa_poc" / ".env"
@@ -341,9 +373,9 @@ def main():
         if env_file:
             os.environ["LLM_ENV_FILE"] = env_file
 
-    # Load base config to get credentials (using 'task' as default source)
+    # Configuracion de cada rol, cada uno con su propia conexion (FR-008)
     try:
-        base_config = LLMConfig.from_env("task")
+        confs = role_configs()
     except Exception as e:
         print(f"Error loading configuration: {e}")
         print("Check your .env file.")
@@ -351,18 +383,26 @@ def main():
 
     print(f"\n{'=' * 70}")
     print("VERIFICADOR DE DEPLOYMENTS AZURE OPENAI")
-    print(f"{'=' * 70}")
-    print(f"\nEndpoint: {base_config.api_base}\n")
+    print(f"{'=' * 70}\n")
+    for conf in confs:
+        print(f"  {conf.connection_summary()}")
+    print()
 
     try:
-        if args.quick:
-            # Solo verificar config actual
-            check_config([], base_config)
-        else:
-            # Escaneo completo
-            available = scan_deployments(base_config, verbose=args.verbose)
-            print_deployments_list(available)
-            check_config(available, base_config)
+        available_by_endpoint: dict = {}
+        if not args.quick:
+            # Escaneo completo: una vez por endpoint Azure distinto
+            for conf in confs:
+                if not conf.model or provider_of(conf.model) != "azure":
+                    continue
+                key = _endpoint_key(conf)
+                if key in available_by_endpoint:
+                    continue
+                print(f"\nEndpoint ({conf.role}): {conf.endpoint_host}")
+                available = scan_deployments(conf, verbose=args.verbose)
+                print_deployments_list(available)
+                available_by_endpoint[key] = available
+        check_config(available_by_endpoint, confs)
 
     except KeyboardInterrupt:
         print("\n\n[WARN] Verificacion cancelada.\n")
