@@ -94,7 +94,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 6 (correcciones) | 6-fix-1 (R1) Migracion: sin `run.json`, clasificar la fila por `config_snapshot.yaml` | FR-006, SC-006 | D10 | Sonnet 5.5 | hecho (b6b4102) |
 | | 6-fix-2 (R2) Juez heredado: sin sonda propia y mensajes con las variables del profesor | FR-004, FR-005 | D8, D13 | Sonnet 5.5 | hecho (dcd48c9) |
 | | 6-fix-3 (R3, R5) `from_env` rechaza overrides de conexion; borrar `validate_llm_connection` | FR-003 | D14 | Sonnet 5.5 | hecho (36e9ec8) |
-| 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |
+| 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | hecho (verificado 2026-11-27; ver "Verificacion real (fase 7)") |
 | Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
 
 ## Dependencias
@@ -707,6 +707,82 @@ Verificado sin hallazgos:
   `make_completion_response` / `patch_litellm_completion` y payloads de
   `tests/litellm_failure_payloads.py`.
 
+## Verificacion real (fase 7)
+
+Sesion interactiva, 2026-11-27, base `77b3351`. Estudiante `azure/gpt-4.1-mini`
+(conexion global Azure), profesor `anthropic/claude-sonnet-5-5`
+(`LLM_API_KEY_REFLECTION`); en `gepa_standalone` juez propio
+`anthropic/claude-sonnet-5-5` (`LLM_MODEL_JUDGE`, `LLM_API_KEY_JUDGE`). Effort y
+thinking sin definir en el `.env`: el profesor y el juez Claude quedaron en
+`effort: medium (default)` y `thinking: adaptive` en ambas corridas (constantes en
+el lote, precondicion de SC-002 con D-028 abierta).
+
+Pasos previos:
+
+- `check_deployments --env-file` en ambos `.env`: `task` `[OK] Activo`
+  (`gpt-4.1-mini` en `a-sand-openai.openai.azure.com`), `reflection` "no aplica".
+  El juez no se listo en `gepa_standalone` (ver R8).
+- `migrate_metrics_csv` sobre ambos CSV maestros (backups
+  `.bak-20261127_160646` y `.bak-20261127_160657`): GEPA 690 filas, 18 RAG con
+  `Modelo Juez` = `Modelo Profesor`, 395 sin saber si son RAG; DSPy 614 filas, todas
+  "sin saber si son RAG" (ver R9).
+
+SC-001, GEPA (`rag_optimization.yaml`, 60 metric calls, usados 68; run `235a07e5`,
+`runs/rag_optimization/2026-11-27_161410_2909060d`):
+
+- Log de arranque (Step 2): `Rol: task | azure | azure/gpt-4.1-mini |
+  a-sand-openai.openai.azure.com`, `Rol: reflection | anthropic |
+  anthropic/claude-sonnet-5-5 | api.anthropic.com`, `Rol: judge | anthropic |
+  anthropic/claude-sonnet-5-5 | api.anthropic.com`; aviso de que `LLM_API_BASE` no
+  se hereda a `reflection` ni a `judge`; sondas de los tres roles OK.
+- `run.json` `models`: `provider`/`endpoint_host` `azure`/`a-sand-openai...` (task),
+  `anthropic`/`api.anthropic.com` (reflection y judge).
+- `usage`: task 78 llamadas (53490 + 9359 tokens), reflection 8 (21101 + 11003),
+  judge 78 (60777 + 16067); `cost_usd` 0,448095.
+- Fila CSV: `Modelo Juez` = `anthropic/claude-sonnet-5-5`; `Tokens Task` 62849;
+  `Tokens Reflection` 108948 (= reflexion + juez, FR-004); `Costo Real USD`
+  0,448095. Baseline 31,25, optimizado 93,75, test 92,50.
+
+SC-001, DSPy (`dynamic_sentiment_hard.yaml`, 30 metric calls; run `3182b393`,
+`runs/sentiment_hard_20261127_160756`):
+
+- Log de arranque: `task | azure | azure/gpt-4.1-mini |
+  a-sand-openai.openai.azure.com` y `reflection | anthropic |
+  anthropic/claude-sonnet-5-5 | api.anthropic.com`.
+- `run.json` `models` con proveedor y host por rol; `usage`: task 69 llamadas
+  (33465 + 5936), reflection 1 (850 + 753), judge 0; `cost_usd` 0,017811.
+- Fila CSV: `Modelo Juez` vacio (no RAG); `Tokens Reflection` 1603. Baseline 75,00,
+  optimizado 75,00, test 86,67.
+
+SC-002 (sin red, sobre las filas resultantes):
+
+- `seed_triage --list`: `rag_optimization` N=1 ("45 fila(s) previa(s) de otro
+  modelo se ignoran") y `dynamic_sentiment_hard` N=1 ("20 ... se ignoran").
+- `seed_protocol.filter_reference_by_models` con la fila nueva como lote: RAG 0 de
+  45 previas comparables (ternas previas: `azure/gpt-4.1-mini` / `azure/gpt-4o` /
+  `''` 27, `.../azure/gpt-4o/azure/gpt-4o` 5, otras de gpt-5 y gpt-5.4); sentiment 0
+  de 20 (`azure/gpt-4.1-mini` / `azure/gpt-4o` 15, gpt-5.4 5). Mismo caso, dataset y
+  estudiante; solo cambia el profesor (y el juez en RAG): las filas nuevas no se
+  comparan con la combinacion anterior.
+- `seed_protocol --report-only` no filtra sin lote nuevo y lo avisa con `[WARN]`
+  (conducta de SPEC-100, sin cambio).
+
+Hallazgos nuevos de la fase 7 (sin corregir; pendientes de decision del usuario):
+
+- R8 (media, FR-008, `shared/utils/check_deployments.py::role_configs`). Decide si
+  incluye `judge` leyendo `LLM_MODEL_JUDGE` de `os.environ` antes de que
+  `LLMConfig.from_env` cargue `LLM_ENV_FILE` (la carga es perezosa, en el primer
+  `from_env`). Con `--env-file` (o `LLM_ENV_FILE`) y el juez definido solo en ese
+  `.env`, el juez no se verifica. Correccion propuesta: cargar el `.env` antes de
+  armar la lista de roles (o resolver `task` primero y despues decidir el juez).
+  Test RED: `--env-file` con `LLM_MODEL_JUDGE` solo en el archivo -> el juez figura.
+- R9 (baja, FR-006, `shared/utils/migrate_metrics_csv.py`). En el CSV de DSPy cada
+  fila cuenta como "sin saber si son RAG (sin run.json ni config_snapshot.yaml)":
+  los snapshots de DSPy existen pero no tienen `adapter.type`. El resultado
+  (`Modelo Juez` vacio) es correcto porque DSPy no tiene RAG; el conteo y el mensaje
+  engañan. Propuesta: tratar un snapshot sin `adapter` (DSPy) como no RAG, o ajustar
+  el mensaje.
+
 ## Bloqueos
 
 (ninguno)
@@ -820,3 +896,9 @@ Siguiente: fase 7, sesion interactiva (gasta API). Pasos previos:
    corrida, para que las filas RAG previas tengan `Modelo Juez` y sean comparables.
 3. Corridas cortas segun el Detalle de la fase 7 y registro en este plan.
 Arrancar con: "Fase 7 de SPEC-106 segun docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
+Fase 7 hecha (2026-11-27): SC-001 y SC-002 verificados con API real en ambos
+subproyectos (detalle en "Verificacion real (fase 7)"). Dos hallazgos nuevos, R8
+(media, `check_deployments` no ve el juez definido solo en `--env-file`) y R9 (baja,
+conteo de la migracion en DSPy), pendientes de decision del usuario: corregir en
+subfases `7-fix-N` (Sonnet 5.5, test RED previo) antes del Cierre, o registrarlos
+como deuda en el Cierre. Siguiente: esa decision y despues el Cierre (Opus 5.5).

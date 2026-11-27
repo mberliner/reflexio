@@ -274,8 +274,8 @@ Deuda a revisar (`historial/sdd.md`):
 | FR-007 | `shared/llm/config.py::LLMConfig.endpoint_host` y `connection_summary` (vigente desde 1b, `tests/test_role_connection.py::TestEndpointAndSummary`); impresion en entry points: `tests/test_role_startup.py::TestStartupPrintsEndpointPerRole` (vigente desde 2b) |
 | FR-008 | `shared/utils/check_deployments.py`; `tests/test_check_deployments.py` (vigente desde 5a); carga de `LLM_ENV_FILE` sin credenciales (FR-005, ultimo punto): `check_deployments.main` y `tests/test_check_deployments.py::TestEnvFileTrigger` (vigente desde 5a) |
 | FR-009 | `docs/LLM_CONFIG.md`, `docs/METADATA_REPRODUCIBILIDAD.md`, `docs/PROTOCOLO_N_SEEDS.md`, `.env.example` de ambos subproyectos (vigente desde 5b) |
-| SC-001 | corrida manual con API real por subproyecto (pendiente) |
-| SC-002 | `seed_protocol` / `seed_triage` sobre las filas resultantes (pendiente) |
+| SC-001 | corrida manual con API real por subproyecto (vigente desde fase 7, 2026-11-27: GEPA `rag_optimization` run `235a07e5`, DSPy `dynamic_sentiment_hard` run `3182b393`; registro en el plan) |
+| SC-002 | `seed_protocol` / `seed_triage` sobre las filas resultantes (vigente desde fase 7, 2026-11-27: las filas nuevas solo se comparan entre si; las previas con profesor `azure/gpt-4o` quedan excluidas) |
 | SC-003 | `tests/test_role_connection.py::TestNoLeakBetweenProviders` (vigente desde 1b, sin red) |
 | SC-004 | `./shared/utils/ci_local.sh`; `tests/test_role_connection_golden.py` |
 | SC-005 | `tests/test_role_startup.py::TestInvalidCredentialByRole` (tarea y profesor, ambos subproyectos; vigente desde 2b); juez: `tests/test_judge_role.py::TestInvalidJudgeCredential` (vigente desde 3b) |
