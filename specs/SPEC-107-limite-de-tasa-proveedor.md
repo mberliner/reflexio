@@ -1,7 +1,7 @@
 # SPEC-107-limite-de-tasa-proveedor — Espera ante limite de tasa del proveedor (429)
 
 Estado: draft
-Iteracion: 2 (rev. 2026-11-27)
+Iteracion: 3 (rev. 2026-11-27)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificador de la capa 1, FR-011 reintentos, contador y aborto FR-006), [[SPEC-105-punto-llamada-desacoplado]] (punto de llamada unico en `shared/llm/call.py`, contratos de superficies de libreria FR-007), [[SPEC-106-roles-intercambiables]] (sonda de conexion FR-005)
 Relacionada con: [[SPEC-108-costo-real-por-resolucion]] (el tiempo de espera no entra en `usage`), docs/GEPA_MANEJO_ERRORES.md, docs/YAML_CONFIG_REFERENCE.md, docs/METADATA_REPRODUCIBILIDAD.md, docs/PROTOCOLO_N_SEEDS.md
 
@@ -12,6 +12,11 @@ pero con la espera generica de FR-011 (1, 2 y 4 s), insuficiente para un limite
 por minuto. La iteracion 2 incorpora una revision contrastada con el entorno
 instalado (litellm 1.108.5, openai 3.57.0, httpx 0.28.1, dspy 3.5.0, gepa 0.1.4)
 que cierra las cuatro clarificaciones de la iteracion 1 y agrega cinco huecos.
+La iteracion 3 (revision del plan, 2026-11-27) agrega FR-013 y SC-012: la
+matriz era proporcional por llamada pero no por corrida. Con un 429 que no se
+recupera, cada caso gastaba un presupuesto completo (unos 195 s) y el aborto
+llegaba recien tras `min_attempts` casos (20 en `task`: de 55 a 65 min en
+secuencial).
 
 ## User Story (prioridad)
 
@@ -73,6 +78,7 @@ clases nuevas: es la taxonomia de SPEC-104.
 | 429 no transitorio: (i) `Retry-After` > `rate_limit_max_wait`, (ii) `insufficient_quota` en `exc.body`, (iii) "request too large" (sin distinguir mayusculas) en el mensaje | `infraestructura` | 0 (1 llamada) | 0 s | 0 s |
 | 429 transitorio CON cabecera | `infraestructura` | `rate_limit_retries` (default 6) | Lo que pide la cabecera, sin jitter hacia abajo | Solo lo pedido por el proveedor |
 | 429 transitorio SIN cabecera | `infraestructura` | `rate_limit_retries` (default 6) | `min(5 * 2**n, 60)` s con jitter [0.8, 1.2] | 195 s como maximo por caso (156 a 234 s con jitter) |
+| Cualquier 429 transitorio con el rol en corte por limite persistente (FR-013) | `infraestructura` | 0 (1 llamada) | 0 s | Un solo presupuesto completo por rol hasta que una llamada responda |
 | Resto de `infraestructura` (timeout, red, 408, 409, 500, 502, 503, 504, 529) | `infraestructura` | `infra_retries` (default 3) | 1, 2 y 4 s (SPEC-104 FR-011) | 7 s |
 
 ## Requisitos funcionales
@@ -144,8 +150,9 @@ clases nuevas: es la taxonomia de SPEC-104.
   otro deployment del mismo modelo queda fuera de alcance.
 - FR-009 `run.json` MUST registrar `failures.rate_limit_waits`, emitido por
   `FailureTracker.snapshot()`: por cada rol de `ROLES`
-  `{"waits": int, "seconds": float}`. `waits` cuenta las esperas iniciadas (una por
-  linea `INFO` de FR-005) y `seconds` los segundos efectivamente dormidos, incluidos
+  `{"waits": int, "seconds": float, "cortes": int}`. `waits` cuenta las esperas
+  iniciadas (una por linea `INFO` de espera de FR-005), `cortes` las activaciones
+  del corte de FR-013 y `seconds` los segundos efectivamente dormidos, incluidos
   los tramos parciales si FR-006 interrumpe y acumulados por hilo si
   `num_threads > 1`. El campo vive dentro de `failures` (no es una clave nueva de
   primer nivel), no toca `failures.counts` ni `usage`, y MUST describirse en
@@ -185,6 +192,30 @@ clases nuevas: es la taxonomia de SPEC-104.
   - `shared/utils/seed_protocol.py::run_seeds` MUST cortar de inmediato las seeds
     restantes ante `returncode == 75`, informando "limite del proveedor", y SHOULD
     respetar `BATCH_COOLDOWN` cuando `--jobs 1`.
+- FR-013 Corte por limite persistente, por rol. El tiempo de espera MUST ser
+  proporcional tambien por corrida: un 429 que no se recupera MUST costar a lo
+  sumo un presupuesto completo de FR-004 por rol, no uno por caso.
+  - Cuando una llamada agota `rate_limit_retries` ante un 429 transitorio, el
+    contador MUST marcar el rol como "en corte". El estado MUST ser thread-safe
+    y reiniciarse con `FailureTracker.reset`.
+  - Con el rol en corte, todo 429 transitorio de ese rol MUST fallar de
+    inmediato: 1 llamada HTTP, 0 s de espera, `infraestructura`,
+    `es_limite_tasa=True` y un mensaje que nombra el corte. La llamada se hace
+    igual (no se suprime), para detectar que la cuota reabrio. Un hilo que ya
+    estaba esperando cuando se activo el corte termina esa espera y su 429
+    siguiente falla sin esperar.
+  - Cualquier llamada del rol que responda sin excepcion del proveedor MUST
+    levantar el corte: el 429 siguiente vuelve a esperar con el presupuesto
+    completo.
+  - El corte no cambia la clasificacion, los conteos ni los umbrales de SPEC-104:
+    el aborto sigue la regla de FR-006 de SPEC-104 y sale con 75 por FR-010. No
+    afecta a las demas fallas de `infraestructura` (`infra_retries`) ni a los 429
+    no transitorios de FR-003, que ya fallan sin esperar.
+  - Cada activacion y cada levantamiento MUST emitir una linea `INFO` por el
+    mismo logger de FR-005, con rol y modelo. No es una espera: no suma a
+    `waits`. Las activaciones suman a `cortes` (FR-009).
+  - La sonda de conexion (FR-011) no activa ni consulta el corte: si agota su
+    presupuesto, la corrida sale con 75.
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 
@@ -207,7 +238,8 @@ clases nuevas: es la taxonomia de SPEC-104.
   payloads que no son 429.
 - SC-006 Cada espera deja exactamente una linea `INFO` visible en consola (no solo
   en `caplog`), con modelo incluido, y `run.json["failures"]["rate_limit_waits"]`
-  coincide en `waits` con el numero de lineas, sin alterar `failures.counts`
+  coincide en `waits` con el numero de lineas de espera (y en `cortes` con las de
+  activacion del corte), sin alterar `failures.counts`
   (SPEC-104 SC-005) ni el conjunto de claves de primer nivel (SPEC-104 SC-006).
 - SC-007 Con `num_threads > 1` y un 429 con espera de T s en un hilo, ninguna otra
   llamada del mismo rol sale antes de `T` s (reloj simulado); el estado se reinicia
@@ -226,6 +258,12 @@ clases nuevas: es la taxonomia de SPEC-104.
 - SC-011 Valores invalidos de `failures.rate_limit_retries` o
   `failures.rate_limit_max_wait` (negativo, no numerico, booleano) fallan en la
   validacion de la config, antes de gastar tokens.
+- SC-012 Con `num_threads=1`, un 429 sin cabecera que no se recupera en ninguna
+  llamada del rol `task` y los umbrales por defecto: la espera total del rol no
+  supera un presupuesto completo (234 s con jitter), cada llamada posterior al
+  corte hace 1 llamada HTTP y 0 s de espera, `cortes` vale 1 y la corrida sale
+  con 75. Si despues del corte una llamada responde, el corte se levanta y el
+  429 siguiente vuelve a hacer `1 + rate_limit_retries` llamadas.
 
 ## Escenarios (Given/When/Then)
 
@@ -249,6 +287,12 @@ clases nuevas: es la taxonomia de SPEC-104.
 - Given una prueba que sale con 75 dentro de un batch o de `seed_protocol`, When el
   runner la recibe, Then se detiene, informa "limite del proveedor" y las
   pruebas o seeds restantes quedan sin ejecutar.
+- Given una cuota que no reabre y un 429 sin cabecera (p. ej. Azure
+  `insufficient_quota`), When el primer caso agota su presupuesto, Then los
+  casos siguientes del rol fallan sin esperar y la corrida aborta con 75 tras
+  unos 195 s de espera en total, no tras una hora.
+- Given un rol en corte, When una llamada del rol responde, Then el corte se
+  levanta, se informa en consola y el 429 siguiente vuelve a esperar.
 - Given un batch cuya prueba k agoto el TPM, When la prueba k+1 arranca y su sonda
   de conexion recibe un 429, Then la sonda espera segun la cabecera en lugar de
   terminar con 1.
@@ -270,6 +314,11 @@ clases nuevas: es la taxonomia de SPEC-104.
 - Un tope de espera acumulada por caso para el 413 generico: FR-003 lo resuelve sin
   esperar nada y sin acotar por tiempo.
 - Leer `x-ratelimit-reset-*` para calcular la espera: reportan horas en limites mixtos.
+- Para el 429 cronico (FR-013): abortar la corrida en cuanto una llamada agota el
+  presupuesto (un solo caso corta una corrida larga y rompe la regla de umbrales
+  de SPEC-104 FR-006); un tope de espera acumulada por corrida con clave nueva
+  (no se rearma si la cuota reabre); aceptar el costo de un presupuesto por caso
+  (hasta una hora en secuencial antes del aborto).
 
 ## Tests y docs existentes que esta spec obliga a ajustar
 
@@ -315,6 +364,7 @@ aprobar la spec (`docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md`).
 | FR-010 | `shared/llm/failures.py` (`EXIT_RATE_LIMIT`, `is_rate_limit_abort`), `shared/llm/__init__.py`; `dspy_gepa_poc/reflexio_declarativa.py`, `gepa_standalone/universal_optimizer.py`; `docs/DEVELOPMENT.md` |
 | FR-011 | `shared/llm/call.py::probe_completion`, `shared/llm/config.py`; `gepa_standalone/universal_optimizer.py` (orden); `tests/test_role_probe.py`; `docs/LLM_CONFIG.md` |
 | FR-012 | `dspy_gepa_poc/run_dspy_total.sh`, `gepa_standalone/run_demos_gepa.sh`, `shared/utils/seed_protocol.py`; `docs/DEVELOPMENT.md`, `docs/PROTOCOLO_N_SEEDS.md` |
+| FR-013 | `shared/llm/failures.py` (estado del corte, `cortes` en `snapshot`), `shared/llm/call.py` (bucle); `tests/test_rate_limit_wait.py`, `tests/test_failures.py` |
 | SC-001, SC-003, SC-004, SC-005 | `tests/test_rate_limit_wait.py`, `tests/test_litellm_failure_mapping.py`, `tests/test_single_call_point.py` |
 | SC-002 | `tests/test_rate_limit_wait.py` (intercepta `httpx` por proveedor); `tests/test_lib_contracts.py` |
 | SC-006 | `tests/test_sc005_logs_vs_run_json.py` (extension), `tests/test_sc006_no_failure_regression.py` |
@@ -323,3 +373,4 @@ aprobar la spec (`docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md`).
 | SC-009 | `tests/test_role_probe.py` |
 | SC-010 | prueba de los runners con python simulado (sin LLM) y de `run_seeds`; donde vive: por decidir en el plan |
 | SC-011 | `tests/test_failures.py` o el test del validador de `failures` |
+| SC-012 | `tests/test_rate_limit_wait.py` |

@@ -6,7 +6,8 @@ implementa, con que modelo de agente, que decisiones de diseno ya estan tomadas
 y en que estado esta cada subfase. Si cambia un requisito, se edita la spec y
 aca solo se ajusta la referencia.
 
-Creado: 2026-11-27. Base: `e1a97e8` (SPEC-107 iteracion 2, `draft`). Dependencias
+Creado: 2026-11-27. Base: `e1a97e8` (SPEC-107 iteracion 2, `draft`; la
+iteracion 3, del mismo dia, agrega FR-013 y SC-012, ver D18 y C9). Dependencias
 cumplidas: SPEC-104, SPEC-105 y SPEC-106 `active`. Estado del plan: aprobado el
 2026-11-27 (C1 a C8 confirmadas, ver "Decisiones a confirmar"); sin subfases
 ejecutadas.
@@ -92,9 +93,9 @@ sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 
 | Fase | Subfase | Requisitos | Decisiones | Modelo | Estado |
 |---|---|---|---|---|---|
-| 1 Nucleo (`shared/llm`) | 1a Tests RED: funciones puras de limite de tasa, contador, validador y punto de llamada (xfail strict por subfase); payloads 429 nuevos | FR-001 a FR-004, FR-006 a FR-010 (contador), SC-001 a SC-005, SC-007, SC-008 (contador), SC-011 | D1 a D8, D11, D15, D16 | Sonnet 5.5 | pendiente |
-| | 1b `shared/llm/rate_limit.py` (decision, cabeceras, backoff, reloj), `LLMFailure.es_limite_tasa`, `FailureTracker` (presupuesto, conteo, esperas, cooldown, `snapshot`, `is_rate_limit_abort`, `EXIT_RATE_LIMIT`), validador y reloj simulado autouse (GREEN de lo marcado "1b") | FR-001 (campo), FR-002, FR-003 (decision), FR-004, FR-009, FR-010 (contador), SC-002, SC-008 (contador), SC-011 | D1, D2, D5 (estado), D7, D8, D11, D15 | Sonnet 5.5 | pendiente |
-| | 1c Punto de llamada: presupuesto propio del 429, espera por cabecera o backoff, 429 no transitorio sin espera, espera interrumpible, aviso `INFO` con modelo; ajuste de los conteos de tests existentes (GREEN de "1c") | FR-001, FR-002, FR-003, FR-004, FR-005 (emision), FR-006, FR-008, SC-001, SC-003, SC-004, SC-005 | D2, D3, D4, D6 | Opus 5.5 | pendiente |
+| 1 Nucleo (`shared/llm`) | 1a Tests RED: funciones puras de limite de tasa, contador, validador y punto de llamada (xfail strict por subfase); payloads 429 nuevos | FR-001 a FR-004, FR-006 a FR-010 (contador), FR-013, SC-001 a SC-005, SC-007, SC-008 (contador), SC-011, SC-012 | D1 a D8, D11, D15, D16, D18 | Sonnet 5.5 | pendiente |
+| | 1b `shared/llm/rate_limit.py` (decision, cabeceras, backoff, reloj), `LLMFailure.es_limite_tasa`, `FailureTracker` (presupuesto, conteo, esperas, cooldown, corte, `snapshot`, `is_rate_limit_abort`, `EXIT_RATE_LIMIT`), validador y reloj simulado autouse (GREEN de lo marcado "1b") | FR-001 (campo), FR-002, FR-003 (decision), FR-004, FR-009, FR-010 (contador), FR-013 (estado), SC-002, SC-008 (contador), SC-011 | D1, D2, D5 (estado), D7, D8, D11, D15, D18 (estado) | Sonnet 5.5 | pendiente |
+| | 1c Punto de llamada: presupuesto propio del 429, espera por cabecera o backoff, 429 no transitorio sin espera, espera interrumpible, aviso `INFO` con modelo, corte por limite persistente; ajuste de los conteos de tests existentes (GREEN de "1c") | FR-001, FR-002, FR-003, FR-004, FR-005 (emision), FR-006, FR-008, FR-013, SC-001, SC-003, SC-004, SC-005, SC-012 | D2, D3, D4, D6, D18 | Opus 5.5 | pendiente |
 | | 1d Cooldown compartido por rol entre hilos y propagacion de `es_limite_tasa` por la atribucion contra el baseline (GREEN de "1d") | FR-007, FR-001 (propagacion), SC-007 | D2, D5 | Opus 5.5 | pendiente |
 | 2 Sonda y entry points | 2a Sonda con espera solo ante 429; `LLMConnectionError.rate_limited`; mensaje por causa | FR-011 (sonda), SC-009 (sonda) | D9 | Opus 5.5 | pendiente |
 | | 2b Entry points: codigo 75, orden `configure_failure_tracker` antes de la sonda en GEPA, handler `INFO` acotado, claves nuevas del YAML; SC-006 visible en consola | FR-005 (consola), FR-010, FR-011 (orden), SC-006, SC-008, SC-009 | D6, D8, D10, D11, D17 | Sonnet 5.5 | pendiente |
@@ -349,7 +350,8 @@ D6. Aviso visible (FR-005, H3):
 - No es una falla: no pasa por `record`, no suma a `counts` ni a `usage`.
 
 D7. `run.json` (FR-009, SC-006): `FailureTracker.snapshot()` agrega
-`"rate_limit_waits": {rol: {"waits": int, "seconds": float}}` para cada rol de
+`"rate_limit_waits": {rol: {"waits": int, "seconds": float, "cortes": int}}`
+(`cortes`: D18) para cada rol de
 `ROLES`, siempre (ceros sin esperas), `seconds` redondeado a 3 decimales. Vive
 dentro de `failures`; las claves de primer nivel de `run.json` no cambian
 (`create_run` pasa `failures` tal cual). `tests/test_sc006_no_failure_regression.py`
@@ -486,6 +488,33 @@ MUST NOT leer el estado del contador (hoy solo importa `shared.scoring`). Sin
 cambiar el resto del texto (lo parsea SC-005 de SPEC-104 solo en la linea ERROR
 del contador, que no cambia).
 
+D18. Corte por limite persistente (FR-013, SC-012; C9):
+- Estado en `FailureTracker` bajo su lock, en `_init_state` (lo limpia
+  `reset()`): `_rate_limit_cut: set[rol]` y `_cortes: dict[rol, int]`.
+  `activate_rate_limit_cut(rol) -> bool` (True solo si no estaba activo; suma a
+  `cortes` solo en ese caso), `clear_rate_limit_cut(rol) -> bool` (True si
+  estaba activo) y `rate_limit_cut(rol) -> bool`. No toca `counts`, umbrales ni
+  `abort`.
+- En `call_with_infra_retry` (1c):
+  - `fn()` que vuelve sin excepcion -> `clear_rate_limit_cut(rol)` antes de
+    devolver; si devolvio True, linea `INFO` `Limite de tasa: rol=<rol>
+    modelo=<modelo> corte levantado`. Cuenta cualquier respuesta, aunque despues
+    `raise_for_response` la clasifique (`sin_texto`, etc.): la cuota respondio.
+  - 429 transitorio (tras `decide`) con `rate_limit_cut(rol)` -> `LLMCallFailure`
+    inmediata, `infraestructura`, `es_limite_tasa=True`, mensaje "rol <rol> en
+    corte por limite de tasa persistente (sin espera)". Sin espera, sin
+    cooldown, sin consumir `attempt_rl`. Se consulta en cada 429, no solo al
+    empezar la llamada: un hilo que ya esperaba falla sin esperar en su 429
+    siguiente.
+  - Presupuesto agotado (`attempt_rl == rate_limit_retries`) ->
+    `activate_rate_limit_cut(rol)`; si devolvio True, linea `INFO`
+    `Limite de tasa: rol=<rol> modelo=<modelo> corte activado tras <m>
+    intentos`; despues lanza como en D3.
+  - Las lineas de corte no contienen ` espera `: el parser de SC-006 cuenta
+    `waits` solo con las lineas de espera y `cortes` con las de activacion.
+- `probe_completion` (D9) no llama a ninguno de los tres metodos.
+- 429 no transitorios (FR-003) y demas `infraestructura`: sin cambio.
+
 `dspy_gepa_poc/scripts/baseline_only.py` (decision explicita): recibe el handler
 de D6 pero sigue saliendo con 1 ante cualquier aborto. FR-010 nombra solo los dos
 entry points y ningun runner invoca `baseline_only.py`.
@@ -533,8 +562,15 @@ los nombra en su nota.
   a WARNING por `lastResort`/`caplog` sin formato `[INFO]`.
 - Runners: la tecnica no cubre `winpty` (D13) y cada invocacion es lenta en
   Windows. Mitigacion: maximo 6 invocaciones; verificacion manual en la fase 6.
-- H1: en Azure, `insufficient_quota` espera hasta 195 s por caso antes de
-  abortar. Mitigacion: el aborto sale igual con 75 y frena el batch.
+- H1: en Azure, `insufficient_quota` se trata como 429 transitorio sin
+  cabecera. Sin D18 costaba un presupuesto por caso (unos 195 s) hasta llegar a
+  `min_attempts` (20 en `task`): de 55 a 65 min en secuencial. Con D18 (FR-013)
+  cuesta un solo presupuesto por rol; los casos siguientes fallan sin esperar y
+  el aborto sale con 75 y frena el batch.
+- D18 levanta el corte con cualquier respuesta del rol: con una cuota que
+  oscila, cada reapertura rearma un presupuesto completo. Es lo pedido ("esperar
+  cuando la cuota reabre"); el costo por corrida queda acotado por los umbrales
+  de SPEC-104.
 
 ## Detalle por subfase
 
@@ -558,7 +594,14 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
     (i)); FR-006 (aborto fijado por otro hilo durante la espera -> `RunAborted`
     en el tramo siguiente, tramo parcial contado); FR-008 (mismo `model` en
     todas las llamadas); una linea `INFO` por espera en `caplog` con rol,
-    modelo, intento n/m y segundos.
+    modelo, intento n/m y segundos. SC-012 y FR-013: con `num_threads=1` y 429
+    sin cabecera permanente en `task`, espera total <= 234 s simulados, las
+    llamadas tras el corte hacen 1 llamada HTTP y 0 esperas, una linea de
+    activacion, `cortes == 1` y aborto con `is_rate_limit_abort()`; una
+    respuesta sana tras el corte lo levanta (linea `INFO`) y el 429 siguiente
+    vuelve a `1 + rate_limit_retries` llamadas; un 5xx con el rol en corte sigue
+    con `infra_retries`; un hilo que esperaba al activarse el corte falla sin
+    esperar en su 429 siguiente.
   - "SPEC-107 1d": SC-007 (dos hilos, `Retry-After: 10` en uno: ninguna llamada
     del rol antes de 10 s simulados; otro rol no espera; `reset()` limpia).
   - Sin marca (verde hoy): SC-005, 1 + `infra_retries` llamadas con 1, 2 y 4 s
@@ -567,7 +610,9 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
   `configure` de las claves nuevas (SC-011); `snapshot()["rate_limit_waits"]`
   con los tres roles en cero; `start_rate_limit_wait`/`add_rate_limit_seconds`;
   `is_rate_limit_abort` con los cuatro casos de SC-008; `EXIT_RATE_LIMIT == 75`;
-  `reset` limpia conteo, esperas y cooldown. Marca "SPEC-107 1b".
+  estado del corte (D18: activar dos veces suma un solo `corte`, `clear`
+  devuelve si estaba activo, `cortes` en `snapshot`); `reset` limpia conteo,
+  esperas, cooldown y corte. Marca "SPEC-107 1b".
 - Validador: test en el archivo de tests del validador de `failures` (ubicarlo
   con Grep `FAILURES_KEYS`) para SC-011 (negativo, no numerico, booleano, `nan`
   en `rate_limit_max_wait`). Marca "SPEC-107 1b".
@@ -595,8 +640,8 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 
 ### 1c Punto de llamada (GREEN "1c") — Opus 5.5
 
-- Implementa D3, D4 y D6 (emision y `enable_rate_limit_console`, sin llamarla
-  desde entry points). Quita las marcas "SPEC-107 1c". Corre la suite completa
+- Implementa D3, D4, D6 (emision y `enable_rate_limit_console`, sin llamarla
+  desde entry points) y D18 (bucle). Quita las marcas "SPEC-107 1c". Corre la suite completa
   y ajusta los conteos de 429 de los tests de la lista "Tests existentes"
   (FR-004, FR-003 (iii)), listandolos.
 - Test extra (riesgo H3): con `enable_rate_limit_console()` instalado, una falla
@@ -837,6 +882,10 @@ codigo definido en `shared/llm/failures.py`, traducido por
 - C7 (D1). Adoptar el jitter positivo [0, 0.25] s sobre la espera de cabecera
   (MAY de FR-002). Recomendado: si.
 - C8. Aprobar las enmiendas de redaccion H2, H3 y H4 para 4b.
+- C9 (D18, revision del plan, 2026-11-27). Ante un 429 que no se recupera, corte
+  por rol que se levanta solo (opcion A) en lugar de abortar al agotar el
+  presupuesto, un tope de espera acumulada o aceptar el costo. CONFIRMADA por el
+  usuario; llevada a la spec como FR-013 y SC-012 (iteracion 3).
 
 ## Bloqueos
 
