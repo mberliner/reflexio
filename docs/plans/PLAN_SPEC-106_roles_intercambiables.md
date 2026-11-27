@@ -87,7 +87,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | hecho (890d343) |
 | | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | hecho (e9fbb0f) |
 | 4 Registro y comparabilidad | 4a `run.json` con proveedor y host por rol; columna `Modelo Juez`; logger sobre CSV sin migrar; migracion | FR-006, SC-006 | D7, D10 | Sonnet 5.5 | hecho (e902fba) |
-| | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | pendiente |
+| | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | hecho (a10f647) |
 | 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | pendiente |
 | | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | pendiente |
 | 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | pendiente |
@@ -587,6 +587,11 @@ Resuelto 2026-11-27, 4a: el usuario aprueba agregar `"Modelo Juez"` despues de
 `tests/test_shared_logging_consolidation.py::test_append_adds_missing_columns_to_legacy_header`
 (FR-006: columnas faltantes se agregan, no se descartan). Relanzar 4a sobre el
 arbol sin commitear: aplicar la correccion, `ci_local.sh` y commitear.
+
+4b hecha (a10f647). Tests existentes ajustados (FR-006, terna): `TARGET` y el
+helper `_row` de `tests/test_seed_triage.py` (agregan juez) y sus aserciones de
+`_matches`. `ConfigInfo` expone `adapter_type` (en `seed_protocol.py`, archivo de
+la lista). Desvio menor: `target_models(framework, adapter_type="")`.
 
 ## Proxima sesion
 
