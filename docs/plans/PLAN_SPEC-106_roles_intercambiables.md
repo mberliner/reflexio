@@ -413,7 +413,8 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 - Archivos: `shared/llm/usage.py`, `shared/analysis/roi_calculator.py`,
   `gepa_standalone/universal_optimizer.py` (`save_results`,
   `save_aborted_run`), `dspy_gepa_poc/reflexio_declarativa.py` (tokens del
-  CSV), tests de uso y de `roi_calculator`.
+  CSV), tests de uso y de `roi_calculator`, `tests/test_failure_call.py` (desvio
+  aceptado, asercion del bucket del juez).
 
 ### 3b Juez como rol — Sonnet 5.5
 
@@ -608,5 +609,8 @@ modelo del juez sale de `adapter.judge_config` (`_judge_model()`; None sin juez
 -> tarifa con el profesor). En DSPy no hay juez, no pasa `judge_model`. Test
 existente ajustado: `test_failure_call.py::test_success_records_token_usage`
 (asevera el pliegue viejo del juez en `reflection`; pasa al bucket `judge`).
+Fuera de la lista de Archivos de 3a: desvio aceptado por el usuario
+(2026-11-27) como correccion de una asercion que contradice FR-004; el archivo
+se agrega a la lista de 3a.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
