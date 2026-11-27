@@ -89,7 +89,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 4 Registro y comparabilidad | 4a `run.json` con proveedor y host por rol; columna `Modelo Juez`; logger sobre CSV sin migrar; migracion | FR-006, SC-006 | D7, D10 | Sonnet 5.5 | hecho (e902fba) |
 | | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | hecho (a10f647) |
 | 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | hecho (496ece3) |
-| | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | pendiente |
+| | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | hecho (d516fcf) |
 | 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | pendiente |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |
 | Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
