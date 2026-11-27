@@ -4,12 +4,15 @@ from types import SimpleNamespace
 
 import pytest
 
+from shared.llm.call import checked_response
 from shared.llm.usage import (
     UsageTracker,
     extract_usage,
     get_tracker,
     record_usage,
+    reflection_tokens_for_csv,
 )
+from tests.conftest import make_completion_response, patch_litellm_completion
 
 
 @pytest.fixture
@@ -52,14 +55,45 @@ class TestUsageTracker:
         assert snap["reflection"]["calls"] == 0
         assert snap["total_tokens"] == 120
 
-    def test_reflection_and_judge_share_bucket(self, tracker):
+    def test_judge_has_its_own_bucket(self, tracker):
+        """SPEC-106 FR-004: el juez no se pliega en `reflection`."""
         tracker.record("reflection", 200, 40)
         tracker.record("judge", 60, 10)
         snap = tracker.snapshot()
-        assert snap["reflection"]["calls"] == 2
-        assert snap["reflection"]["prompt_tokens"] == 260
-        assert snap["reflection"]["completion_tokens"] == 50
+        assert snap["reflection"] == {"calls": 1, "prompt_tokens": 200, "completion_tokens": 40}
+        assert snap["judge"] == {"calls": 1, "prompt_tokens": 60, "completion_tokens": 10}
         assert snap["task"]["calls"] == 0
+        assert snap["total_tokens"] == 310
+
+    def test_without_judge_bucket_is_zero(self, tracker):
+        tracker.record("task", 10, 5)
+        snap = tracker.snapshot()
+        assert snap["judge"] == {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
+        assert snap["total_tokens"] == 15
+
+    def test_reflection_tokens_for_csv_is_reflection_plus_judge(self, tracker):
+        tracker.record("reflection", 200, 40)
+        tracker.record("judge", 60, 10)
+        tracker.record("task", 1000, 1000)
+        assert reflection_tokens_for_csv(tracker.snapshot()) == 310
+
+    def test_reflection_tokens_for_csv_tolerates_missing_judge(self):
+        usage = {"reflection": {"prompt_tokens": 7, "completion_tokens": 3}}
+        assert reflection_tokens_for_csv(usage) == 10
+        assert reflection_tokens_for_csv({}) == 0
+
+    def test_judge_call_through_call_point_lands_in_judge_bucket(self, tracker, monkeypatch):
+        """Respuesta real de LiteLLM por el punto de llamada comun, rol `judge`."""
+        patch_litellm_completion(
+            monkeypatch,
+            lambda request, num_retries: make_completion_response(
+                "0.8", prompt_tokens=120, completion_tokens=8
+            ),
+        )
+        checked_response({"model": "openai/gpt-4o"}, [{"role": "user", "content": "x"}], "judge")
+        snap = tracker.snapshot()
+        assert snap["judge"] == {"calls": 1, "prompt_tokens": 120, "completion_tokens": 8}
+        assert snap["reflection"]["calls"] == 0
 
     def test_unknown_role_falls_back_to_task(self, tracker):
         tracker.record("embedding", 10, 0)

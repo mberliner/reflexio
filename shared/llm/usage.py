@@ -3,12 +3,13 @@ Real token usage tracking for LLM calls.
 
 Accumulates the actual token consumption reported by the provider
 (litellm/DSPy ``response.usage``) instead of relying on fixed per-case
-estimates. Tokens are split into two buckets:
+estimates. Tokens are split into three buckets (SPEC-106 FR-004):
 
 - ``task``: calls made by the task/student model (candidate evaluation).
-- ``reflection``: calls made by the reflection/teacher model AND by any
-  LLM-as-judge, since both only run during optimization (never in
-  production). See project decision: judge tokens count as reflection.
+- ``reflection``: calls made by the reflection/teacher model.
+- ``judge``: calls made by the LLM-as-judge (RAG adapter). It has its own
+  bucket so it can be priced with its own model; the CSV column
+  ``Tokens Reflection`` sums reflection + judge (``reflection_tokens_for_csv``).
 
 The tracker is a process-level singleton: LLM calls happen at several
 points without a tracker being threaded through, so callers record into
@@ -19,7 +20,7 @@ start of a run and ``snapshot()`` at the end.
 import threading
 from dataclasses import asdict, dataclass
 
-_REFLECTION_ROLES = frozenset({"reflection", "judge"})
+_BUCKETS = ("task", "reflection", "judge")
 
 
 @dataclass
@@ -38,10 +39,15 @@ class UsageBucket:
 def _normalize_role(role: str) -> str:
     """Map a raw role/model_name to its usage bucket.
 
-    Anything in _REFLECTION_ROLES (reflection, judge) lands in 'reflection';
-    everything else (task, embedding probes, unknown) lands in 'task'.
+    'reflection' and 'judge' keep their own bucket; everything else (task,
+    embedding probes, unknown) lands in 'task'.
     """
-    return "reflection" if (role or "").lower() in _REFLECTION_ROLES else "task"
+    name = (role or "").lower()
+    return name if name in ("reflection", "judge") else "task"
+
+
+def _new_buckets() -> dict:
+    return {name: UsageBucket() for name in _BUCKETS}
 
 
 class UsageTracker:
@@ -49,12 +55,12 @@ class UsageTracker:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._buckets = {"task": UsageBucket(), "reflection": UsageBucket()}
+        self._buckets = _new_buckets()
 
     def reset(self) -> None:
         """Clear all accumulated usage (call at the start of a run)."""
         with self._lock:
-            self._buckets = {"task": UsageBucket(), "reflection": UsageBucket()}
+            self._buckets = _new_buckets()
 
     def record(self, role: str, prompt_tokens: int, completion_tokens: int) -> None:
         """Add a single call's token counts to the appropriate bucket."""
@@ -73,14 +79,24 @@ class UsageTracker:
             {
               "task":       {"calls", "prompt_tokens", "completion_tokens"},
               "reflection": {"calls", "prompt_tokens", "completion_tokens"},
+              "judge":      {"calls", "prompt_tokens", "completion_tokens"},
               "total_tokens": int,
             }
         """
         with self._lock:
-            task = asdict(self._buckets["task"])
-            reflection = asdict(self._buckets["reflection"])
-        total = self._buckets["task"].total_tokens + self._buckets["reflection"].total_tokens
-        return {"task": task, "reflection": reflection, "total_tokens": total}
+            snap = {name: asdict(self._buckets[name]) for name in _BUCKETS}
+            total = sum(self._buckets[name].total_tokens for name in _BUCKETS)
+        snap["total_tokens"] = total
+        return snap
+
+
+def reflection_tokens_for_csv(usage: dict) -> int:
+    """Tokens of the ``Tokens Reflection`` CSV column: reflection + judge."""
+    return sum(
+        (usage.get(name) or {}).get("prompt_tokens", 0)
+        + (usage.get(name) or {}).get("completion_tokens", 0)
+        for name in ("reflection", "judge")
+    )
 
 
 # Process-level singleton.

@@ -128,7 +128,9 @@ class TestResponseClassification:
         usage = get_usage_tracker()
         usage.reset()
         _run(_HTTP_200_OK[0], role="judge")
-        assert usage.snapshot()["reflection"]["calls"] == 1
+        snap = usage.snapshot()
+        assert snap["judge"]["calls"] == 1  # SPEC-106 FR-004: bucket propio
+        assert snap["reflection"]["calls"] == 0
 
 
 class TestAbortState:

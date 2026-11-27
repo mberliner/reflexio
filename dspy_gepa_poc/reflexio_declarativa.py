@@ -33,7 +33,7 @@ from shared.display import (
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import RunAborted, get_failure_tracker
 from shared.llm.dspy_lm import configure_dspy
-from shared.llm.usage import get_tracker
+from shared.llm.usage import get_tracker, reflection_tokens_for_csv
 from shared.logging.metadata import (
     MetadataManager,
     collect_model_info,
@@ -817,9 +817,7 @@ class ReflexioDeclarativa:
                 "test_score": _csv_score(test_score),  # Held-out Test Score
                 "run_dir": str(self.results_dir),
                 "tokens_task": usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
-                "tokens_reflection": (
-                    usage["reflection"]["prompt_tokens"] + usage["reflection"]["completion_tokens"]
-                ),
+                "tokens_reflection": reflection_tokens_for_csv(usage),
                 "cost_real_usd": f"{cost:.6f}".replace(".", ","),
                 "notes": (
                     f"Strategy: {self.config.gepa.auto_budget}, {few_shot_info}, "

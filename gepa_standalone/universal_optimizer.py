@@ -57,7 +57,7 @@ from shared.display import (
 )
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import LLMConnectionError, RunAborted, get_failure_tracker
-from shared.llm.usage import get_tracker
+from shared.llm.usage import get_tracker, reflection_tokens_for_csv
 from shared.logging.metadata import (
     MetadataManager,
     collect_model_info,
@@ -130,6 +130,11 @@ class UniversalOptimizer:
             judge_max_tokens=getattr(self.adapter, "judge_max_tokens", None),
         )
 
+    def _judge_model(self) -> str | None:
+        """Modelo del juez (RAG) para tarifar su bucket; None si no hay juez."""
+        judge_config = getattr(self.adapter, "judge_config", None)
+        return judge_config.model if judge_config is not None else None
+
     def save_aborted_run(self) -> Path:
         """
         Escribe solo `run.json` (estado `aborted`) de una corrida abortada (FR-008).
@@ -140,7 +145,10 @@ class UniversalOptimizer:
         run_dir = get_paths().run_dir(self.config["case"]["name"], run_id=str(uuid.uuid4())[:8])
         usage = get_tracker().snapshot()
         usage["cost_usd"] = cost_from_usage(
-            usage, self.task_config.model, self.reflection_config.model
+            usage,
+            self.task_config.model,
+            self.reflection_config.model,
+            judge_model=self._judge_model(),
         )
         return self.metadata_mgr.create_run(
             run_dir=run_dir,
@@ -662,7 +670,9 @@ class UniversalOptimizer:
 
         # Real token usage captured during this run -> cost with same pricing table
         usage = get_tracker().snapshot()
-        cost = cost_from_usage(usage, task_config.model, reflect_config.model)
+        cost = cost_from_usage(
+            usage, task_config.model, reflect_config.model, judge_model=self._judge_model()
+        )
         usage["cost_usd"] = cost
 
         # Write run-level metadata (includes real usage block)
@@ -690,9 +700,7 @@ class UniversalOptimizer:
             run_directory=str(run_dir),
             budget=metadata["max_metric_calls"],
             tokens_task=usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
-            tokens_reflection=(
-                usage["reflection"]["prompt_tokens"] + usage["reflection"]["completion_tokens"]
-            ),
+            tokens_reflection=reflection_tokens_for_csv(usage),
             cost_real_usd=f"{cost:.6f}".replace(".", ","),
         )
 

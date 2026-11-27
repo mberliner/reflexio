@@ -404,6 +404,37 @@ def test_cost_from_usage_matches_pricing():
     assert cost == pytest.approx(0.75 + 12.50)
 
 
+def test_cost_from_usage_prices_judge_with_its_own_model():
+    """SPEC-106 FR-004 / H1: cada bucket se tarifa con el modelo de su rol."""
+    usage = {
+        "task": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+        "reflection": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+        "judge": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+    }
+    cost = roi_calculator.cost_from_usage(
+        usage, task_model="gpt-4o-mini", reflection_model="gpt-4o", judge_model="gpt-4o-mini"
+    )
+    # task 0.75 + reflection 12.50 + judge (gpt-4o-mini) 0.75
+    assert cost == pytest.approx(0.75 + 12.50 + 0.75)
+
+
+def test_cost_from_usage_judge_defaults_to_reflection_model():
+    usage = {"judge": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000}}
+    cost = roi_calculator.cost_from_usage(usage, "gpt-4o-mini", "gpt-4o")
+    assert cost == pytest.approx(12.50)
+
+
+def test_cost_from_usage_without_judge_equals_previous_total():
+    usage = {
+        "task": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+        "reflection": {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000},
+        "judge": {"prompt_tokens": 0, "completion_tokens": 0},
+    }
+    assert roi_calculator.cost_from_usage(
+        usage, "gpt-4o-mini", "gpt-4o", judge_model="gpt-4o-mini"
+    ) == pytest.approx(0.75 + 12.50)
+
+
 def test_cost_from_usage_handles_missing_buckets():
     """Empty/partial usage must not raise and yields zero cost."""
     assert roi_calculator.cost_from_usage({}, "gpt-4o-mini", "gpt-4o") == 0.0

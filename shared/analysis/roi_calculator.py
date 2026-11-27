@@ -203,6 +203,7 @@ def cost_from_usage(
     task_model: str,
     reflection_model: str,
     pricing: dict = None,
+    judge_model: str | None = None,
 ) -> float:
     """Compute real USD cost from a measured usage snapshot.
 
@@ -211,14 +212,16 @@ def cost_from_usage(
     of fixed per-case estimates.
 
     Args:
-        usage: Snapshot with ``task`` and ``reflection`` buckets, each holding
-            ``prompt_tokens`` and ``completion_tokens``.
+        usage: Snapshot with ``task``, ``reflection`` and (optional) ``judge``
+            buckets, each holding ``prompt_tokens`` and ``completion_tokens``.
         task_model: Model used for the task bucket.
         reflection_model: Model used for the reflection bucket.
         pricing: Custom pricing dict (defaults to DEFAULT_PRICING).
+        judge_model: Model used for the judge bucket (SPEC-106 FR-004); when
+            None, the reflection model prices it.
 
     Returns:
-        Total cost in USD.
+        Total cost in USD (all buckets, each priced with its role's model).
     """
     task_pricing = get_model_pricing(task_model, pricing)
     reflection_pricing = get_model_pricing(reflection_model, pricing)
@@ -232,7 +235,12 @@ def cost_from_usage(
     reflection_cost = reflection_pricing.cost_per_call(
         reflection.get("prompt_tokens", 0), reflection.get("completion_tokens", 0)
     )
-    return task_cost + reflection_cost
+    judge = usage.get("judge") or {}
+    judge_pricing = get_model_pricing(judge_model or reflection_model, pricing)
+    judge_cost = judge_pricing.cost_per_call(
+        judge.get("prompt_tokens", 0), judge.get("completion_tokens", 0)
+    )
+    return task_cost + reflection_cost + judge_cost
 
 
 def calculate_optimization_cost(
