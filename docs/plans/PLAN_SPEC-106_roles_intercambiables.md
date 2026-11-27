@@ -47,6 +47,12 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 - "Archivos" del Detalle es la lista cerrada que usa el control de salida: el
   diff MUST NOT tocar otros (este plan siempre se puede editar). Si hace falta
   otro archivo, la sesion lo anota como bloqueo en "Bloqueos" y no commitea.
+  Excepcion (decision del usuario, 2026-11-27): la spec manda y los tests se
+  adaptan a ella. Un test existente, de cualquier archivo, cuya asercion fija una
+  conducta que la spec cambia MAY ajustarse para que verifique la conducta nueva
+  (asercion, fixture o constante de esquema que la spec modifica), sin bloqueo,
+  listandolo en el resumen y en la nota de la subfase con el FR que lo motiva.
+  Cualquier otro cambio fuera de la lista sigue siendo bloqueo.
 - Arquitectura (`docs/ARCHITECTURE.md`): toda llamada al LLM pasa por
   `shared/llm/call.py`; `shared/` no importa `gepa_standalone` ni
   `dspy_gepa_poc`; en `shared/` solo `dspy_lm.py` importa `dspy`; solo API
@@ -440,7 +446,9 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 - Archivos: `shared/llm/config.py`, `shared/logging/csv_writer.py`, el modulo
   que define `log_experiment_result` (ubicarlo con Grep),
   `shared/utils/migrate_metrics_csv.py`,
-  `gepa_standalone/universal_optimizer.py`, tests de esos modulos.
+  `gepa_standalone/universal_optimizer.py`, tests de esos modulos,
+  `tests/test_sc006_no_failure_regression.py` (`CSV_COLUMNS` con `Modelo
+  Juez`, aprobado por el usuario).
 
 ### 4b Comparabilidad — Sonnet 5.5
 
@@ -568,6 +576,13 @@ log completo o el diff solo cuando un control falla.
 ## Bloqueos
 
 (ninguno)
+
+Resuelto 2026-11-27, 4a: el usuario aprueba agregar `"Modelo Juez"` despues de
+`"Modelo Profesor"` en `CSV_COLUMNS` de `tests/test_sc006_no_failure_regression.py`
+(sin tocar aserciones) y acepta el cambio de
+`tests/test_shared_logging_consolidation.py::test_append_adds_missing_columns_to_legacy_header`
+(FR-006: columnas faltantes se agregan, no se descartan). Relanzar 4a sobre el
+arbol sin commitear: aplicar la correccion, `ci_local.sh` y commitear.
 
 ## Proxima sesion
 
