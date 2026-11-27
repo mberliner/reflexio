@@ -95,6 +95,8 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | | 6-fix-2 (R2) Juez heredado: sin sonda propia y mensajes con las variables del profesor | FR-004, FR-005 | D8, D13 | Sonnet 5.5 | hecho (dcd48c9) |
 | | 6-fix-3 (R3, R5) `from_env` rechaza overrides de conexion; borrar `validate_llm_connection` | FR-003 | D14 | Sonnet 5.5 | hecho (36e9ec8) |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | hecho (verificado 2026-11-27; ver "Verificacion real (fase 7)") |
+| 7 (correcciones) | 7-fix-1 (R8) `check_deployments` decide el juez despues de cargar `LLM_ENV_FILE` | FR-008 | D2 | Opus 5.5 (interactiva) | hecho (ab91cea) |
+| | 7-fix-2 (R9) Migracion: snapshot DSPy (`module`, sin `adapter.type`) es no RAG | FR-006 | D10 | Opus 5.5 (interactiva) | hecho (d864369) |
 | Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
 
 ## Dependencias
@@ -104,9 +106,9 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 - 3a requiere 1b. 3b requiere 2b y 3a.
 - 4a requiere 3b. 4b requiere 4a.
 - 5a requiere 2a. 5b requiere 4b y 5a.
-- 6 requiere 5b. 6-fix-1, 6-fix-2 y 6-fix-3 requieren 6 (independientes entre si; se corren en ese orden). 7 requiere 6 y sus correcciones. Cierre requiere 7.
+- 6 requiere 5b. 6-fix-1, 6-fix-2 y 6-fix-3 requieren 6 (independientes entre si; se corren en ese orden). 7 requiere 6 y sus correcciones. 7-fix-1 y 7-fix-2 requieren 7. Cierre requiere 7 y sus correcciones.
 
-Orden lineal recomendado: 1a, 1b, 1b-fix-1, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 6-fix-1, 6-fix-2, 6-fix-3, 7, Cierre.
+Orden lineal recomendado: 1a, 1b, 1b-fix-1, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 6-fix-1, 6-fix-2, 6-fix-3, 7, 7-fix-1, 7-fix-2, Cierre.
 
 ## Huecos de la spec
 
@@ -547,6 +549,25 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 - Registrar en este plan: log de arranque por rol, `models` y `usage` de
   `run.json`, filas del CSV y el resultado de `seed_triage` sobre ellas.
 
+### 7-fix-1 Juez en `check_deployments` con `--env-file` (R8) — Opus 5.5, interactiva
+
+- Test RED primero en `tests/test_check_deployments.py`: `--env-file` con
+  `LLM_MODEL_JUDGE` definido solo en el archivo -> el juez figura en la salida.
+- Implementacion: `role_configs` resuelve `task` y `reflection` con `from_env` (que
+  carga `LLM_ENV_FILE`) antes de leer `LLM_MODEL_JUDGE`.
+- Archivos: `shared/utils/check_deployments.py`, `tests/test_check_deployments.py`.
+
+### 7-fix-2 Snapshot DSPy en la migracion (R9) — Opus 5.5, interactiva
+
+- Test RED primero en `tests/test_judge_registry.py`: fila con snapshot DSPy
+  (`module:` y `adapter:` sin `type`) y sin `run.json` -> `Modelo Juez` vacio y no
+  contada en `judge_unknown`; snapshot sin `module` ni `adapter.type` sigue
+  contando como desconocido.
+- Implementacion: en `_is_rag_run`, un snapshot sin `adapter.type` con seccion
+  `module` (exclusiva de DSPy, que no tiene RAG) es no RAG. Mensaje de `main` con
+  la causa exacta.
+- Archivos: `shared/utils/migrate_metrics_csv.py`, `tests/test_judge_registry.py`.
+
 ### Cierre — sesion interactiva, Opus 5.5
 
 - `[SDD-Check]` en `historial/sdd.md`; estado de D-028 y D-029 (a); Coverage
@@ -902,3 +923,25 @@ subproyectos (detalle en "Verificacion real (fase 7)"). Dos hallazgos nuevos, R8
 conteo de la migracion en DSPy), pendientes de decision del usuario: corregir en
 subfases `7-fix-N` (Sonnet 5.5, test RED previo) antes del Cierre, o registrarlos
 como deuda en el Cierre. Siguiente: esa decision y despues el Cierre (Opus 5.5).
+Hallazgos R8 y R9 aprobados por el usuario (2026-11-27): se corrigen ambos, en sesion
+interactiva (Opus 5.5) en lugar de `-p` Sonnet.
+Precondicion encontrada al correr `ci_local.sh` (7b7ad1c): con el `.env` real de la fase 7
+(juez Anthropic y `LLM_API_KEY_JUDGE`) fallaban en local, no en CI, `test_sc005_logs_vs_run_json.py::
+TestGepaStandalone::test_completed_rag_run_with_judge_failures` (aviso de herencia del juez) y
+`test_shared_llm.py::TestLLMConfigFromEnv::test_env_file_override_loads_when_no_api_key` (una
+credencial por rol impedia cargar `LLM_ENV_FILE`). Causa: `config.py` de cada subproyecto hace
+`load_dotenv` al importarse y `clear_env` solo conocia las 6 variables globales previas a
+SPEC-106. `tests/conftest.py` (fuera de las listas, excepcion de tests por FR-001: fixture que
+la spec deja incompleto) fuerza esa carga y quita todo `LLM_*` del proceso; `clear_env` borra
+por prefijo; se elimina `LLM_ENV_VARS`.
+7-fix-1 hecha (ab91cea). `role_configs` resuelve `task` y `reflection` antes de leer
+`LLM_MODEL_JUDGE`. Test nuevo `TestEnvFileTrigger::test_judge_defined_only_in_env_file_is_checked`;
+`isolated_env` de `tests/test_check_deployments.py` deja de usar monkeypatch (un `delenv` sobre lo
+que escribio `load_dotenv` lo restauraba en el teardown). Verificado sobre `gepa_standalone/.env`:
+el juez figura en `check_deployments --quick --env-file`.
+7-fix-2 hecha (d864369). `_is_rag_run`: snapshot con `module` y sin `adapter.type` -> no RAG;
+mensaje de `main` con la causa exacta. Tests nuevos en `TestMigrationOfJudgeModel` (2). Sobre los
+CSV reales: DSPy 615 filas no RAG (antes 614 "sin saber"); GEPA sin cambio (19 RAG, 277 no RAG,
+395 sin directorio de corrida). `ci_local.sh` verde (2636 tests).
+Siguiente: Cierre (Opus 5.5, interactiva). Deuda a registrar: R4, R6, R7 y `variable` en
+`infraestructura`. Arrancar con: "Cierre de SPEC-106 segun docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
