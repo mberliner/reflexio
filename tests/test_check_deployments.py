@@ -18,12 +18,25 @@ AZURE_B = "https://beta.openai.azure.com/"
 
 
 @pytest.fixture(autouse=True)
-def isolated_env(monkeypatch, tmp_path):
-    """Sin .env del cwd ni variables LLM_* heredadas."""
-    monkeypatch.chdir(tmp_path)
-    for name in list(os.environ):
-        if name.startswith("LLM_"):
-            monkeypatch.delenv(name)
+def isolated_env(tmp_path):
+    """Sin .env del cwd ni variables LLM_* heredadas, y sin fuga al terminar.
+
+    No usa monkeypatch a proposito: `load_dotenv` (via `--env-file`) escribe
+    `os.environ` por fuera, y un `monkeypatch.delenv` posterior registraria esos
+    valores y los restauraria en su teardown. Este fixture autouse se instancia
+    antes que el `monkeypatch` del test, asi que su teardown corre despues y deja
+    las `LLM_*` exactamente como estaban.
+    """
+    cwd = os.getcwd()
+    saved = {name: value for name, value in os.environ.items() if name.startswith("LLM_")}
+    for name in saved:
+        del os.environ[name]
+    os.chdir(tmp_path)
+    yield
+    os.chdir(cwd)
+    for name in [n for n in os.environ if n.startswith("LLM_")]:
+        del os.environ[name]
+    os.environ.update(saved)
 
 
 class TestRoleConfigs:
@@ -171,3 +184,25 @@ class TestEnvFileTrigger:
         out = capsys.readouterr().out
         assert "alpha.openai.azure.com" in out
         assert "from-file" not in out
+
+    def test_judge_defined_only_in_env_file_is_checked(self, monkeypatch, tmp_path, capsys):
+        """R8: el juez del `.env` de `--env-file` se verifica aunque no este en el entorno."""
+        env_file = tmp_path / "custom.env"
+        env_file.write_text(
+            "LLM_MODEL_TASK=azure/gpt-4.1-mini\n"
+            "LLM_MODEL_REFLECTION=azure/gpt-4.1-mini\n"
+            "LLM_MODEL_JUDGE=anthropic/claude-sonnet-5-5\n"
+            "LLM_API_KEY_JUDGE=judge-key\n"
+            "LLM_API_KEY=from-file\n"
+            f"LLM_API_BASE={AZURE_A}\n"
+        )
+        monkeypatch.setattr(
+            "sys.argv", ["check_deployments", "--quick", "--env-file", str(env_file)]
+        )
+        patch_litellm_completion(
+            monkeypatch, lambda request, num_retries: make_completion_response()
+        )
+        cd.main()  # isolated_env limpia lo que load_dotenv deja en os.environ
+        out = capsys.readouterr().out
+        assert "judge | anthropic | anthropic/claude-sonnet-5-5 | api.anthropic.com" in out
+        assert "judge-key" not in out

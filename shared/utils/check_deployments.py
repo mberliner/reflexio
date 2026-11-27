@@ -251,11 +251,14 @@ def role_configs() -> list[LLMConfig]:
     Configuracion resuelta de cada rol a verificar (SPEC-106 FR-008, D2): `task`,
     `reflection` y `judge` solo si `LLM_MODEL_JUDGE` esta definido. Cada rol usa su
     propia conexion (variables por rol y proveedor ancla).
+
+    `LLM_MODEL_JUDGE` se lee despues de resolver `task` y `reflection`: `from_env`
+    carga `LLM_ENV_FILE`, y el juez puede estar definido solo en ese `.env`.
     """
-    roles = ["task", "reflection"]
+    confs = [LLMConfig.from_env(role) for role in ("task", "reflection")]
     if (os.getenv("LLM_MODEL_JUDGE") or "").strip():
-        roles.append("judge")
-    return [LLMConfig.from_env(role) for role in roles]
+        confs.append(LLMConfig.from_env("judge"))
+    return confs
 
 
 def _deployment_name(config: LLMConfig) -> str:
