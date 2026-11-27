@@ -2,8 +2,9 @@
 SPEC-104 subfase 2a: punto unico de llamada a LiteLLM (D3, FR-001, FR-011, SC-009).
 
 - AST: no hay otra llamada a `litellm.completion` en produccion fuera de
-  `shared/llm/call.py` y de las sondas de configuracion
-  (`LLMConfig.validate_connection`, `shared/utils/check_deployments.py`).
+  `shared/llm/call.py` y de la herramienta de diagnostico
+  `shared/utils/check_deployments.py`. La sonda de conexion
+  (`LLMConfig.validate_connection`) pasa por el punto comun (SPEC-106 FR-005).
 - Los tres caminos sin DSPy (`get_lm_function`, `call_llm`,
   `SimpleRAGAdapter._complete`) delegan en `checked_completion`.
 - SC-009 por caso: a traves de `dspy.Predict` (con el fallback ChatAdapter ->
@@ -45,8 +46,8 @@ COMPLETION_NAMES = frozenset({"completion", "acompletion"})
 
 # (archivo, funcion que contiene la llamada): unicos lugares permitidos.
 ALLOWED_CALL_SITES = {
-    ("shared/llm/call.py", "_call"),
-    ("shared/llm/config.py", "validate_connection"),
+    ("shared/llm/call.py", "_raw_completion"),
+    # Herramienta de diagnostico, fuera de FR-005 de SPEC-106 (D5).
     ("shared/utils/check_deployments.py", None),
 }
 
@@ -129,12 +130,17 @@ class TestSingleCallPoint:
 
     def test_common_call_has_exactly_one_completion(self) -> None:
         sites = _completion_call_sites(REPO_ROOT / "shared/llm/call.py")
-        assert sites == [("shared/llm/call.py", "_call")]
+        assert sites == [("shared/llm/call.py", "_raw_completion")]
+
+    def test_probe_has_no_own_completion(self) -> None:
+        # SPEC-106 FR-005: la sonda de conexion pasa por el punto de llamada comun.
+        assert _completion_call_sites(REPO_ROOT / "shared/llm/config.py") == []
 
     def test_detector_finds_known_probe(self) -> None:
-        # Control del detector: la sonda de configuracion si llama a litellm.completion.
-        sites = _completion_call_sites(REPO_ROOT / "shared/llm/config.py")
-        assert ("shared/llm/config.py", "validate_connection") in sites
+        # Control del detector: la herramienta de diagnostico si llama a litellm.completion.
+        sites = _completion_call_sites(REPO_ROOT / "shared/utils/check_deployments.py")
+        assert sites
+        assert all(rel == "shared/utils/check_deployments.py" for rel, _ in sites)
 
 
 # ==================== Caminos sin DSPy delegan en checked_completion ====================

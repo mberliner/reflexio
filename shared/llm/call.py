@@ -4,6 +4,10 @@ Llamada comun con reintento propio de infraestructura (SPEC-104, D3, FR-011).
 Sin importar `dspy`. La capa de llamada solo lanza: nunca llama a `record` ni a
 `record_attempt` del contador (D4); cuenta quien conoce el caso. La unica
 excepcion es `configuracion`, que fija el estado de aborto antes de lanzar.
+
+La sonda de conexion (`probe_completion`, SPEC-106 D5) comparte el sitio unico
+de `litellm.completion` (`_raw_completion`) pero no reintenta, no registra uso
+ni toca el contador.
 """
 
 from __future__ import annotations
@@ -187,10 +191,9 @@ def checked_response(
     `capture_finish_reason`. Con `allow_tool_calls`, una respuesta con
     `tool_calls` no se revisa como texto (la usa el LM de DSPy).
     """
-    import litellm
 
     def _call() -> Any:
-        return litellm.completion(messages=messages, **{**kwargs, "num_retries": 0})
+        return _raw_completion(kwargs, messages)
 
     response = call_with_infra_retry(
         _call, role, infra_retries=infra_retries, backoff_base=backoff_base
@@ -204,6 +207,57 @@ def checked_response(
     if sink is not None:
         sink[:] = [finish_reason]
     return response
+
+
+def _raw_completion(kwargs: dict[str, Any], messages: list[dict[str, Any]]) -> Any:
+    """
+    Unico sitio de `litellm.completion` en produccion (SPEC-105 FR-001, SPEC-106
+    D5): un intento HTTP, sin reintento de LiteLLM (`num_retries=0`).
+    """
+    import litellm
+
+    return litellm.completion(messages=messages, **{**kwargs, "num_retries": 0})
+
+
+PROBE_MESSAGES: list[dict[str, Any]] = [{"role": "user", "content": "Respond only 'OK'"}]
+
+
+def probe_completion(kwargs: dict[str, Any], role: str) -> None:
+    """
+    Sonda de conexion de un rol (SPEC-106 FR-005, D5): un intento, sin reintento.
+
+    No registra uso (no es uso de la corrida) ni toca el contador de fallas (no
+    fija aborto: todavia no hay corrida). Una excepcion se clasifica con la capa 1
+    de SPEC-104 sin leer el texto y sale como `LLMCallFailure`; una respuesta
+    `None` es `configuracion`. Una respuesta sin texto es conexion valida: el
+    endpoint y la credencial respondieron; se avisa con `[WARN]`.
+    """
+    try:
+        response = _raw_completion(kwargs, PROBE_MESSAGES)
+    except Exception as exc:
+        clase = classify_exception(exc)
+        failure = LLMFailure(
+            clase=clase, rol=role, causa=type(root_exception(exc)).__name__, finish_reason=None
+        )
+        raise LLMCallFailure(
+            failure,
+            f"Sonda de conexion fallida (rol={role}, clase={clase.value}, causa={failure.causa})",
+        ) from exc
+    clase = classify_response(response)
+    if clase is None:
+        return
+    if response is None:
+        failure = LLMFailure(clase=clase, rol=role, causa="NoneResponse")
+        raise LLMCallFailure(failure, f"Sonda de conexion: respuesta None del LLM (rol={role})")
+    choice = response.choices[0] if getattr(response, "choices", None) else None
+    logger.warning(
+        "[WARN] Sonda de conexion del rol %s: respuesta sin texto sano "
+        "(clase=%s, finish_reason=%s); el endpoint y la credencial respondieron, "
+        "se toma como conexion valida",
+        role,
+        clase.value,
+        getattr(choice, "finish_reason", None),
+    )
 
 
 def _has_tool_calls(response: Any) -> bool:

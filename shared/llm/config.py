@@ -758,7 +758,9 @@ class LLMConfig:
         """
         import litellm
 
+        from .call import probe_completion
         from .errors import LLMConnectionError
+        from .failures import FailureClass, LLMCallFailure
 
         # Config invalida: LLMConfigError sale tal cual, no se envuelve como falla de red.
         # La sonda fija max_tokens=5 y apply_constraints eleva a 16000 si hay razonamiento.
@@ -766,79 +768,88 @@ class LLMConfig:
         base["max_tokens"] = 5
         kwargs = self.apply_constraints(base)
 
+        # Usar kwargs sin None para evitar romper el logger de litellm
+        litellm.drop_params = True
         try:
-            # Usar kwargs sin None para evitar romper el logger de litellm
-            litellm.drop_params = True
-
-            litellm.completion(
-                messages=[{"role": "user", "content": "Respond only 'OK'"}], **kwargs
-            )
+            # SPEC-106 D5: por el punto de llamada comun, un intento, sin uso ni aborto.
+            probe_completion(kwargs, self.role)
             return True
-        except Exception as e:
-            error_str = str(e)
-            provider = provider_of(self.model)
+        except LLMCallFailure as failure_exc:
+            clase = failure_exc.failure.clase
+            cause = failure_exc.__cause__
+            key_var = self._source_variable("api_key", "API_KEY")
+            base_var = self._source_variable("api_base", "API_BASE")
+            model_var = self._source_variable("model", "MODEL")
 
-            def _truncate(value, limit: int = 500) -> str:
-                try:
-                    return str(value)[:limit]
-                except Exception:
-                    return "<unavailable>"
-
-            response_obj = getattr(e, "response", None)
-            response_text = (
-                getattr(response_obj, "text", None) if response_obj is not None else None
-            )
-            extra_details = {
-                "error_type": type(e).__name__,
-                "error_repr": _truncate(repr(e)),
-                "error_args": _truncate(getattr(e, "args", None)),
-                "status_code": getattr(e, "status_code", None),
-                "response_text": _truncate(response_text) if response_text else None,
-                "response": _truncate(response_obj) if response_obj else None,
-                "request_id": getattr(e, "request_id", None),
-            }
-
-            # Parse common errors
-            suggestions = []
-            if "Virtual Network" in error_str or "VNet" in error_str:
-                message = "Azure endpoint requires VNet access"
+            # Mensaje por clase de SPEC-104 (capa 1), sin leer el texto del error.
+            if clase == FailureClass.configuracion:
+                message = "Invalid credential, endpoint or model (class configuracion)"
                 suggestions = [
-                    "Connect to corporate VPN with VNet access",
-                    "Verify your IP is allowed in Azure resource",
+                    f"Verify the API key in {key_var}",
+                    f"Verify the endpoint in {base_var}: {self.api_base}"
+                    if self.api_base
+                    else f"Verify the endpoint for provider {provider_of(self.model)}",
+                    f"Verify that model/deployment '{self.model}' ({model_var}) exists",
                 ]
-            elif "401" in error_str or "Unauthorized" in error_str:
-                message = "Authentication failed - invalid API key"
-                suggestions = [
-                    "Verify LLM_API_KEY in .env file",
-                    "Regenerate API key in Azure/OpenAI portal",
-                ]
-            elif "404" in error_str or "not found" in error_str.lower():
-                message = "Model or deployment not found"
-                suggestions = [
-                    f"Verify deployment '{self.model}' exists",
-                    "Check LLM_MODEL_* values in .env",
-                ]
-            elif "429" in error_str or "rate limit" in error_str.lower():
-                message = "Rate limit exceeded"
+            elif clase == FailureClass.infraestructura:
+                message = (
+                    "Provider not reachable now (rate limit 429, timeout or network; "
+                    "class infraestructura): retry later"
+                )
                 suggestions = [
                     "Wait a few minutes before retrying",
-                    "Check quotas in Azure/OpenAI portal",
+                    "Check quotas and limits of the deployment",
+                    "Check network access (VPN/VNet) to the endpoint",
                 ]
             else:
-                message = "Connection failed"
-                suggestions = [
-                    "Check internet connection",
-                    f"Verify endpoint: {self.api_base}",
-                    "Review error details below",
-                ]
+                message = f"Connection probe failed (class {clase.value})"
+                suggestions = ["Review error details below"]
 
             raise LLMConnectionError(
                 message=message,
-                provider=provider,
+                provider=provider_of(self.model),
                 model=self.model,
                 endpoint=self.api_base,
                 api_version=self.api_version,
-                original_error=error_str[:500],
-                extra_details=extra_details,
+                original_error=str(cause or failure_exc)[:500],
+                extra_details=_probe_error_details(cause) if cause is not None else None,
                 suggestions=suggestions,
-            ) from e
+                role=self.role,
+                failure_class=clase.value,
+                variable=key_var,
+            ) from failure_exc
+
+    def _source_variable(self, field_name: str, suffix: str) -> str:
+        """
+        Variable de la que salio un valor de conexion (`env_sources`, SPEC-106 D2/D4);
+        sin fuente concreta, la esperada para el rol segun la regla de herencia.
+        """
+        source = self.env_sources.get(field_name)
+        if source and source not in ("unset", "default"):
+            return source
+        role_var = f"LLM_{suffix}_{self.role.upper()}"
+        if field_name != "model" and self.inherits_global:
+            return f"{role_var} or LLM_{suffix}"
+        return role_var
+
+
+def _probe_error_details(exc: BaseException) -> dict[str, Any]:
+    """Detalles diagnosticos de la excepcion de la sonda (sin la credencial)."""
+
+    def _truncate(value: Any, limit: int = 500) -> str:
+        try:
+            return str(value)[:limit]
+        except Exception:
+            return "<unavailable>"
+
+    response_obj = getattr(exc, "response", None)
+    response_text = getattr(response_obj, "text", None) if response_obj is not None else None
+    return {
+        "error_type": type(exc).__name__,
+        "error_repr": _truncate(repr(exc)),
+        "error_args": _truncate(getattr(exc, "args", None)),
+        "status_code": getattr(exc, "status_code", None),
+        "response_text": _truncate(response_text) if response_text else None,
+        "response": _truncate(response_obj) if response_obj else None,
+        "request_id": getattr(exc, "request_id", None),
+    }

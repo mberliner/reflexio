@@ -6,6 +6,7 @@ Covers errors.py (LLMConnectionError) and config.py (LLMConfig).
 
 from unittest.mock import MagicMock
 
+import litellm
 import pytest
 
 from shared.llm.config import LLMConfig
@@ -363,42 +364,50 @@ class TestLLMConfigValidateConnection:
         config = LLMConfig(model="azure/gpt-4", api_key="key", api_base="https://base.com")
         assert config.validate_connection() is True
 
+    # SPEC-106 D5: la clase sale de la capa 1 de SPEC-104 (tipo de excepcion), no
+    # de subcadenas del mensaje.
+
     def test_error_401(self, monkeypatch):
-        exc = Exception("401 Unauthorized")
+        exc = litellm.AuthenticationError(
+            message="Invalid API key", llm_provider="azure", model="gpt-4"
+        )
         monkeypatch.setattr("litellm.completion", MagicMock(side_effect=exc))
 
         config = LLMConfig(model="azure/gpt-4", api_key="bad", api_base="https://base.com")
         with pytest.raises(LLMConnectionError) as exc_info:
             config.validate_connection()
-        assert "Authentication failed" in exc_info.value.message
+        assert exc_info.value.failure_class == "configuracion"
+        assert "credential" in exc_info.value.message
 
     def test_error_404(self, monkeypatch):
-        exc = Exception("404 not found")
+        exc = litellm.NotFoundError(message="Not found", llm_provider="azure", model="gpt-4")
         monkeypatch.setattr("litellm.completion", MagicMock(side_effect=exc))
 
         config = LLMConfig(model="azure/gpt-4", api_key="key", api_base="https://base.com")
         with pytest.raises(LLMConnectionError) as exc_info:
             config.validate_connection()
-        assert "Model or deployment not found" in exc_info.value.message
+        assert exc_info.value.failure_class == "configuracion"
+        assert any("azure/gpt-4" in s for s in exc_info.value.suggestions)
 
     def test_error_429(self, monkeypatch):
+        exc = litellm.RateLimitError(message="Rate limit", llm_provider="azure", model="gpt-4")
+        monkeypatch.setattr("litellm.completion", MagicMock(side_effect=exc))
+
+        config = LLMConfig(model="azure/gpt-4", api_key="key", api_base="https://base.com")
+        with pytest.raises(LLMConnectionError) as exc_info:
+            config.validate_connection()
+        assert exc_info.value.failure_class == "infraestructura"
+        assert "retry later" in exc_info.value.message
+
+    def test_message_text_does_not_drive_class(self, monkeypatch):
+        # Un texto con "429" en una excepcion sin tipo de API no es infraestructura.
         exc = Exception("429 rate limit exceeded")
         monkeypatch.setattr("litellm.completion", MagicMock(side_effect=exc))
 
         config = LLMConfig(model="azure/gpt-4", api_key="key", api_base="https://base.com")
         with pytest.raises(LLMConnectionError) as exc_info:
             config.validate_connection()
-        assert "Rate limit exceeded" in exc_info.value.message
-
-    def test_error_vnet(self, monkeypatch):
-        exc = Exception("Virtual Network rules blocking request")
-        monkeypatch.setattr("litellm.completion", MagicMock(side_effect=exc))
-
-        config = LLMConfig(model="azure/gpt-4", api_key="key", api_base="https://base.com")
-        with pytest.raises(LLMConnectionError) as exc_info:
-            config.validate_connection()
-        assert "VNet" in exc_info.value.message
-        assert any("VPN" in s for s in exc_info.value.suggestions)
+        assert exc_info.value.failure_class == "configuracion"
 
     def test_error_generic(self, monkeypatch):
         exc = Exception("Something totally unexpected")
@@ -407,7 +416,9 @@ class TestLLMConfigValidateConnection:
         config = LLMConfig(model="azure/gpt-4", api_key="key", api_base="https://base.com")
         with pytest.raises(LLMConnectionError) as exc_info:
             config.validate_connection()
-        assert "Connection failed" in exc_info.value.message
+        assert exc_info.value.role == "task"
+        assert exc_info.value.failure_class == "configuracion"
+        assert exc_info.value.extra_details["error_type"] == "Exception"
 
     def test_truncates_original_error(self, monkeypatch):
         long_msg = "x" * 1000
