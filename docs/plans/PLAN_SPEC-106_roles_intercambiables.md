@@ -77,7 +77,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | | 1b Funcion de proveedor, resolucion por rol con proveedor ancla, `api_base` explicito en `anthropic/`, validacion local por rol, `LLM_ENV_FILE`, `endpoint_host` y `connection_summary` (GREEN) | FR-001, FR-002, FR-003, FR-005 (ultimo punto), FR-007 (metodo) | D1 a D4, D7 | Sonnet 5.5 | hecho (c0f7c64) |
 | 1 (correccion) | 1b-fix-1 Modelo sin default: `LLM_MODEL_<ROL>` ausente o vacio falla en `validate()` nombrando rol y variable (test RED previo) | FR-001 (enmienda), FR-003 (ancla) | D12 | Sonnet 5.5 | hecho (1e23351) |
 | 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | hecho (7cc3840) |
-| | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | pendiente |
+| | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | hecho (27f111f) |
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | pendiente |
 | | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | pendiente |
 | 4 Registro y comparabilidad | 4a `run.json` con proveedor y host por rol; columna `Modelo Juez`; logger sobre CSV sin migrar; migracion | FR-006, SC-006 | D7, D10 | Sonnet 5.5 | pendiente |
@@ -592,5 +592,15 @@ Revision de la sonda por el usuario (2026-11-27): nota (2) aceptada. Nota (1)
 aceptada para esta spec; mejora posterior, fuera de SPEC-106: en
 `infraestructura` el campo `variable` no deberia nombrar la credencial (no es
 la causa). Registrarla como deuda en el Cierre.
+2b hecha (27f111f). `setup_models(roles=("task", "reflection"))` valida todos los
+roles usados antes de la primera sonda e imprime `connection_summary()`;
+`baseline_only.py` pide `roles=("task",)`; `validate_llm_connections` (GEPA)
+valida y sondea `judge_config` si existe (lo construye 3b; hoy no existe). Tests
+existentes ajustados: `test_dspy_orchestrator_failures.py` (los stubs de
+`setup_models` aceptan `roles`). Observacion para 3b/4a: `collect_model_info`
+(`shared/logging/metadata.py`, fuera de los archivos de 2b) no tolera
+`reflection_config is None`; `baseline_only.py` no lo llama, asi que no hay
+fallo hoy. En `save_aborted_run` de DSPy la reflexion tampoco es None porque el
+optimizador usa ambos roles.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
