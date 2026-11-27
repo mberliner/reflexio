@@ -16,6 +16,7 @@ from shared.logging import (
     format_framework_versions,
     save_run_artifacts,
 )
+from shared.logging.csv_writer import STANDARD_COLUMN_MAPPING
 from shared.paths import DSPyPaths, GEPAPaths
 
 
@@ -87,8 +88,8 @@ class TestExperimentLogger:
         assert rows[1][header.index("Tokens Task")] == "1234"
         assert rows[1][header.index("Costo Real USD")] == "0,012345"
 
-    def test_append_aligns_to_legacy_header(self, gepa_paths: GEPAPaths) -> None:
-        # Simulate a pre-existing CSV without the new token columns.
+    def test_append_adds_missing_columns_to_legacy_header(self, gepa_paths: GEPAPaths) -> None:
+        # CSV previo sin las columnas nuevas: se agregan, no se descartan (SPEC-106 FR-006).
         legacy_header = (
             "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;Baseline Score;"
             "Optimizado Score;Robustez Score;Run Directory;Reflexion Positiva;Budget;Notas"
@@ -102,15 +103,14 @@ class TestExperimentLogger:
                 "case_name": "demo",
                 "run_dir": "N/A",
                 "budget": 30,
-                "tokens_task": 999,  # new column absent in legacy file -> dropped
+                "tokens_task": 999,  # columna ausente en el archivo previo: se agrega
             }
         )
         rows = list(csv.reader(gepa_paths.summary_csv.open(encoding="utf-8"), delimiter=";"))
-        # Header unchanged (still 12 cols); appended row has matching width.
-        assert len(rows[0]) == 12
-        assert len(rows[1]) == 12
+        assert len(rows[0]) == len(STANDARD_COLUMN_MAPPING)
+        assert len(rows[1]) == len(rows[0])
         assert rows[1][rows[0].index("Budget")] == "30"
-        assert "Tokens Task" not in rows[0]
+        assert rows[1][rows[0].index("Tokens Task")] == "999"
 
     def test_lib_versions_stamped(self, gepa_paths: GEPAPaths) -> None:
         """SPEC-100 FR-009: cada fila lleva las versiones instaladas de las librerias."""

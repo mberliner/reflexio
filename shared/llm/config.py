@@ -435,6 +435,8 @@ class LLMConfig:
             - thinking_param: dict `thinking` enviado o None.
             - max_tokens: valor enviado (tras FR-006).
             - max_tokens_requested: `max_tokens` del argumento o, si es None, de config.
+            - provider: proveedor del modelo (`provider_of`, SPEC-106 D1).
+            - endpoint_host: host del endpoint efectivo (D7); nunca la credencial.
         """
         base = self._base_kwargs()
         requested = self.max_tokens if max_tokens is None else max_tokens
@@ -462,6 +464,8 @@ class LLMConfig:
             "thinking_param": sent.get("thinking"),
             "max_tokens": sent.get("max_tokens"),
             "max_tokens_requested": requested,
+            "provider": provider_of(self.model),
+            "endpoint_host": self._effective_host(sent),
         }
 
     def describe(self, max_tokens: int | None = None) -> str:
@@ -654,10 +658,15 @@ class LLMConfig:
         Host del endpoint efectivo (SPEC-106 D7): `hostname` del `api_base` enviado; si
         no hay, el default del proveedor (openai, anthropic); si no se conoce, None.
         """
+        return self._effective_host(self.apply_constraints(self._base_kwargs()))
+
+    def _effective_host(self, sent: dict[str, Any]) -> str | None:
+        """Host del `api_base` realmente enviado (tras `apply_constraints`) o el del proveedor."""
         from urllib.parse import urlparse
 
-        if self.api_base:
-            return urlparse(self.api_base).hostname
+        api_base = sent.get("api_base")
+        if api_base:
+            return urlparse(api_base).hostname
         return _PROVIDER_DEFAULT_HOSTS.get(provider_of(self.model))
 
     def connection_summary(self) -> str:

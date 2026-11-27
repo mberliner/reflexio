@@ -31,6 +31,7 @@ STANDARD_COLUMN_MAPPING = {
     "case_name": "Caso",
     "task_model": "Modelo Tarea",
     "reflection_model": "Modelo Profesor",
+    "judge_model": "Modelo Juez",
     "baseline_score": "Baseline Score",
     "optimized_score": "Optimizado Score",
     "test_score": "Robustez Score",
@@ -43,6 +44,9 @@ STANDARD_COLUMN_MAPPING = {
     "lib_versions": "Versiones Librerias",
     "notes": "Notas",
 }
+
+# The judge exists only in RAG: empty (not "N/A") elsewhere (SPEC-106 FR-006).
+_EMPTY_WHEN_MISSING = frozenset({"judge_model"})
 
 
 class BaseCSVLogger:
@@ -99,12 +103,11 @@ class BaseCSVLogger:
     def _sync_active_keys_to_file(self) -> None:
         """Align the write order to the existing file's header.
 
-        Guarantees appended rows match the columns already on disk: new
-        columns added to the mapping are simply not written to a legacy file
-        (it must be regenerated to gain them), and any column the file has
-        that the mapping no longer knows keeps an empty slot to preserve
-        alignment. An existing-but-empty file is (re)initialized with the
-        current full header.
+        Guarantees appended rows match the columns already on disk: columns the
+        mapping has and the file lacks are added to the file (never dropped
+        silently, SPEC-106 FR-006), and any column the file has that the
+        mapping no longer knows keeps an empty slot to preserve alignment. An
+        existing-but-empty file is (re)initialized with the current full header.
         """
         try:
             with open(self.csv_path, newline="", encoding="utf-8-sig") as f:
@@ -120,12 +123,64 @@ class BaseCSVLogger:
         if existing == self.headers:
             return
 
+        missing = [h for h in self.headers if h not in existing]
+        if missing:
+            existing = self._add_missing_columns(existing, missing)
+
         self._active_keys = [self._display_to_key.get(h) for h in existing]
         logger.info(
             "CSV header differs from current mapping; appending aligned to existing %d columns: %s",
             len(existing),
             self.csv_path,
         )
+
+    def _add_missing_columns(self, existing: list[str], missing: list[str]) -> list[str]:
+        """Rewrite the file adding the mapping columns it lacks (SPEC-106 FR-006, D10).
+
+        Existing columns keep their order and values, including those the mapping
+        does not know; each missing column goes right after the nearest preceding
+        mapping column present in the file, and is empty in existing rows. The
+        rewrite is atomic (temporary file and replace). A new column is never
+        dropped silently: a WARN asks to run ``migrate_metrics_csv`` to backfill
+        ``Modelo Juez`` in earlier RAG rows.
+        """
+        with open(self.csv_path, newline="", encoding="utf-8-sig") as f:
+            rows = list(csv.reader(f, **EUROPEAN_CSV_CONFIG))
+
+        new_header = list(existing)
+        for header in self.headers:
+            if header not in missing:
+                continue
+            pos = 0
+            for earlier in reversed(self.headers[: self.headers.index(header)]):
+                if earlier in new_header:
+                    pos = new_header.index(earlier) + 1
+                    break
+            new_header.insert(pos, header)
+
+        index_of = {h: i for i, h in enumerate(existing)}
+        out_rows = [new_header]
+        for raw in rows[1:]:
+            out_rows.append(
+                [
+                    raw[index_of[h]] if h in index_of and index_of[h] < len(raw) else ""
+                    for h in new_header
+                ]
+            )
+
+        tmp_path = self.csv_path.with_name(self.csv_path.name + ".tmp")
+        with open(tmp_path, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f, **EUROPEAN_CSV_CONFIG).writerows(out_rows)
+        os.replace(tmp_path, self.csv_path)
+
+        logger.warning(
+            "[WARN] CSV %s lacked columns %s; added them (empty in earlier rows). "
+            "Run `python -m shared.utils.migrate_metrics_csv` to fill 'Modelo Juez' "
+            "in earlier RAG rows.",
+            self.csv_path,
+            missing,
+        )
+        return new_header
 
     def _write_headers(self) -> None:
         """Write column headers to the CSV file."""
@@ -153,13 +208,15 @@ class BaseCSVLogger:
                 row.append("")
                 continue
 
-            value = data.get(key, "N/A")
+            # Keys that stay empty (not "N/A") when the case does not use them.
+            empty = "" if key in _EMPTY_WHEN_MISSING else "N/A"
+            value = data.get(key, empty)
 
             # Auto-format score fields
             if "score" in key.lower() and value != "N/A":
                 value = fmt_score(value)
 
-            row.append(str(value) if value is not None else "N/A")
+            row.append(str(value) if value is not None else empty)
 
         return row
 

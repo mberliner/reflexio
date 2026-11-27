@@ -62,6 +62,7 @@ class GEPAResultsLogger(ExperimentLogger):
         tokens_task: int | None = None,
         tokens_reflection: int | None = None,
         cost_real_usd: str | None = None,
+        judge_model: str = "",
     ) -> str:
         """Log an experiment row, returning the generated run_id."""
         return self.log_run(
@@ -69,6 +70,7 @@ class GEPAResultsLogger(ExperimentLogger):
                 "case_name": case_title,
                 "task_model": task_model,
                 "reflection_model": reflection_model,
+                "judge_model": judge_model,
                 "baseline_score": baseline_score,
                 "optimized_score": optimized_score,
                 "test_score": robustness_score,
@@ -99,6 +101,7 @@ def log_experiment_result(
     tokens_task: int | None = None,
     tokens_reflection: int | None = None,
     cost_real_usd: str | None = None,
+    judge_model: str = "",
 ) -> str:
     """Legacy positional wrapper around ``GEPAResultsLogger.log_experiment``."""
     return GEPAResultsLogger().log_experiment(
@@ -115,4 +118,5 @@ def log_experiment_result(
         tokens_task=tokens_task,
         tokens_reflection=tokens_reflection,
         cost_real_usd=cost_real_usd,
+        judge_model=judge_model,
     )

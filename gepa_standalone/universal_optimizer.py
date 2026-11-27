@@ -724,6 +724,7 @@ class UniversalOptimizer:
             tokens_task=usage["task"]["prompt_tokens"] + usage["task"]["completion_tokens"],
             tokens_reflection=reflection_tokens_for_csv(usage),
             cost_real_usd=f"{cost:.6f}".replace(".", ","),
+            judge_model=self._judge_model() or "",
         )
 
         return run_dir

@@ -55,6 +55,7 @@ CSV_COLUMNS = [
     "Caso",
     "Modelo Tarea",
     "Modelo Profesor",
+    "Modelo Juez",
     "Baseline Score",
     "Optimizado Score",
     "Robustez Score",

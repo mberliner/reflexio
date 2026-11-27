@@ -11,6 +11,8 @@ up. This one-shot migration rewrites the file to the current header while:
 - backfilling token/cost columns from each run's ``run.json`` when available,
 - backfilling ``Versiones Librerias`` from ``run.json`` (empty for legacy runs
   that did not record them: versions unknown, never guessed),
+- backfilling ``Modelo Juez`` in RAG rows with ``Modelo Profesor`` (before
+  SPEC-106 the judge was the teacher); empty elsewhere (SPEC-106 FR-006),
 - writing a timestamped ``.bak`` backup first.
 
 Usage (from repo root):
@@ -25,6 +27,8 @@ import sys
 import unicodedata
 from datetime import datetime
 from pathlib import Path
+
+import yaml
 
 from shared.logging.csv_writer import EUROPEAN_CSV_CONFIG, STANDARD_COLUMN_MAPPING
 from shared.logging.metadata import format_framework_versions
@@ -69,10 +73,93 @@ def _versions_from_run_json(results_dir: Path, run_dir_value: str) -> str:
     return format_framework_versions(frameworks) if isinstance(frameworks, dict) else ""
 
 
+def _is_rag_run(results_dir: Path, run_dir_value: str) -> bool | None:
+    """Whether a row is a RAG run: True, False, or None when it cannot be known.
+
+    RAG if its ``run.json`` has ``models.judge``; without that, if its
+    ``config_snapshot.yaml`` has ``adapter.type: rag`` (SPEC-106 D10).
+    """
+    data = _run_json(results_dir, run_dir_value)
+    if data is None:
+        return None
+    models = data.get("models")
+    if isinstance(models, dict) and "judge" in models:
+        return True
+    snapshot = results_dir / run_dir_value.replace("\\", "/") / "config_snapshot.yaml"
+    if not snapshot.exists():
+        return None
+    try:
+        config = yaml.safe_load(snapshot.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return None
+    adapter = config.get("adapter") if isinstance(config, dict) else None
+    if not isinstance(adapter, dict) or "type" not in adapter:
+        return None
+    return adapter["type"] == "rag"
+
+
+def _backfill_judge(new_row: dict, results_dir: Path) -> bool | None:
+    """Fill an empty ``judge_model`` of a RAG row with the teacher.
+
+    Returns True if filled, None if the row's kind is unknown (reported), False otherwise.
+    """
+    if new_row.get("judge_model"):
+        return False
+    kind = _is_rag_run(results_dir, new_row.get("run_dir", ""))
+    if kind is None:
+        return None
+    if kind and new_row.get("reflection_model"):
+        new_row["judge_model"] = new_row["reflection_model"]
+        return True
+    return False
+
+
+def _backfill_judge_only(csv_path: Path, results_dir: Path, rows: list[list[str]]) -> dict:
+    """File already at the current header: complete only an empty ``Modelo Juez``.
+
+    The logger adds the column to an unmigrated file leaving earlier rows empty
+    (SPEC-106 D10); this fills them. Idempotent: with nothing to fill, the file
+    is not touched and no backup is made.
+    """
+    header, data_rows = rows[0], rows[1:]
+    keys = list(STANDARD_COLUMN_MAPPING)
+    judge_filled = 0
+    judge_unknown = 0
+    out_rows = [header]
+    for raw in data_rows:
+        padded = [*raw, *[""] * (len(keys) - len(raw))]
+        new_row = dict(zip(keys, padded, strict=False))
+        filled = _backfill_judge(new_row, results_dir)
+        judge_filled += filled is True
+        judge_unknown += filled is None
+        out_rows.append([*(str(new_row[k]) for k in keys), *padded[len(keys) :]])
+
+    result = {
+        "backup": None,
+        "rows": len(data_rows),
+        "backfilled": 0,
+        "already_current": True,
+        "judge_filled": judge_filled,
+        "judge_unknown": judge_unknown,
+    }
+    if not judge_filled:
+        return result
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = csv_path.with_name(f"{csv_path.name}.bak-{stamp}")
+    shutil.copy2(csv_path, backup)
+    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        csv.writer(f, **EUROPEAN_CSV_CONFIG).writerows(out_rows)
+    result.update(backup=backup, already_current=False)
+    return result
+
+
 def migrate_csv(csv_path: Path) -> dict:
     """Rewrite csv_path to the current schema, backfilling from run.json.
 
-    Returns a summary dict: {backup, rows, backfilled, already_current}.
+    Returns a summary dict: {backup, rows, backfilled, already_current,
+    judge_filled, judge_unknown}. ``judge_unknown`` counts rows whose kind (RAG
+    or not) could not be determined; they keep ``Modelo Juez`` empty.
     """
     csv_path = Path(csv_path)
     # <project>/results/experiments/metricas_optimizacion.csv -> results dir
@@ -82,19 +169,21 @@ def migrate_csv(csv_path: Path) -> dict:
         rows = list(csv.reader(f, **EUROPEAN_CSV_CONFIG))
 
     if not rows:
-        return {"backup": None, "rows": 0, "backfilled": 0, "already_current": False}
+        return {
+            "backup": None,
+            "rows": 0,
+            "backfilled": 0,
+            "already_current": False,
+            "judge_filled": 0,
+            "judge_unknown": 0,
+        }
 
     new_headers = list(STANDARD_COLUMN_MAPPING.values())
     old_header = rows[0]
     data_rows = rows[1:]
 
     if old_header == new_headers:
-        return {
-            "backup": None,
-            "rows": len(data_rows),
-            "backfilled": 0,
-            "already_current": True,
-        }
+        return _backfill_judge_only(csv_path, results_dir, rows)
 
     # Backup before touching anything.
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -102,6 +191,8 @@ def migrate_csv(csv_path: Path) -> dict:
     shutil.copy2(csv_path, backup)
 
     backfilled = 0
+    judge_filled = 0
+    judge_unknown = 0
     out_rows = [new_headers]
     for raw in data_rows:
         by_norm = {
@@ -133,6 +224,10 @@ def migrate_csv(csv_path: Path) -> dict:
                 results_dir, new_row.get("run_dir", "")
             )
 
+        filled = _backfill_judge(new_row, results_dir)
+        judge_filled += filled is True
+        judge_unknown += filled is None
+
         out_rows.append([str(new_row.get(key, "")) for key in STANDARD_COLUMN_MAPPING])
 
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
@@ -144,6 +239,8 @@ def migrate_csv(csv_path: Path) -> dict:
         "rows": len(data_rows),
         "backfilled": backfilled,
         "already_current": False,
+        "judge_filled": judge_filled,
+        "judge_unknown": judge_unknown,
     }
 
 
@@ -173,6 +270,14 @@ def main(argv: list[str]) -> int:
         print(f"  Backup:    {result['backup'].name}")
         print(f"  Filas:     {result['rows']}")
         print(f"  Backfill:  {result['backfilled']} fila(s) con costo real desde run.json")
+        print(
+            f"  Juez:      {result['judge_filled']} fila(s) RAG con Modelo Juez = Modelo Profesor"
+        )
+        if result["judge_unknown"]:
+            print(
+                f"  Sin saber si son RAG: {result['judge_unknown']} fila(s) "
+                "(sin run.json ni config_snapshot.yaml); Modelo Juez queda vacio."
+            )
     return 0
 
 
