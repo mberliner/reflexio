@@ -149,6 +149,20 @@ guardar). Antes eran solo `model`, `temperature` y `max_tokens`.
 | `thinking` | `adaptive`, `always`, `off` o `null` (no se sabe) |
 | `thinking_param` | Dict `thinking` enviado o `null` |
 | `max_tokens` / `max_tokens_requested` | Valor final (tras el minimo de 16000) y el pedido |
+| `provider` | Proveedor del rol (`azure`, `openai`, `anthropic`; SPEC-106 FR-006) |
+| `endpoint_host` | Host del endpoint efectivo (nunca la credencial ni el `api_base` completo); `null` si no se conoce |
+
+`provider` y `endpoint_host` permiten verificar que endpoint uso cada rol cuando
+los roles son de proveedores distintos (`docs/LLM_CONFIG.md`). El arranque imprime
+la misma terna por rol (rol, proveedor, modelo, host). `run.json` anteriores no
+las tienen.
+
+**Uso por bucket (SPEC-106 FR-004):** `usage` separa `task`, `reflection` y
+`judge`. El juez (solo RAG) tiene su propio bucket y se tarifa con el modelo del
+juez; la columna `Tokens Reflection` del CSV sigue mostrando reflexion + juez.
+Los casos sin juez no registran rol `judge` en `models`. La columna `Modelo Juez`
+del CSV maestro guarda el modelo efectivo del juez en RAG y queda vacia en el
+resto; forma parte de la clave de comparabilidad (`docs/PROTOCOLO_N_SEEDS.md`).
 
 `judge` aparece solo con el adapter RAG. Los adapters que fijan su propio
 `max_tokens` reportan el valor efectivo de sus llamadas. `run.json` de corridas

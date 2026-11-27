@@ -71,7 +71,7 @@ COMANDO: python -m shared.utils.seed_protocol --config ... --seeds 5
 4. FOTO POSTERIOR + report():
    nuevas = after - before  (por Run ID)
    COMPARABILIDAD: la referencia previa se filtra para conservar solo las filas
-     con los mismos (Modelo Tarea, Modelo Profesor) que el lote nuevo; las demas
+     con la misma terna (Modelo Tarea, Modelo Profesor, Modelo Juez) que el lote nuevo; las demas
      se excluyen con [WARN] (comparar robustez entre modelos invalida la
      conclusion -> baseline confound, leccion 10). Ademas iguala las versiones
      de librerias (columna Versiones Librerias, SPEC-100 FR-009): otras
@@ -155,14 +155,20 @@ Comparar el lote `_v2` contra su referencia previa, no una corrida suelta:
    exito: significa que la intervencion estabilizo la seleccion del prompt.
 
 **Comparabilidad de modelos (prerequisito).** La referencia previa solo es valida
-si usa los MISMOS modelos (`Modelo Tarea` y `Modelo Profesor`) que el lote nuevo.
-El protocolo lo garantiza automaticamente: filtra las filas previas con un par de
-modelos distinto y avisa con `[WARN]` cuantas excluyo. Comparar robustez entre
+si usa los MISMOS modelos (`Modelo Tarea`, `Modelo Profesor` y `Modelo Juez`) que
+el lote nuevo (SPEC-106 FR-006). La clave es la terna con la cadena cruda del CSV:
+`azure/gpt-4o` y `openai/gpt-4o` cuentan como modelos distintos (pueden diferir en
+version de despliegue y filtros), y cambiar solo el juez (RAG) separa las filas.
+`Modelo Juez` esta vacia fuera de RAG. El protocolo lo garantiza automaticamente:
+filtra las filas previas con una terna distinta y avisa con `[WARN]` cuantas
+excluyo. Una fila RAG sin `Modelo Juez` (CSV sin migrar) no es comparable con una
+corrida nueva: el aviso sugiere correr `shared/utils/migrate_metrics_csv.py`, que
+completa el juez con el profesor en las filas RAG previas. Comparar robustez entre
 modelos distintos mide el cambio de modelo, no la intervencion (baseline confound,
 ver `LECCIONES_APRENDIDAS.md` seccion 10). El modelo lo fija el `.env`
-(`LLM_MODEL_TASK`/`LLM_MODEL_REFLECTION`); para reproducir una referencia hay que
-correr con su mismo par de modelos (se puede forzar por variable de entorno, que
-gana sobre el `.env`).
+(`LLM_MODEL_TASK`/`LLM_MODEL_REFLECTION`/`LLM_MODEL_JUDGE`, ver
+`docs/LLM_CONFIG.md`); para reproducir una referencia hay que correr con su misma
+terna (se puede forzar por variable de entorno, que gana sobre el `.env`).
 
 **Comparabilidad de librerias (SPEC-100 FR-009).** Igual que los modelos, un
 cambio de `dspy`, `gepa`, `litellm` u `openai` cambia el optimizador, la
@@ -239,7 +245,7 @@ veredicto de `SPEC-100`). Umbrales: `TRIAGE_VARIANCE_RANGE_PTS=5`,
 
 - No mezclar en un mismo lote de referencia corridas Claude con distinto
   `LLM_EFFORT_<ROL>` o `LLM_THINKING_<ROL>` (SPEC-103 FR-012, D-028). El criterio de
-  comparabilidad de SPEC-100 solo ve el par de modelos y las versiones de
+  comparabilidad de SPEC-100 solo ve la terna de modelos y las versiones de
   librerias, no esa diferencia; los valores efectivos de cada corrida estan en
   su `run.json`.
 - El triaje (`seed_triage`, SPEC-101) filtra solo por modelos, no por versiones
