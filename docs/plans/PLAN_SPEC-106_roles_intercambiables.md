@@ -74,7 +74,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | Fase | Subfase | Requisitos | Decisiones | Modelo | Estado |
 |---|---|---|---|---|---|
 | 1 Conexion por rol (`shared/llm`) | 1a Tests: golden de regresion de parametros (verde hoy) y tests RED de resolucion por rol, no fuga y validacion local | FR-001, FR-002, FR-003, SC-003, SC-004 | D1, D2, D3, D4 | Sonnet 5.5 | hecho (404af1d) |
-| | 1b Funcion de proveedor, resolucion por rol con proveedor ancla, `api_base` explicito en `anthropic/`, validacion local por rol, `LLM_ENV_FILE`, `endpoint_host` y `connection_summary` (GREEN) | FR-001, FR-002, FR-003, FR-005 (ultimo punto), FR-007 (metodo) | D1 a D4, D7 | Sonnet 5.5 | pendiente |
+| | 1b Funcion de proveedor, resolucion por rol con proveedor ancla, `api_base` explicito en `anthropic/`, validacion local por rol, `LLM_ENV_FILE`, `endpoint_host` y `connection_summary` (GREEN) | FR-001, FR-002, FR-003, FR-005 (ultimo punto), FR-007 (metodo) | D1 a D4, D7 | Sonnet 5.5 | hecho (c0f7c64) |
 | 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | pendiente |
 | | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | pendiente |
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | pendiente |
@@ -529,5 +529,6 @@ log completo o el diff solo cuando un control falla.
 ## Proxima sesion
 
 Plan aprobado por el usuario el 2026-11-27, con H1 resuelta. 1a hecha
-(404af1d). Siguiente subfase: 1b (Sonnet 5.5). Arrancar con: "Supervisar SPEC-106 segun la seccion
+(404af1d) y 1b hecha (c0f7c64; parada obligatoria: el usuario revisa el nucleo).
+Siguiente subfase: 2a (Opus 5.5). Arrancar con: "Supervisar SPEC-106 segun la seccion
 Seguimiento de docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
