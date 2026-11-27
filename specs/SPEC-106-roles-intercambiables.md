@@ -113,7 +113,10 @@ Deuda a revisar (`historial/sdd.md`):
   - Sin `LLM_MODEL_JUDGE`, el juez MUST usar la configuracion resuelta del
     profesor completa (modelo, conexion, effort, razonamiento), como hoy. Las
     variables `LLM_*_JUDGE` MUST ignorarse en ese caso, con un `[WARN]` si alguna
-    esta definida.
+    esta definida. Como su conexion es la del profesor, la sonda del profesor la
+    cubre: el juez heredado MUST NOT sondearse aparte, y sus mensajes de
+    validacion MUST nombrar las variables del profesor, no las `LLM_*_JUDGE`
+    (aclaracion del 2026-11-27, hallazgo R2 de la revision).
   - Con `LLM_MODEL_JUDGE`, el juez MUST resolverse como un rol mas (FR-001,
     FR-003; `LLM_EFFORT_JUDGE` y `LLM_THINKING_JUDGE` segun SPEC-103). Los
     overrides del YAML (`models:`) MUST aplicarse al juez igual que hoy se

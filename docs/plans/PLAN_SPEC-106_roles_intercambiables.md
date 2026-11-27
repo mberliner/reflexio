@@ -91,6 +91,9 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | hecho (496ece3) |
 | | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | hecho (d516fcf) |
 | 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | hecho (35ec0a6) |
+| 6 (correcciones) | 6-fix-1 (R1) Migracion: sin `run.json`, clasificar la fila por `config_snapshot.yaml` | FR-006, SC-006 | D10 | Sonnet 5.5 | pendiente |
+| | 6-fix-2 (R2) Juez heredado: sin sonda propia y mensajes con las variables del profesor | FR-004, FR-005 | D8, D13 | Sonnet 5.5 | pendiente |
+| | 6-fix-3 (R3, R5) `from_env` rechaza overrides de conexion; borrar `validate_llm_connection` | FR-003 | D14 | Sonnet 5.5 | pendiente |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |
 | Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
 
@@ -101,9 +104,9 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 - 3a requiere 1b. 3b requiere 2b y 3a.
 - 4a requiere 3b. 4b requiere 4a.
 - 5a requiere 2a. 5b requiere 4b y 5a.
-- 6 requiere 5b. 7 requiere 6 (y sus correcciones). Cierre requiere 7.
+- 6 requiere 5b. 6-fix-1, 6-fix-2 y 6-fix-3 requieren 6 (independientes entre si; se corren en ese orden). 7 requiere 6 y sus correcciones. Cierre requiere 7.
 
-Orden lineal recomendado: 1a, 1b, 1b-fix-1, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 7, Cierre.
+Orden lineal recomendado: 1a, 1b, 1b-fix-1, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 6-fix-1, 6-fix-2, 6-fix-3, 7, Cierre.
 
 ## Huecos de la spec
 
@@ -300,6 +303,25 @@ usuario al revisar 1b):
 - El juez sin `LLM_MODEL_JUDGE` no pasa por aca: usa la config del profesor
   (FR-004, 3b).
 
+D13. Juez heredado (R2, aclaracion de FR-004 del 2026-11-27):
+- `LLMConfig` gana `env_role: str | None` (`compare=False`, `repr=False`, default
+  `None` = el propio `role`): rol cuyas variables de entorno se usaron.
+  `resolve_judge_config` sin `LLM_MODEL_JUDGE` lo fija en `"reflection"`.
+- `validate()` y `_source_variable` nombran las variables con `env_role` cuando
+  esta definido (`LLM_API_KEY_REFLECTION`, `LLM_MODEL_REFLECTION`), nunca
+  `LLM_*_JUDGE` para el juez heredado.
+- `validate_llm_connections` (GEPA): el juez heredado pasa por `validate()` (sus
+  overrides de YAML pueden diferir) e imprime su `connection_summary()`, pero no
+  se sondea; se loguea que usa la conexion del profesor ya sondeada. Con
+  `LLM_MODEL_JUDGE` se sondea como hoy.
+
+D14. Overrides de conexion (R3) y limpieza (R5):
+- `LLMConfig.from_env(**overrides)` MUST rechazar con `ValueError` los overrides
+  `model`, `api_key`, `api_base` y `api_version` (dejarian `inherits_global` y
+  `env_sources` desalineados). El resto de overrides sigue igual.
+- Se elimina `gepa_standalone/core/llm_factory.py::validate_llm_connection` (sin
+  llamadores; semantica previa a D6).
+
 ## Riesgos del plan
 
 - FR-002 es el riesgo mayor: un cambio en `from_env` altera en silencio los
@@ -485,6 +507,35 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
   severidad, archivo y FR. No corrige: cada hallazgo aprobado por el usuario se
   resuelve en una subfase `6-fix-N` (Sonnet 5.5, test RED previo).
 - Archivos: solo este plan.
+
+### 6-fix-1 Migracion sin `run.json` (R1) — Sonnet 5.5
+
+- Test RED primero: fila RAG con `config_snapshot.yaml` (`adapter.type: rag`) y
+  sin `run.json` -> `Modelo Juez` = `Modelo Profesor`; fila no RAG con snapshot
+  y sin `run.json` -> vacia; sin ninguno de los dos -> vacia y contada en
+  `judge_unknown`.
+- Implementacion: en `_is_rag_run`, si no hay `run.json`, seguir al snapshot.
+- Archivos: `shared/utils/migrate_metrics_csv.py`, `tests/test_judge_registry.py`
+  o `tests/test_migrate_metrics_csv.py`.
+
+### 6-fix-2 Juez heredado (R2) — Sonnet 5.5
+
+- Implementa D13. Tests RED primero en `tests/test_judge_role.py`: sin
+  `LLM_MODEL_JUDGE`, la validacion de GEPA hace una sola sonda por endpoint
+  (tarea y profesor, no el juez) con `make_completion_response` y conteo de
+  llamadas; un error de validacion local del juez heredado nombra
+  `LLM_*_REFLECTION` y no `LLM_*_JUDGE`; con `LLM_MODEL_JUDGE` el juez se sondea.
+- Archivos: `shared/llm/config.py`, `gepa_standalone/universal_optimizer.py`,
+  `tests/test_judge_role.py`, `tests/test_role_startup.py` (si fija la sonda del
+  juez heredado).
+
+### 6-fix-3 Overrides de conexion y limpieza (R3, R5) — Sonnet 5.5
+
+- Implementa D14. Test RED primero en `tests/test_role_connection.py`:
+  `from_env("task", model=...)` (y `api_key`, `api_base`, `api_version`) lanza
+  `ValueError`; `max_tokens=...` sigue funcionando.
+- Archivos: `shared/llm/config.py`, `gepa_standalone/core/llm_factory.py`,
+  `tests/test_role_connection.py`.
 
 ### 7 Verificacion real — sesion interactiva
 
@@ -736,5 +787,12 @@ rol). Tests nuevos en `tests/test_check_deployments.py` (9). Sin tests existente
 alcance), detalle en "Hallazgos de la revision". Sin cambios de codigo ni de la spec: ninguna
 fila del Coverage mapping cambia por una revision. Parada obligatoria: el usuario aprueba que
 hallazgos se corrigen (subfases `6-fix-N`) antes de la fase 7.
+Hallazgos aprobados por el usuario (2026-11-27): R1 (6-fix-1), R2 (6-fix-2,
+con aclaracion de FR-004 en la spec, D13) y R3 + R5 (6-fix-3, D14). Deuda para
+el Cierre (no se corrigen en SPEC-106): R4 (`print_targets` muestra un juez por
+framework segun el orden de los casos), R6 (`BaseAdapter` reconstruye la config
+de tarea desde el entorno), R7 (supervisor: `save_aborted_run` y
+`collect_model_info` no toleran `reflection_config is None`; hoy no alcanzable) y
+`variable` en `infraestructura` (revision de la sonda 2a). Siguiente: 6-fix-1.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
