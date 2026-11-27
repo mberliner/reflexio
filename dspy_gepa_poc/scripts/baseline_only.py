@@ -50,7 +50,8 @@ def run_baseline(config_path: Path) -> int:
 
 
 def _run_baseline(orchestrator: ReflexioDeclarativa) -> int:
-    orchestrator.setup_models()
+    # SPEC-106 D6: el baseline usa solo la tarea; la reflexion no se valida.
+    orchestrator.setup_models(roles=("task",))
     orchestrator.load_data()
     orchestrator.create_module_and_metric()
 

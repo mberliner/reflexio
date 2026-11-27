@@ -180,8 +180,16 @@ class ReflexioDeclarativa:
             failures=get_failure_tracker().snapshot(),
         )
 
-    def setup_models(self):
-        """Configure Task and Reflection LMs with connection validation."""
+    def setup_models(self, roles: tuple[str, ...] = ("task", "reflection")):
+        """
+        Configure the LMs of the roles this run uses, with connection validation.
+
+        SPEC-106 D6: solo se construyen, validan y sondean los `roles` pedidos. Con
+        `roles=("task",)` (baseline_only) la reflexion no se construye
+        (`reflection_config` y `reflection_lm` quedan en None). Primero la validacion
+        local de todos los roles (sin red) y despues la sonda de cada uno, asi un
+        error local sale sin ninguna llamada.
+        """
         # SPEC-104: contador de fallas limpio por corrida y configurado desde la
         # seccion opcional `failures` del YAML (FR-006). Lo usan `run()` y
         # `scripts/baseline_only.py`.
@@ -190,23 +198,28 @@ class ReflexioDeclarativa:
         # desde aca (la sonda de `validate_connection` no registra uso).
         get_tracker().reset()
         self.task_config = LLMConfig.from_env("task")
-        self.reflection_config = LLMConfig.from_env("reflection")
+        self.reflection_config = None
+        self.reflection_lm = None
+        if "reflection" in roles:
+            self.reflection_config = LLMConfig.from_env("reflection")
+        used = [c for c in (self.task_config, self.reflection_config) if c is not None]
 
         models_config = self.config.raw_config.get("models", {})
-        if "temperature" in models_config:
-            self.task_config.temperature = models_config["temperature"]
-            self.reflection_config.temperature = models_config["temperature"]
-        if "max_tokens" in models_config:
-            self.task_config.max_tokens = models_config["max_tokens"]
-            self.reflection_config.max_tokens = models_config["max_tokens"]
-        if "cache" in models_config:
-            self.task_config.cache = models_config["cache"]
-            self.reflection_config.cache = models_config["cache"]
+        for cfg in used:
+            if "temperature" in models_config:
+                cfg.temperature = models_config["temperature"]
+            if "max_tokens" in models_config:
+                cfg.max_tokens = models_config["max_tokens"]
+            if "cache" in models_config:
+                cfg.cache = models_config["cache"]
 
         self.seed = generate_seed()
 
-        self.task_config.validate()
-        self.reflection_config.validate()
+        for cfg in used:
+            cfg.validate()
+
+        for cfg in used:
+            print_kv(f"{cfg.role} LM", cfg.connection_summary())
 
         print_kv("Task LM", self.task_config.describe())
         lm = self.task_config.get_dspy_lm()
@@ -219,12 +232,13 @@ class ReflexioDeclarativa:
 
         configure_dspy(lm)
 
-        print_kv("Reflection LM", self.reflection_config.describe())
-        self.reflection_lm = self.reflection_config.get_dspy_lm()
+        if self.reflection_config is not None:
+            print_kv("Reflection LM", self.reflection_config.describe())
+            self.reflection_lm = self.reflection_config.get_dspy_lm()
 
-        log_info("Validando conexion con Reflection LM...")
-        self.reflection_config.validate_connection()
-        log_ok("Reflection LM conectado")
+            log_info("Validando conexion con Reflection LM...")
+            self.reflection_config.validate_connection()
+            log_ok("Reflection LM conectado")
 
     def load_data(self):
         """Load datasets based on config."""

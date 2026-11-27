@@ -234,7 +234,7 @@ class TestReportedMetrics:
 # ==================== FR-006 / SC-004: aborto por estado ====================
 
 
-def _abort_config_error():
+def _abort_config_error(roles=None):
     get_failure_tracker().abort(
         LLMFailure(FailureClass.configuracion, "task", "AuthenticationError"), "test"
     )
@@ -244,7 +244,7 @@ class TestBaselineOnly:
     @staticmethod
     def _stub(valset, testset, student, metric):
         stub = SimpleNamespace(
-            setup_models=lambda: None,
+            setup_models=lambda roles=None: None,
             load_data=lambda: None,
             create_module_and_metric=lambda: None,
             config=SimpleNamespace(

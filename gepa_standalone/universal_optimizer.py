@@ -323,23 +323,33 @@ class UniversalOptimizer:
 
     def validate_llm_connections(self):
         """
-        Validate Task and Reflection LM connections with a real probe.
+        Validate the LM connections of the roles this run uses (SPEC-106 D6).
+
+        Roles: task, reflection and, in RAG, the judge (`judge_config`, when built).
+        First the local validation of every role (no network), then the real probe
+        of each, so a local error in any role leaves before any call. Prints
+        `role | provider | model | host` per role (FR-007).
 
         Raises:
             LLMConnectionError: If any endpoint is unreachable or misconfigured.
         """
-        task_cfg = self.task_config
-        ref_cfg = self.reflection_config
+        roles = [
+            ("Task", self.task_config),
+            ("Reflection", self.reflection_config),
+        ]
+        judge_cfg = getattr(self, "judge_config", None)
+        if judge_cfg is not None:
+            roles.append(("Judge", judge_cfg))
 
-        log_info("Validando conexion con Task LM...")
-        task_cfg.validate()
-        task_cfg.validate_connection()
-        log_ok(f"Task LM conectado: {task_cfg.describe()}")
+        for _, cfg in roles:
+            cfg.validate()
+        for _, cfg in roles:
+            log_info(f"Rol: {cfg.connection_summary()}")
 
-        log_info("Validando conexion con Reflection LM...")
-        ref_cfg.validate()
-        ref_cfg.validate_connection()
-        log_ok(f"Reflection LM conectado: {ref_cfg.describe()}")
+        for label, cfg in roles:
+            log_info(f"Validando conexion con {label} LM...")
+            cfg.validate_connection()
+            log_ok(f"{label} LM conectado: {cfg.describe()}")
 
     def load_data(self):
         """Load dataset using universal data loader."""
