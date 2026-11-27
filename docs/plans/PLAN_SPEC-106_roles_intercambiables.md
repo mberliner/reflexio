@@ -88,7 +88,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | | 3b `LLM_MODEL_JUDGE`, configuracion del juez en `build_llm_configs`, validacion en el Step 2 e inyeccion al adapter RAG | FR-004, FR-005, SC-005 (juez) | D8 | Sonnet 5.5 | hecho (e9fbb0f) |
 | 4 Registro y comparabilidad | 4a `run.json` con proveedor y host por rol; columna `Modelo Juez`; logger sobre CSV sin migrar; migracion | FR-006, SC-006 | D7, D10 | Sonnet 5.5 | hecho (e902fba) |
 | | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | hecho (a10f647) |
-| 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | pendiente |
+| 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | hecho (496ece3) |
 | | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | pendiente |
 | 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | pendiente |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |
@@ -643,5 +643,10 @@ obligatorio. `get_reflection_config` sigue en uso (profesor). Tests existentes a
 solo en la construccion del adapter (pasan `LLMConfig`): `test_anthropic_matrix`,
 `test_describe_effective`, `test_empty_response`, `test_gepa_adapters`,
 `test_gepa_adapters_failures`, `test_rag_judge_json`, `test_single_call_point`.
+5a hecha (496ece3). `check_deployments` verifica `task`, `reflection` y `judge` (solo con
+`LLM_MODEL_JUDGE`) con `LLMConfig.from_env` por rol; los deployments escaneados se llevan por
+endpoint (api_base, credencial, version); un rol no Azure se informa "no aplica"; escaneo una vez
+por endpoint Azure distinto; `LLM_ENV_FILE` se fija solo sin ninguna credencial (global ni por
+rol). Tests nuevos en `tests/test_check_deployments.py` (9). Sin tests existentes ajustados.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
