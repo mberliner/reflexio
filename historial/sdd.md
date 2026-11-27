@@ -61,6 +61,32 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-27 (cont. 3) — Plan de SPEC-107 escrito con Opus 5.5 y aprobado
+
+- `docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md`: 17 decisiones de diseno
+  (D1 a D17), 13 subfases con modelo por subfase (Opus 5.5 en punto de llamada,
+  cooldown, sonda, enmiendas y cierre; Sonnet 5.5 en el resto). Escrito con
+  `claude -p --model claude-opus-5-5` (perfil por defecto): el `Agent` de la sesion
+  de empresa no tiene cuota de Opus (429 con limite de 0 tokens por minuto).
+- Verificacion con `httpx` interceptado (sin llamadas reales): confirma que las
+  cabeceras estan en `litellm_response_headers`. Hallazgo H1: en Azure
+  `insufficient_quota` llega con `exc.body = None`, asi que se trata como 429
+  transitorio sin cabecera (limite aceptado, con test de contrato).
+- Decisiones C1 a C8 confirmadas por el usuario (valor recomendado en todas). FR-007
+  (cooldown compartido) se mantiene. Las enmiendas de redaccion H1 a H5 pasan a la
+  subfase 4b.
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-107-limite-de-tasa-proveedor.md, docs/plans/PLAN_SPEC-104 y PLAN_SPEC-106 (plantillas), docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md
+- Incluye/Excluye verificado: incluye el plan, su fila en 00-INDEX.md y el registro de decisiones; excluye implementar y las enmiendas a specs (subfase 4b)
+- Validaciones aplicadas: sin [NEEDS CLARIFICATION] abiertos en el plan, solo la raya larga de los titulos como caracter no ASCII, sin emoticones
+- SSOT afectado: docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md (nuevo), 00-INDEX.md
+- Derivados a revisar: SPEC-107 (enmiendas H1 a H5 en 4b), SPEC-104 FR-007/FR-011/FR-015, SPEC-106 FR-005
+- Deuda arrastrada: ninguna nueva
+- Riesgos/reservas: el camino winpty de los runners no se puede probar sin terminal (verificacion manual en la fase 6); el 429 de Azure con `insufficient_quota` puede esperar hasta 195 s por caso
+```
+
 ### 2026-11-27 (cont. 2) — SPEC-107 iter 2: matriz de proporcionalidad y cierre de clarificaciones
 
 - Revision externa de la spec contrastada con el entorno instalado (litellm 1.108.5,
