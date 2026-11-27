@@ -5,6 +5,7 @@ Iteracion: 2 (rev. 2026-11-26)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificacion de fallas), [[SPEC-105-punto-llamada-desacoplado]] (punto de llamada comun y sonda de conexion)
 Enmienda: [[SPEC-103-proveedor-anthropic]] FR-007 (FR-003 de esta spec), [[SPEC-100-veredicto-senal-ruido]] FR-007 y FR-008, [[SPEC-101-triaje-casos-nseeds]] FR-002 (FR-006 de esta spec)
 Relacionada con: [[SPEC-107-costo-real-por-resolucion]] (evaluacion economica de cada combinacion, separada en la iteracion 2), docs/LLM_CONFIG.md, docs/METADATA_REPRODUCIBILIDAD.md
+Plan de implementacion: docs/plans/PLAN_SPEC-106_roles_intercambiables.md
 
 ## User Story (prioridad)
 
@@ -120,6 +121,9 @@ Deuda a revisar (`historial/sdd.md`):
     `UsageTracker`. Por compatibilidad, la columna `Tokens Reflection` del CSV
     MUST seguir mostrando reflexion + juez, y el detalle por bucket MUST quedar
     en `run.json`.
+  - El costo de cada bucket (`task`, `reflection`, `judge`) MUST tarifarse con
+    el modelo de su rol. `Costo Real USD` conserva su semantica (total de la
+    corrida).
   - Los casos sin juez MUST NOT registrar un rol `judge` (ni en `run.json` ni en
     el CSV).
 - FR-005 Al arrancar, cada entry point MUST validar la configuracion y la
@@ -252,7 +256,7 @@ Deuda a revisar (`historial/sdd.md`):
 | FR-001 | `shared/llm/config.py::LLMConfig.from_env`; `tests/test_shared_llm.py` (pendiente) |
 | FR-002 | test de regresion de parametros con `.env` actuales por proveedor (pendiente) |
 | FR-003 | `shared/llm/config.py` (`from_env`, `apply_constraints`, `_warn_once`, funcion de proveedor), `shared/llm/dspy_lm.py`; `tests/test_anthropic_matrix.py` (ajustar caso `api_base`), test de no fuga (pendiente) |
-| FR-004 | `shared/llm/usage.py`, `shared/llm/config.py`, `gepa_standalone/universal_optimizer.py::build_llm_configs`, `gepa_standalone/adapters/simple_rag_adapter.py`, `gepa_standalone/core/llm_factory.py`; test (pendiente) |
+| FR-004 | `shared/llm/usage.py`, `shared/analysis/roi_calculator.py::cost_from_usage`, `shared/llm/config.py`, `gepa_standalone/universal_optimizer.py::build_llm_configs`, `gepa_standalone/adapters/simple_rag_adapter.py`, `gepa_standalone/core/llm_factory.py`; test (pendiente) |
 | FR-005 | `shared/llm/config.py::validate_connection`, `shared/llm/errors.py::LLMConnectionError`, `shared/llm/call.py`, `gepa_standalone/universal_optimizer.py::validate_llm_connections`, `dspy_gepa_poc/reflexio_declarativa.py::setup_models`, `dspy_gepa_poc/scripts/baseline_only.py`, `tests/test_single_call_point.py`; test de validacion por rol (pendiente) |
 | FR-006 | `shared/logging/metadata.py`, `shared/logging/csv_writer.py` (`STANDARD_COLUMN_MAPPING`, `_sync_active_keys_to_file`), `shared/utils/migrate_metrics_csv.py`, `shared/utils/seed_protocol.py`, `shared/utils/seed_triage.py`; tests (pendiente) |
 | FR-007 | `shared/llm/config.py::describe`, entry points (pendiente) |
