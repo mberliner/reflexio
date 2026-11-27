@@ -125,6 +125,25 @@ ANTHROPIC_FAMILIES: tuple[AnthropicFamily, ...] = (
 )
 
 
+def provider_of(model: str) -> str:
+    """
+    Proveedor de un modelo (SPEC-106 D1): prefijo antes de la primera `/` en
+    minusculas; sin `/` es `openai` (convencion de LiteLLM). Unica fuente del
+    proveedor para `config.py`, `errors.py` y `dspy_lm.py`.
+    """
+    return model.split("/", 1)[0].lower() if "/" in model else "openai"
+
+
+_PROVIDER_DEFAULT_HOSTS = {"openai": "api.openai.com", "anthropic": "api.anthropic.com"}
+
+
+def _env(name: str) -> str | None:
+    """Variable de entorno con `strip()`; vacia cuenta como no definida (FR-001)."""
+    value = os.getenv(name)
+    value = value.strip() if value else ""
+    return value or None
+
+
 def _is_anthropic(model: str) -> bool:
     """
     True si `model` usa el proveedor Anthropic directo (prefijo `anthropic/`).
@@ -180,7 +199,7 @@ class LLMConfig:
     model: str
     api_key: str | None = None
     api_base: str | None = None
-    api_version: str = "2024-02-15-preview"
+    api_version: str | None = "2024-02-15-preview"
     temperature: float = 0.7
     max_tokens: int = 1000
     cache: bool = False  # DSPy LM cache (True = cachea respuestas, False = resultados frescos)
@@ -193,6 +212,13 @@ class LLMConfig:
     role: str = "task"
     effort: str | None = None
     thinking: str = "default"
+    # SPEC-106 D2: variable de la que salio cada valor de conexion (nunca el valor).
+    env_sources: dict[str, str] = field(default_factory=dict, repr=False, compare=False)
+    # SPEC-106 FR-003: False si el proveedor del rol difiere del ancla (`task`) y por
+    # tanto no hereda las variables globales.
+    inherits_global: bool = field(default=True, repr=False, compare=False)
+    # True si hay LLM_API_BASE global que este rol `anthropic/` no hereda (aviso D3).
+    _global_base_ignored: bool = field(default=False, init=False, repr=False, compare=False)
     # Aviso de arranque una sola vez por config (D5).
     _warned: bool = field(default=False, init=False, repr=False, compare=False)
 
@@ -290,10 +316,13 @@ class LLMConfig:
                 effort_var,
                 thinking_var,
             )
-        if self.api_base:
+        if self._global_base_ignored:
             logger.warning(
-                "LLM_API_BASE is ignored for %s (Anthropic provider uses its own endpoint).",
+                "LLM_API_BASE is not inherited by role %s (%s): the global is not sent to "
+                "Anthropic. Set LLM_API_BASE_%s to use a gateway.",
+                self.role,
                 self.model,
+                self.role.upper(),
             )
 
     def apply_constraints(self, kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -312,7 +341,8 @@ class LLMConfig:
         - Rama OpenAI/Azure (no `anthropic/`): conducta actual de reasoning models
           (temperature=1.0, max_tokens>=16000); el resto intacto (SC-006). effort y
           thinking no se envian.
-        - Rama `anthropic/` (siempre): quita `api_base` y `api_version` (FR-007).
+        - Rama `anthropic/` (siempre): quita `api_version`; conserva `api_base` (solo
+          llega desde `LLM_API_BASE_<ROL>`, explicito; SPEC-106 D3).
         - Rama `anthropic/` en la matriz (familia resuelta):
           1. quita `temperature` si `not family.sends_temperature` (FR-003);
           2. si `family.efforts` no es None: `output_config={"effort": effort or
@@ -337,7 +367,6 @@ class LLMConfig:
                     result["max_tokens"] = _REASONING_MIN_MAX_TOKENS
             return result
 
-        result.pop("api_base", None)
         result.pop("api_version", None)
         family = resolve_anthropic_family(self.model)
         if family is None:
@@ -482,23 +511,61 @@ class LLMConfig:
 
             # 2. Override explicito por ruta (sin hardcodear subproyectos): util para
             #    herramientas que corren desde la raiz sin importar el config de un
-            #    subproyecto. Solo si todavia falta la API key.
-            if not os.getenv("LLM_API_KEY"):
+            #    subproyecto. Solo si no hay ninguna credencial (global ni por rol).
+            has_credential = any(
+                name.startswith("LLM_API_KEY") and value.strip()
+                for name, value in os.environ.items()
+            )
+            if not has_credential:
                 env_file = os.getenv("LLM_ENV_FILE")
                 if env_file and os.path.exists(env_file):
                     load_dotenv(env_file)
 
-        model_var = f"LLM_MODEL_{model_name.upper()}"
-
         suffix = model_name.upper()
+        default_model = "azure/gpt-4.1-mini"
+        model = _env(f"LLM_MODEL_{suffix}") or default_model
+        # Proveedor ancla (FR-003): el de `task`, dueno de las variables globales.
+        anchor = provider_of(_env("LLM_MODEL_TASK") or default_model)
+        provider = provider_of(model)
+        inherits = provider == anchor
+        is_anthropic = provider == "anthropic"
+        sources: dict[str, str] = {}
+
+        def _resolve(field_name: str, role_var: str, global_var: str, allow_global: bool):
+            value = _env(role_var)
+            if value:
+                sources[field_name] = role_var
+                return value
+            value = _env(global_var) if allow_global else None
+            sources[field_name] = global_var if value else "unset"
+            return value
+
+        api_key = _resolve("api_key", f"LLM_API_KEY_{suffix}", "LLM_API_KEY", inherits)
+        api_base = _resolve(
+            "api_base", f"LLM_API_BASE_{suffix}", "LLM_API_BASE", inherits and not is_anthropic
+        )
+        api_version = _resolve(
+            "api_version",
+            f"LLM_API_VERSION_{suffix}",
+            "LLM_API_VERSION",
+            inherits and not is_anthropic,
+        )
+        if api_version is None and inherits and not is_anthropic:
+            api_version = "2024-02-15-preview"
+            sources["api_version"] = "default"
         config = cls(
-            model=os.getenv(model_var, "azure/gpt-4.1-mini"),
-            api_key=os.getenv("LLM_API_KEY"),
-            api_base=os.getenv("LLM_API_BASE"),
-            api_version=os.getenv("LLM_API_VERSION", "2024-02-15-preview"),
+            model=model,
+            api_key=api_key,
+            api_base=api_base,
+            api_version=api_version,
             role=model_name.lower(),
-            effort=os.getenv(f"LLM_EFFORT_{suffix}", "").strip().lower() or None,
-            thinking=os.getenv(f"LLM_THINKING_{suffix}", "").strip().lower() or "default",
+            effort=(_env(f"LLM_EFFORT_{suffix}") or "").lower() or None,
+            thinking=(_env(f"LLM_THINKING_{suffix}") or "default").lower(),
+        )
+        config.env_sources = sources
+        config.inherits_global = inherits
+        config._global_base_ignored = bool(
+            is_anthropic and not _env(f"LLM_API_BASE_{suffix}") and _env("LLM_API_BASE")
         )
         config.cache = os.getenv("LLM_CACHE", "false").lower() == "true"
         # Timeout por request (segundos). LLM_TIMEOUT=0 (o invalido) -> sin limite (None).
@@ -546,6 +613,23 @@ class LLMConfig:
             kwargs["timeout"] = self.timeout
 
         return kwargs
+
+    @property
+    def endpoint_host(self) -> str | None:
+        """
+        Host del endpoint efectivo (SPEC-106 D7): `hostname` del `api_base` enviado; si
+        no hay, el default del proveedor (openai, anthropic); si no se conoce, None.
+        """
+        from urllib.parse import urlparse
+
+        if self.api_base:
+            return urlparse(self.api_base).hostname
+        return _PROVIDER_DEFAULT_HOSTS.get(provider_of(self.model))
+
+    def connection_summary(self) -> str:
+        """Linea `rol | proveedor | modelo | host`; nunca la credencial ni el `api_base`."""
+        host = self.endpoint_host or "unknown"
+        return f"{self.role} | {provider_of(self.model)} | {self.model} | {host}"
 
     def get_dspy_lm(self):
         """
@@ -618,24 +702,34 @@ class LLMConfig:
         """
         from .errors import LLMConnectionError
 
+        role_var = self.role.upper()
+
+        def _expected(name: str) -> str:
+            # El rol que no hereda solo puede usar su variable propia (FR-003).
+            if self.inherits_global:
+                return f"LLM_{name}_{role_var} or LLM_{name}"
+            return f"LLM_{name}_{role_var}"
+
         missing = []
         if not self.api_key:
-            missing.append("LLM_API_KEY")
+            missing.append(_expected("API_KEY"))
         if not self.model:
             missing.append("LLM_MODEL_*")
 
         # Azure requires api_base
-        if self.model.startswith("azure/") and not self.api_base:
-            missing.append("LLM_API_BASE (required for Azure)")
+        if provider_of(self.model) == "azure" and not self.api_base:
+            missing.append(f"{_expected('API_BASE')} (required for Azure)")
 
         if missing:
             raise LLMConnectionError(
                 message="Missing required configuration",
-                provider=self.model.split("/")[0] if "/" in self.model else "unknown",
+                provider=provider_of(self.model),
                 model=self.model,
                 endpoint=self.api_base,
                 api_version=self.api_version,
                 suggestions=[f"Set {var} in your .env file" for var in missing],
+                role=self.role,
+                variable=", ".join(missing),
             )
 
         self._check_params()
@@ -671,7 +765,7 @@ class LLMConfig:
             return True
         except Exception as e:
             error_str = str(e)
-            provider = self.model.split("/")[0] if "/" in self.model else "unknown"
+            provider = provider_of(self.model)
 
             def _truncate(value, limit: int = 500) -> str:
                 try:

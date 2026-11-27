@@ -175,12 +175,12 @@ class TestMatrixGetLmFunction:
         assert body["thinking"] == {"type": "disabled"}
         assert body["output_config"] == {"effort": "high"}
 
-    def test_azure_leftovers_never_sent(self, capture_anthropic_post):
-        config = _cfg(
-            "claude-opus-5-5",
-            api_base="https://x.openai.azure.com",
-            api_version="2024-02-15-preview",
-        )
+    def test_azure_leftovers_never_sent(self, capture_anthropic_post, anthropic_env, monkeypatch):
+        # D3: los globales no se heredan; por from_env no llegan a la config del rol.
+        anthropic_env("claude-opus-5-5")
+        monkeypatch.setenv("LLM_API_BASE", "https://x.openai.azure.com")
+        monkeypatch.setenv("LLM_API_VERSION", "2024-02-15-preview")
+        config = LLMConfig.from_env("task", load_env=False)
         config.get_lm_function(role="task")("hi")
 
         _assert_common_wire(capture_anthropic_post, "claude-opus-5-5")
@@ -372,7 +372,7 @@ class TestApplyConstraints:
         assert original == snapshot
         assert result is not original
         assert "temperature" not in result
-        assert "api_base" not in result
+        assert result["api_base"] == "https://x.openai.azure.com"  # explicito: se conserva (D3)
         assert "api_version" not in result
         assert result["max_tokens"] == 16000
         assert result["output_config"] == {"effort": "medium"}
@@ -601,15 +601,23 @@ class TestStartupWarnings:
 
         assert "claude-opus-5-5" not in caplog.text
 
-    def test_leftover_api_base_warns_and_is_not_sent(self, capture_anthropic_post, caplog):
-        config = _cfg("claude-haiku-4-5", api_base="https://x.openai.azure.com")
+    def test_global_api_base_warns_and_is_not_sent_but_role_api_base_is(
+        self, anthropic_env, monkeypatch, caplog
+    ):
+        anthropic_env("claude-haiku-4-5")
+        monkeypatch.setenv("LLM_API_BASE", "https://x.openai.azure.com")
+        config = LLMConfig.from_env("task", load_env=False)
         with caplog.at_level(logging.WARNING):
             config.validate()
 
         assert "LLM_API_BASE" in caplog.text
-
         kwargs = config.to_kwargs()
         assert "api_base" not in kwargs
+        assert "api_version" not in kwargs
+
+        monkeypatch.setenv("LLM_API_BASE_TASK", "https://gateway.interno")
+        kwargs = LLMConfig.from_env("task", load_env=False).to_kwargs()
+        assert kwargs["api_base"] == "https://gateway.interno"
         assert "api_version" not in kwargs
 
     def test_validate_does_not_require_api_base_or_version(self):

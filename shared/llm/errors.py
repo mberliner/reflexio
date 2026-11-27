@@ -28,6 +28,9 @@ class LLMConnectionError(Exception):
         original_error: str | None = None,
         extra_details: dict[str, Any] | None = None,
         suggestions: list[str] | None = None,
+        role: str | None = None,
+        failure_class: str | None = None,
+        variable: str | None = None,
     ):
         """
         Initialize LLMConnectionError.
@@ -39,7 +42,13 @@ class LLMConnectionError(Exception):
             endpoint: API endpoint URL.
             original_error: Original exception message.
             suggestions: List of actionable suggestions to fix the error.
+            role: Rol afectado (task, reflection, judge, ...), SPEC-106 D4.
+            failure_class: Clase de falla de SPEC-104, si aplica.
+            variable: Variable de entorno esperada para el rol.
         """
+        self.role = role
+        self.failure_class = failure_class
+        self.variable = variable
         self.message = message
         self.provider = provider
         self.model = model
@@ -61,9 +70,14 @@ class LLMConnectionError(Exception):
             f"Message: {self.message}",
             "",
             "Configuration:",
-            f"  - Provider: {self.provider}",
-            f"  - Model: {self.model}",
         ]
+        if self.role:
+            lines.append(f"  - Role: {self.role}")
+        lines.extend([f"  - Provider: {self.provider}", f"  - Model: {self.model}"])
+        if self.failure_class:
+            lines.append(f"  - Class: {self.failure_class}")
+        if self.variable:
+            lines.append(f"  - Variable: {self.variable}")
 
         if self.endpoint:
             lines.append(f"  - Endpoint: {self.endpoint}")
@@ -125,7 +139,9 @@ class LLMConfigError(LLMConnectionError):
     ):
         self.parameter = parameter
         self.accepted = list(accepted) if accepted else []
-        provider = model.split("/")[0] if "/" in model else "unknown"
+        from .config import provider_of
+
+        provider = provider_of(model)
         suggestions = [f"Set {parameter} to one of: {', '.join(self.accepted)}"] if accepted else []
         super().__init__(
             message=message,

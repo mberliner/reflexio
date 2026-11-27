@@ -15,8 +15,6 @@ from shared.llm.config import LLMConfig
 from shared.llm.errors import LLMConnectionError
 from tests.conftest import make_completion_response, patch_litellm_completion, project_warnings
 
-pytestmark = pytest.mark.xfail(strict=True, reason="SPEC-106 1b")
-
 _AZURE_TASK = {
     "LLM_MODEL_TASK": "azure/gpt-4.1-mini",
     "LLM_API_KEY": "key-global-azure",

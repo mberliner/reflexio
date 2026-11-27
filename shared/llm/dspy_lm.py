@@ -68,6 +68,7 @@ from dspy.lm15 import (
 )
 
 from .call import checked_response
+from .config import provider_of
 from .failures import LLMCallFailure, RunAborted
 from .reflection import ReflectionProposer
 
@@ -258,7 +259,7 @@ class CheckedEngine:
 
     @property
     def _provider(self) -> str:
-        return self.model.split("/", 1)[0] if "/" in self.model else "openai"
+        return provider_of(self.model)
 
     # Pistas de capacidad que dspy lee del engine (adapters: `response_format`).
     @property
