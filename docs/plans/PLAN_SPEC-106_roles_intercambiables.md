@@ -90,7 +90,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | | 4b Terna de comparabilidad en `seed_protocol` y `seed_triage` (`target_models` con juez en RAG) | FR-006, SC-002 (sin red) | D11 | Sonnet 5.5 | hecho (a10f647) |
 | 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | hecho (496ece3) |
 | | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | hecho (d516fcf) |
-| 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | pendiente |
+| 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | hecho (35ec0a6) |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |
 | Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
 
@@ -731,5 +731,10 @@ solo en la construccion del adapter (pasan `LLMConfig`): `test_anthropic_matrix`
 endpoint (api_base, credencial, version); un rol no Azure se informa "no aplica"; escaneo una vez
 por endpoint Azure distinto; `LLM_ENV_FILE` se fija solo sin ninguna credencial (global ni por
 rol). Tests nuevos en `tests/test_check_deployments.py` (9). Sin tests existentes ajustados.
+6 hecha (35ec0a6). Revision sin red: sin hallazgos altos; R1 (media, migracion sin
+`run.json` no consulta `config_snapshot.yaml`), R2 a R5 (bajas) y R6 (observacion fuera de
+alcance), detalle en "Hallazgos de la revision". Sin cambios de codigo ni de la spec: ninguna
+fila del Coverage mapping cambia por una revision. Parada obligatoria: el usuario aprueba que
+hallazgos se corrigen (subfases `6-fix-N`) antes de la fase 7.
 Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
 docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
