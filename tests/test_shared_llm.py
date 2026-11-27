@@ -146,8 +146,9 @@ class TestLLMConfigFromEnv:
         assert config.cache is False
 
     def test_defaults_without_env(self, clear_env):
+        # D12: el modelo no tiene default; lo rechaza validate().
         config = LLMConfig.from_env("task", load_env=False)
-        assert config.model == "azure/gpt-4.1-mini"
+        assert config.model == ""
         assert config.api_key is None
 
     def test_timeout_default(self, mock_env):

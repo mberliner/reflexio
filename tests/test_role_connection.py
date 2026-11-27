@@ -283,11 +283,13 @@ class TestEnvSources:
         reflection = LLMConfig.from_env("reflection", load_env=False)
 
         assert task.env_sources == {
+            "model": "LLM_MODEL_TASK",
             "api_key": "LLM_API_KEY",
             "api_base": "LLM_API_BASE",
             "api_version": "default",
         }
         assert reflection.env_sources == {
+            "model": "LLM_MODEL_REFLECTION",
             "api_key": "LLM_API_KEY_REFLECTION",
             "api_base": "LLM_API_BASE",
             "api_version": "default",
@@ -387,3 +389,65 @@ class TestEndpointAndSummary:
         assert summary.split(" | ") == ["reflection", "anthropic", _CLAUDE, "gateway.interno"]
         assert "key-secreta-claude" not in summary
         assert "/ruta/privada" not in summary
+
+
+class TestModelWithoutDefault:
+    """FR-001 (enmienda) y D12: `LLM_MODEL_<ROL>` ausente o vacio falla en validate()."""
+
+    @pytest.mark.parametrize("role", ["task", "reflection"])
+    @pytest.mark.parametrize("value", [None, "", "   "])
+    def test_missing_or_empty_model_fails_validation_without_network(
+        self, monkeypatch, role, value
+    ):
+        env = {"LLM_API_KEY": "key-global", "LLM_API_BASE": "https://r.azure.com/"}
+        if value is not None:
+            env[f"LLM_MODEL_{role.upper()}"] = value
+        if role == "reflection":
+            env["LLM_MODEL_TASK"] = "azure/gpt-4.1-mini"
+        _set_env(monkeypatch, env)
+        calls = _forbid_network(monkeypatch)
+
+        config = LLMConfig.from_env(role, load_env=False)
+        with pytest.raises(LLMConnectionError) as exc_info:
+            config.validate()
+
+        error = exc_info.value
+        assert error.role == role
+        assert f"LLM_MODEL_{role.upper()}" in error.variable
+        assert f"LLM_MODEL_{role.upper()}" in _error_text(exc_info)
+        assert "LLM_MODEL_*" not in _error_text(exc_info)
+        assert calls == []
+
+    def test_empty_model_error_does_not_report_an_invented_provider(self, monkeypatch):
+        _set_env(monkeypatch, {"LLM_MODEL_TASK": "", "LLM_API_KEY": "key-global"})
+
+        with pytest.raises(LLMConnectionError) as exc_info:
+            LLMConfig.from_env("task", load_env=False).validate()
+
+        assert exc_info.value.provider not in ("openai", "azure", "anthropic")
+        assert "Provider: openai" not in _error_text(exc_info)
+
+    def test_without_task_model_there_is_no_anchor_and_globals_are_not_inherited(self, monkeypatch):
+        _set_env(
+            monkeypatch,
+            {
+                "LLM_API_KEY": "key-global",
+                "LLM_API_BASE": "https://r.azure.com/",
+                "LLM_MODEL_REFLECTION": "azure/gpt-4.1",
+            },
+        )
+
+        reflection = LLMConfig.from_env("reflection", load_env=False)
+
+        assert reflection.api_key is None
+        assert reflection.api_base is None
+        assert reflection.api_version is None
+        assert "key-global" not in reflection.to_kwargs().values()
+
+    def test_env_sources_model(self, monkeypatch):
+        _set_env(monkeypatch, {"LLM_MODEL_TASK": "azure/gpt-4.1-mini"})
+
+        assert LLMConfig.from_env("task", load_env=False).env_sources["model"] == "LLM_MODEL_TASK"
+        reflection = LLMConfig.from_env("reflection", load_env=False)
+        assert reflection.env_sources["model"] == "unset"
+        assert reflection.model == ""

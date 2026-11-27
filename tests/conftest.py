@@ -151,6 +151,7 @@ def repo_dspy_adapter():
 def mock_env(monkeypatch):
     """Set standard LLM environment variables."""
     monkeypatch.setenv("LLM_MODEL_TASK", "azure/gpt-4.1-mini")
+    monkeypatch.setenv("LLM_MODEL_REFLECTION", "azure/gpt-4.1-mini")
     monkeypatch.setenv("LLM_API_KEY", "test-key-123")
     monkeypatch.setenv("LLM_API_BASE", "https://test.openai.azure.com/")
     monkeypatch.setenv("LLM_API_VERSION", "2024-02-15-preview")

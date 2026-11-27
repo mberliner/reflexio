@@ -522,14 +522,16 @@ class LLMConfig:
                     load_dotenv(env_file)
 
         suffix = model_name.upper()
-        default_model = "azure/gpt-4.1-mini"
-        model = _env(f"LLM_MODEL_{suffix}") or default_model
+        # Sin default de modelo (FR-001, D12): un modelo ausente lo rechaza validate().
+        model = _env(f"LLM_MODEL_{suffix}") or ""
+        task_model = _env("LLM_MODEL_TASK")
         # Proveedor ancla (FR-003): el de `task`, dueno de las variables globales.
-        anchor = provider_of(_env("LLM_MODEL_TASK") or default_model)
+        # Sin LLM_MODEL_TASK no hay ancla y ningun rol hereda los globales.
+        anchor = provider_of(task_model) if task_model else None
         provider = provider_of(model)
-        inherits = provider == anchor
-        is_anthropic = provider == "anthropic"
-        sources: dict[str, str] = {}
+        inherits = bool(model) and anchor is not None and provider == anchor
+        is_anthropic = bool(model) and provider == "anthropic"
+        sources: dict[str, str] = {"model": f"LLM_MODEL_{suffix}" if model else "unset"}
 
         def _resolve(field_name: str, role_var: str, global_var: str, allow_global: bool):
             value = _env(role_var)
@@ -710,11 +712,20 @@ class LLMConfig:
                 return f"LLM_{name}_{role_var} or LLM_{name}"
             return f"LLM_{name}_{role_var}"
 
+        if not self.model:
+            # Sin modelo no hay proveedor: no se inventa uno (D12).
+            raise LLMConnectionError(
+                message="Missing required configuration: model is not defined",
+                provider="unset",
+                model="",
+                suggestions=[f"Set LLM_MODEL_{role_var} in your .env file"],
+                role=self.role,
+                variable=f"LLM_MODEL_{role_var}",
+            )
+
         missing = []
         if not self.api_key:
             missing.append(_expected("API_KEY"))
-        if not self.model:
-            missing.append("LLM_MODEL_*")
 
         # Azure requires api_base
         if provider_of(self.model) == "azure" and not self.api_base:
