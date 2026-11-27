@@ -91,7 +91,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 5 Herramientas y docs | 5a `check_deployments.py` por rol y carga de `LLM_ENV_FILE` | FR-005 (ultimo punto), FR-008 | D2, D7 | Sonnet 5.5 | hecho (496ece3) |
 | | 5b Documentacion y `.env.example` | FR-009 | todas | Sonnet 5.5 | hecho (d516fcf) |
 | 6 Revision | 6 Revision integral sin red contra la spec (diff `8aa6ff7..HEAD`); hallazgos al plan | todos, SC-003 a SC-006 | todas | Opus 5.5 | hecho (35ec0a6) |
-| 6 (correcciones) | 6-fix-1 (R1) Migracion: sin `run.json`, clasificar la fila por `config_snapshot.yaml` | FR-006, SC-006 | D10 | Sonnet 5.5 | pendiente |
+| 6 (correcciones) | 6-fix-1 (R1) Migracion: sin `run.json`, clasificar la fila por `config_snapshot.yaml` | FR-006, SC-006 | D10 | Sonnet 5.5 | hecho (b6b4102) |
 | | 6-fix-2 (R2) Juez heredado: sin sonda propia y mensajes con las variables del profesor | FR-004, FR-005 | D8, D13 | Sonnet 5.5 | pendiente |
 | | 6-fix-3 (R3, R5) `from_env` rechaza overrides de conexion; borrar `validate_llm_connection` | FR-003 | D14 | Sonnet 5.5 | pendiente |
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | pendiente |

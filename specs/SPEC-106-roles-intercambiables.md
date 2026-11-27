@@ -279,4 +279,4 @@ Deuda a revisar (`historial/sdd.md`):
 | SC-003 | `tests/test_role_connection.py::TestNoLeakBetweenProviders` (vigente desde 1b, sin red) |
 | SC-004 | `./shared/utils/ci_local.sh`; `tests/test_role_connection_golden.py` |
 | SC-005 | `tests/test_role_startup.py::TestInvalidCredentialByRole` (tarea y profesor, ambos subproyectos; vigente desde 2b); juez: `tests/test_judge_role.py::TestInvalidJudgeCredential` (vigente desde 3b) |
-| SC-006 | `tests/test_judge_registry.py::TestSC006` sobre copia sintetica del CSV, con y sin migracion (vigente desde 4a) |
+| SC-006 | `tests/test_judge_registry.py::TestSC006` sobre copia sintetica del CSV, con y sin migracion (vigente desde 4a; migracion sin `run.json`: `tests/test_judge_registry.py::TestMigrationOfJudgeModel` (vigente desde 6-fix-1)) |
