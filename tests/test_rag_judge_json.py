@@ -11,7 +11,7 @@ import json
 import pytest
 
 from gepa_standalone.adapters.simple_rag_adapter import SimpleRAGAdapter
-from shared.llm import LLMCallFailure, get_failure_tracker
+from shared.llm import LLMCallFailure, LLMConfig, get_failure_tracker
 from tests.conftest import make_completion_response
 
 CASE = {"case_id": "c0", "question": "q", "context": "ctx", "answer": "Paris"}
@@ -53,7 +53,7 @@ class TestJudgePromptAsksForJson:
 
         monkeypatch.setattr("litellm.completion", spy)
 
-        SimpleRAGAdapter()._evaluate_with_judge("q", "gt", "gen")
+        SimpleRAGAdapter(LLMConfig.from_env("reflection"))._evaluate_with_judge("q", "gt", "gen")
 
         system = captured["messages"][0]["content"]
         assert "JSON" in system and "puntaje" in system
@@ -66,7 +66,9 @@ class TestJudgeScoreParsing:
     def test_valid_score_in_range(self, mock_env, monkeypatch, score):
         JudgeScript(monkeypatch, [_judge_json(score, "buena")])
 
-        value, reason = SimpleRAGAdapter()._evaluate_with_judge("q", "gt", "gen")
+        value, reason = SimpleRAGAdapter(LLMConfig.from_env("reflection"))._evaluate_with_judge(
+            "q", "gt", "gen"
+        )
 
         assert value == float(score)
         assert reason == "buena"
@@ -74,7 +76,9 @@ class TestJudgeScoreParsing:
     def test_json_inside_code_fence_is_accepted(self, mock_env, monkeypatch):
         JudgeScript(monkeypatch, ["```json\n" + _judge_json(0.75) + "\n```"])
 
-        value, _ = SimpleRAGAdapter()._evaluate_with_judge("q", "gt", "gen")
+        value, _ = SimpleRAGAdapter(LLMConfig.from_env("reflection"))._evaluate_with_judge(
+            "q", "gt", "gen"
+        )
 
         assert value == 0.75
 
@@ -99,7 +103,9 @@ class TestJudgeRetries:
     def test_unreadable_or_out_of_range_then_valid_retries(self, mock_env, monkeypatch, bad):
         script = JudgeScript(monkeypatch, [bad, _judge_json(0.5)])
 
-        value, _ = SimpleRAGAdapter()._evaluate_with_judge("q", "gt", "gen")
+        value, _ = SimpleRAGAdapter(LLMConfig.from_env("reflection"))._evaluate_with_judge(
+            "q", "gt", "gen"
+        )
 
         assert value == 0.5
         assert len(script.judge_calls) == 2
@@ -108,7 +114,9 @@ class TestJudgeRetries:
         script = JudgeScript(monkeypatch, ["basura"])
 
         with pytest.raises(LLMCallFailure) as exc_info:
-            SimpleRAGAdapter()._evaluate_with_judge("q", "gt", "gen")
+            SimpleRAGAdapter(LLMConfig.from_env("reflection"))._evaluate_with_judge(
+                "q", "gt", "gen"
+            )
 
         assert len(script.judge_calls) == 3
         failure = exc_info.value.failure
@@ -119,20 +127,24 @@ class TestJudgeRetries:
         script = JudgeScript(monkeypatch, ["basura"])
 
         with pytest.raises(LLMCallFailure):
-            SimpleRAGAdapter(judge_retries=0)._evaluate_with_judge("q", "gt", "gen")
+            SimpleRAGAdapter(
+                LLMConfig.from_env("reflection"), judge_retries=0
+            )._evaluate_with_judge("q", "gt", "gen")
 
         assert len(script.judge_calls) == 1
 
     @pytest.mark.parametrize("bad", [-1, True, 1.5, "2"])
     def test_invalid_retries_value_is_rejected(self, mock_env, bad):
         with pytest.raises(ValueError, match="judge_retries"):
-            SimpleRAGAdapter(judge_retries=bad)
+            SimpleRAGAdapter(LLMConfig.from_env("reflection"), judge_retries=bad)
 
     def test_layer_one_failure_is_not_retried_as_format(self, mock_env, monkeypatch):
         script = JudgeScript(monkeypatch, [(None, "length")])
 
         with pytest.raises(LLMCallFailure) as exc_info:
-            SimpleRAGAdapter()._evaluate_with_judge("q", "gt", "gen")
+            SimpleRAGAdapter(LLMConfig.from_env("reflection"))._evaluate_with_judge(
+                "q", "gt", "gen"
+            )
 
         assert len(script.judge_calls) == 1
         assert exc_info.value.failure.clase.value == "presupuesto"
@@ -143,7 +155,7 @@ class TestUnreadableJudgeLeavesCaseNE:
     def test_case_is_ne_format_of_judge_and_counted_once(self, mock_env, monkeypatch):
         """Agotados los reintentos: NE `formato` del juez; una sola falla contada."""
         script = JudgeScript(monkeypatch, ["basura"])
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
 
         result = adapter.evaluate([CASE], {"system_prompt": "p"})
 
@@ -159,7 +171,7 @@ class TestUnreadableJudgeLeavesCaseNE:
 
     def test_ne_case_never_reaches_the_reflective_dataset(self, mock_env, monkeypatch):
         JudgeScript(monkeypatch, ["basura"])
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         result = adapter.evaluate([CASE], {"system_prompt": "p"}, capture_traces=True)
 
         dataset = adapter.make_reflective_dataset({"system_prompt": "p"}, result, ["system_prompt"])
@@ -168,7 +180,7 @@ class TestUnreadableJudgeLeavesCaseNE:
 
     def test_recovered_judge_leaves_case_evaluated_without_failure(self, mock_env, monkeypatch):
         JudgeScript(monkeypatch, ["basura", _judge_json(0.75, "ok")])
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
 
         result = adapter.evaluate([CASE], {"system_prompt": "p"})
 
@@ -178,7 +190,7 @@ class TestUnreadableJudgeLeavesCaseNE:
 
     def test_judge_truncated_by_max_tokens_is_ne_presupuesto(self, mock_env, monkeypatch):
         JudgeScript(monkeypatch, [('{"puntaje": 0.5, "raz', "length")])
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
 
         result = adapter.evaluate([CASE], {"system_prompt": "p"})
 

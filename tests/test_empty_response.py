@@ -220,7 +220,7 @@ class TestAdapters:
             return _response("ok")
 
         _scripted(monkeypatch, respond)
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         adapter.set_baseline("base")
         batch = [{"case_id": "a", "question": "q", "context": "c", "answer": "a"}]
         evaluated, key = TASK_TREATMENT[clase]
@@ -244,7 +244,7 @@ class TestAdapters:
             return _response("Paris")
 
         _scripted(monkeypatch, respond)
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         batch = [{"case_id": "a", "question": "q", "context": "c", "answer": "Paris"}]
 
         with caplog.at_level(logging.WARNING):
@@ -261,13 +261,13 @@ class TestAdapters:
 
     def test_rag_judge_failure_propagates_from_helper(self, mock_env, monkeypatch):
         _patch_completion(monkeypatch, None, "length")
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         with pytest.raises(LLMCallFailure) as exc_info:
             adapter._evaluate_with_judge("q", "gt", "gen")
         assert exc_info.value.failure.rol == "judge"
 
     def test_rag_judge_config_error_propagates(self, mock_env, monkeypatch):
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
 
         def raise_config_error(*args, **kwargs):
             raise LLMConfigError("invalida", "anthropic/claude-opus-5-5", "LLM_EFFORT_TASK")

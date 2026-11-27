@@ -10,7 +10,7 @@ import logging
 import os
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
@@ -180,6 +180,38 @@ def resolve_anthropic_family(model: str) -> AnthropicFamily | None:
         if model in family.aliases:
             return family
     return None
+
+
+_JUDGE_ROLE_VARS = (
+    "LLM_API_KEY_JUDGE",
+    "LLM_API_BASE_JUDGE",
+    "LLM_API_VERSION_JUDGE",
+    "LLM_EFFORT_JUDGE",
+    "LLM_THINKING_JUDGE",
+)
+
+
+def resolve_judge_config(reflection_config: "LLMConfig") -> "LLMConfig":
+    """
+    Configuracion del juez del adapter RAG (SPEC-106 D8, FR-004).
+
+    Sin `LLM_MODEL_JUDGE`: la configuracion resuelta del profesor (copia con rol
+    `judge`, incluidos los overrides ya aplicados) y un `[WARN]` si alguna
+    `LLM_*_JUDGE` esta definida, porque se ignora. Con `LLM_MODEL_JUDGE`: un rol mas
+    (`LLMConfig.from_env("judge")`).
+    """
+    if _env("LLM_MODEL_JUDGE"):
+        return LLMConfig.from_env("judge")
+    ignored = [name for name in _JUDGE_ROLE_VARS if _env(name)]
+    if ignored:
+        logger.warning(
+            "[WARN] %s definida(s) sin LLM_MODEL_JUDGE: se ignoran, el juez usa la "
+            "configuracion del profesor.",
+            ", ".join(ignored),
+        )
+    judge = replace(reflection_config, role="judge")
+    judge._global_base_ignored = reflection_config._global_base_ignored
+    return judge
 
 
 @dataclass

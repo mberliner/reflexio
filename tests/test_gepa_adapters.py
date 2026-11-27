@@ -23,6 +23,7 @@ from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
 from shared.llm import (
     FailureClass,
     LLMCallFailure,
+    LLMConfig,
     LLMFailure,
     RunAborted,
     get_failure_tracker,
@@ -680,7 +681,7 @@ class TestSimpleSQLAdapter:
 class TestSimpleRAGAdapter:
     def test_judge_config_is_public_read_only(self, mock_env):
         """`judge_config` expone la configuracion del juez sin acceso privado (D-022)."""
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         assert adapter.judge_config is adapter._judge_config
         assert adapter.judge_config.model == adapter.judge_model
         with pytest.raises(AttributeError):
@@ -704,7 +705,7 @@ class TestSimpleRAGAdapter:
 
         monkeypatch.setattr("litellm.completion", mock_completion)
 
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         candidate = {"system_prompt": "Answer the question..."}
 
         result = adapter.evaluate([rag_batch[0]], candidate)
@@ -717,7 +718,7 @@ class TestSimpleRAGAdapter:
         mock_completion = MagicMock(return_value=make_completion_response("Success"))
         monkeypatch.setattr("litellm.completion", mock_completion)
 
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         messages = [{"role": "user", "content": "test"}]
 
         result = adapter._complete(messages)
@@ -728,7 +729,7 @@ class TestSimpleRAGAdapter:
 
     def test_rag_complete_input_filter_not_retried(self, mock_env):
         """Filtro de entrada (HTTP 400) → 1 llamada HTTP, `entrada`, sin reintento (FR-011)."""
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         messages = [{"role": "user", "content": "test"}]
 
         with intercept_httpx(_payload("azure_400_content_filter_canonico")) as calls:
@@ -741,7 +742,7 @@ class TestSimpleRAGAdapter:
 
     def test_rag_complete_output_filter_not_retried(self, mock_env):
         """Filtro de salida (HTTP 200 sin texto) → 1 llamada HTTP, `filtro_salida`."""
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         messages = [{"role": "user", "content": "test"}]
 
         with intercept_httpx(_payload("azure_200_content_filter_vacio")) as calls:
@@ -763,7 +764,7 @@ class TestSimpleRAGAdapter:
             "gepa_standalone.adapters.simple_rag_adapter.complete_text", fake_complete_text
         )
 
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         result = adapter.evaluate(
             [{"case_id": "c0", "question": "q", "context": "c", "answer": "Paris"}],
             {"system_prompt": "..."},
@@ -779,7 +780,7 @@ class TestSimpleRAGAdapter:
         tracker = get_failure_tracker()
         tracker.abort(LLMFailure(FailureClass.configuracion, "task", "AuthenticationError"), "test")
 
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         with pytest.raises(RunAborted):
             adapter.evaluate(
                 [{"case_id": "c0", "question": "q", "context": "c", "answer": "a"}],
@@ -799,7 +800,7 @@ class TestSimpleRAGAdapter:
 
         monkeypatch.setattr("litellm.completion", mock_completion)
 
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         score, reason = adapter._evaluate_with_judge("q", "gt", "gen")
 
         assert score == 0.75
@@ -810,7 +811,7 @@ class TestSimpleRAGAdapter:
         queda NE con rol `judge` (tabla de la spec: `entrada` del juez es NE)."""
         # El juez usa la config de reflexion: mismo proveedor que el payload (Azure)
         monkeypatch.setenv("LLM_MODEL_REFLECTION", "azure/gpt-4.1-mini")
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         monkeypatch.setattr(adapter, "_task_call", lambda system_prompt, example: "Paris")
         batch = [{"case_id": "c0", "question": "q", "context": "c", "answer": "Paris"}]
 
@@ -826,7 +827,7 @@ class TestSimpleRAGAdapter:
 
     def test_rag_sanitize_for_reflection(self):
         """Replaces problematic terms with [REDACTED] or safe alternatives."""
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
 
         text = "ERROR: This is an error with alucinacion and incorrecta response"
         sanitized = adapter._sanitize_for_reflection(text)
@@ -840,7 +841,7 @@ class TestSimpleRAGAdapter:
 
     def test_rag_make_reflective_negatives(self, mock_env):
         """Only score < 1.0 in reflective dataset."""
-        adapter = SimpleRAGAdapter(max_positive_examples=0)
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"), max_positive_examples=0)
         eval_batch = EvaluationBatch(
             outputs=[
                 {
@@ -884,7 +885,7 @@ class TestSimpleRAGAdapter:
 
     def test_rag_make_reflective_positives(self, mock_env):
         """Includes score == 1.0 if max_positive_examples > 0."""
-        adapter = SimpleRAGAdapter(max_positive_examples=1)
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"), max_positive_examples=1)
         eval_batch = EvaluationBatch(
             outputs=[
                 {
@@ -919,7 +920,7 @@ class TestSimpleRAGAdapter:
         """Context > Config.RAG_CONTEXT_MAX_LENGTH is truncated."""
         monkeypatch.setattr("gepa_standalone.config.Config.RAG_CONTEXT_MAX_LENGTH", 10)
 
-        adapter = SimpleRAGAdapter(max_positive_examples=0)
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"), max_positive_examples=0)
         long_context = "a" * 50
         eval_batch = EvaluationBatch(
             outputs=[
@@ -965,7 +966,7 @@ class TestSimpleRAGAdapter:
 
         monkeypatch.setattr("litellm.completion", mock_completion)
 
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         batch = [
             {
                 "case_id": "c0",
@@ -986,7 +987,7 @@ class TestSimpleRAGAdapter:
         """Tarea bloqueada por filtro de entrada y el baseline tambien (mismo transporte):
         `entrada_dato`, NE, el ejemplo conserva su lugar y se hacen 2 llamadas HTTP (la del
         candidato y la unica del baseline; sin el reintento viejo por content_filter)."""
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         adapter.set_baseline("baseline")
         batch = [{"case_id": "c0", "question": "q", "context": "c", "answer": "a"}]
 
@@ -1003,7 +1004,7 @@ class TestSimpleRAGAdapter:
 
     def test_rag_task_failure_without_baseline_is_a_clear_error(self, mock_env):
         """Sin baseline fijado no se adivina la atribucion de `entrada`/`presupuesto`."""
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         batch = [{"case_id": "c0", "question": "q", "context": "c", "answer": "a"}]
 
         with intercept_httpx(_payload("azure_400_content_filter_canonico")):

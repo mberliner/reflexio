@@ -252,7 +252,9 @@ class TestMatrixSimpleRagAdapter:
 
         anthropic_env("claude-sonnet-4-6", reflection="claude-opus-5-5")
         monkeypatch.setenv("LLM_EFFORT_REFLECTION", "high")
-        adapter = SimpleRAGAdapter(temperature=REQUESTED_TEMPERATURE)
+        adapter = SimpleRAGAdapter(
+            LLMConfig.from_env("reflection"), temperature=REQUESTED_TEMPERATURE
+        )
         messages = [{"role": "user", "content": "hi"}]
 
         adapter._complete(messages, max_tokens=400)

@@ -15,6 +15,8 @@ Usage (desde la raiz del repo):
 
 import argparse
 import json
+import logging
+import os
 import sys
 import traceback
 import uuid
@@ -57,6 +59,7 @@ from shared.display import (
 )
 from shared.display.formatting import format_abort_error, format_metric_line
 from shared.llm import LLMConnectionError, RunAborted, get_failure_tracker
+from shared.llm.config import resolve_judge_config
 from shared.llm.usage import get_tracker, reflection_tokens_for_csv
 from shared.logging.metadata import (
     MetadataManager,
@@ -66,6 +69,8 @@ from shared.logging.metadata import (
 )
 from shared.paths import get_paths
 from shared.scoring import MetricSummary, paired_delta, summarize
+
+logger = logging.getLogger(__name__)
 
 # Total de pasos del pipeline canonico (compartido con dspy_gepa_poc).
 TOTAL_STEPS = 7
@@ -99,6 +104,7 @@ class UniversalOptimizer:
         self.results = None
         self.task_config = None
         self.reflection_config = None
+        self.judge_config = None
 
     def abort_message(self, exc: RunAborted) -> str:
         """Mensaje de una corrida abortada (FR-006), con el modelo del rol que fallo."""
@@ -175,11 +181,24 @@ class UniversalOptimizer:
         self.reflection_config = get_reflection_config()
         if models_cfg.get("temperature") is not None:
             self.reflection_config.temperature = models_cfg["temperature"]
-        for cfg in (self.task_config, self.reflection_config):
-            if models_cfg.get("max_tokens"):
-                cfg.max_tokens = models_cfg["max_tokens"]
         if models_cfg.get("cache") is not None:
             self.reflection_config.cache = models_cfg["cache"]
+
+        # Juez (SPEC-106 D8): solo en RAG, con los mismos overrides del YAML que el
+        # profesor y sin el max_tokens por defecto (el juez fija el suyo por llamada).
+        self.judge_config = None
+        if (self.config.get("adapter") or {}).get("type") == "rag":
+            self.judge_config = resolve_judge_config(self.reflection_config)
+            if models_cfg.get("temperature") is not None:
+                self.judge_config.temperature = models_cfg["temperature"]
+            if models_cfg.get("cache") is not None:
+                self.judge_config.cache = models_cfg["cache"]
+        elif os.getenv("LLM_MODEL_JUDGE"):
+            logger.debug("LLM_MODEL_JUDGE ignorado: el caso no es RAG")
+
+        for cfg in (self.task_config, self.reflection_config, self.judge_config):
+            if cfg is not None and models_cfg.get("max_tokens"):
+                cfg.max_tokens = models_cfg["max_tokens"]
         if not models_cfg.get("max_tokens"):
             # default usado por create_reflection_lm_function
             self.reflection_config.max_tokens = _REFLECTION_DEFAULT_MAX_TOKENS
@@ -421,7 +440,10 @@ class UniversalOptimizer:
             if judge_retries is not None:  # FR-009: reintentos del juez desde el YAML
                 rag_kwargs["judge_retries"] = judge_retries
             self.adapter = SimpleRAGAdapter(
-                temperature=self.active_temperature, max_positive_examples=max_pos, **rag_kwargs
+                judge_config=self.judge_config,
+                temperature=self.active_temperature,
+                max_positive_examples=max_pos,
+                **rag_kwargs,
             )
 
         else:

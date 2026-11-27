@@ -17,7 +17,6 @@ from gepa import EvaluationBatch
 
 from gepa_standalone.adapters.base_adapter import BaseAdapter
 from gepa_standalone.config import Config
-from gepa_standalone.core.llm_factory import get_reflection_config
 from shared.llm import FailureClass, LLMCallFailure, LLMConfig, LLMFailure, get_failure_tracker
 from shared.llm.config import complete_text
 
@@ -41,6 +40,7 @@ class SimpleRAGAdapter(BaseAdapter):
 
     def __init__(
         self,
+        judge_config: LLMConfig,
         temperature: float = 0.0,
         max_positive_examples: int | None = None,
         judge_retries: int = DEFAULT_JUDGE_RETRIES,
@@ -54,8 +54,9 @@ class SimpleRAGAdapter(BaseAdapter):
             raise ValueError(f"judge_retries debe ser un entero >= 0: {judge_retries!r}")
         # Reintentos ante un puntaje ilegible o fuera de rango (SPEC-104 FR-009)
         self.judge_retries = judge_retries
-        # Usamos el modelo "Profesor" (mas potente) para juzgar
-        self._judge_config = get_reflection_config()
+        # Configuracion del juez inyectada por el orquestador (SPEC-106 D8): el adapter
+        # no la reconstruye desde el entorno.
+        self._judge_config = judge_config
         self.judge_model = self._judge_config.model
 
         # Configuracion de ejemplos positivos en dataset reflexivo

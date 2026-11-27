@@ -187,7 +187,7 @@ class TestPathsDelegate:
         roles = _spy_checked_completion(monkeypatch)
         completion = MagicMock(return_value=make_completion_response("ok"))
         monkeypatch.setattr("litellm.completion", completion)
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
         messages = [{"role": "user", "content": "hola"}]
 
         assert adapter._complete(messages) == "ok"
@@ -302,6 +302,8 @@ class TestRunAbortedWithoutHttp:
         monkeypatch.setattr("litellm.completion", completion)
 
         with pytest.raises(RunAborted):
-            SimpleRAGAdapter()._complete([{"role": "user", "content": "hola"}], is_judge=True)
+            SimpleRAGAdapter(LLMConfig.from_env("reflection"))._complete(
+                [{"role": "user", "content": "hola"}], is_judge=True
+            )
 
         assert completion.call_count == 0

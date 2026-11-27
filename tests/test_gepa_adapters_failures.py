@@ -22,7 +22,7 @@ from gepa_standalone.adapters.simple_classifier_adapter import SimpleClassifierA
 from gepa_standalone.adapters.simple_extractor_adapter import SimpleExtractorAdapter
 from gepa_standalone.adapters.simple_rag_adapter import SimpleRAGAdapter
 from gepa_standalone.adapters.simple_sql_adapter import SimpleSQLAdapter
-from shared.llm import RunAborted, get_failure_tracker
+from shared.llm import LLMConfig, RunAborted, get_failure_tracker
 from tests.conftest import make_completion_response, project_warnings
 from tests.litellm_failure_payloads import ALL_FAILURE_CASES
 from tests.test_litellm_failure_mapping import intercept_httpx
@@ -101,7 +101,7 @@ def _extractor(prompt_base="base"):
 
 
 def _rag(prompt_base="base"):
-    adapter = SimpleRAGAdapter()
+    adapter = SimpleRAGAdapter(LLMConfig.from_env("reflection"))
     adapter.set_baseline(prompt_base)
     return adapter
 

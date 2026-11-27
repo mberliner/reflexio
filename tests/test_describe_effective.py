@@ -92,9 +92,6 @@ def _patched_configs():
     cfg = LLMConfig(model="azure/gpt-4.1-mini", api_key="x")
     with (
         patch("gepa_standalone.adapters.base_adapter.get_task_config", return_value=cfg),
-        patch(
-            "gepa_standalone.adapters.simple_rag_adapter.get_reflection_config", return_value=cfg
-        ),
     ):
         yield
 
@@ -113,7 +110,7 @@ class TestAdapterMaxTokens:
         assert explicit.task_max_tokens == 123
 
     def test_rag_task_and_judge(self):
-        adapter = SimpleRAGAdapter()
+        adapter = SimpleRAGAdapter(LLMConfig(model="azure/gpt-4.1-mini", api_key="x"))
 
         assert adapter.task_max_tokens == 400
         assert adapter.judge_max_tokens == 200
