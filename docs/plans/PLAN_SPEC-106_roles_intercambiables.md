@@ -75,6 +75,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 |---|---|---|---|---|---|
 | 1 Conexion por rol (`shared/llm`) | 1a Tests: golden de regresion de parametros (verde hoy) y tests RED de resolucion por rol, no fuga y validacion local | FR-001, FR-002, FR-003, SC-003, SC-004 | D1, D2, D3, D4 | Sonnet 5.5 | hecho (404af1d) |
 | | 1b Funcion de proveedor, resolucion por rol con proveedor ancla, `api_base` explicito en `anthropic/`, validacion local por rol, `LLM_ENV_FILE`, `endpoint_host` y `connection_summary` (GREEN) | FR-001, FR-002, FR-003, FR-005 (ultimo punto), FR-007 (metodo) | D1 a D4, D7 | Sonnet 5.5 | hecho (c0f7c64) |
+| 1 (correccion) | 1b-fix-1 Modelo sin default: `LLM_MODEL_<ROL>` ausente o vacio falla en `validate()` nombrando rol y variable (test RED previo) | FR-001 (enmienda), FR-003 (ancla) | D12 | Sonnet 5.5 | pendiente |
 | 2 Validacion al arrancar | 2a Sonda por el punto de llamada comun, clasificacion de SPEC-104 y `LLMConnectionError` con rol y variable; quitar la excepcion de `test_single_call_point.py` | FR-005 | D5 | Opus 5.5 | pendiente |
 | | 2b Entry points: validar solo los roles usados e imprimir rol, proveedor, modelo y host | FR-005, FR-007, SC-005 (tarea y profesor) | D6, D7 | Sonnet 5.5 | pendiente |
 | 3 Juez como rol | 3a Bucket `judge` en `UsageTracker`, `Tokens Reflection` = reflexion + juez, juez tarifado con su modelo | FR-004 (uso), H1 | D9 | Sonnet 5.5 | pendiente |
@@ -89,14 +90,14 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 
 ## Dependencias
 
-- 1a -> 1b. Todo lo demas requiere 1b.
+- 1a -> 1b -> 1b-fix-1. Todo lo demas requiere 1b-fix-1.
 - 2a requiere 1b. 2b requiere 2a.
 - 3a requiere 1b. 3b requiere 2b y 3a.
 - 4a requiere 3b. 4b requiere 4a.
 - 5a requiere 2a. 5b requiere 4b y 5a.
 - 6 requiere 5b. 7 requiere 6 (y sus correcciones). Cierre requiere 7.
 
-Orden lineal recomendado: 1a, 1b, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 7, Cierre.
+Orden lineal recomendado: 1a, 1b, 1b-fix-1, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 7, Cierre.
 
 ## Huecos de la spec
 
@@ -125,10 +126,10 @@ cualquier otro). `_is_anthropic` se conserva (decide la rama de
 D2. Resolucion de la conexion en `LLMConfig.from_env(model_name)`:
 - `_env(name)`: `os.getenv` con `strip()`; vacio cuenta como no definido
   (FR-001, mismo criterio que SPEC-103 FR-008).
-- `ROL = model_name.upper()`. Modelo: `LLM_MODEL_<ROL>` con el default vigente
-  (`azure/gpt-4.1-mini`).
+- `ROL = model_name.upper()`. Modelo: `LLM_MODEL_<ROL>`, sin default (enmienda
+  de 2026-11-27, ver D12; reemplaza el default `azure/gpt-4.1-mini`).
 - Proveedor ancla: `provider_of` del modelo de `task`, leido con la misma regla
-  y default (para `task` es el propio).
+  (para `task` es el propio). Sin `LLM_MODEL_TASK` no hay ancla (D12).
 - `hereda = provider_of(model) == ancla`.
 - `api_key = LLM_API_KEY_<ROL>`, si no, `LLM_API_KEY` solo si `hereda`.
 - `api_base = LLM_API_BASE_<ROL>`, si no, `LLM_API_BASE` solo si `hereda` y el
@@ -275,6 +276,24 @@ D11. Comparabilidad (FR-006, enmienda a SPEC-100 FR-008 y SPEC-101 FR-002):
 - D-028 (effort y thinking) queda fuera: SC-002 con profesor Claude se
   verifica en la fase 7 con effort y thinking constantes.
 
+D12. Modelo sin default (enmienda a FR-001 del 2026-11-27, decision del
+usuario al revisar 1b):
+- `from_env` no inventa modelo: `model = _env("LLM_MODEL_<ROL>") or ""` y
+  `env_sources["model"]` = `LLM_MODEL_<ROL>` o `unset`. El default del dataclass
+  no se toca (construcciones directas).
+- Sin `LLM_MODEL_TASK` no hay ancla: ningun rol distinto de `task` hereda los
+  globales. `task` sin modelo no se resuelve contra un proveedor inventado.
+- `validate()` falla antes de cualquier llamada con `LLMConnectionError` que
+  nombra el rol y `LLM_MODEL_<ROL>` (campo `variable`), tambien con el modelo
+  vacio. Con modelo vacio el `provider` del error no es `openai` (no hay
+  proveedor): usar `None` o `unset`, nunca un proveedor inventado. Se elimina el
+  texto generico `LLM_MODEL_*`.
+- Se valida en `validate()` y no en `from_env`: es el punto de validacion local
+  de D4, y D6 (2b) lo corre para todos los roles usados antes de la primera
+  sonda; asi una herramienta que construye un rol que no usa no se rompe.
+- El juez sin `LLM_MODEL_JUDGE` no pasa por aca: usa la config del profesor
+  (FR-004, 3b).
+
 ## Riesgos del plan
 
 - FR-002 es el riesgo mayor: un cambio en `from_env` altera en silencio los
@@ -329,6 +348,28 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
   `api_base`, D3), `tests/test_shared_llm.py` (solo si un test fija el
   `"unknown"` o el aviso viejo).
 - Parada obligatoria al terminar: el usuario revisa el nucleo.
+
+### 1b-fix-1 Modelo sin default — Sonnet 5.5
+
+- Implementa D12. Tests primero en la misma sesion (verificar que fallan por la
+  razon correcta antes de implementar), en `tests/test_role_connection.py`:
+  `LLM_MODEL_TASK` ausente y vacio -> `validate()` lanza `LLMConnectionError`
+  con `role == "task"`, `variable` con `LLM_MODEL_TASK` y sin llamadas de red;
+  igual para `reflection`; el error con modelo vacio no informa `openai` como
+  proveedor; sin `LLM_MODEL_TASK` un rol `reflection` con `LLM_API_KEY` global
+  no la hereda; `env_sources["model"]`.
+- El golden de 1a sigue verde sin editarlo (si hay que editarlo, es un bloqueo:
+  FR-002).
+- Tests existentes que hoy dependen del default (construyen un rol sin
+  `LLM_MODEL_<ROL>` y llaman `validate()` o a la red): MAY ajustarse solo
+  agregando `LLM_MODEL_<ROL>` al entorno del test (`setenv` o el fixture
+  `mock_env` de `tests/conftest.py`), sin cambiar aserciones. Si un test asevera
+  el default `azure/gpt-4.1-mini` o el texto `LLM_MODEL_*`, la asercion pasa a
+  D12. Cualquier otro cambio en esos tests es un bloqueo.
+- Archivos: `shared/llm/config.py`, `shared/llm/errors.py` (solo si hace falta
+  para el `provider` sin modelo), `tests/test_role_connection.py`,
+  `tests/conftest.py` (`mock_env`) y los tests existentes que caen en la regla
+  anterior (listarlos en el resumen).
 
 ### 2a Sonda por el punto comun — Opus 5.5
 
@@ -422,7 +463,8 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
   Azure + Claude, juez), `docs/METADATA_REPRODUCIBILIDAD.md` (proveedor y host
   por rol, bucket `judge`), `docs/PROTOCOLO_N_SEEDS.md` (terna),
   `gepa_standalone/.env.example`, `dspy_gepa_poc/.env.example`. Enlazar, no
-  duplicar (SSOT).
+  duplicar (SSOT). En `docs/LLM_CONFIG.md`, `LLM_MODEL_TASK` y
+  `LLM_MODEL_REFLECTION` pasan a obligatorias, sin default (D12).
 - Archivos: esos cinco y las filas del Coverage mapping de la spec.
 
 ### 6 Revision integral — Opus 5.5
@@ -529,6 +571,8 @@ log completo o el diff solo cuando un control falla.
 ## Proxima sesion
 
 Plan aprobado por el usuario el 2026-11-27, con H1 resuelta. 1a hecha
-(404af1d) y 1b hecha (c0f7c64; parada obligatoria: el usuario revisa el nucleo).
-Siguiente subfase: 2a (Opus 5.5). Arrancar con: "Supervisar SPEC-106 segun la seccion
-Seguimiento de docs/plans/PLAN_SPEC-106_roles_intercambiables.md".
+(404af1d) y 1b hecha (c0f7c64). Revision del nucleo por el usuario
+(2026-11-27): aprobado con una correccion, el modelo sin default (D12, subfase
+1b-fix-1). Siguiente subfase: 1b-fix-1 (Sonnet 5.5), luego 2a (Opus 5.5).
+Arrancar con: "Supervisar SPEC-106 segun la seccion Seguimiento de
+docs/plans/PLAN_SPEC-106_roles_intercambiables.md".

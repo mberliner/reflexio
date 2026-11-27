@@ -83,6 +83,10 @@ Deuda a revisar (`historial/sdd.md`):
   esta definida, MAY usarse la global correspondiente solo si FR-003 lo permite.
   Una variable presente pero vacia (`VAR=`) MUST tratarse como no definida (mismo
   criterio que SPEC-103 FR-008).
+  El modelo de un rol (`LLM_MODEL_<ROL>`) MUST NOT tener default: si no esta
+  definido (ausente o vacio), la validacion local del rol MUST fallar antes de
+  cualquier llamada, nombrando el rol y la variable `LLM_MODEL_<ROL>`. No aplica al
+  juez sin `LLM_MODEL_JUDGE`, que usa la configuracion del profesor (FR-004).
 - FR-002 Un `.env` sin variables por rol y con todos los roles del mismo
   proveedor (unica configuracion posible hoy) MUST producir exactamente los
   mismos parametros de llamada que antes del cambio, incluido `openai/` con un
@@ -187,6 +191,11 @@ Deuda a revisar (`historial/sdd.md`):
   que `normalize_model` los igualaba, era falsa).
 - El proveedor va en el prefijo del modelo, que ya esta en el CSV: no hace falta
   una columna de proveedor. La unica columna nueva es `Modelo Juez`.
+- Sin modelo por defecto (2026-11-27, decision del usuario tras revisar 1b): un
+  `LLM_MODEL_<ROL>` ausente o vacio frena la corrida en la validacion local. Un
+  default silencioso (`azure/gpt-4.1-mini`) puede gastar API con un modelo que
+  nadie eligio y, con roles de proveedores distintos, fija un proveedor ancla
+  equivocado.
 - Sin variables nativas de LiteLLM: la credencial de cada rol es explicita en
   `LLM_*`, para que la validacion local pueda nombrar lo que falta.
 - La iteracion 1 incluia la evaluacion economica (FR-007 y FR-008). Paso a
