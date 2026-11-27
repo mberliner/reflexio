@@ -25,26 +25,15 @@ error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 # --- Validaciones generales ---
 
 check_python() {
-    if ! command -v python3 &>/dev/null && ! command -v python &>/dev/null; then
-        error "Python no encontrado. Instala Python >= 3.10"
-        exit 1
-    fi
-
-    local py_cmd
-    py_cmd=$(command -v python3 || command -v python)
+    # Python del .venv (sin fallback al del PATH) y entorno alineado con
+    # requirements.txt; aborta con exit 1 si no (ver shared/utils/python_env.sh).
+    source "$SCRIPT_DIR/shared/utils/python_env.sh"
+    python_env_require "$SCRIPT_DIR" >&2
 
     local py_version
-    py_version=$("$py_cmd" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    local major minor
-    major=$(echo "$py_version" | cut -d. -f1)
-    minor=$(echo "$py_version" | cut -d. -f2)
-
-    if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 10 ]; }; then
-        error "Python >= 3.10 requerido (encontrado: $py_version)"
-        exit 1
-    fi
+    py_version=$("$PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
     ok "Python $py_version"
-    echo "$py_cmd"
+    echo "$PYTHON"
 }
 
 check_dependencies() {

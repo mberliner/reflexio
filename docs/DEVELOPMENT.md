@@ -8,10 +8,13 @@ entry points. Si un comando no esta aqui, no es canonico.
 - Python >= 3.10 (minimo en `pyproject.toml`, `requires-python`); el CI corre en
   3.13. Con las dependencias de `requirements.txt` instaladas.
 - Entorno virtual en `.venv/` (Unix: `.venv/bin/`, Windows: `.venv/Scripts/`).
-  RECOMENDADO pero no obligatorio: el pipeline local detecta el `.venv` y, si no
-  existe, cae al `python` del SO con un warning (ver `shared/utils/ci_local.sh`).
-  El `.venv` se vuelve NECESARIO cuando el python del sistema no cumple los
-  requisitos (es < 3.10 o le faltan las dependencias).
+  El pipeline local (`ci_local.sh`) lo detecta y, si no existe, cae al `python` del
+  SO con un warning. Los runners batch (`run_dspy_total.sh`, `run_demos_gepa.sh`,
+  `run_nseeds_triage.sh`, `run_demo.sh`) lo EXIGEN: no hay fallback al python del
+  PATH. Antes de correr verifican que el entorno coincida con `requirements.txt`
+  (`shared/utils/python_env.sh`, que usa `shared.utils.check_env_deps`) y, si no,
+  abortan una sola vez con la causa (p.ej. `dspy==3.2.1 no cumple dspy==3.5.0`).
+  `SKIP_ENV_CHECK=1` omite solo el chequeo de dependencias.
 - Cada subproyecto (`dspy_gepa_poc/`, `gepa_standalone/`) tiene su propio `.env`
   para configuracion LLM independiente. Ver `docs/LLM_CONFIG.md`.
 
@@ -87,7 +90,12 @@ python -m shared.utils.check_deployments
 MUST NOT invocar directamente como `python gepa_standalone/universal_optimizer.py`:
 Python pondria el directorio del script en `sys.path` y `import shared` fallaria.
 Los shell scripts del repo (`run_demo.sh`, `run_dspy_total.sh`, etc.) ya invocan con
-`python -m` desde la raiz.
+`python -m` desde la raiz, usando el python del `.venv`.
+
+Los batch (`run_dspy_total.sh`, `run_demos_gepa.sh`) se DETIENEN en la primera prueba
+fallida y lo reportan en el resumen (`Estado: ABORTADO`), para no repetir el mismo
+error N veces gastando tokens. `CONTINUE_ON_FAIL=1` restaura el modo "seguir con las
+demas".
 
 - Punto de entrada GEPA: `python -m gepa_standalone.universal_optimizer --config <yaml>`.
 - Punto de entrada DSPy: `python -m dspy_gepa_poc.reflexio_declarativa --config <yaml>`

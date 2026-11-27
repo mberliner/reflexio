@@ -34,6 +34,9 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Helper multiplataforma para evitar suspension/hibernacion durante el batch.
 source "$REPO_ROOT/shared/utils/keep_awake.sh"
 
+# Resuelve el python del .venv y verifica el entorno (aborta con exit 1 si no).
+source "$REPO_ROOT/shared/utils/python_env.sh"
+
 # Directorio de configuraciones
 CONFIGS_DIR="$SCRIPT_DIR/configs"
 
@@ -78,11 +81,11 @@ ejecutar_prueba() {
     # Ejecutar prueba (cache deshabilitado via config: cache: false; no hay
     # cache en disco que limpiar, ver get_dspy_lm en shared/llm/config.py).
     echo ">>> Ejecutando prueba"
-    echo "    Comando: python -m dspy_gepa_poc.reflexio_declarativa --config $config_file"
+    echo "    Comando: $PYTHON -m dspy_gepa_poc.reflexio_declarativa --config $config_file"
     echo ""
     echo "--- INICIO OUTPUT PRUEBA ---"
     local exit_code=0
-    (cd "$REPO_ROOT" && run_py python -m dspy_gepa_poc.reflexio_declarativa --config "$config_file") || exit_code=$?
+    (cd "$REPO_ROOT" && run_py "$PYTHON" -m dspy_gepa_poc.reflexio_declarativa --config "$config_file") || exit_code=$?
     echo "--- FIN OUTPUT PRUEBA ---"
     echo ""
     return $exit_code
@@ -99,6 +102,10 @@ echo "=============================================="
 echo ""
 echo "  Configuracion:"
 echo "    - Dir configs:      $CONFIGS_DIR"
+echo ""
+
+# Falla aqui (una sola vez, con causa) en lugar de en cada corrida del batch.
+python_env_require "$REPO_ROOT"
 echo ""
 
 # Verificar que existe el directorio de configs
@@ -174,6 +181,12 @@ current_test=0
 failed_tests=0
 failed_list=()
 
+# Por defecto el batch se DETIENE en la primera prueba fallida (evita repetir el
+# mismo error N veces y gastar tokens). CONTINUE_ON_FAIL=1 restaura el modo
+# "seguir con las demas".
+CONTINUE_ON_FAIL="${CONTINUE_ON_FAIL:-0}"
+aborted=0
+
 echo "  Total de pruebas a ejecutar: $total_tests"
 echo ""
 echo "=============================================="
@@ -196,6 +209,11 @@ for ((run=1; run<=NUM_RUNS; run++)); do
             echo ">>> RESULTADO: FALLO"
             failed_tests=$((failed_tests + 1))
             failed_list+=("$config_name (run $run)")
+            if [ "$CONTINUE_ON_FAIL" != "1" ]; then
+                aborted=1
+                echo ">>> BATCH DETENIDO en la primera falla (CONTINUE_ON_FAIL=1 para continuar)"
+                break 2
+            fi
         fi
     done
 done
@@ -208,9 +226,13 @@ echo "#                         RESUMEN FINAL"
 echo "#"
 echo "##############################################################################"
 echo ""
-echo "  Total de pruebas ejecutadas: $total_tests"
-echo "  Exitosas:                    $((total_tests - failed_tests))"
+echo "  Pruebas planificadas:        $total_tests"
+echo "  Pruebas ejecutadas:          $current_test"
+echo "  Exitosas:                    $((current_test - failed_tests))"
 echo "  Fallidas:                    $failed_tests"
+if [ "$aborted" = "1" ]; then
+    echo "  Estado:                      ABORTADO ($((total_tests - current_test)) sin ejecutar)"
+fi
 echo ""
 
 if [ $failed_tests -gt 0 ]; then

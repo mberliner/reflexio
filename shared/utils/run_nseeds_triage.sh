@@ -28,16 +28,10 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Python: venv (Unix o Windows) o python del SO (misma deteccion que ci_local.sh).
-if [ -f "$REPO_ROOT/.venv/bin/python" ]; then
-    PYTHON="$REPO_ROOT/.venv/bin/python"
-elif [ -f "$REPO_ROOT/.venv/Scripts/python.exe" ]; then
-    PYTHON="$REPO_ROOT/.venv/Scripts/python.exe"
-elif command -v python >/dev/null 2>&1; then
-    PYTHON="python"
-else
-    PYTHON="python3"
-fi
+# Python del .venv (sin fallback al del sistema) + chequeo de entorno: aborta con
+# un mensaje claro si no esta alineado con requirements.txt.
+source "$SCRIPT_DIR/python_env.sh"
+python_env_require "$REPO_ROOT"
 
 # winpty da un pty real a python.exe nativo bajo mintty cuando stdout es terminal
 # (sin esto la seleccion interactiva con input() puede no verse). Si esta
