@@ -86,7 +86,7 @@ python -m shared.utils.check_deployments
 
 MUST NOT invocar directamente como `python gepa_standalone/universal_optimizer.py`:
 Python pondria el directorio del script en `sys.path` y `import shared` fallaria.
-Los shell scripts del repo (`run_demo.sh`, `run_cv_cases.sh`, etc.) ya invocan con
+Los shell scripts del repo (`run_demo.sh`, `run_dspy_total.sh`, etc.) ya invocan con
 `python -m` desde la raiz.
 
 - Punto de entrada GEPA: `python -m gepa_standalone.universal_optimizer --config <yaml>`.

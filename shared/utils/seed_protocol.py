@@ -18,7 +18,7 @@ Uso (siempre como modulo desde la raiz del repo):
         --config gepa_standalone/experiments/configs/cv_extraction_v2.yaml \
         --seeds 5
 
-    # Solo agregar lo ya corrido (p. ej. tras run_cv_cases.sh), sin ejecutar:
+    # Solo agregar lo ya corrido (p. ej. tras run_dspy_total.sh), sin ejecutar:
     python -m shared.utils.seed_protocol --config <yaml> --report-only
 
     # Regresion de un upgrade de librerias: comparar A PROPOSITO contra la
