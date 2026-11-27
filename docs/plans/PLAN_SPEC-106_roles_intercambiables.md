@@ -573,6 +573,89 @@ Paradas obligatorias (la sesion se detiene y espera al usuario):
 Contexto del supervisor: de cada log leer solo el final (`tail -n 40`); abrir el
 log completo o el diff solo cuando un control falla.
 
+## Hallazgos de la revision
+
+Subfase 6 (2026-11-27, Opus 5.5): diff `8aa6ff7..HEAD` contrastado con el texto de
+cada FR y SC de la spec, sin red. Severidad: alta (incumple un MUST en un caso
+alcanzable), media (incumple un MUST en un caso borde), baja (robustez o
+limpieza, sin incumplir la spec). Ningun hallazgo se corrigio: cada uno que el
+usuario apruebe va a una subfase `6-fix-N` (Sonnet 5.5, test RED previo).
+
+Sin hallazgos de severidad alta.
+
+- R1 (media, FR-006, `shared/utils/migrate_metrics_csv.py::_is_rag_run`). Si el
+  run no tiene `run.json`, devuelve "desconocido" sin mirar `config_snapshot.yaml`:
+  la consulta del snapshot solo ocurre cuando `run.json` existe y no tiene
+  `models.judge`. D10 dice "por `run.json` o, sin eso, por `config_snapshot.yaml`".
+  Una fila RAG previa con snapshot pero sin `run.json` queda con `Modelo Juez`
+  vacio y, por D11, no es comparable con una corrida nueva (SC-006 en ese caso
+  borde). Correccion propuesta: si `_run_json` es None, seguir al snapshot.
+- R2 (baja, FR-004, `shared/llm/config.py::resolve_judge_config` y
+  `LLMConfig.validate`). Sin `LLM_MODEL_JUDGE`, el juez es una copia del profesor
+  con `role="judge"`; si su validacion local fallara, el mensaje pediria
+  `LLM_API_KEY_JUDGE` / `LLM_MODEL_JUDGE`, variables que FR-004 manda ignorar en
+  ese caso. Hoy no es alcanzable: el profesor, con la misma configuracion, se
+  valida antes y falla primero. Ademas la sonda se repite contra el mismo
+  endpoint y modelo (una llamada de red mas por corrida RAG, sin informacion
+  nueva). Propuesta: decidir si el juez heredado se sondea (FR-005 dice "los
+  roles que esa corrida usa") y, si se mantiene, que sus mensajes nombren las
+  variables del profesor (`env_sources` ya las tiene).
+- R3 (baja, FR-003, `LLMConfig.from_env`). Los `**overrides` se aplican despues
+  de resolver proveedor, ancla, herencia y `env_sources`; un override de `model`
+  (o `api_key`) dejaria `inherits_global` y `env_sources` desalineados con la
+  config final. Ningun llamador de produccion lo hace (`llm_factory` solo pasa
+  `max_tokens`). Propuesta: documentarlo en el docstring o rechazar overrides de
+  conexion.
+- R4 (baja, FR-006, `shared/utils/seed_triage.py::print_targets`). Muestra una
+  terna por framework tomada del primer diagnostico; en `gepa` conviven casos RAG
+  y no RAG, asi que la linea "Juez (RAG)" depende del orden y puede decir
+  "(no aplica)" aunque haya casos RAG. Solo afecta la impresion; la terna de cada
+  diagnostico (`Diagnosis.target`) es correcta.
+- R5 (baja, limpieza, `gepa_standalone/core/llm_factory.py::validate_llm_connection`).
+  Funcion sin llamadores que valida solo `task` (semantica previa a D6). Propuesta:
+  eliminarla.
+- R6 (observacion, fuera de alcance de SPEC-106, `gepa_standalone/adapters/
+  base_adapter.py`). `BaseAdapter.__init__` reconstruye la config de tarea desde
+  el entorno (`get_task_config()`) en lugar de recibir la que se valido en el
+  Step 2: es el mismo patron que FR-004 prohibio para el juez. Hoy la conexion
+  resultante es la misma (mismo `from_env`), asi que no incumple FR-005. Registrar
+  como deuda en el Cierre, junto a la de `variable` en `infraestructura`.
+
+Verificado sin hallazgos:
+
+- FR-001: `_env` con `strip()`, vacio = no definido; modelo sin default y
+  `validate()` nombra rol y `LLM_MODEL_<ROL>` con proveedor `unset`.
+- FR-002 / SC-004: `tests/test_role_connection_golden.py` sin editar desde 1a;
+  `ci_local.sh` verde en esta revision.
+- FR-003 / SC-003: herencia solo con proveedor igual al ancla; `api_base` y
+  `api_version` (con su default) nunca a `anthropic/` ni a otro proveedor;
+  `LLM_API_BASE_<ROL>` en `anthropic/` se envia sin aviso; `provider_of` unica
+  fuente en `config.py`, `errors.py` y `dspy_lm.py`;
+  `TestNoLeakBetweenProviders` sin red.
+- FR-004: bucket `judge` propio, `Tokens Reflection` = reflexion + juez en ambos
+  orquestadores, costo por bucket con el modelo de su rol, juez construido en
+  `build_llm_configs`, validado en el Step 2 e inyectado (`SimpleRAGAdapter` ya no
+  lee el entorno); `Modelo Juez` vacio fuera de RAG.
+- FR-005 / SC-005: sonda por `_raw_completion` con `num_retries=0`, sin uso ni
+  contador; clasificacion por capa 1 sin ramas por subcadena;
+  `LLMConnectionError` con rol, clase y variable; validacion local de todos los
+  roles antes de la primera sonda; `baseline_only.py` solo con `task`; carga de
+  `LLM_ENV_FILE` sin ninguna credencial en `config.py` y `check_deployments.py`.
+- FR-006 / SC-006: `provider` y `endpoint_host` en `effective_params` (llegan a
+  `run.json` por `collect_model_info`), sin credencial; logger agrega columnas
+  faltantes con reescritura atomica y `[WARN]`; terna cruda en `seed_protocol` y
+  `seed_triage`, con sugerencia de migrar (salvo R1).
+- FR-007: `connection_summary()` impreso por rol en ambos subproyectos, sin
+  credencial ni `api_base` completo.
+- FR-008: `check_deployments` por rol y endpoint; rol no Azure "no aplica".
+- FR-009: docs y `.env.example` cubiertos en 5b (no releidos en esta revision,
+  fuera de "Consumo de tokens").
+- Arquitectura: `litellm.completion` solo en `shared/llm/call.py::_raw_completion`
+  (mas la excepcion de `check_deployments`); `shared/` no importa los
+  subproyectos; solo `dspy_lm.py` importa `dspy`; tests nuevos con
+  `make_completion_response` / `patch_litellm_completion` y payloads de
+  `tests/litellm_failure_payloads.py`.
+
 ## Bloqueos
 
 (ninguno)
