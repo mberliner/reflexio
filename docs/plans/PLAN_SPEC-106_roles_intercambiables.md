@@ -97,7 +97,7 @@ codigo, la sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 7 Verificacion real (sesion interactiva, gasta API) | Corridas cortas Azure + Claude en ambos subproyectos | SC-001, SC-002 | - | Sonnet 5.5 | hecho (verificado 2026-11-27; ver "Verificacion real (fase 7)") |
 | 7 (correcciones) | 7-fix-1 (R8) `check_deployments` decide el juez despues de cargar `LLM_ENV_FILE` | FR-008 | D2 | Opus 5.5 (interactiva) | hecho (ab91cea) |
 | | 7-fix-2 (R9) Migracion: snapshot DSPy (`module`, sin `adapter.type`) es no RAG | FR-006 | D10 | Opus 5.5 (interactiva) | hecho (d864369) |
-| Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | pendiente |
+| Cierre (sesion interactiva) | `[SDD-Check]`, estado de D-028 y D-029, spec y registro a `active`, plan cerrado | todos | - | Opus 5.5 | hecho (2026-11-27; ver `historial/sdd.md`) |
 
 ## Dependencias
 
@@ -825,6 +825,12 @@ helper `_row` de `tests/test_seed_triage.py` (agregan juez) y sus aserciones de
 la lista). Desvio menor: `target_models(framework, adapter_type="")`.
 
 ## Proxima sesion
+
+**Plan cerrado (2026-11-27).** SPEC-106 `active` (iteracion 2); fases 1 a 7, sus
+correcciones y Cierre `hecho`. Resumen y `[SDD-Check]` en `historial/sdd.md`
+(entrada 2026-11-27). D-028 y D-029 siguen abiertas; la deuda sin corregir quedo
+registrada como D-030 (R4), D-031 (R6), D-032 (R7) y D-033 (`variable` en
+`infraestructura`). Lo que sigue debajo es el estado historico de la ejecucion.
 
 Plan aprobado por el usuario el 2026-11-27, con H1 resuelta. 1a hecha
 (404af1d) y 1b hecha (c0f7c64). Revision del nucleo por el usuario

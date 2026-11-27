@@ -35,8 +35,12 @@ Prioridad: P1
   semantica MUST documentarse en `docs/PROTOCOLO_N_SEEDS.md`.
 - FR-007 El veredicto MUST ser salida adicional; MUST NOT alterar la ejecucion de
   corridas, el scoring ni el formato del CSV (retrocompatibilidad).
+  Enmendado por [[SPEC-106-roles-intercambiables]] FR-006 (2026-11-27): segunda
+  excepcion al formato congelado, la columna `Modelo Juez`, agregada por el
+  logger y no por el veredicto.
 - FR-008 La referencia previa MUST igualar los modelos (`Modelo Tarea` y
-  `Modelo Profesor`) del lote nuevo: las filas previas con un par de modelos
+  `Modelo Profesor`; desde [[SPEC-106-roles-intercambiables]] FR-006, la terna con
+  `Modelo Juez` y por la cadena cruda del modelo) del lote nuevo: las filas previas con un par de modelos
   distinto MUST excluirse antes de computar el veredicto (comparar robustez entre
   modelos invalida la conclusion: baseline confound, leccion 10). Cuando se
   excluyan filas, el protocolo MUST advertirlo (`[WARN]`) indicando cuantas. Si
@@ -51,8 +55,8 @@ Prioridad: P1
   un upgrade), en cuyo caso MUST conservarse y advertirse que el veredicto mide
   el cambio de librerias. Las filas sin versiones registradas (anteriores a
   FR-009) MUST conservarse con `[WARN]` (comparabilidad no verificable), nunca
-  completarse con un valor inferido. Esta columna es la unica excepcion a FR-007:
-  la agrega el logger del CSV, no el veredicto.
+  completarse con un valor inferido. Esta columna es una excepcion a FR-007 (la otra
+  es `Modelo Juez`, SPEC-106 FR-006): la agrega el logger del CSV, no el veredicto.
 
 ## Criterios de exito (medibles, agnosticos a tecnologia)
 

@@ -38,7 +38,7 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 | SPEC-103-proveedor-anthropic | Anthropic como proveedor verificado (Haiku 4.5 a Opus 5.5 / Fable) | active | 4 | `SPEC-103-proveedor-anthropic.md` |
 | SPEC-104-fallas-tecnicas-justas | Fallas tecnicas visibles y medicion justa | active | 4 | `SPEC-104-fallas-tecnicas-justas.md` |
 | SPEC-105-punto-llamada-desacoplado | Punto de llamada propio, desacoplado de los internos de DSPy y GEPA | active | 5 | `SPEC-105-punto-llamada-desacoplado.md` |
-| SPEC-106-roles-intercambiables | Profesor, estudiante y juez intercambiables entre proveedores | draft | 2 | `SPEC-106-roles-intercambiables.md` |
+| SPEC-106-roles-intercambiables | Profesor, estudiante y juez intercambiables entre proveedores | active | 2 | `SPEC-106-roles-intercambiables.md` |
 | SPEC-107-costo-real-por-resolucion | Costo real de cada combinacion de roles | draft | 1 | `SPEC-107-costo-real-por-resolucion.md` |
 
 ## Roadmap de iteraciones

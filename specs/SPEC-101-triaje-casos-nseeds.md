@@ -21,6 +21,9 @@ Prioridad: P2
 - FR-002 Por cada caso MUST emitir un estado en `{RESUELTO, DUDOSO, SIN DATOS}`
   a partir de las filas previas COMPARABLES (mismo par de modelos que usaria una
   corrida nueva, criterio de [[SPEC-100-veredicto-senal-ruido]] FR-008).
+  Enmendado por [[SPEC-106-roles-intercambiables]] FR-006 (2026-11-27): la clave
+  es la terna (`Modelo Tarea`, `Modelo Profesor`, `Modelo Juez`) y
+  `target_models` incluye el juez en casos RAG.
 - FR-003 Un caso MUST clasificarse `DUDOSO` cuando se cumpla alguno de:
   - mejora sin confirmar: `media Rob < CEILING_BASELINE_PTS` y `Opt - Base > NOISE_EPS_PTS`;
   - alta varianza: `rango Rob > TRIAGE_VARIANCE_RANGE_PTS`, o poca evidencia

@@ -134,6 +134,9 @@ Notas de la matriz:
   (evita redirigir el pedido al endpoint Azure que quedo en un `.env` editado).
   `validate_connection()` MUST funcionar con todos los modelos de la matriz (la
   prueba de conexion respeta FR-003 a FR-006).
+  Enmendado por [[SPEC-106-roles-intercambiables]] FR-003 (2026-11-27): un
+  `LLM_API_BASE_<ROL>` explicito MUST enviarse sin aviso (proxy o gateway); el
+  global sigue sin enviarse y ya no se hereda a un rol `anthropic/`.
 - FR-008 Variables `LLM_EFFORT_<ROL>` y `LLM_THINKING_<ROL>`: el parseo MUST
   ignorar mayusculas y espacios; una variable vacia MUST equivaler a no
   configurada; un valor fuera de los permitidos (effort: low..max; thinking:
