@@ -517,7 +517,7 @@ Sesion no interactiva: si algo exige decision del usuario o un archivo fuera de 
 anotarlo en 'Bloqueos' del plan, no commitear y terminar." \
   --model "$MODEL" \
   --permission-mode acceptEdits \
-  --allowedTools "Bash(./shared/utils/ci_local.sh:*) Bash(.venv/Scripts/python.exe -m pytest:*) Bash(git status) Bash(git diff:*) Bash(git log:*) Bash(git add:*) Bash(git commit:*)" \
+  --allowedTools "Bash(./shared/utils/ci_local.sh:*) Bash(.venv/Scripts/python.exe -m pytest:*) Bash(.venv/Scripts/python.exe -m ruff:*) Bash(git status) Bash(git diff:*) Bash(git log:*) Bash(git add:*) Bash(git commit:*)" \
   | tee "$HOME/spec106_logs/$SUB.log"
 ```
 
