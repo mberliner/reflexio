@@ -361,6 +361,45 @@ class TestMigrationOfJudgeModel:
         assert _read(self._csv(tmp_path))[0]["Modelo Juez"] == ""
         assert result["judge_unknown"] == 1
 
+    def test_dspy_snapshot_is_not_rag_and_not_unknown(self, tmp_path):
+        """R9: snapshot DSPy (`module`, `adapter` sin `type`): no RAG, no desconocido."""
+        results = tmp_path / "results"
+        run = _make_run(
+            results,
+            "r9",
+            run_json={"models": {"task": {}, "reflection": {}}},
+            snapshot="adapter:\n  max_text_length: 1000\nmodule:\n  type: dynamic\n",
+        )
+        bare = _make_run(results, "r10", run_json=None, snapshot="module:\n  type: dynamic\n")
+        _write_pre_106(
+            self._csv(tmp_path),
+            [
+                {"Run ID": "r9", "Modelo Profesor": "p", "Run Directory": run},
+                {"Run ID": "r10", "Modelo Profesor": "p", "Run Directory": bare},
+            ],
+        )
+
+        result = migrate_csv(self._csv(tmp_path))
+
+        rows = _read(self._csv(tmp_path))
+        assert [r["Modelo Juez"] for r in rows] == ["", ""]
+        assert result["judge_unknown"] == 0
+
+    def test_snapshot_without_module_nor_adapter_type_stays_unknown(self, tmp_path):
+        results = tmp_path / "results"
+        run = _make_run(
+            results, "r11", run_json=None, snapshot="adapter:\n  max_text_length: 1000\n"
+        )
+        _write_pre_106(
+            self._csv(tmp_path),
+            [{"Run ID": "r11", "Modelo Profesor": "p", "Run Directory": run}],
+        )
+
+        result = migrate_csv(self._csv(tmp_path))
+
+        assert _read(self._csv(tmp_path))[0]["Modelo Juez"] == ""
+        assert result["judge_unknown"] == 1
+
     def test_existing_judge_is_never_overwritten(self, tmp_path):
         results = tmp_path / "results"
         run = _make_run(results, "r5", run_json={"models": {"judge": {}}}, snapshot=None)

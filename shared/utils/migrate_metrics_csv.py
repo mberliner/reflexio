@@ -78,7 +78,8 @@ def _is_rag_run(results_dir: Path, run_dir_value: str) -> bool | None:
 
     RAG if its ``run.json`` has ``models.judge``; without that (or without
     ``run.json``), if its ``config_snapshot.yaml`` has ``adapter.type: rag``
-    (SPEC-106 D10).
+    (SPEC-106 D10). A snapshot with a ``module`` section and no ``adapter.type``
+    is a DSPy run (``module`` exists only in DSPy, which has no RAG): not RAG.
     """
     data = _run_json(results_dir, run_dir_value)
     models = data.get("models") if data else None
@@ -91,10 +92,14 @@ def _is_rag_run(results_dir: Path, run_dir_value: str) -> bool | None:
         config = yaml.safe_load(snapshot.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
         return None
-    adapter = config.get("adapter") if isinstance(config, dict) else None
-    if not isinstance(adapter, dict) or "type" not in adapter:
+    if not isinstance(config, dict):
         return None
-    return adapter["type"] == "rag"
+    adapter = config.get("adapter")
+    if isinstance(adapter, dict) and "type" in adapter:
+        return adapter["type"] == "rag"
+    if "module" in config:
+        return False
+    return None
 
 
 def _backfill_judge(new_row: dict, results_dir: Path) -> bool | None:
@@ -275,7 +280,8 @@ def main(argv: list[str]) -> int:
         if result["judge_unknown"]:
             print(
                 f"  Sin saber si son RAG: {result['judge_unknown']} fila(s) "
-                "(sin run.json ni config_snapshot.yaml); Modelo Juez queda vacio."
+                "(ni run.json con juez ni config_snapshot.yaml con adapter.type o "
+                "module); Modelo Juez queda vacio."
             )
     return 0
 
