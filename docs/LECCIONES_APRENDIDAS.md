@@ -976,3 +976,28 @@ train) frente a los 11 demos fijos. Medido en dos niveles, ambos N=3:
   remedio es un chequeo, no una costumbre: `shared/utils/check_env_deps.py`
   corre primero en `ci_local.sh` y en el CI y falla ante huerfanos, pins
   desalineados e imports no declarados (`docs/DEVELOPMENT.md`).
+
+## 12. Auditoria de artefactos, conciliacion y hallazgos operativos (2026-11-28)
+
+Auditoria completa sobre `dspy_gepa_poc/results/`, `gepa_standalone/results/` y `shared/analysis/output/` tras las corridas del `2026-11-27` (51 completadas: 7 DSPy + 44 GEPA standalone; y 2 abortadas en DSPy).
+
+### Criterios de conciliacion (que se conserva sin modificar)
+
+- **Corridas abortadas con `run.json` sin fila en CSV (SPEC-104 FR-008):** los directorios de corrida que contienen solo `run.json` y `status="aborted"` (incluidos `flujo_intents_fast_gate_rule_v1_20261127_182345` y `..._185240` por `RateLimitError`, `$0,173586` en total) constituyen el registro oficial de fallas y consumo; MUST conservarse en `results/runs/` aunque no figuren en `metricas_optimizacion.csv`.
+- **Registros historicos previos al esquema actual:** se conservan sin alterar (a) las 235 filas historicas sin `Run Directory` en `gepa_standalone` (`2025-12-22` a `2026-01-12`, ya conciliadas en `docs/METADATA_REPRODUCIBILIDAD.md`), (b) las 12 carpetas de `2026-05-14`/`2026-05-17` compartidas por filas de `dspy_gepa_poc` con `Run ID` unico, (c) los `.meta.json` antiguos nombrados por `case.title` en `dspy_gepa_poc`, y (d) las 18 filas del `2026-06-02` en `gepa_standalone` con diferencia de ~$0,01 frente a `run.json`.
+- **Diferencia entre `candidates.json` y `Optimizado Score` en `dspy_gepa_poc`:** en corridas con `temperature > 0`, `cache: false` y `eval_repeats: 1` (p. ej. el `2026-11-27`: `3182b393` con `83,33%` en `candidates.json` vs `75,00%` en CSV/`run.json`, y `b76d2a02` con `97,33%` vs `94,67%`), la diferencia no es desincronizacion de artefactos: `dspy_gepa_poc/reflexio_declarativa.py` guarda `candidates.json` desde `GEPA.compile()` y luego re-evalua el programa optimizado sobre `valset` en el Step 7 para poblar `run.json` (`paired_delta`) y el CSV.
+
+### Hallazgos operativos a corregir
+
+1. **Tests de analisis pisan el leaderboard real (`tests/test_shared_analysis.py`):**
+   - **Sintoma:** `shared/analysis/output/leaderboard.md` y `leaderboard.csv` aparecen con solo 2 casos de fixture (`CV Extraction` y `Email Urgency` con `gpt-4o`) fechados al momento de correr `pytest` / `./shared/utils/ci_local.sh` (`2026-11-27 18:11:17`).
+   - **Causa:** `tests/test_shared_analysis.py` (lineas 736, 758, 769) invoca `leaderboard.run(csv_path=..., graphs=False)` sin aislar el directorio de salida, sobrescribiendo la salida real de `./analyze leaderboard`.
+   - **Accion recomendada:** aislar la ruta de salida en esos tests (p. ej. `tmp_path`) y regenerar el leaderboard con `./analyze leaderboard`.
+2. **Carpetas vacias en fallas tempranas de `dspy_gepa_poc`:**
+   - **Sintoma:** 19 directorios completamente vacios acumulados en `dspy_gepa_poc/results/runs/` (mayo, junio y `2026-11-25`) cuando un run falla antes de escribir `run.json`. Limpiados el `2026-11-28`, pero el patron sigue abierto si ocurre una excepcion previa al logger de aborto.
+   - **Accion recomendada:** crear `run_dir` de forma perezosa o eliminarlo si el run aborta antes de persistir `run.json`.
+3. **`dataset_path` antiguo en `.meta.json` de `gepa_standalone`:**
+   - **Sintoma:** experimentos activos (`cv_extraction_v3.meta.json`, `cv_profile_v3.meta.json`, `rag_optimization.meta.json`, etc.) conservan rutas Linux (`/datum1/Descargas/Claudio/reflexio/...`) de su creacion original porque `MetadataManager.ensure_experiment()` no refresca `dataset_path` en re-ejecuciones.
+   - **Accion recomendada:** actualizar `dataset_path` al re-escribir `<exp>.meta.json` (preservando `created_at` y `total_runs`).
+4. **Bloqueo por tasa en `flujo_intents_fast_gate_rule_v1` (`2026-11-27`):**
+   - Dos ejecuciones consecutivas en `dspy_gepa_poc` (`18:25` y `18:55`, `azure/gpt-4.1-mini`, `few_shot_count=8`) abortaron por `RateLimitError` al superar el umbral `0.1` (`9/81` y `17/166` intentos). Se atiende mediante `specs/SPEC-107-limite-de-tasa-proveedor.md`.

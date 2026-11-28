@@ -32,6 +32,7 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 | D-031 | `gepa_standalone/adapters/base_adapter.py::BaseAdapter.__init__` reconstruye la config de tarea desde el entorno (`get_task_config()`) en lugar de recibir la que se valido en el Step 2: el mismo patron que SPEC-106 FR-004 prohibio para el juez. Hoy la conexion resultante es la misma (mismo `from_env`), asi que no incumple FR-005; un cambio del entorno entre el Step 2 y el Step 4 (o un override futuro) haria que la tarea corra con una config no validada. Correccion natural: inyectar la config de tarea como se inyecta el juez | SPEC-106 revision (R6, 2026-11-27) | Abierta. Observacion fuera de alcance de SPEC-106 |
 | D-032 | `save_aborted_run` (ambos orquestadores) y `shared/logging/metadata.py::collect_model_info` no toleran `reflection_config is None`. Hoy no es alcanzable: `baseline_only.py` (unico entry point sin profesor) no los llama y el optimizador siempre usa los dos roles. Se vuelve alcanzable si un entry point que solo usa `task` (SPEC-106 FR-005) registra una corrida o un aborto | SPEC-106 supervision (R7, 2026-11-27) | Abierta. Severidad baja |
 | D-033 | En la sonda de conexion (`shared/llm/config.py::validate_connection`, SPEC-106 FR-005), el campo `variable` de `LLMConnectionError` es siempre la de la credencial del rol, tambien cuando la clase es `infraestructura` (429, timeout), donde la credencial no es la causa y nombrarla orienta mal el diagnostico. Aceptado para SPEC-106 en la revision de la sonda (2a) | SPEC-106 revision de la sonda (2a, 2026-11-27) | Abierta. Mejora posterior, sin impacto en la clasificacion |
+| D-034 | Hallazgos de auditoria de artefactos (`docs/LECCIONES_APRENDIDAS.md` seccion 12, 2026-11-28): (a) `tests/test_shared_analysis.py` llama a `leaderboard.run(...)` sin aislar la salida y sobrescribe `shared/analysis/output/leaderboard.{md,csv}` en cada corrida de `pytest`/`ci_local.sh`; (b) `dspy_gepa_poc` deja carpetas vacias en `results/runs/` si falla antes de escribir `run.json`; (c) `MetadataManager.ensure_experiment()` no refresca `dataset_path` al re-ejecutar un experimento (`.meta.json` de `gepa_standalone` conservan rutas Linux antiguas) | Auditoria de artefactos post-corridas 2026-11-27 (2026-11-28) | Abierta. Severidad baja/media; (a) se corrige aislando con `tmp_path` y regenerando con `./analyze leaderboard` |
 
 ## Deuda resuelta
 
@@ -60,6 +61,11 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 ---
 
 ## Log de fases
+
+### 2026-11-28 — Auditoria de artefactos post-corridas 2026-11-27 y limpieza
+
+- Limpieza en `results/` (gitignored): eliminados 19 directorios vacios en `dspy_gepa_poc/results/runs/`, 2 carpetas con `latest` roto (`fast_gate`, `rag_optimization_v2`) en `gepa_standalone/results/runs/`, y 7 backups `.bak` historicos de `metricas_optimizacion.csv` (conservando los de ayer `*.bak-20261127_*`).
+- Documentados en `docs/LECCIONES_APRENDIDAS.md` (seccion 12) los criterios de conciliacion (que se conserva sin tocar) y los 4 hallazgos operativos; los pendientes tecnicos quedan abiertos en `D-034` (tests que pisan `shared/analysis/output/leaderboard.*`, carpetas vacias en fallas tempranas de DSPy, y `dataset_path` antiguo en `.meta.json`).
 
 ### 2026-11-27 (cont. 3) — Plan de SPEC-107 escrito con Opus 5.5 y aprobado
 
