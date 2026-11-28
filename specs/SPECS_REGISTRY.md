@@ -16,7 +16,23 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 
 ## Convenciones
 
-- Estado: `draft` | `active` | `superseded` | `archived`.
+- Estado (SSOT de los estados de spec; la plantilla de `docs/SDD_PROTOCOLO.md`
+  remite aqui):
+  - `draft`: spec en redaccion o aprobada, con implementacion pendiente (al
+    menos una fila del Coverage mapping en `pendiente`). Un plan aprobado en
+    `docs/plans/` no cambia el estado.
+  - `active`: capacidad implementada y vigente. Se pasa de `draft` a `active`
+    al cerrar la implementacion: Coverage mapping sin `pendiente` y
+    `./shared/utils/ci_local.sh` en verde. Una iteracion nueva sobre una spec
+    `active` que agregue requisitos sin implementar MUST volverla a `draft`
+    hasta su cierre.
+  - `superseded`: reemplazada por otra spec, que MUST citarse en la cabecera
+    (`Reemplazada por: [[SPEC-NNN-...]]`). La capacidad sigue existiendo, pero
+    su contrato vigente es el de la spec nueva.
+  - `archived`: sin vigencia y sin reemplazo (capacidad retirada del codigo o
+    spec abandonada antes de implementarse).
+  - Todo cambio de estado MUST reflejarse en la spec, en este registro y en
+    `historial/sdd.md`.
 - Cada spec tiene un ID estable (`SPEC-NNN-slug`) y un archivo en este directorio.
 - Numeracion: las nuevas capacidades se numeran desde `SPEC-100` en adelante. El
   rango `SPEC-001`..`SPEC-099` queda RESERVADO para formalizar retrospectivamente

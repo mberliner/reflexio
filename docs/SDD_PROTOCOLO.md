@@ -109,7 +109,7 @@ si hace falta, en el rango reservado `SPEC-001..099` (ver
 ```
 # SPEC-NNN-slug — <titulo de la capacidad>
 
-Estado: draft | active | superseded | archived
+Estado: <ver specs/SPECS_REGISTRY.md, Convenciones>
 Iteracion: <N> (rev. YYYY-MM-DD)
 Depende de: [[SPEC-MMM-...]]      # opcional
 Relacionada con: [[SPEC-...]]     # opcional

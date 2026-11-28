@@ -60,9 +60,11 @@ regulares; coincidencia exacta normalizada sin prefijo; cambios en
   Ambos MUST aceptar una cadena opcional (default `None`, sin filtro). Si se
   pasan un flag y su alias en la misma invocacion, prevalece el comportamiento
   estandar de `argparse` para opciones con el mismo `dest` (el ultimo valor).
-  El parser MUST conservar `allow_abbrev` por defecto de `argparse`; la
-  abreviatura `--t` es ambigua (`--task`/`--teacher`) y `argparse` la rechaza
-  con error, lo que MUST documentarse en `docs/ANALISIS_UTILIDADES.md`.
+  El parser MUST conservar `allow_abbrev` por defecto de `argparse`: toda
+  abreviatura ambigua se rechaza con error, lo que MUST documentarse en
+  `docs/ANALISIS_UTILIDADES.md` con los casos que introduce esta spec: `--t`
+  (`--task`/`--teacher`) en los 4 subcomandos y `--s` (`--student`/`--sort`) en
+  `budget`; `--c` ya era ambigua (`--case`/`--csv`, y `--cuts` en `stats`).
   Cada `cmd_*` MUST propagar `args.student` y `args.teacher` a `run(...)` como
   `student_filter` y `teacher_filter`.
 - FR-002 Los 3 filtros (`case_filter`, `student_filter`, `teacher_filter`) MUST
@@ -136,6 +138,12 @@ regulares; coincidencia exacta normalizada sin prefijo; cambios en
   vista filtrada en `output_dir` si se informa, o en `get_output_dir(project)`
   en caso contrario (`shared/analysis/output/` sin `--project`,
   `<proyecto>/results/` con `--project`).
+  Con al menos un filtro de fila activo, `leaderboard.md` SHOULD incluir bajo
+  la linea `Generado:` una linea `Filtros:` con los filtros activos (p. ej.
+  `Filtros: caso=CV, estudiante=4.1-mini, profesor=claude`), para que una vista
+  parcial sea reconocible; sin filtros activos la linea MUST NOT aparecer, de
+  modo que la salida sin filtros no cambia (SC-005). `leaderboard.csv` no
+  cambia de formato.
 - FR-008 La ayuda del CLI (`shared/analysis/cli.py`) y el SSOT
   `docs/ANALISIS_UTILIDADES.md` MUST documentar `--student`/`--task` y
   `--teacher`/`--reflection`, su combinacion con `--case` en `AND` logico, el
@@ -182,9 +190,13 @@ regulares; coincidencia exacta normalizada sin prefijo; cambios en
 
 - Given un CSV con corridas de `Email Urgency` (`gpt-4o-mini` / `gpt-4o`),
   `CV Extraction` (`gpt-4.1-mini` / `claude-sonnet-5-5`) y `CV Extraction`
-  (`gpt-4.1-mini` / `gpt-4o`), When se ejecuta `./analyze leaderboard --case CV --student 4.1-mini --teacher claude`,
+  (`gpt-4.1-mini` / `gpt-4o`), con al menos una corrida anomala (p. ej.
+  `Optimizado Score < Baseline Score`) en cada grupo, When se ejecuta
+  `./analyze leaderboard --case CV --student 4.1-mini --teacher claude`,
   Then solo aparece el grupo `CV Extraction | gpt-4.1-mini | claude-sonnet-5-5`
-  en la tabla principal, en estadisticas por caso y en anomalias.
+  en la tabla principal, en estadisticas por caso y en anomalias (solo los
+  `Run ID` anomalos de ese grupo), y `leaderboard.md` incluye la linea
+  `Filtros:` con los 3 filtros.
 - Given el mismo CSV, When se ejecuta `./analyze leaderboard --teacher claude`
   (sin `--case` ni `--student`), Then aparecen todas las corridas de cualquier
   caso y estudiante cuyo `Modelo Profesor` contenga `claude` (case-insensitive).
@@ -195,7 +207,8 @@ regulares; coincidencia exacta normalizada sin prefijo; cambios en
   When se ejecuta `./analyze leaderboard --case Email --teacher claude`, Then
   imprime `"No hay datos para analizar."`, no lanza excepcion y no escribe
   archivos de salida.
-- Given los CSV reales con profesores `azure/gpt-5` y `azure/gpt-5.4`, When se
+- Given un CSV de prueba con profesores `azure/gpt-5` y `azure/gpt-5.4` (valores
+  presentes en los CSV maestros reales), When se
   ejecuta `./analyze leaderboard --teacher gpt-5`, Then aparecen ambos
   profesores (limite conocido, FR-003); When se ejecuta
   `./analyze leaderboard --teacher gpt-5.4`, Then aparece solo `azure/gpt-5.4`.
@@ -217,7 +230,7 @@ regulares; coincidencia exacta normalizada sin prefijo; cambios en
 | FR-004 | `shared/analysis/base.py::filter_metrics`, `shared/analysis/__init__.py`, 4 modulos de `shared/analysis/` (pendiente) |
 | FR-005 | `run(...)` en `leaderboard.py`, `roi_calculator.py`, `stats_evolution.py`, `budget_breakdown.py` (pendiente) |
 | FR-006 | tests de resultado vacio en los 4 modulos, no-escritura en `leaderboard` y grupos todos omitidos en `roi` (pendiente) |
-| FR-007 | `shared/analysis/leaderboard.py::run`; tests sobre tabla, estadisticas, anomalias y archivos CSV/MD (pendiente) |
+| FR-007 | `shared/analysis/leaderboard.py::run`; tests sobre tabla, estadisticas, anomalias, archivos CSV/MD y linea `Filtros:` (presente con filtros, ausente sin ellos) (pendiente) |
 | FR-008 | `shared/analysis/cli.py`, `docs/ANALISIS_UTILIDADES.md` (pendiente) |
 | FR-009 | `run(...)` de los 4 modulos, `cmd_*` en `shared/analysis/cli.py`; tests de `--no-merge` (pendiente) |
 | SC-001..SC-004, SC-006, SC-007 | `tests/test_shared_analysis.py` (pendiente) |

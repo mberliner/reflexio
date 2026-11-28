@@ -62,6 +62,40 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-28 (cont. 6) — Definicion de estados de spec
+
+- Definidos `draft`, `active`, `superseded` y `archived` y sus transiciones en `specs/SPECS_REGISTRY.md` (Convenciones), SSOT unico; la plantilla de `docs/SDD_PROTOCOLO.md` remite alli en lugar de repetir la lista. Criterio tomado de la practica previa (SPEC-103..106 pasaron a `active` al cerrar la implementacion).
+- SPEC-110 corregida a `draft` (se habia pasado a `active` sin implementacion).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, historial/sdd.md (transiciones previas a active), cabeceras de specs/SPEC-100..106
+- Incluye/Excluye verificado: solo definicion de estados y correccion de SPEC-110; sin cambios de estado en otras specs (todas cumplen la definicion)
+- Validaciones aplicadas: lista de estados en un unico SSOT, sin emoticones
+- SSOT afectado: specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, historial/sdd.md
+- Derivados a revisar: ninguno
+- Deuda arrastrada: ninguna
+- Riesgos/reservas: ninguno
+```
+
+### 2026-11-28 (cont. 5) — SPEC-110 ajustes finales (draft)
+
+- FR-001: abreviaturas ambiguas documentadas en general (`--t` en los 4 subcomandos, `--s` en `budget`, `--c` preexistente).
+- FR-007: `leaderboard.md` SHOULD incluir una linea `Filtros:` solo con filtros activos (sin filtros la salida no cambia, SC-005); `leaderboard.csv` sin cambios de formato.
+- Escenarios: el de `gpt-5` vs `gpt-5.4` usa un CSV de prueba (no los CSV maestros); el escenario 1 exige corridas anomalas por grupo para que la verificacion de anomalias no sea vacua.
+- Estado: sigue `draft` (iteracion 1); pasa a `active` al cerrar la implementacion, cuando el Coverage mapping quede sin `pendiente`. Implementacion directa por TDD, sin plan en `docs/plans/`.
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-110-filtros-modelos-analisis.md, specs/SPECS_REGISTRY.md, shared/analysis/cli.py
+- Incluye/Excluye verificado: solo texto de la spec, registro y log; sin codigo
+- Validaciones aplicadas: lenguaje normativo RFC 2119, sin NEEDS CLARIFICATION, coverage mapping de FR-007 actualizado, sin emoticones
+- SSOT afectado: specs/SPEC-110-filtros-modelos-analisis.md, specs/SPECS_REGISTRY.md, historial/sdd.md
+- Derivados a revisar: shared/analysis/{base,__init__,cli,leaderboard,roi_calculator,stats_evolution,budget_breakdown}.py, tests/test_shared_analysis.py, docs/ANALISIS_UTILIDADES.md
+- Deuda arrastrada: ninguna
+- Riesgos/reservas: limite conocido gpt-5 / gpt-5.4 de la busqueda progresiva (FR-003)
+```
+
 ### 2026-11-28 (cont. 4) — Renumeracion de specs pendientes y paso de 5
 
 - Decision del usuario: la spec de filtros de analisis se resuelve antes que la de limite de tasa y la de costo real. Desde ahora cada spec nueva toma el siguiente multiplo de 5 libre, y los numeros intermedios quedan reservados para casos intermedios. Regla en `specs/SPECS_REGISTRY.md` (Convenciones); referencia en `docs/SDD_PROTOCOLO.md`.
