@@ -92,7 +92,7 @@ central). Modelo: proyecto testigo `agent-test-suite`.
 
 Separacion de alcance (clave para no duplicar SSOTs):
 
-- **Capacidades** (funcionalidad/contrato de software) -> `specs/SPEC-NNN-slug.md`, registradas en `specs/SPECS_REGISTRY.md`.
+- **Capacidades** (funcionalidad/contrato de software) -> `specs/SPEC-NNN-slug.md`, registradas en `specs/SPECS_REGISTRY.md`. Numeracion (paso de 5 con huecos reservados) y regla de renumeracion: ver `specs/SPECS_REGISTRY.md`, seccion Convenciones.
 - **Docs** (arquitectura, guias, conceptos) -> `docs/*.md`, gobernados por el Mapa de SSOTs de `00-INDEX.md`. NO entran al registro.
 - **Planes de implementacion** (fases, orden, estado de ejecucion de una spec o iniciativa) -> `docs/plans/*.md`, indexados en `00-INDEX.md`. La spec enlaza a su plan; el plan no repite requisitos.
   Si un plan fija una lista cerrada de archivos por subfase, ajustar un test

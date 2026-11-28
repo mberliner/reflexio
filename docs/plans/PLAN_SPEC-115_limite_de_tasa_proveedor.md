@@ -1,12 +1,12 @@
-# Plan de implementacion — SPEC-107 limite de tasa del proveedor
+# Plan de implementacion — SPEC-115 limite de tasa del proveedor
 
-Fuente del plan de ejecucion de [[SPEC-107-limite-de-tasa-proveedor]]. La spec
+Fuente del plan de ejecucion de [[SPEC-115-limite-de-tasa-proveedor]]. La spec
 define que debe cumplirse (FR/SC); este documento define en que orden se
 implementa, con que modelo de agente, que decisiones de diseno ya estan tomadas
 y en que estado esta cada subfase. Si cambia un requisito, se edita la spec y
 aca solo se ajusta la referencia.
 
-Creado: 2026-11-27. Base: `e1a97e8` (SPEC-107 iteracion 2, `draft`; la
+Creado: 2026-11-27. Base: `e1a97e8` (SPEC-115 iteracion 2, `draft`; la
 iteracion 3, del mismo dia, agrega FR-013 y SC-012, ver D18 y C9). Dependencias
 cumplidas: SPEC-104, SPEC-105 y SPEC-106 `active`. Estado del plan: aprobado el
 2026-11-27 (C1 a C8 confirmadas, ver "Decisiones a confirmar"); sin subfases
@@ -39,7 +39,7 @@ sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 - Tests primero. Cuando RED y GREEN van en la misma subfase, la sesion escribe
   primero los tests, verifica que fallan por la razon correcta y despues
   implementa. Cuando van en subfases distintas (fase 1), los tests RED se marcan
-  `@pytest.mark.xfail(strict=True, reason="SPEC-107 <subfase que los cierra>")`
+  `@pytest.mark.xfail(strict=True, reason="SPEC-115 <subfase que los cierra>")`
   para que `ci_local.sh` quede verde; la subfase GREEN quita la marca. Los
   simbolos que aun no existen se importan dentro del test (no a nivel de
   modulo), para que el RED sea `xfail` y no un error de coleccion.
@@ -49,12 +49,12 @@ sesion lo anota como bloqueo (ver Reglas) y no improvisa.
   `tests/litellm_failure_payloads.py` (un payload nuevo se agrega ahi, D16).
   Sin red: ningun test llama a una API. Ningun test duerme de verdad (D15).
 - Cada subfase cierra con `./shared/utils/ci_local.sh` verde y un commit
-  `feat(spec-107): <subfase> <resumen>` (o `test(...)`, `docs(...)`). Commits
+  `feat(spec-115): <subfase> <resumen>` (o `test(...)`, `docs(...)`). Commits
   sin trailer `Co-Authored-By`. Sin mezclar `-n`/`-q` con `git commit` en el
   mismo comando.
 - Al cerrar una subfase: marcarla `hecho (<hash>)` en la tabla y pasar a
   vigente la fila del Coverage mapping de la spec que corresponda, en un commit
-  aparte `docs(spec-107): estado de <subfase>`.
+  aparte `docs(spec-115): estado de <subfase>`.
 - "Archivos" del Detalle es la lista cerrada que usa el control de salida: el
   diff MUST NOT tocar otros (este plan siempre se puede editar). Si hace falta
   otro archivo, la sesion lo anota como bloqueo en "Bloqueos" y no commitea.
@@ -102,7 +102,7 @@ sesion lo anota como bloqueo (ver Reglas) y no improvisa.
 | 3 Runners | 3a `BATCH_COOLDOWN` y corte ante 75 en `run_dspy_total.sh` y `run_demos_gepa.sh` (helper comun), tests con python simulado | FR-012 (runners), SC-010 (runners) | D12, D13 | Sonnet 5.5 | pendiente |
 | | 3b `run_seeds`: corte ante 75 y `BATCH_COOLDOWN` con `--jobs 1` | FR-012 (`run_seeds`), SC-010 (`run_seeds`) | D14 | Sonnet 5.5 | pendiente |
 | 4 Docs y enmiendas | 4a Docs: `GEPA_MANEJO_ERRORES.md`, `LLM_CONFIG.md`, `YAML_CONFIG_REFERENCE.md`, `METADATA_REPRODUCIBILIDAD.md`, `DEVELOPMENT.md`, `PROTOCOLO_N_SEEDS.md` | FR-004, FR-005, FR-009, FR-010, FR-011, FR-012 (docs) | todas | Sonnet 5.5 | pendiente |
-| | 4b Enmiendas de SPEC-104 (FR-007, FR-011, FR-015) y SPEC-106 (FR-005) con traza en `historial/sdd.md`; enmiendas aprobadas de SPEC-107 (H1 a H6 y las decisiones C2, C4, C5, C6) | FR-003, FR-005, FR-011 | - | Opus 5.5 | pendiente |
+| | 4b Enmiendas de SPEC-104 (FR-007, FR-011, FR-015) y SPEC-106 (FR-005) con traza en `historial/sdd.md`; enmiendas aprobadas de SPEC-115 (H1 a H6 y las decisiones C2, C4, C5, C6) | FR-003, FR-005, FR-011 | - | Opus 5.5 | pendiente |
 | 5 Revision | 5 Revision integral sin red contra la spec (diff `e1a97e8..HEAD`); hallazgos al plan | todos | todas | Opus 5.5 | pendiente |
 | 6 Verificacion (sesion interactiva, opcional) | Corrida corta real por subproyecto sin 429 forzado (regresion: `rate_limit_waits` en cero, salida 0); el 429 se verifica simulado | SC-005, SC-006 (regresion) | - | Sonnet 5.5 | pendiente |
 | Cierre (sesion interactiva) | `[SDD-Check]`, spec y registro a `active`, Coverage mapping vigente, deuda | todos | - | Opus 5.5 | pendiente |
@@ -210,7 +210,7 @@ No se edito la spec. Cada enmienda la aplica 4b si el usuario la aprueba.
   completa. Enmienda: "por llamada" en la matriz y en SC-003 donde aplique.
 
 Decisiones del plan que interpretan o extienden la letra de la spec y que 4b
-MUST llevar al texto de SPEC-107 (para que al Cierre la spec describa la
+MUST llevar al texto de SPEC-115 (para que al Cierre la spec describa la
 conducta implementada): C2 (FR-012: `seed_protocol` salta tambien los
 `--config` restantes y devuelve 75), C4 (FR-005 y FR-009: las esperas por
 cooldown emiten linea `INFO` y cuentan en `waits`/`seconds`), C5 (FR-009 y
@@ -581,13 +581,13 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 
 - `tests/test_rate_limit_wait.py` (nuevo). Imports de simbolos nuevos dentro de
   cada test. Marcas `xfail(strict=True)` por subfase que los cierra:
-  - "SPEC-107 1b": `retry_after_seconds` (prioridad ms antes que s, fecha HTTP,
+  - "SPEC-115 1b": `retry_after_seconds` (prioridad ms antes que s, fecha HTTP,
     invalidos ignorados, `x-ratelimit-reset-*` ignorado); `response_headers`
     (orden defensivo); `decide` (los tres no transitorios con `es_limite_tasa`
     de FR-003, igual al tope = transitorio); `backoff_seconds` en [0.8, 1.2] x
     `min(5 * 2**n, 60)`; `header_wait` >= cabecera y <= cabecera + 0.25. SC-002
     con `RATE_LIMIT_CASES` e `intercept_httpx` (cabecera leida por proveedor).
-  - "SPEC-107 1c": SC-001 (`Retry-After: 2` y respuesta sana: espera >= 2 s y <
+  - "SPEC-115 1c": SC-001 (`Retry-After: 2` y respuesta sana: espera >= 2 s y <
     tope, 0 fallas); SC-003 (sin cabecera persistente: `1 + rate_limit_retries`
     llamadas, esperas en rango, una falla `infraestructura` por caso); SC-004
     (tres no transitorios: 1 llamada, 0 esperas, mensaje con la espera pedida en
@@ -602,7 +602,7 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
     vuelve a `1 + rate_limit_retries` llamadas; un 5xx con el rol en corte sigue
     con `infra_retries`; un hilo que esperaba al activarse el corte falla sin
     esperar en su 429 siguiente.
-  - "SPEC-107 1d": SC-007 (dos hilos, `Retry-After: 10` en uno: ninguna llamada
+  - "SPEC-115 1d": SC-007 (dos hilos, `Retry-After: 10` en uno: ninguna llamada
     del rol antes de 10 s simulados; otro rol no espera; `reset()` limpia).
   - Sin marca (verde hoy): SC-005, 1 + `infra_retries` llamadas con 1, 2 y 4 s
     para todos los payloads de `RETRY_CASES` que no son 429.
@@ -612,10 +612,10 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
   `is_rate_limit_abort` con los cuatro casos de SC-008; `EXIT_RATE_LIMIT == 75`;
   estado del corte (D18: activar dos veces suma un solo `corte`, `clear`
   devuelve si estaba activo, `cortes` en `snapshot`); `reset` limpia conteo,
-  esperas, cooldown y corte. Marca "SPEC-107 1b".
+  esperas, cooldown y corte. Marca "SPEC-115 1b".
 - Validador: test en el archivo de tests del validador de `failures` (ubicarlo
   con Grep `FAILURES_KEYS`) para SC-011 (negativo, no numerico, booleano, `nan`
-  en `rate_limit_max_wait`). Marca "SPEC-107 1b".
+  en `rate_limit_max_wait`). Marca "SPEC-115 1b".
 - `tests/litellm_failure_payloads.py`: `RATE_LIMIT_CASES` (D16).
 - `FakeClock` provisorio dentro de `tests/test_rate_limit_wait.py` (pasa a
   `tests/conftest.py` en 1b).
@@ -631,7 +631,7 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
   en 1c).
 - `tests/test_lib_contracts.py`: superficie y mutacion de
   `litellm_response_headers` (FR-002).
-- Quita las marcas "SPEC-107 1b".
+- Quita las marcas "SPEC-115 1b".
 - Archivos: `shared/llm/rate_limit.py` (nuevo), `shared/llm/failures.py`,
   `shared/llm/__init__.py`, `shared/validation/base_validator.py`,
   `tests/conftest.py`, `tests/test_rate_limit_wait.py`, `tests/test_failures.py`,
@@ -641,7 +641,7 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 ### 1c Punto de llamada (GREEN "1c") — Opus 5.5
 
 - Implementa D3, D4, D6 (emision y `enable_rate_limit_console`, sin llamarla
-  desde entry points) y D18 (bucle). Quita las marcas "SPEC-107 1c". Corre la suite completa
+  desde entry points) y D18 (bucle). Quita las marcas "SPEC-115 1c". Corre la suite completa
   y ajusta los conteos de 429 de los tests de la lista "Tests existentes"
   (FR-004, FR-003 (iii)), listandolos.
 - Test extra (riesgo H3): con `enable_rate_limit_console()` instalado, una falla
@@ -656,7 +656,7 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 ### 1d Cooldown y atribucion (GREEN "1d") — Opus 5.5
 
 - Implementa D5 (espera previa a cada llamada) y la parte de D2 de
-  `BaselineOutcome`/`attribute_failure`. Quita las marcas "SPEC-107 1d".
+  `BaselineOutcome`/`attribute_failure`. Quita las marcas "SPEC-115 1d".
 - Tests nuevos: atribucion con baseline rate-limited conserva `es_limite_tasa`
   en la falla sustituida (`tests/test_attribution.py`); cooldown con
   `ThreadPoolExecutor` y `FakeClock`.
@@ -740,14 +740,14 @@ Toda sesion de subfase lee antes la spec y, de este plan, lo indicado en
 
 - SPEC-104: FR-007 (el aviso `INFO` de espera es la unica excepcion a "intentos
   intermedios a DEBUG"), FR-011 (el 429 tiene presupuesto y espera propios,
-  enlace a SPEC-107 FR-002/FR-004), FR-015 (excepcion textual "request too
+  enlace a SPEC-115 FR-002/FR-004), FR-015 (excepcion textual "request too
   large", justificada por el enrutado de LiteLLM). SPEC-106: FR-005 (la sonda
-  espera ante 429). SPEC-107: las enmiendas H1 a H5 que el usuario apruebe.
+  espera ante 429). SPEC-115: las enmiendas H1 a H5 que el usuario apruebe.
   Cada una trazada en `historial/sdd.md` (entrada fechada).
 - Archivos: `specs/SPEC-104-fallas-tecnicas-justas.md`,
   `specs/SPEC-106-roles-intercambiables.md`,
-  `specs/SPEC-107-limite-de-tasa-proveedor.md` (solo texto de FR/Contexto
-  aprobado, sigue `draft`), `historial/sdd.md`. Las enmiendas de SPEC-107
+  `specs/SPEC-115-limite-de-tasa-proveedor.md` (solo texto de FR/Contexto
+  aprobado, sigue `draft`), `historial/sdd.md`. Las enmiendas de SPEC-115
   incluyen H1 a H6 y las decisiones C2, C4, C5 y C6 (ver "Hallazgos").
 
 ### 5 Revision integral — Opus 5.5
@@ -794,7 +794,7 @@ SUB=1a                                   # subfase a ejecutar
 CLI=claude-e; MODEL=claude-sonnet-5-5    # Opus: CLI=claude; MODEL=claude-opus-5-5
 export PYTHONUTF8=1                      # salida redirigida en Windows (cp1252)
 mkdir -p "$HOME/spec107_logs"            # logs fuera del repo
-"$CLI" -p "Implementar SPEC-107 subfase $SUB segun docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md. \
+"$CLI" -p "Implementar SPEC-115 subfase $SUB segun docs/plans/PLAN_SPEC-115_limite_de_tasa_proveedor.md. \
 Leer solo lo indicado en 'Consumo de tokens' del plan. \
 Los tests MUST verificar el comportamiento de la spec, sin red y sin dormir (reloj simulado, D15). \
 Al cerrar: ci_local.sh verde, commit de la subfase y, en commit aparte de docs, estado en la tabla del plan y Coverage mapping de la spec. \
@@ -822,8 +822,8 @@ Reglas:
 Una sesion interactiva de Opus 5.5 supervisa las fases 1 a 5. No implementa ni
 guarda estado propio: el estado es la columna Estado de este plan.
 
-Arranque: "Supervisar SPEC-107 segun la seccion Seguimiento de
-docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md".
+Arranque: "Supervisar SPEC-115 segun la seccion Seguimiento de
+docs/plans/PLAN_SPEC-115_limite_de_tasa_proveedor.md".
 
 Ciclo por subfase:
 

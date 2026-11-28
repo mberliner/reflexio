@@ -87,4 +87,4 @@ Cada archivo de `docs/` actua como SSOT (single source of truth) para su dominio
 | Plan: implementacion de SPEC-103 (fases, modelo de agente, estado) | `docs/plans/PLAN_SPEC-103_proveedor_anthropic.md` |
 | Plan: implementacion de SPEC-104 (fases, modelo de agente, estado) | `docs/plans/PLAN_SPEC-104_fallas_tecnicas_justas.md` |
 | Plan: implementacion de SPEC-106 (fases, modelo de agente, estado) | `docs/plans/PLAN_SPEC-106_roles_intercambiables.md` |
-| Plan: implementacion de SPEC-107 (fases, modelo de agente, estado) | `docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md` |
+| Plan: implementacion de SPEC-115 (fases, modelo de agente, estado) | `docs/plans/PLAN_SPEC-115_limite_de_tasa_proveedor.md` |

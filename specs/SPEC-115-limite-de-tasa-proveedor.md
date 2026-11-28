@@ -1,9 +1,9 @@
-# SPEC-107-limite-de-tasa-proveedor — Espera ante limite de tasa del proveedor (429)
+# SPEC-115-limite-de-tasa-proveedor — Espera ante limite de tasa del proveedor (429)
 
 Estado: draft
 Iteracion: 3 (rev. 2026-11-27)
 Depende de: [[SPEC-104-fallas-tecnicas-justas]] (clasificador de la capa 1, FR-011 reintentos, contador y aborto FR-006), [[SPEC-105-punto-llamada-desacoplado]] (punto de llamada unico en `shared/llm/call.py`, contratos de superficies de libreria FR-007), [[SPEC-106-roles-intercambiables]] (sonda de conexion FR-005)
-Relacionada con: [[SPEC-108-costo-real-por-resolucion]] (el tiempo de espera no entra en `usage`), docs/GEPA_MANEJO_ERRORES.md, docs/YAML_CONFIG_REFERENCE.md, docs/METADATA_REPRODUCIBILIDAD.md, docs/PROTOCOLO_N_SEEDS.md
+Relacionada con: [[SPEC-120-costo-real-por-resolucion]] (el tiempo de espera no entra en `usage`), docs/GEPA_MANEJO_ERRORES.md, docs/YAML_CONFIG_REFERENCE.md, docs/METADATA_REPRODUCIBILIDAD.md, docs/PROTOCOLO_N_SEEDS.md
 
 Origen: 2026-11-27, dos corridas de un batch abortaron con `litellm.RateLimitError:
 AzureException ... gpt-4.1-mini ... in eastus have exceeded token rate limit`
@@ -348,7 +348,7 @@ Docs y specs con enmienda trazada en `historial/sdd.md`:
 ## Coverage mapping (requisito -> derivado)
 
 Todo pendiente de implementacion (spec en `draft`); el plan de fases se crea al
-aprobar la spec (`docs/plans/PLAN_SPEC-107_limite_de_tasa_proveedor.md`).
+aprobar la spec (`docs/plans/PLAN_SPEC-115_limite_de_tasa_proveedor.md`).
 
 | Requisito | Derivado previsto (codigo/test/config) |
 |---|---|

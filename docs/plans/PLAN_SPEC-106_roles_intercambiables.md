@@ -118,7 +118,7 @@ Orden lineal recomendado: 1a, 1b, 1b-fix-1, 2a, 2b, 3a, 3b, 4a, 4b, 5a, 5b, 6, 6
   del profesor. Con un juez de otro proveedor, `Costo Real USD` quedaria mal.
   Propuesta: agregar a FR-004 "El costo del bucket `judge` MUST tarifarse con
   el modelo del juez; `Costo Real USD` conserva su semantica (total de la
-  corrida)". No adelanta SPEC-108: es mantener correcto el total vigente.
+  corrida)". No adelanta SPEC-120: es mantener correcto el total vigente.
   Estado: resuelta (2026-11-27, aprobada por el usuario): FR-004 de la spec
   agrega que cada bucket se tarifa con el modelo de su rol.
 
@@ -255,7 +255,7 @@ D9. Uso y costo (FR-004, H1):
   reflexion + juez. La usan los dos orquestadores para `Tokens Reflection`.
 - `cost_from_usage(usage, task_model, reflection_model, pricing=None,
   judge_model=None)`: `judge` se tarifa con `judge_model` o, si es None, con
-  `reflection_model`. Sin dimension de fase: la agrega SPEC-108 sobre esta
+  `reflection_model`. Sin dimension de fase: la agrega SPEC-120 sobre esta
   forma plana por rol.
 - Sin juez, `snapshot()["judge"]` queda en ceros. FR-004 ("los casos sin juez
   MUST NOT registrar un rol `judge`") se cumple en `models` de `run.json` y en

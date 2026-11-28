@@ -62,6 +62,69 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-28 (cont. 4) — Renumeracion de specs pendientes y paso de 5
+
+- Decision del usuario: la spec de filtros de analisis se resuelve antes que la de limite de tasa y la de costo real. Desde ahora cada spec nueva toma el siguiente multiplo de 5 libre, y los numeros intermedios quedan reservados para casos intermedios. Regla en `specs/SPECS_REGISTRY.md` (Convenciones); referencia en `docs/SDD_PROTOCOLO.md`.
+- Tabla de equivalencias (las entradas anteriores de este log y los mensajes de commit conservan el numero viejo):
+
+| Numero anterior | Numero nuevo | Spec |
+|---|---|---|
+| SPEC-109 | SPEC-110 | filtros-modelos-analisis |
+| SPEC-107 | SPEC-115 | limite-de-tasa-proveedor (plan: `docs/plans/PLAN_SPEC-115_limite_de_tasa_proveedor.md`) |
+| SPEC-108 | SPEC-120 | costo-real-por-resolucion |
+
+- `SPEC-107`..`SPEC-109` quedan libres como reserva; proxima spec nueva: `SPEC-125`.
+- Se conserva el directorio externo de logs `$HOME/spec107_logs/` que cita el plan de SPEC-115 (ruta fuera del repo, puede contener logs previos).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, 00-INDEX.md, specs/SPEC-106/107/108/109, docs/plans/PLAN_SPEC-106 y PLAN_SPEC-107, docs/LECCIONES_APRENDIDAS.md
+- Incluye/Excluye verificado: incluye renombrar 3 specs y 1 plan, actualizar referencias en docs vivos y documentar la regla; excluye reescribir entradas previas del log y mensajes de commit
+- Validaciones aplicadas: grep sin referencias SPEC-107/108/109 fuera de historial/sdd.md; registro ordenado por ID; sin emoticones
+- SSOT afectado: specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, 00-INDEX.md, specs/SPEC-106, SPEC-110, SPEC-115, SPEC-120, docs/plans/PLAN_SPEC-106 y PLAN_SPEC-115, docs/LECCIONES_APRENDIDAS.md, historial/sdd.md
+- Derivados a revisar: ninguno (sin codigo que cite los numeros)
+- Deuda arrastrada: ninguna
+- Riesgos/reservas: los commits dae1b06, 280ea97 y b097f4c dicen spec-107 y hoy corresponden a SPEC-115 (ver tabla)
+```
+
+### 2026-11-28 (cont. 3) — SPEC-109 revision de la spec (draft, iteracion 1)
+
+- Revision contra codigo y CSV reales; correcciones acordadas con el usuario:
+  - FR-003: matching renombrado a "busqueda progresiva"; limite conocido `azure/gpt-5` dentro de `azure/gpt-5.4`; filtro sobre valor crudo (no defaults de agrupacion); cambio aceptado sobre `--case` (strip, vacio = sin filtro, `None` tolerado).
+  - FR-007: cerrado el `[NEEDS CLARIFICATION]`; escritura identica a `--case` vigente (CSV, MD salvo `-o`, PNG; `output_dir` o `get_output_dir(project)`).
+  - FR-005/SC-002: preservar `output_dir` de `leaderboard.run` y aislar tests con `tmp_path` (D-034).
+  - FR-001: propagacion obligatoria en `cmd_*`; abreviatura `--t` ambigua documentada. FR-002: calculos derivados (lotes de `stats`) sobre el subconjunto filtrado. FR-004: firma tipada, sin mutacion, lista nueva. FR-006: `roi` con todos los grupos omitidos conserva su mensaje vigente.
+  - FR-009 (nuevo): `--no-merge` hoy ignorado por los 4 subcomandos; pasa a tener efecto.
+  - SC-005 acotado; SC-006 (tests de filtro en `roi`/`stats`/`budget` y propagacion de `cmd_*`) y SC-007 (`--no-merge`) nuevos; escenarios con datos reales (`gpt-5` vs `gpt-5.4`, ROI con Tarea == Profesor).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-109-filtros-modelos-analisis.md, shared/analysis/{cli,base,leaderboard,roi_calculator,stats_evolution,budget_breakdown}.py, CSV maestros de ambos proyectos, docs/LECCIONES_APRENDIDAS.md (D-034)
+- Incluye/Excluye verificado: solo cambios en la spec y este log; sin codigo
+- Validaciones aplicadas: lenguaje normativo RFC 2119, sin NEEDS CLARIFICATION abiertos, coverage mapping actualizado (FR-009, SC-006, SC-007)
+- SSOT afectado: specs/SPEC-109-filtros-modelos-analisis.md, historial/sdd.md
+- Derivados a revisar: los mismos de la entrada anterior, mas `cmd_*` y `run(...)` por FR-009
+- Deuda arrastrada: ninguna
+- Riesgos/reservas: la busqueda progresiva no aisla modelos cuyo nombre completo es subcadena de otro (gpt-5 / gpt-5.4); documentado, sin modo exacto en esta iteracion
+```
+
+### 2026-11-28 (cont. 2) — SPEC-109 (filtros combinables por caso, estudiante y profesor en analisis, draft)
+
+- Creada `specs/SPEC-109-filtros-modelos-analisis.md` (estado `draft`, iteracion 1) y registrada en `specs/SPECS_REGISTRY.md`: ninguna spec previa (`SPEC-100..108`) cubria filtros del CLI `./analyze`.
+- Alcance acordado con el usuario: filtros independientes `--student` (alias `--task`) y `--teacher` (alias `--reflection`) combinables con `--case` mediante `AND` logico, con matching por subcadena case-insensitive, en los 4 subcomandos (`leaderboard`/`lb`, `roi`, `stats`, `budget`) y centralizados en una funcion pura `filter_metrics` en `shared/analysis/base.py`.
+- Queda abierto un `[NEEDS CLARIFICATION]` en FR-007 sobre si `./analyze leaderboard` filtrado sin `-o` debe seguir sobrescribiendo `shared/analysis/output/leaderboard.{csv,md}` (como hoy hace `--case`) o omitir la escritura por defecto. Sin implementacion de codigo aun (pendiente de revision de la spec).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, docs/ANALISIS_UTILIDADES.md, specs/SPEC-106-roles-intercambiables.md, specs/SPEC-108-costo-real-por-resolucion.md, shared/analysis/{cli,leaderboard,roi_calculator,stats_evolution,budget_breakdown,base}.py
+- Incluye/Excluye verificado: incluye solo la spec en draft, su registro en SPECS_REGISTRY.md y la entrada en el log; excluye implementar codigo y tests
+- Validaciones aplicadas: formato hibrido Tramo 2 (User Story, FR-001..008, SC-001..005, Given/When/Then, Coverage mapping), lenguaje normativo RFC 2119, sin emoticones
+- SSOT afectado: specs/SPEC-109-filtros-modelos-analisis.md (nueva), specs/SPECS_REGISTRY.md, historial/sdd.md
+- Derivados a revisar: shared/analysis/{base,__init__,cli,leaderboard,roi_calculator,stats_evolution,budget_breakdown}.py, tests/test_shared_analysis.py, docs/ANALISIS_UTILIDADES.md (al implementar)
+- Deuda arrastrada: ninguna nueva (el NEEDS CLARIFICATION vive dentro de SPEC-109 FR-007)
+- Riesgos/reservas: el matching por subcadena es coherente con --case, pero valores cortos como "gpt-4o" coinciden tambien con "gpt-4o-mini" (documentado en FR-003 y FR-008)
+```
+
 ### 2026-11-28 (cont.) — Cierre de D-034 (hallazgos de auditoria de artefactos)
 
 - (a) Aislamiento de salida del leaderboard: `shared/analysis/leaderboard.py::run` acepta `output_dir: Path | None = None`; los tres tests de `tests/test_shared_analysis.py` que invocan `leaderboard.run(...)` ahora escriben en `tmp_path`, mas test de regresion que verifica que no se llama a `get_output_dir` cuando `output_dir` se provee. `shared/analysis/output/leaderboard.{csv,md}` queda intacto tras `pytest`/`ci_local.sh`.

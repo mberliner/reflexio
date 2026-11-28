@@ -23,6 +23,19 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
   capacidades preexistentes (las que ya viven en el codigo sin spec). Asi el
   numero bajo no implica "primera en el tiempo" y hay espacio para documentar lo
   anterior sin renumerar.
+- Paso entre specs (desde 2026-11-28): cada spec nueva toma el siguiente
+  multiplo de 5 libre (`SPEC-110`, `SPEC-115`, `SPEC-120`, `SPEC-125`, ...). Los
+  numeros intermedios quedan RESERVADOS para specs que deban ubicarse entre dos
+  existentes (p. ej. una capacidad que debe resolverse antes que `SPEC-115` toma
+  `SPEC-111`..`SPEC-114`). El rango `SPEC-100`..`SPEC-106` es anterior a la
+  regla y queda contiguo; `SPEC-107`..`SPEC-109` quedan libres como reserva.
+- El numero expresa el orden previsto de resolucion, no la fecha de creacion.
+  Si una spec en `draft` debe adelantarse, MAY renumerarse a un hueco reservado
+  mientras no tenga codigo ni commits de implementacion que la citen; al
+  renumerar MUST actualizarse el archivo, este registro y los docs vivos que la
+  citan, y MUST registrarse en `historial/sdd.md` una tabla de equivalencias
+  (numero anterior -> nuevo). Las entradas previas del log y los mensajes de
+  commit no se reescriben.
 - Una spec MAY declarar `Depende de:` y `Relacionada con:` (links `[[id]]`).
 - Cierre de iteracion -> bloque `[SDD-Check]` citando specs leidas, includes/excludes verificados y SSOTs afectados.
 - Formato de spec: anatomia hibrida (User Story con prioridad P1/P2/P3 + `FR-NNN MUST` + `SC-NNN` medibles + Given/When/Then + coverage mapping). Plantilla en `docs/SDD_PROTOCOLO.md` (Tramo 2).
@@ -39,8 +52,9 @@ SSOTs de `00-INDEX.md`; NO se registran aqui (modelo del proyecto testigo
 | SPEC-104-fallas-tecnicas-justas | Fallas tecnicas visibles y medicion justa | active | 4 | `SPEC-104-fallas-tecnicas-justas.md` |
 | SPEC-105-punto-llamada-desacoplado | Punto de llamada propio, desacoplado de los internos de DSPy y GEPA | active | 5 | `SPEC-105-punto-llamada-desacoplado.md` |
 | SPEC-106-roles-intercambiables | Profesor, estudiante y juez intercambiables entre proveedores | active | 2 | `SPEC-106-roles-intercambiables.md` |
-| SPEC-107-limite-de-tasa-proveedor | Espera ante limite de tasa del proveedor (429) | draft | 3 | `SPEC-107-limite-de-tasa-proveedor.md` |
-| SPEC-108-costo-real-por-resolucion | Costo real de cada combinacion de roles | draft | 1 | `SPEC-108-costo-real-por-resolucion.md` |
+| SPEC-110-filtros-modelos-analisis | Filtros combinables por caso, estudiante y profesor en el analisis | draft | 1 | `SPEC-110-filtros-modelos-analisis.md` |
+| SPEC-115-limite-de-tasa-proveedor | Espera ante limite de tasa del proveedor (429) | draft | 3 | `SPEC-115-limite-de-tasa-proveedor.md` |
+| SPEC-120-costo-real-por-resolucion | Costo real de cada combinacion de roles | draft | 1 | `SPEC-120-costo-real-por-resolucion.md` |
 
 ## Roadmap de iteraciones
 
