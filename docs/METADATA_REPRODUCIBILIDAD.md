@@ -72,7 +72,7 @@ results/
 }
 ```
 
-**Deteccion de cambios:** Si el SHA-256 del dataset CSV cambia entre runs, se marca `dataset_hash_changed: true` y se guarda el hash anterior.
+**Deteccion de cambios:** Si el SHA-256 del dataset CSV cambia entre runs, se marca `dataset_hash_changed: true` y se guarda el hash anterior. En cada corrida tambien se refresca `dataset_path` (preservando `created_at` y `total_runs`) para evitar rutas obsoletas al correr en otra maquina.
 
 ### Nivel 3: Run (Individual)
 

@@ -220,6 +220,24 @@ class TestEnsureExperiment:
         assert data.get("dataset_hash_changed") is True
         assert "previous_dataset_hash" in data
 
+    def test_refreshes_dataset_path_preserving_created_at_and_total_runs(
+        self, manager, results_dir, sample_dataset
+    ):
+        """D-034c: re-ejecutar actualiza dataset_path y preserva created_at/total_runs."""
+        meta_path = manager.ensure_experiment("portable_exp", sample_dataset, {"case": "portable"})
+        initial = json.loads(meta_path.read_text(encoding="utf-8"))
+        initial["dataset_path"] = "/old/linux/path/portable.csv"
+        meta_path.write_text(json.dumps(initial, indent=2), encoding="utf-8")
+
+        updated_path = manager.ensure_experiment(
+            "portable_exp", sample_dataset, {"case": "portable"}
+        )
+
+        data = json.loads(updated_path.read_text(encoding="utf-8"))
+        assert data["dataset_path"] == str(sample_dataset)
+        assert data["created_at"] == initial["created_at"]
+        assert data["total_runs"] == 2
+
 
 # ==================== Level 3: Run ====================
 
@@ -271,6 +289,17 @@ class TestCreateRun:
         assert data["usage"]["total_tokens"] == 2250
         assert data["usage"]["cost_usd"] == 0.01234
         assert data["usage"]["task"]["prompt_tokens"] == 1000
+
+    def test_does_not_create_empty_dir_if_serialization_fails(self, manager, tmp_path):
+        run_dir = tmp_path / "runs" / "broken_run"
+        with pytest.raises(TypeError):
+            manager.create_run(
+                run_dir=run_dir,
+                experiment_name="demo",
+                seed=1,
+                models={"task": object()},
+            )
+        assert not run_dir.exists()
 
 
 class TestCreateRunFailures:

@@ -159,11 +159,12 @@ def generate_charts(case_stats: list[dict], grouped_data: list[dict], output_dir
 
 
 def run(
-    csv_path: Path = None,
-    project: str = None,
-    case_filter: str = None,
-    output: Path = None,
+    csv_path: Path | None = None,
+    project: str | None = None,
+    case_filter: str | None = None,
+    output: Path | None = None,
     graphs: bool = False,
+    output_dir: Path | None = None,
 ):
     """
     Run leaderboard analysis.
@@ -174,6 +175,8 @@ def run(
         case_filter: Filter to specific case
         output: Output file path (markdown)
         graphs: Generate PNG charts
+        output_dir: Optional directory for generated files (CSV, default Markdown, charts).
+            Defaults to get_output_dir(project).
     """
     data = load_metrics(csv_path=csv_path, project=project, merge=True)
 
@@ -355,10 +358,14 @@ def run(
             print(f"  ... y {len(anomalies) - 10} mas")
 
     # Output files
-    output_dir = get_output_dir(project)
+    if output_dir is not None:
+        resolved_output_dir = Path(output_dir)
+        resolved_output_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        resolved_output_dir = get_output_dir(project)
 
     # Save CSV
-    csv_out = output_dir / "leaderboard.csv"
+    csv_out = resolved_output_dir / "leaderboard.csv"
     import csv
 
     with open(csv_out, "w", encoding="utf-8", newline="") as f:
@@ -368,7 +375,7 @@ def run(
     print(f"\n[INFO] CSV: {csv_out}")
 
     # Save Markdown
-    md_out = output or (output_dir / "leaderboard.md")
+    md_out = output or (resolved_output_dir / "leaderboard.md")
     md_content = "# Leaderboard GEPA\n\n"
     md_content += f"Generado: {get_timestamp()}\n\n"
     md_content += "## Leaderboard por Modelo\n\n"
@@ -386,7 +393,7 @@ def run(
 
     # Generate charts
     if graphs:
-        generate_charts(case_stats, grouped_data, output_dir)
+        generate_charts(case_stats, grouped_data, resolved_output_dir)
 
     print()
 

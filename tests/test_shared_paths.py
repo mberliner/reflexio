@@ -155,6 +155,14 @@ class TestGEPAPaths:
         assert result == expected
         assert result.exists()
 
+    def test_run_dir_create_false_does_not_touch_filesystem(self, paths, tmp_path):
+        ts = datetime(2026, 1, 15, 10, 30, 0)
+        result = paths.run_dir("email_urgency", "abc123", timestamp=ts, create=False)
+        expected = tmp_path / "results" / "runs" / "email_urgency" / "2026-01-15_103000_abc123"
+        assert result == expected
+        assert not result.exists()
+        assert not (tmp_path / "results" / "runs" / "email_urgency").exists()
+
     def test_archived(self, paths, tmp_path):
         assert paths.archived == tmp_path / "results" / "archived"
         assert paths.archived.exists()
@@ -233,6 +241,13 @@ class TestDSPyPaths:
         result = paths.run_dir("email_urgency", run_id="abc123", timestamp=ts)
         assert result.name == "email_urgency_20260301_080000_abc123"
         assert result.exists()
+
+    def test_run_dir_create_false_does_not_touch_filesystem(self, paths, tmp_path):
+        ts = datetime(2026, 3, 1, 8, 0, 0)
+        result = paths.run_dir("email_urgency", timestamp=ts, create=False)
+        assert result == tmp_path / "results" / "runs" / "email_urgency_20260301_080000"
+        assert not result.exists()
+        assert not (tmp_path / "results" / "runs").exists()
 
     def test_default_root_points_to_dspy_gepa_poc(self):
         root = DSPyPaths._default_root()

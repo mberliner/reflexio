@@ -563,3 +563,113 @@ class TestRunChecksStateAfterEachStep:
         out = capsys.readouterr().out
         assert "Improvement (pareado)" in out
         assert "3 casos pareados" in out
+
+
+# ==================== D-034(b): creacion perezosa de run_dir ====================
+
+
+class TestLazyRunDirectory:
+    """D-034(b): `dspy_gepa_poc` no deja carpetas vacias si falla antes de `run.json`."""
+
+    @staticmethod
+    def _make_config(tmp_path, monkeypatch):
+        from dspy_gepa_poc.config import AppConfig
+        from shared.paths import dspy_paths
+
+        root = tmp_path / "dspy_root"
+        paths = dspy_paths.DSPyPaths(root_override=root)
+        monkeypatch.setattr(dspy_paths, "_dspy_paths_instance", paths)
+        monkeypatch.setattr(AppConfig, "DATASETS_DIR", str(paths.datasets))
+
+        (paths.datasets / "mini.csv").write_text(
+            "split,text,label\ntrain,a,x\nval,b,x\ntest,c,x\n", encoding="utf-8"
+        )
+        cfg = tmp_path / "mini.yaml"
+        cfg.write_text(
+            "case: {name: mini_case, title: Mini}\n"
+            "module: {type: dynamic}\n"
+            "signature:\n"
+            '  instruction: "Classify."\n'
+            "  inputs: [{name: text, desc: text}]\n"
+            "  outputs: [{name: label, desc: label}]\n"
+            "data: {csv_filename: mini.csv, input_column: text}\n"
+            "optimization: {max_metric_calls: 4}\n",
+            encoding="utf-8",
+        )
+        return paths, cfg
+
+    def test_init_does_not_create_run_dir(self, tmp_path, monkeypatch):
+        paths, cfg = self._make_config(tmp_path, monkeypatch)
+
+        orchestrator = ReflexioDeclarativa(str(cfg))
+
+        assert not orchestrator.results_dir.exists()
+        assert not (paths.root / "results" / "runs").exists()
+
+    def test_early_failure_leaves_no_empty_run_dir(self, tmp_path, monkeypatch):
+        paths, cfg = self._make_config(tmp_path, monkeypatch)
+        orchestrator = ReflexioDeclarativa(str(cfg))
+        orchestrator.setup_models = MagicMock(side_effect=RuntimeError("fallo de conexion"))
+
+        with pytest.raises(RuntimeError, match="fallo de conexion"):
+            orchestrator.run()
+
+        assert not orchestrator.results_dir.exists()
+        assert not (paths.root / "results" / "runs").exists()
+
+    def test_failure_after_mkdir_cleans_up_empty_run_dir(self, tmp_path, monkeypatch):
+        _, cfg = self._make_config(tmp_path, monkeypatch)
+        orchestrator = ReflexioDeclarativa(str(cfg))
+
+        def create_then_fail():
+            orchestrator.results_dir.mkdir(parents=True, exist_ok=True)
+            raise RuntimeError("fallo antes de persistir run.json")
+
+        orchestrator._run_pipeline = create_then_fail
+
+        with pytest.raises(RuntimeError, match="fallo antes de persistir"):
+            orchestrator.run()
+
+        assert not orchestrator.results_dir.exists()
+
+    def test_aborted_run_preserves_run_dir_with_run_json(self, tmp_path, monkeypatch):
+        _, cfg = self._make_config(tmp_path, monkeypatch)
+        orchestrator = ReflexioDeclarativa(str(cfg))
+        orchestrator.seed = 7
+        orchestrator.task_config = SimpleNamespace(
+            model="openai/gpt-4o-mini", effective_params=lambda mt=None: {}
+        )
+        orchestrator.reflection_config = SimpleNamespace(
+            model="openai/gpt-4o", effective_params=lambda mt=None: {}
+        )
+
+        def abort_pipeline():
+            _abort_config_error()
+            get_failure_tracker().check_abort()
+
+        orchestrator._run_pipeline = abort_pipeline
+
+        with pytest.raises(RunAborted):
+            orchestrator.run()
+
+        assert (orchestrator.results_dir / "run.json").exists()
+
+    def test_save_results_creates_lazy_run_dir(self, tmp_path, monkeypatch):
+        _, cfg = self._make_config(tmp_path, monkeypatch)
+        orchestrator = ReflexioDeclarativa(str(cfg))
+        assert not orchestrator.results_dir.exists()
+
+        orchestrator.seed = 1
+        orchestrator.task_config = SimpleNamespace(
+            model="openai/gpt-4o-mini", effective_params=lambda mt=None: {}
+        )
+        orchestrator.reflection_config = SimpleNamespace(
+            model="openai/gpt-4o", effective_params=lambda mt=None: {}
+        )
+        orchestrator.optimized_student = MagicMock()
+        orchestrator.logger = MagicMock()
+
+        orchestrator.save_results(50.0, 80.0, 75.0)
+
+        assert (orchestrator.results_dir / "config_snapshot.yaml").exists()
+        assert (orchestrator.results_dir / "run.json").exists()

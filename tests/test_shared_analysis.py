@@ -731,9 +731,9 @@ def test_detect_anomalies_none_when_clean():
     assert len(anomalies) == 0
 
 
-def test_run_grouping_by_models(metrics_csv_sample, capsys):
+def test_run_grouping_by_models(metrics_csv_sample, tmp_path, capsys):
     """Groups runs by (case, task_model, reflection_model)."""
-    leaderboard.run(csv_path=metrics_csv_sample, graphs=False)
+    leaderboard.run(csv_path=metrics_csv_sample, graphs=False, output_dir=tmp_path)
 
     captured = capsys.readouterr()
     output = captured.out
@@ -755,7 +755,7 @@ def test_run_same_model_shows_na(tmp_path, capsys):
         "r1;2026-02-01 10:00:00;Same Case;azure/gpt-4o;gpt-4o;0,5;0,9;0,9;30;;;;n\n",
         encoding="utf-8",
     )
-    leaderboard.run(csv_path=csv_path, graphs=False)
+    leaderboard.run(csv_path=csv_path, graphs=False, output_dir=tmp_path)
     output = capsys.readouterr().out
 
     assert "Same Case" in output
@@ -764,9 +764,9 @@ def test_run_same_model_shows_na(tmp_path, capsys):
     assert "$-" not in output
 
 
-def test_run_statistics_calculation(metrics_csv_sample, capsys):
+def test_run_statistics_calculation(metrics_csv_sample, tmp_path, capsys):
     """Calculates avg and std correctly."""
-    leaderboard.run(csv_path=metrics_csv_sample, graphs=False)
+    leaderboard.run(csv_path=metrics_csv_sample, graphs=False, output_dir=tmp_path)
 
     captured = capsys.readouterr()
     output = captured.out
@@ -775,6 +775,21 @@ def test_run_statistics_calculation(metrics_csv_sample, capsys):
     assert "Base%" in output
     assert "Opt%" in output
     assert "Rob%" in output
+
+
+def test_run_output_dir_isolates_generated_files(metrics_csv_sample, tmp_path, monkeypatch):
+    """Passing output_dir writes CSV and Markdown there without touching default output."""
+
+    def _forbid_default(*args, **kwargs):
+        raise AssertionError("get_output_dir must not be called when output_dir is given")
+
+    monkeypatch.setattr(leaderboard, "get_output_dir", _forbid_default)
+    out_dir = tmp_path / "isolated_lb"
+
+    leaderboard.run(csv_path=metrics_csv_sample, graphs=False, output_dir=out_dir)
+
+    assert (out_dir / "leaderboard.csv").exists()
+    assert (out_dir / "leaderboard.md").exists()
 
 
 # =============================================================================

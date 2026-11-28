@@ -75,6 +75,7 @@ class BasePaths(ABC):
         case_name: str,
         run_id: str | None = None,
         timestamp: datetime | None = None,
+        create: bool = True,
     ) -> Path:
         """
         Generate directory path for a specific run.
@@ -86,7 +87,9 @@ class BasePaths(ABC):
             case_name: Name of case (e.g., 'email_urgency').
             run_id: Optional unique run identifier (e.g., 8-char UUID).
             timestamp: Optional timestamp (defaults to now).
+            create: When True (default), create the directory on disk.
+                When False, compute the path without touching the filesystem.
 
         Returns:
-            Path to (created) run directory.
+            Path to run directory (created on disk when ``create=True``).
         """

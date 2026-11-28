@@ -192,6 +192,7 @@ class MetadataManager:
                     current_hash[:12],
                 )
             existing["dataset_hash"] = current_hash
+            existing["dataset_path"] = str(dataset_path)
             data = existing
         else:
             data = {
@@ -251,7 +252,6 @@ class MetadataManager:
         if status not in RUN_STATUSES:
             raise ValueError(f"status debe ser uno de {RUN_STATUSES}: {status!r}")
         run_dir = Path(run_dir)
-        run_dir.mkdir(parents=True, exist_ok=True)
         run_path = run_dir / "run.json"
 
         data = {
@@ -275,6 +275,8 @@ class MetadataManager:
         if usage is not None:
             data["usage"] = usage
 
-        run_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        payload = json.dumps(data, indent=2)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        run_path.write_text(payload, encoding="utf-8")
         logger.info("Run metadata written: %s", run_path)
         return run_path

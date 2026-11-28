@@ -132,7 +132,9 @@ class ReflexioDeclarativa:
         self.logger = ResultsLogger()
 
         self.results_dir = get_dspy_paths().run_dir(
-            case_name=self.config.raw_config["case"]["name"], timestamp=run_ts
+            case_name=self.config.raw_config["case"]["name"],
+            timestamp=run_ts,
+            create=False,
         )
         self.metadata_mgr = MetadataManager(get_dspy_paths().results)
         _case = self.config.raw_config["case"]
@@ -518,6 +520,15 @@ class ReflexioDeclarativa:
         if not eval_fields:
             log_warn("No hay campos para evaluar. Todos los outputs estan en ignore_in_metric.")
 
+    def _cleanup_empty_results_dir(self) -> None:
+        """Elimina `self.results_dir` solo si existe y quedo vacio (sin artefactos)."""
+        results_dir = getattr(self, "results_dir", None)
+        if results_dir is not None and results_dir.is_dir():
+            try:
+                results_dir.rmdir()
+            except OSError:
+                pass
+
     def run(self):
         """Execute the optimization pipeline; an aborted run leaves `run.json` (FR-008)."""
         try:
@@ -527,6 +538,10 @@ class ReflexioDeclarativa:
                 self.save_aborted_run()
             except Exception as e:  # noqa: BLE001 - no debe tapar el motivo del aborto
                 log_error(f"No se pudo escribir run.json de la corrida abortada: {e}")
+            self._cleanup_empty_results_dir()
+            raise
+        except BaseException:
+            self._cleanup_empty_results_dir()
             raise
 
     def _run_pipeline(self):
@@ -721,6 +736,7 @@ class ReflexioDeclarativa:
                 *[f"pred_{f}" for f in out_fields],
                 *input_keys,
             ]
+            self.results_dir.mkdir(parents=True, exist_ok=True)
             path = self.results_dir / f"predictions_{split_name}.csv"
             with open(path, "w", encoding="utf-8", newline="") as f:
                 writer = _csv.DictWriter(f, fieldnames=cols)
@@ -753,6 +769,7 @@ class ReflexioDeclarativa:
     ):
         """Save the optimized module and config."""
         log_info(f"Saving results to {self.results_dir}...")
+        self.results_dir.mkdir(parents=True, exist_ok=True)
 
         model_path = self.results_dir / "optimized_program.json"
         self.optimized_student.save(str(model_path))

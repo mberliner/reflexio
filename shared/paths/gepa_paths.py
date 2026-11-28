@@ -132,6 +132,7 @@ class GEPAPaths(BasePaths):
         case_name: str,
         run_id: str | None = None,
         timestamp: datetime | None = None,
+        create: bool = True,
     ) -> Path:
         """
         Generate directory path for a specific run.
@@ -141,6 +142,8 @@ class GEPAPaths(BasePaths):
             run_id: Optional unique run identifier (typically 8-char UUID).
                 If omitted, layout is runs/{case}/{YYYY-MM-DD_HHMMSS}/.
             timestamp: Optional timestamp (defaults to now)
+            create: When True (default), create the directory on disk.
+                When False, compute the path without touching the filesystem.
 
         Returns:
             Path to run directory with format:
@@ -153,8 +156,14 @@ class GEPAPaths(BasePaths):
         ts_str = timestamp.strftime("%Y-%m-%d_%H%M%S")
         dirname = f"{ts_str}_{run_id}" if run_id else ts_str
 
-        path = self.case_runs_dir(case_name) / dirname
-        path.mkdir(parents=True, exist_ok=True)
+        base = (
+            self.case_runs_dir(case_name)
+            if create
+            else (self._root / "results" / "runs" / case_name)
+        )
+        path = base / dirname
+        if create:
+            path.mkdir(parents=True, exist_ok=True)
         return path
 
     def latest_run_symlink(self, case_name: str) -> Path:

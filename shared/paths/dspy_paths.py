@@ -41,6 +41,7 @@ class DSPyPaths(BasePaths):
         case_name: str,
         run_id: str | None = None,
         timestamp: datetime | None = None,
+        create: bool = True,
     ) -> Path:
         """
         Generate directory path for a specific run.
@@ -50,6 +51,8 @@ class DSPyPaths(BasePaths):
             run_id: Optional unique run identifier. When provided it is
                 appended to the directory name.
             timestamp: Optional timestamp (defaults to now)
+            create: When True (default), create the directory on disk.
+                When False, compute the path without touching the filesystem.
 
         Returns:
             Path to run directory with format
@@ -62,8 +65,10 @@ class DSPyPaths(BasePaths):
         ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
         dirname = f"{safe_name}_{ts_str}_{run_id}" if run_id else f"{safe_name}_{ts_str}"
 
-        path = self.runs / dirname
-        path.mkdir(parents=True, exist_ok=True)
+        base = self.runs if create else (self._root / "results" / "runs")
+        path = base / dirname
+        if create:
+            path.mkdir(parents=True, exist_ok=True)
         return path
 
 
