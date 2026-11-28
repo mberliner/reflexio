@@ -974,3 +974,1072 @@ def test_get_model_pricing_anthropic_alias_and_snapshot(alias, caplog):
         for name in (alias, "anthropic/" + alias, "anthropic/" + alias + "-20260514"):
             assert roi_calculator.get_model_pricing(name) is expected
     assert not any("sin precio configurado" in r.message for r in caplog.records)
+
+
+# =============================================================================
+# SPEC-110: Filtros combinables por caso, estudiante y profesor + --no-merge
+# =============================================================================
+
+_SPEC110_CSV_HEADER = (
+    "Run ID;Fecha;Caso;Modelo Tarea;Modelo Profesor;"
+    "Baseline Score;Optimizado Score;Robustez Score;Budget;Tokens Task;"
+    "Tokens Reflection;Costo Real USD;Notas\n"
+)
+
+
+def _write_spec110_csv(csv_path, rows: list[str]) -> None:
+    csv_path.write_text(_SPEC110_CSV_HEADER + "".join(rows), encoding="utf-8")
+
+
+def _csv_row(
+    run_id: str,
+    fecha: str,
+    caso: str,
+    student: str,
+    teacher: str,
+    base_s: str = "0,60",
+    opt_s: str = "0,85",
+    rob_s: str = "0,82",
+    cost: str = "0,50",
+) -> str:
+    return f"{run_id};{fecha};{caso};{student};{teacher};{base_s};{opt_s};{rob_s};30;;;{cost};\n"
+
+
+@pytest.fixture
+def spec110_rows():
+    """Filas cubriendo las 8 combinaciones de (case='CV', student='4.1-mini', teacher='claude')."""
+    return [
+        {
+            "Run ID": "em_4o_ok",
+            "Fecha": "2026-02-01 10:00:00",
+            "Caso": "Email Urgency",
+            "Modelo Tarea": "azure/gpt-4o-mini",
+            "Modelo Profesor": "azure/gpt-4o",
+            "Baseline Score": "0,70",
+            "Optimizado Score": "0,85",
+            "Robustez Score": "0,82",
+            "Budget": "30",
+            "Costo Real USD": "0,50",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "em_4o_anom",
+            "Fecha": "2026-02-02 10:00:00",
+            "Caso": "Email Urgency",
+            "Modelo Tarea": "azure/gpt-4o-mini",
+            "Modelo Profesor": "azure/gpt-4o",
+            "Baseline Score": "0,80",
+            "Optimizado Score": "0,70",
+            "Robustez Score": "0,75",
+            "Budget": "30",
+            "Costo Real USD": "0,50",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "em_41_claude_ok",
+            "Fecha": "2026-02-03 10:00:00",
+            "Caso": "Email Urgency",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+            "Baseline Score": "0,65",
+            "Optimizado Score": "0,88",
+            "Robustez Score": "0,84",
+            "Budget": "30",
+            "Costo Real USD": "0,80",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "em_41_claude_anom",
+            "Fecha": "2026-02-04 10:00:00",
+            "Caso": "Email Urgency",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+            "Baseline Score": "0,80",
+            "Optimizado Score": "0,72",
+            "Robustez Score": "0,75",
+            "Budget": "30",
+            "Costo Real USD": "0,80",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "cv_41_claude_ok",
+            "Fecha": "2026-02-05 10:00:00",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+            "Baseline Score": "0,60",
+            "Optimizado Score": "0,90",
+            "Robustez Score": "0,88",
+            "Budget": "30",
+            "Costo Real USD": "1,20",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "cv_41_claude_anom",
+            "Fecha": "2026-02-06 10:00:00",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+            "Baseline Score": "0,85",
+            "Optimizado Score": "0,75",
+            "Robustez Score": "0,80",
+            "Budget": "30",
+            "Costo Real USD": "1,20",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "cv_41_gpt4o_ok",
+            "Fecha": "2026-02-07 10:00:00",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "azure/gpt-4o",
+            "Baseline Score": "0,60",
+            "Optimizado Score": "0,86",
+            "Robustez Score": "0,82",
+            "Budget": "30",
+            "Costo Real USD": "0,90",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "cv_41_gpt4o_anom",
+            "Fecha": "2026-02-08 10:00:00",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "azure/gpt-4o",
+            "Baseline Score": "0,82",
+            "Optimizado Score": "0,74",
+            "Robustez Score": "0,78",
+            "Budget": "30",
+            "Costo Real USD": "0,90",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "cv_4o_claude_ok",
+            "Fecha": "2026-02-09 10:00:00",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4o-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+            "Baseline Score": "0,58",
+            "Optimizado Score": "0,84",
+            "Robustez Score": "0,80",
+            "Budget": "30",
+            "Costo Real USD": "1,00",
+            "Notas": "",
+            "source": "proj_a",
+        },
+        {
+            "Run ID": "cv_4o_claude_anom",
+            "Fecha": "2026-02-10 10:00:00",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4o-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+            "Baseline Score": "0,84",
+            "Optimizado Score": "0,71",
+            "Robustez Score": "0,76",
+            "Budget": "30",
+            "Costo Real USD": "1,00",
+            "Notas": "",
+            "source": "proj_a",
+        },
+    ]
+
+
+@pytest.fixture
+def spec110_csv(tmp_path, spec110_rows):
+    """CSV escrito desde spec110_rows para pruebas de integracion de modulos."""
+    csv_path = tmp_path / "spec110_metrics.csv"
+    lines = [
+        (
+            f"{r['Run ID']};{r['Fecha']};{r['Caso']};{r['Modelo Tarea']};"
+            f"{r['Modelo Profesor']};{r['Baseline Score']};{r['Optimizado Score']};"
+            f"{r['Robustez Score']};{r['Budget']};;;{r['Costo Real USD']};{r['Notas']}\n"
+        )
+        for r in spec110_rows
+    ]
+    _write_spec110_csv(csv_path, lines)
+    return csv_path
+
+
+def test_filter_metrics_exported_in_shared_analysis():
+    """FR-004: filter_metrics se exporta en shared.analysis."""
+    import shared.analysis as analysis_pkg
+
+    assert hasattr(analysis_pkg, "filter_metrics")
+    assert "filter_metrics" in analysis_pkg.__all__
+    assert analysis_pkg.filter_metrics is base.filter_metrics
+
+
+_EIGHT_COMBINATIONS = [
+    (
+        None,
+        None,
+        None,
+        {
+            "em_4o_ok",
+            "em_4o_anom",
+            "em_41_claude_ok",
+            "em_41_claude_anom",
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+            "cv_41_gpt4o_ok",
+            "cv_41_gpt4o_anom",
+            "cv_4o_claude_ok",
+            "cv_4o_claude_anom",
+        },
+        None,
+    ),
+    (
+        "CV",
+        None,
+        None,
+        {
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+            "cv_41_gpt4o_ok",
+            "cv_41_gpt4o_anom",
+            "cv_4o_claude_ok",
+            "cv_4o_claude_anom",
+        },
+        "Filtros: caso=CV",
+    ),
+    (
+        None,
+        "4.1-mini",
+        None,
+        {
+            "em_41_claude_ok",
+            "em_41_claude_anom",
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+            "cv_41_gpt4o_ok",
+            "cv_41_gpt4o_anom",
+        },
+        "Filtros: estudiante=4.1-mini",
+    ),
+    (
+        None,
+        None,
+        "claude",
+        {
+            "em_41_claude_ok",
+            "em_41_claude_anom",
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+            "cv_4o_claude_ok",
+            "cv_4o_claude_anom",
+        },
+        "Filtros: profesor=claude",
+    ),
+    (
+        "CV",
+        "4.1-mini",
+        None,
+        {
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+            "cv_41_gpt4o_ok",
+            "cv_41_gpt4o_anom",
+        },
+        "Filtros: caso=CV, estudiante=4.1-mini",
+    ),
+    (
+        "CV",
+        None,
+        "claude",
+        {
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+            "cv_4o_claude_ok",
+            "cv_4o_claude_anom",
+        },
+        "Filtros: caso=CV, profesor=claude",
+    ),
+    (
+        None,
+        "4.1-mini",
+        "claude",
+        {
+            "em_41_claude_ok",
+            "em_41_claude_anom",
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+        },
+        "Filtros: estudiante=4.1-mini, profesor=claude",
+    ),
+    (
+        "CV",
+        "4.1-mini",
+        "claude",
+        {
+            "cv_41_claude_ok",
+            "cv_41_claude_anom",
+        },
+        "Filtros: caso=CV, estudiante=4.1-mini, profesor=claude",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("case_f", "student_f", "teacher_f", "expected_ids", "_expected_md_line"),
+    _EIGHT_COMBINATIONS,
+)
+def test_filter_metrics_all_eight_combinations(
+    spec110_rows, case_f, student_f, teacher_f, expected_ids, _expected_md_line
+):
+    """FR-002 / SC-002: las 8 combinaciones de presencia/ausencia aplican AND logico."""
+    result = base.filter_metrics(
+        spec110_rows,
+        case_filter=case_f,
+        student_filter=student_f,
+        teacher_filter=teacher_f,
+    )
+    assert {r["Run ID"] for r in result} == expected_ids
+    # Preserva orden original
+    expected_order = [r["Run ID"] for r in spec110_rows if r["Run ID"] in expected_ids]
+    assert [r["Run ID"] for r in result] == expected_order
+
+
+def test_filter_metrics_returns_new_list_and_does_not_mutate(spec110_rows):
+    """FR-004: devuelve lista nueva tambien sin filtros activos y no muta data ni sus filas."""
+    import copy
+
+    snapshot = copy.deepcopy(spec110_rows)
+
+    result_none = base.filter_metrics(spec110_rows)
+    assert result_none is not spec110_rows
+    assert result_none == spec110_rows
+
+    result_blank = base.filter_metrics(
+        spec110_rows, case_filter="   ", student_filter="", teacher_filter="\t\n"
+    )
+    assert result_blank is not spec110_rows
+    assert result_blank == spec110_rows
+
+    result_none.pop()
+    assert spec110_rows == snapshot
+
+
+def test_filter_metrics_progressive_case_insensitive_strip_and_limits():
+    """FR-003: busqueda progresiva case-insensitive, strip, subcadenas y limite gpt-5/gpt-5.4."""
+    rows = [
+        {
+            "Run ID": "r1",
+            "Caso": "Triage",
+            "Modelo Tarea": "azure/gpt-4o",
+            "Modelo Profesor": "azure/gpt-5",
+        },
+        {
+            "Run ID": "r2",
+            "Caso": "Email Urgency",
+            "Modelo Tarea": "azure/gpt-4o-mini",
+            "Modelo Profesor": "azure/gpt-5.4",
+        },
+        {
+            "Run ID": "r3",
+            "Caso": "CV Extraction",
+            "Modelo Tarea": "azure/gpt-4.1-mini",
+            "Modelo Profesor": "anthropic/claude-sonnet-5-5",
+        },
+        {
+            "Run ID": "r4",
+            "Caso": "CV Profile",
+            "Modelo Tarea": "azure/gpt-4.1",
+            "Modelo Profesor": "anthropic/claude-opus-5-5",
+        },
+    ]
+
+    # Busqueda progresiva sobre estudiante: gpt -> gpt-4 -> gpt-4.1 -> gpt-4.1-mini
+    assert {r["Run ID"] for r in base.filter_metrics(rows, student_filter="gpt")} == {
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+    }
+    assert {r["Run ID"] for r in base.filter_metrics(rows, student_filter="GPT-4.1")} == {
+        "r3",
+        "r4",
+    }
+    assert {r["Run ID"] for r in base.filter_metrics(rows, student_filter="  gpt-4.1-mini  ")} == {
+        "r3"
+    }
+
+    # Nota de subcadena: gpt-4o coincide con gpt-4o y gpt-4o-mini; claude con toda la familia
+    assert {r["Run ID"] for r in base.filter_metrics(rows, student_filter="gpt-4o")} == {
+        "r1",
+        "r2",
+    }
+    assert {r["Run ID"] for r in base.filter_metrics(rows, teacher_filter="CLAUDE")} == {
+        "r3",
+        "r4",
+    }
+
+    # Limite conocido: gpt-5 coincide con gpt-5 y gpt-5.4; gpt-5.4 aisla solo gpt-5.4
+    assert {r["Run ID"] for r in base.filter_metrics(rows, teacher_filter="gpt-5")} == {
+        "r1",
+        "r2",
+    }
+    assert {r["Run ID"] for r in base.filter_metrics(rows, teacher_filter="gpt-5.4")} == {"r2"}
+
+    # Cambio aceptado sobre --case: espacios en blanco equivale a sin filtro (incluye 'Triage')
+    assert {r["Run ID"] for r in base.filter_metrics(rows, case_filter=" ")} == {
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+    }
+
+
+def test_filter_metrics_missing_empty_and_none_columns():
+    """FR-003: columnas ausentes, None o vacias no fallan y se excluyen si el filtro esta activo."""
+    rows = [
+        {"Run ID": "ok", "Caso": "CV", "Modelo Tarea": "gpt-4.1-mini", "Modelo Profesor": "gpt-4o"},
+        {"Run ID": "no_teacher_key", "Caso": "CV", "Modelo Tarea": "gpt-4.1-mini"},
+        {
+            "Run ID": "none_teacher",
+            "Caso": "CV",
+            "Modelo Tarea": "gpt-4.1-mini",
+            "Modelo Profesor": None,
+        },
+        {
+            "Run ID": "empty_teacher",
+            "Caso": "CV",
+            "Modelo Tarea": "gpt-4.1-mini",
+            "Modelo Profesor": "",
+        },
+        {"Run ID": "none_case", "Caso": None, "Modelo Tarea": None, "Modelo Profesor": "gpt-4o"},
+    ]
+
+    # Sin filtro de profesor se conservan las filas sin Modelo Profesor
+    assert {r["Run ID"] for r in base.filter_metrics(rows)} == {
+        "ok",
+        "no_teacher_key",
+        "none_teacher",
+        "empty_teacher",
+        "none_case",
+    }
+    # Con filtro de profesor quedan excluidas sin error
+    assert {r["Run ID"] for r in base.filter_metrics(rows, teacher_filter="gpt-4o")} == {
+        "ok",
+        "none_case",
+    }
+    # Con filtro de caso y estudiante tolera None/ausente sin error
+    assert {
+        r["Run ID"] for r in base.filter_metrics(rows, case_filter="cv", student_filter="4.1-mini")
+    } == {"ok", "no_teacher_key", "none_teacher", "empty_teacher"}
+
+
+@pytest.mark.parametrize(
+    ("case_f", "student_f", "teacher_f", "expected_ids", "expected_md_line"),
+    _EIGHT_COMBINATIONS,
+)
+def test_leaderboard_all_eight_filter_combinations(
+    spec110_csv,
+    spec110_rows,
+    tmp_path,
+    case_f,
+    student_f,
+    teacher_f,
+    expected_ids,
+    expected_md_line,
+):
+    """FR-007 / SC-002 / SC-003: leaderboard coherente en CSV, MD, stats, anomalias y Filtros."""
+    import csv as csv_mod
+
+    out_dir = tmp_path / "lb_out"
+    leaderboard.run(
+        csv_path=spec110_csv,
+        case_filter=case_f,
+        student_filter=student_f,
+        teacher_filter=teacher_f,
+        graphs=False,
+        output_dir=out_dir,
+    )
+
+    csv_file = out_dir / "leaderboard.csv"
+    md_file = out_dir / "leaderboard.md"
+    assert csv_file.exists()
+    assert md_file.exists()
+
+    # Grupos esperados segun expected_ids
+    expected_rows = [r for r in spec110_rows if r["Run ID"] in expected_ids]
+    expected_groups = {(r["Caso"], r["Modelo Tarea"], r["Modelo Profesor"]) for r in expected_rows}
+    expected_cases = {r["Caso"] for r in expected_rows}
+    expected_anoms = {r["Run ID"] for r in expected_rows if r["Run ID"].endswith("_anom")}
+    excluded_anoms = {
+        r["Run ID"]
+        for r in spec110_rows
+        if r["Run ID"].endswith("_anom") and r["Run ID"] not in expected_ids
+    }
+
+    # Verificar leaderboard.csv (mismo formato, solo grupos esperados)
+    with open(csv_file, encoding="utf-8") as f:
+        parsed_csv = list(csv_mod.DictReader(f, delimiter=";"))
+    actual_groups = {(r["Caso"], r["Tarea"], r["Profesor"]) for r in parsed_csv}
+    assert actual_groups == expected_groups
+
+    # Verificar leaderboard.md: linea Filtros, secciones y anomalias por Run ID
+    md_text = md_file.read_text(encoding="utf-8")
+    md_lines = md_text.splitlines()
+    gen_idx = next(i for i, line in enumerate(md_lines) if line.startswith("Generado:"))
+
+    if expected_md_line is None:
+        assert "Filtros:" not in md_text
+    else:
+        assert md_lines[gen_idx + 1] == expected_md_line
+
+    # Estadisticas por caso solo contiene casos esperados
+    stats_section = md_text.split("## Estadisticas por Caso")[1].split("## Anomalias")[0]
+    for c in expected_cases:
+        assert c in stats_section
+    for c in {"Email Urgency", "CV Extraction"} - expected_cases:
+        assert c not in stats_section
+
+    # Anomalias solo contiene Run IDs anomalos del subconjunto filtrado
+    anom_section = md_text.split("## Anomalias")[1]
+    for run_id in expected_anoms:
+        assert run_id in anom_section
+    for run_id in excluded_anoms:
+        assert run_id not in anom_section
+
+
+def test_leaderboard_no_matches_does_not_create_or_overwrite_files(spec110_csv, tmp_path, capsys):
+    """FR-006 / SC-003: sin coincidencias imprime mensaje y no crea ni sobrescribe archivos."""
+    # Caso 1: directorio vacio -> no crea CSV, MD, -o ni PNGs
+    empty_dir = tmp_path / "empty_out"
+    custom_md = tmp_path / "custom_report.md"
+    leaderboard.run(
+        csv_path=spec110_csv,
+        case_filter="Email",
+        teacher_filter="inexistente",
+        output=custom_md,
+        graphs=True,
+        output_dir=empty_dir,
+    )
+    assert "No hay datos para analizar." in capsys.readouterr().out
+    assert not empty_dir.exists()
+    assert not custom_md.exists()
+
+    # Caso 2: archivos preexistentes -> no los sobrescribe
+    existing_dir = tmp_path / "existing_out"
+    existing_dir.mkdir()
+    existing_csv = existing_dir / "leaderboard.csv"
+    existing_md = existing_dir / "leaderboard.md"
+    existing_csv.write_text("KEEP_CSV", encoding="utf-8")
+    existing_md.write_text("KEEP_MD", encoding="utf-8")
+
+    leaderboard.run(
+        csv_path=spec110_csv,
+        case_filter="Email",
+        student_filter="gpt-4o-mini",
+        teacher_filter="claude",
+        graphs=True,
+        output_dir=existing_dir,
+    )
+    assert "No hay datos para analizar." in capsys.readouterr().out
+    assert existing_csv.read_text(encoding="utf-8") == "KEEP_CSV"
+    assert existing_md.read_text(encoding="utf-8") == "KEEP_MD"
+    assert not (existing_dir / "performance_improvement.png").exists()
+
+
+def test_leaderboard_whitespace_filters_omits_filtros_line(spec110_csv, tmp_path):
+    """FR-002 / FR-007: filtros vacios o solo espacios no generan linea Filtros:."""
+    out_dir = tmp_path / "ws_out"
+    leaderboard.run(
+        csv_path=spec110_csv,
+        case_filter="   ",
+        student_filter="",
+        teacher_filter="\t",
+        output_dir=out_dir,
+    )
+    md_text = (out_dir / "leaderboard.md").read_text(encoding="utf-8")
+    assert "Filtros:" not in md_text
+
+
+def test_leaderboard_gpt5_vs_gpt54_scenario(tmp_path):
+    """FR-003 / Escenario: gpt-5 devuelve ambos profesores; gpt-5.4 aisla azure/gpt-5.4."""
+    csv_path = tmp_path / "gpt5.csv"
+    _write_spec110_csv(
+        csv_path,
+        [
+            _csv_row(
+                "r1", "2026-02-01 10:00:00", "CV Extraction", "azure/gpt-4.1-mini", "azure/gpt-5"
+            ),
+            _csv_row(
+                "r2",
+                "2026-02-02 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "azure/gpt-5.4",
+                opt_s="0,90",
+                rob_s="0,88",
+                cost="0,60",
+            ),
+        ],
+    )
+
+    out_both = tmp_path / "out_both"
+    leaderboard.run(csv_path=csv_path, teacher_filter="gpt-5", output_dir=out_both)
+    csv_both = (out_both / "leaderboard.csv").read_text(encoding="utf-8")
+    assert "azure/gpt-5;" in csv_both
+    assert "azure/gpt-5.4;" in csv_both
+
+    out_54 = tmp_path / "out_54"
+    leaderboard.run(csv_path=csv_path, teacher_filter="gpt-5.4", output_dir=out_54)
+    csv_54 = (out_54 / "leaderboard.csv").read_text(encoding="utf-8")
+    assert "azure/gpt-5;" not in csv_54
+    assert "azure/gpt-5.4;" in csv_54
+
+
+def test_roi_filters_by_student_and_teacher(spec110_csv, capsys):
+    """FR-005 / SC-006: roi filtra por estudiante y profesor con AND y muestra solo ese grupo."""
+    roi_calculator.run(
+        csv_path=spec110_csv,
+        student_filter="4.1-mini",
+        teacher_filter="gpt-4o",
+    )
+    out = capsys.readouterr().out
+    assert "CASO: CV Extraction" in out
+    assert "Modelo Tarea: azure/gpt-4.1-mini" in out
+    assert "Modelo Profesor: azure/gpt-4o" in out
+    assert "Email Urgency" not in out
+    assert "claude-sonnet-5-5" not in out
+
+
+def test_roi_raw_column_excludes_missing_teacher_default(tmp_path, capsys):
+    """FR-003: roi evalua filtro sobre columna cruda, no sobre el default 'gpt-4o' de agrupacion."""
+    csv_path = tmp_path / "no_teacher.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Baseline Score;Optimizado Score;Robustez Score;Budget\n"
+        "r1;2026-02-01 10:00:00;Email Urgency;azure/gpt-4o-mini;0,60;0,85;0,80;30\n",
+        encoding="utf-8",
+    )
+    roi_calculator.run(csv_path=csv_path, teacher_filter="gpt-4o")
+    assert "No hay datos para analizar." in capsys.readouterr().out
+
+    # Sin filtro de profesor, la fila se conserva
+    roi_calculator.run(csv_path=csv_path)
+    assert "CASO: Email Urgency" in capsys.readouterr().out
+
+
+def test_roi_empty_after_filter_prints_no_data(spec110_csv, capsys):
+    """FR-006: roi sin coincidencias imprime mensaje y retorna sin excepcion."""
+    roi_calculator.run(csv_path=spec110_csv, case_filter="Email", teacher_filter="inexistente")
+    assert "No hay datos para analizar." in capsys.readouterr().out
+
+
+def test_roi_filtered_same_model_preserves_omitted_message(tmp_path, capsys):
+    """FR-006 / Escenario: filtro que deja solo Tarea == Profesor conserva [NOTA] vigente."""
+    csv_path = tmp_path / "same_model.csv"
+    _write_spec110_csv(
+        csv_path,
+        [
+            _csv_row("r1", "2026-02-01 10:00:00", "CV Extraction", "azure/gpt-4o", "azure/gpt-4o"),
+            _csv_row(
+                "r2",
+                "2026-02-02 10:00:00",
+                "Email Urgency",
+                "azure/gpt-4.1-mini",
+                "azure/gpt-4o",
+                cost="0,20",
+            ),
+        ],
+    )
+    roi_calculator.run(
+        csv_path=csv_path,
+        student_filter="gpt-4o",
+        teacher_filter="gpt-4o",
+    )
+    out = capsys.readouterr().out
+    assert "[NOTA] Omitidos 1 grupo(s)" in out
+    assert "No hay grupos con sustitucion de modelo (Tarea distinto de Profesor)" in out
+    assert "Email Urgency" not in out
+
+
+def test_stats_filters_by_model_and_recalculates_batch_boundaries(tmp_path, capsys):
+    """FR-002 / FR-005 / SC-006: stats filtra por modelo y calcula limites sobre lo filtrado."""
+    csv_path = tmp_path / "stats_filter.csv"
+    _write_spec110_csv(
+        csv_path,
+        [
+            # Grupo excluido en enero que desplazaria los limites si no se filtrara antes
+            _csv_row(
+                "r0",
+                "2026-01-01 00:00:00",
+                "Email Urgency",
+                "azure/gpt-4o-mini",
+                "azure/gpt-4o",
+                base_s="0,50",
+                opt_s="0,60",
+                rob_s="0,55",
+                cost="0,10",
+            ),
+            # Grupo incluido en marzo (2026-03-01..03 -> corte medio en 2026-03-02)
+            _csv_row(
+                "r1",
+                "2026-03-01 00:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                opt_s="0,80",
+                rob_s="0,78",
+            ),
+            _csv_row(
+                "r2",
+                "2026-03-03 00:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                opt_s="0,90",
+                rob_s="0,88",
+            ),
+        ],
+    )
+    stats_evolution.run(
+        csv_path=csv_path,
+        student_filter="4.1-mini",
+        teacher_filter="claude",
+        num_batches=2,
+    )
+    out = capsys.readouterr().out
+    assert "CV Extraction" in out
+    assert "azure/gpt-4.1-mini/anthropic/claude-sonnet-5-5" in out
+    assert "Email Urgency" not in out
+    assert "gpt-4o-mini" not in out
+    # Limite automatico calculado solo sobre las filas filtradas (2026-03-01..03 -> 2026-03-02)
+    assert "2026-03-02 00:00" in out
+
+
+def test_stats_empty_after_filter_prints_no_data(spec110_csv, capsys):
+    """FR-006: stats sin coincidencias imprime mensaje y retorna sin excepcion."""
+    stats_evolution.run(csv_path=spec110_csv, student_filter="modelo-inexistente")
+    assert "No hay datos para analizar." in capsys.readouterr().out
+
+
+def test_budget_filters_by_model(spec110_csv, capsys):
+    """FR-005 / SC-006: budget filtra por modelo y muestra solo combinaciones coincidentes."""
+    budget_breakdown.run(
+        csv_path=spec110_csv,
+        case_filter="CV",
+        student_filter="4.1-mini",
+        teacher_filter="claude",
+    )
+    out = capsys.readouterr().out
+    assert "CASO: CV Extraction" in out
+    assert "azure/gpt-4.1-mini + anthropic/claude-sonnet-5-5" in out
+    assert "Total Experimentos: 2" in out
+    assert "$2.40" in out
+    assert "Email Urgency" not in out
+    assert "azure/gpt-4o" not in out
+
+
+def test_budget_raw_column_excludes_missing_teacher_default(tmp_path, capsys):
+    """FR-003: budget evalua filtro sobre columna cruda, no sobre default 'gpt-4o'."""
+    csv_path = tmp_path / "no_teacher_budget.csv"
+    csv_path.write_text(
+        "Run ID;Fecha;Caso;Modelo Tarea;Baseline Score;Optimizado Score;Robustez Score;Budget\n"
+        "r1;2026-02-01 10:00:00;Email Urgency;azure/gpt-4o-mini;0,60;0,85;0,80;30\n",
+        encoding="utf-8",
+    )
+    budget_breakdown.run(csv_path=csv_path, teacher_filter="gpt-4o")
+    assert "No hay datos para analizar." in capsys.readouterr().out
+
+    budget_breakdown.run(csv_path=csv_path)
+    assert "CASO: Email Urgency" in capsys.readouterr().out
+
+
+def test_budget_empty_after_filter_prints_no_data(spec110_csv, capsys):
+    """FR-006: budget sin coincidencias imprime mensaje y retorna sin excepcion."""
+    budget_breakdown.run(csv_path=spec110_csv, teacher_filter="modelo-inexistente")
+    assert "No hay datos para analizar." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("subcmd", ["leaderboard", "lb", "roi", "stats", "budget"])
+def test_cli_model_flags_and_aliases(subcmd):
+    """FR-001 / SC-001 / SC-004: subcomandos aceptan --student/--task y --teacher/--reflection."""
+    from shared.analysis import cli
+
+    parser = cli.build_parser()
+
+    args_default = parser.parse_args([subcmd])
+    assert args_default.student is None
+    assert args_default.teacher is None
+    assert args_default.case is None
+    assert args_default.no_merge is False
+
+    args_primary = parser.parse_args(
+        [subcmd, "--case", "CV", "--student", "4.1-mini", "--teacher", "claude", "--no-merge"]
+    )
+    assert args_primary.case == "CV"
+    assert args_primary.student == "4.1-mini"
+    assert args_primary.teacher == "claude"
+    assert args_primary.no_merge is True
+
+    args_alias = parser.parse_args(
+        [subcmd, "--case", "CV", "--task", "4.1-mini", "--reflection", "claude"]
+    )
+    assert args_alias.student == args_primary.student
+    assert args_alias.teacher == args_primary.teacher
+
+    # Si se pasan flag y alias en la misma invocacion, prevalece el ultimo (estandar argparse)
+    args_override = parser.parse_args(
+        [subcmd, "--student", "first", "--task", "second", "--reflection", "r1", "--teacher", "r2"]
+    )
+    assert args_override.student == "second"
+    assert args_override.teacher == "r2"
+
+
+@pytest.mark.parametrize(
+    ("subcmd", "ambiguous_flag"),
+    [
+        ("leaderboard", "--t"),
+        ("roi", "--t"),
+        ("stats", "--t"),
+        ("budget", "--t"),
+        ("budget", "--s"),
+        ("leaderboard", "--c"),
+        ("roi", "--c"),
+        ("stats", "--c"),
+        ("budget", "--c"),
+    ],
+)
+def test_cli_ambiguous_abbreviations_rejected(subcmd, ambiguous_flag, capsys):
+    """FR-001: allow_abbrev por defecto rechaza abreviaturas ambiguas (--t, --s en budget, --c)."""
+    from shared.analysis import cli
+
+    parser = cli.build_parser()
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args([subcmd, ambiguous_flag, "valor"])
+    assert exc_info.value.code == 2
+    assert "ambiguous" in capsys.readouterr().err.lower()
+
+
+@pytest.mark.parametrize(
+    ("subcmd", "module_obj"),
+    [
+        ("leaderboard", leaderboard),
+        ("roi", roi_calculator),
+        ("stats", stats_evolution),
+        ("budget", budget_breakdown),
+    ],
+)
+def test_cli_cmd_propagates_filters_and_merge(subcmd, module_obj, monkeypatch):
+    """FR-001 / FR-009 / SC-006: cada cmd_* propaga student_filter, teacher_filter y merge."""
+    from shared.analysis import cli
+
+    captured: list[dict] = []
+
+    def fake_run(**kwargs):
+        captured.append(kwargs)
+
+    monkeypatch.setattr(module_obj, "run", fake_run)
+
+    cli.main([subcmd, "--case", "CV", "--student", "4.1-mini", "--teacher", "claude"])
+    cli.main([subcmd, "--task", "gpt-4o", "--reflection", "gpt-5", "--no-merge"])
+
+    assert len(captured) == 2
+    assert captured[0]["case_filter"] == "CV"
+    assert captured[0]["student_filter"] == "4.1-mini"
+    assert captured[0]["teacher_filter"] == "claude"
+    assert captured[0]["merge"] is True
+
+    assert captured[1]["student_filter"] == "gpt-4o"
+    assert captured[1]["teacher_filter"] == "gpt-5"
+    assert captured[1]["merge"] is False
+
+
+@pytest.mark.parametrize("subcmd", ["leaderboard", "roi", "stats", "budget"])
+def test_cli_no_merge_with_multiple_csvs(subcmd, tmp_path, monkeypatch, capsys):
+    """FR-009 / SC-007: --no-merge con 2 CSVs sale con Error y codigo 1; sin el los combina."""
+    from shared.analysis import cli
+
+    p1 = tmp_path / "proj_one" / "results" / "experiments"
+    p2 = tmp_path / "proj_two" / "results" / "experiments"
+    lb_out = tmp_path / "lb_isolated"
+    p1.mkdir(parents=True)
+    p2.mkdir(parents=True)
+    lb_out.mkdir(parents=True)
+
+    _write_spec110_csv(
+        p1 / "metricas_optimizacion.csv",
+        [
+            _csv_row(
+                "r1",
+                "2026-02-01 10:00:00",
+                "Email Urgency",
+                "azure/gpt-4o-mini",
+                "azure/gpt-4o",
+                opt_s="0,80",
+                rob_s="0,78",
+                cost="0,30",
+            )
+        ],
+    )
+    _write_spec110_csv(
+        p2 / "metricas_optimizacion.csv",
+        [
+            _csv_row(
+                "r2",
+                "2026-02-05 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                cost="0,70",
+            )
+        ],
+    )
+
+    monkeypatch.setattr(base, "get_shared_root", lambda: tmp_path)
+    monkeypatch.setattr(leaderboard, "get_output_dir", lambda *a, **k: lb_out)
+
+    # Con --no-merge -> Error y codigo de salida 1
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main([subcmd, "--no-merge"])
+    assert exc_info.value.code == 1
+    assert "Error: Multiples CSVs encontrados" in capsys.readouterr().out
+
+    # Sin --no-merge -> combina ambos CSVs y muestra los dos casos
+    cli.main([subcmd])
+    merged_out = capsys.readouterr().out
+    assert "Email Urgency" in merged_out
+    assert "CV Extraction" in merged_out
+
+
+def test_cli_help_documents_model_filters_and_progressive_search():
+    """FR-008: la ayuda del CLI documenta flags, alias, AND, busqueda progresiva y limites."""
+    from shared.analysis import cli
+
+    parser = cli.build_parser()
+    main_help = parser.format_help()
+    for expected in ("--student", "--task", "--teacher", "--reflection", "AND", "gpt-4o", "gpt-5"):
+        assert expected in main_help
+    assert "progresiva" in main_help.lower()
+
+
+def test_project_filter_combines_with_row_filters_and(tmp_path, monkeypatch, capsys):
+    """FR-002: los filtros de fila se combinan en AND con --project."""
+    dspy_dir = tmp_path / "dspy_gepa_poc" / "results" / "experiments"
+    gepa_dir = tmp_path / "gepa_standalone" / "results" / "experiments"
+    dspy_dir.mkdir(parents=True)
+    gepa_dir.mkdir(parents=True)
+
+    _write_spec110_csv(
+        dspy_dir / "metricas_optimizacion.csv",
+        [
+            _csv_row(
+                "d1",
+                "2026-02-01 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                cost="1,10",
+            ),
+            _csv_row(
+                "d2",
+                "2026-02-02 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4o-mini",
+                "azure/gpt-4o",
+                cost="0,40",
+            ),
+        ],
+    )
+    _write_spec110_csv(
+        gepa_dir / "metricas_optimizacion.csv",
+        [
+            _csv_row(
+                "g1",
+                "2026-02-03 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                opt_s="0,88",
+                rob_s="0,85",
+                cost="2,20",
+            ),
+        ],
+    )
+    monkeypatch.setattr(base, "get_shared_root", lambda: tmp_path)
+
+    budget_breakdown.run(project="dspy", student_filter="4.1-mini", teacher_filter="claude")
+    out = capsys.readouterr().out
+    assert "dspy_gepa_poc" in out
+    assert "gepa_standalone" not in out
+    assert "Total Experimentos: 1" in out
+    assert "$1.10" in out
+
+
+def test_stats_filters_with_fixed_cuts(tmp_path, capsys):
+    """FR-002: con --cuts los limites son fijos aun con filtros activos."""
+    csv_path = tmp_path / "stats_cuts.csv"
+    _write_spec110_csv(
+        csv_path,
+        [
+            _csv_row(
+                "r1",
+                "2026-03-01 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                opt_s="0,80",
+                rob_s="0,78",
+            ),
+            _csv_row(
+                "r2",
+                "2026-03-10 10:00:00",
+                "CV Extraction",
+                "azure/gpt-4.1-mini",
+                "anthropic/claude-sonnet-5-5",
+                opt_s="0,90",
+                rob_s="0,88",
+            ),
+            _csv_row(
+                "r3",
+                "2026-01-05 10:00:00",
+                "Email Urgency",
+                "azure/gpt-4o-mini",
+                "azure/gpt-4o",
+                base_s="0,50",
+                opt_s="0,60",
+                rob_s="0,55",
+                cost="0,10",
+            ),
+        ],
+    )
+    stats_evolution.run(
+        csv_path=csv_path,
+        student_filter="4.1-mini",
+        teacher_filter="claude",
+        cuts="2026-03-05",
+    )
+    out = capsys.readouterr().out
+    assert "2026-03-05 00:00" in out
+    assert "CV Extraction" in out
+    assert "Email Urgency" not in out
+
+
+def test_leaderboard_custom_output_redirects_md_with_filters(spec110_csv, tmp_path):
+    """FR-007: -o/--output redirige el Markdown con linea Filtros:, CSV va en output_dir."""
+    out_dir = tmp_path / "out_dir"
+    custom_md = tmp_path / "custom.md"
+    leaderboard.run(
+        csv_path=spec110_csv,
+        case_filter="CV",
+        student_filter="4.1-mini",
+        teacher_filter="claude",
+        output=custom_md,
+        output_dir=out_dir,
+    )
+    assert (out_dir / "leaderboard.csv").exists()
+    assert not (out_dir / "leaderboard.md").exists()
+    assert custom_md.exists()
+    assert "Filtros: caso=CV, estudiante=4.1-mini, profesor=claude" in custom_md.read_text(
+        encoding="utf-8"
+    )

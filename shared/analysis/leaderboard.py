@@ -22,6 +22,7 @@ from statistics import mean, stdev
 from .base import (
     detect_scale,
     extract_budget_from_rows,
+    filter_metrics,
     format_currency,
     format_float,
     format_md_table,
@@ -165,6 +166,9 @@ def run(
     output: Path | None = None,
     graphs: bool = False,
     output_dir: Path | None = None,
+    student_filter: str | None = None,
+    teacher_filter: str | None = None,
+    merge: bool = True,
 ):
     """
     Run leaderboard analysis.
@@ -172,16 +176,22 @@ def run(
     Args:
         csv_path: Explicit path to CSV file
         project: Filter to specific project
-        case_filter: Filter to specific case
+        case_filter: Filter to specific case (progressive substring match)
         output: Output file path (markdown)
         graphs: Generate PNG charts
         output_dir: Optional directory for generated files (CSV, default Markdown, charts).
             Defaults to get_output_dir(project).
+        student_filter: Filter to specific student / task model (progressive substring match)
+        teacher_filter: Filter to specific teacher / reflection model (progressive substring match)
+        merge: Whether to combine multiple discovered CSVs (False raises ValueError)
     """
-    data = load_metrics(csv_path=csv_path, project=project, merge=True)
-
-    if case_filter:
-        data = [d for d in data if case_filter.lower() in d.get("Caso", "").lower()]
+    data = load_metrics(csv_path=csv_path, project=project, merge=merge)
+    data = filter_metrics(
+        data,
+        case_filter=case_filter,
+        student_filter=student_filter,
+        teacher_filter=teacher_filter,
+    )
 
     if not data:
         print("No hay datos para analizar.")
@@ -375,9 +385,21 @@ def run(
     print(f"\n[INFO] CSV: {csv_out}")
 
     # Save Markdown
+    active_filters = [
+        f"{label}={value.strip()}"
+        for label, value in (
+            ("caso", case_filter),
+            ("estudiante", student_filter),
+            ("profesor", teacher_filter),
+        )
+        if value and value.strip()
+    ]
     md_out = output or (resolved_output_dir / "leaderboard.md")
     md_content = "# Leaderboard GEPA\n\n"
-    md_content += f"Generado: {get_timestamp()}\n\n"
+    md_content += f"Generado: {get_timestamp()}\n"
+    if active_filters:
+        md_content += f"Filtros: {', '.join(active_filters)}\n"
+    md_content += "\n"
     md_content += "## Leaderboard por Modelo\n\n"
     md_content += format_md_table(headers, table_rows)
     md_content += "\n## Estadisticas por Caso\n\n"

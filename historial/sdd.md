@@ -62,6 +62,27 @@ resolverse, se mueve a "Deuda resuelta" con la fecha y el cierre.
 
 ## Log de fases
 
+### 2026-11-28 (cont. 7) — Implementacion y cierre de SPEC-110 (active)
+
+- Implementada `SPEC-110-filtros-modelos-analisis` por TDD (FR-001..FR-009, SC-001..SC-007):
+  - `shared/analysis/base.py::filter_metrics` (funcion pura sin I/O ni mutacion, lista nueva siempre, busqueda progresiva por subcadena case-insensitive tras `strip()`, evaluacion sobre valor crudo de `Caso`, `Modelo Tarea` y `Modelo Profesor`, combinacion `AND`), exportada en `shared/analysis/__init__.py`.
+  - Los 4 modulos (`leaderboard.py`, `roi_calculator.py`, `stats_evolution.py`, `budget_breakdown.py`) delegan el filtrado en `filter_metrics`, agregan `student_filter: str | None = None`, `teacher_filter: str | None = None` y `merge: bool = True` preservando firma y defaults previos (incluido `output_dir` en `leaderboard.run`). En `leaderboard.md` se emite la linea `Filtros: ...` bajo `Generado:` solo con filtros de fila activos; sin coincidencias no crea ni sobrescribe archivos.
+  - `shared/analysis/cli.py`: `--student`/`--task` (`dest="student"`) y `--teacher`/`--reflection` (`dest="teacher"`) en `add_common_args`, extraccion de `build_parser()` y `main(argv=None)`, propagacion de `student_filter`, `teacher_filter` y `merge=not args.no_merge` en los 4 `cmd_*`, ayuda CLI actualizada con busqueda progresiva y limites conocidos.
+  - `docs/ANALISIS_UTILIDADES.md` actualizado con los filtros comunes, combinacion `AND`, busqueda progresiva, limite `gpt-5`/`gpt-5.4`, abreviaturas ambiguas (`--t`, `--s` en `budget`, `--c`), efecto en lotes de `stats`, linea `Filtros:` de `leaderboard.md` y ejemplos CLI/programaticos.
+  - `tests/test_shared_analysis.py`: 58 tests nuevos cubriendo las 8 combinaciones en `filter_metrics` y `leaderboard.run` (aislados en `tmp_path`, D-034), valor crudo vs defaults en `roi`/`budget`, `stats` con limites automaticos y `--cuts`, `gpt-5` vs `gpt-5.4`, `roi` con `Tarea == Profesor`, resultado vacio sin escritura, alias, abreviaturas ambiguas, propagacion `cmd_*` y `--no-merge` en los 4 subcomandos.
+- SPEC-110 pasa de `draft` a `active` en `specs/SPEC-110-filtros-modelos-analisis.md` y `specs/SPECS_REGISTRY.md` (Coverage mapping completo sin `pendiente` y `./shared/utils/ci_local.sh` en verde).
+
+```
+[SDD-Check]
+- Spec/doc leido: specs/SPEC-110-filtros-modelos-analisis.md, specs/SPECS_REGISTRY.md, docs/SDD_PROTOCOLO.md, docs/ANALISIS_UTILIDADES.md, docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, docs/CONTRIBUTING.md
+- Incluye/Excluye verificado: incluye filtros --student/--task y --teacher/--reflection combinables con --case en AND en los 4 subcomandos, filter_metrics centralizado, fix de --no-merge, linea Filtros: en leaderboard.md, tests y docs; excluye Modelo Juez, OR/NOT/regex, match exacto y cambios en seed_protocol/seed_triage
+- Validaciones aplicadas: ./shared/utils/ci_local.sh completo en verde (0 errores; check_env_deps, ruff check, ruff format, bandit, pip-audit, 2704 tests pasando, cobertura 98,41%); shared/analysis/output/ sin tocar; sin emoticones
+- SSOT afectado: specs/SPEC-110-filtros-modelos-analisis.md, specs/SPECS_REGISTRY.md, docs/ANALISIS_UTILIDADES.md, historial/sdd.md
+- Derivados a revisar: ninguno (todos los modulos de shared/analysis/, cli.py, tests y docs actualizados)
+- Deuda arrastrada: ninguna
+- Riesgos/reservas: limite conocido de la busqueda progresiva cuando un nombre completo es subcadena de otro (p. ej. azure/gpt-5 en azure/gpt-5.4, documentado en CLI y docs)
+```
+
 ### 2026-11-28 (cont. 6) — Definicion de estados de spec
 
 - Definidos `draft`, `active`, `superseded` y `archived` y sus transiciones en `specs/SPECS_REGISTRY.md` (Convenciones), SSOT unico; la plantilla de `docs/SDD_PROTOCOLO.md` remite alli en lugar de repetir la lista. Criterio tomado de la practica previa (SPEC-103..106 pasaron a `active` al cerrar la implementacion).

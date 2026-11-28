@@ -29,6 +29,7 @@ from shared.llm.config import resolve_anthropic_family, strip_snapshot_suffix
 
 from .base import (
     extract_budget_from_rows,
+    filter_metrics,
     format_currency,
     format_percentage,
     load_metrics,
@@ -384,23 +385,37 @@ def calculate_production_roi(
     }
 
 
-def run(csv_path: Path = None, project: str = None, case_filter: str = None, volume: int = 1000):
+def run(
+    csv_path: Path | None = None,
+    project: str | None = None,
+    case_filter: str | None = None,
+    volume: int = 1000,
+    student_filter: str | None = None,
+    teacher_filter: str | None = None,
+    merge: bool = True,
+):
     """
     Run ROI analysis on experiment data.
 
     Args:
         csv_path: Explicit path to CSV file
         project: Filter to specific project
-        case_filter: Filter to specific case
+        case_filter: Filter to specific case (progressive substring match)
         volume: Production volume to analyze (default 1000)
+        student_filter: Filter to specific student / task model (progressive substring match)
+        teacher_filter: Filter to specific teacher / reflection model (progressive substring match)
+        merge: Whether to combine multiple discovered CSVs (False raises ValueError)
     """
     from collections import defaultdict
     from statistics import mean
 
-    data = load_metrics(csv_path=csv_path, project=project, merge=True)
-
-    if case_filter:
-        data = [d for d in data if case_filter.lower() in d.get("Caso", "").lower()]
+    data = load_metrics(csv_path=csv_path, project=project, merge=merge)
+    data = filter_metrics(
+        data,
+        case_filter=case_filter,
+        student_filter=student_filter,
+        teacher_filter=teacher_filter,
+    )
 
     if not data:
         print("No hay datos para analizar.")

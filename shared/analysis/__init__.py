@@ -9,6 +9,7 @@ from . import budget_breakdown, leaderboard, roi_calculator, stats_evolution
 from .base import (
     detect_scale,
     extract_budget_from_rows,
+    filter_metrics,
     find_all_metrics_csv,
     format_currency,
     format_float,
@@ -20,6 +21,7 @@ from .base import (
 
 __all__ = [
     "load_metrics",
+    "filter_metrics",
     "find_all_metrics_csv",
     "get_output_dir",
     "parse_float",

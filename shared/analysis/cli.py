@@ -19,10 +19,40 @@ def add_common_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--project",
         type=str,
-        help="Filtrar a un solo proyecto (match parcial): 'dspy' -> dspy_gepa_poc, "
+        help="Filtrar a un solo proyecto (match por prefijo): 'dspy' -> dspy_gepa_poc, "
         "'gepa' -> gepa_standalone",
     )
-    parser.add_argument("--case", type=str, help="Filtrar por nombre de caso (match parcial)")
+    parser.add_argument(
+        "--case",
+        type=str,
+        default=None,
+        help=(
+            "Filtrar por nombre de caso / columna 'Caso' "
+            "(busqueda progresiva: subcadena case-insensitive; combinable con AND)"
+        ),
+    )
+    parser.add_argument(
+        "--student",
+        "--task",
+        dest="student",
+        type=str,
+        default=None,
+        help=(
+            "Filtrar por modelo estudiante / columna 'Modelo Tarea' "
+            "(busqueda progresiva: subcadena case-insensitive; combinable con AND)"
+        ),
+    )
+    parser.add_argument(
+        "--teacher",
+        "--reflection",
+        dest="teacher",
+        type=str,
+        default=None,
+        help=(
+            "Filtrar por modelo profesor / columna 'Modelo Profesor' "
+            "(busqueda progresiva: subcadena case-insensitive; combinable con AND)"
+        ),
+    )
     parser.add_argument(
         "--no-merge",
         action="store_true",
@@ -40,6 +70,9 @@ def cmd_leaderboard(args):
         case_filter=args.case,
         output=args.output,
         graphs=args.graphs,
+        student_filter=args.student,
+        teacher_filter=args.teacher,
+        merge=not args.no_merge,
     )
 
 
@@ -48,7 +81,13 @@ def cmd_roi(args):
     from . import roi_calculator
 
     roi_calculator.run(
-        csv_path=args.csv, project=args.project, case_filter=args.case, volume=args.volume
+        csv_path=args.csv,
+        project=args.project,
+        case_filter=args.case,
+        volume=args.volume,
+        student_filter=args.student,
+        teacher_filter=args.teacher,
+        merge=not args.no_merge,
     )
 
 
@@ -62,6 +101,9 @@ def cmd_stats(args):
         case_filter=args.case,
         num_batches=args.batches,
         cuts=args.cuts,
+        student_filter=args.student,
+        teacher_filter=args.teacher,
+        merge=not args.no_merge,
     )
 
 
@@ -70,30 +112,46 @@ def cmd_budget(args):
     from . import budget_breakdown
 
     budget_breakdown.run(
-        csv_path=args.csv, project=args.project, case_filter=args.case, sort_by=args.sort
+        csv_path=args.csv,
+        project=args.project,
+        case_filter=args.case,
+        sort_by=args.sort,
+        student_filter=args.student,
+        teacher_filter=args.teacher,
+        merge=not args.no_merge,
     )
 
 
-def main():
-    """Main CLI entry point."""
+def build_parser() -> argparse.ArgumentParser:
+    """Build and configure the unified analysis argument parser."""
     parser = argparse.ArgumentParser(
         description="Utilidades de analisis para experimentos GEPA",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos:
-  ./analyze leaderboard                    # Analisis completo (ambos proyectos)
-  ./analyze leaderboard --graphs           # Con graficos PNG
-  ./analyze leaderboard --project dspy     # Solo proyecto dspy_gepa_poc
-  ./analyze leaderboard --project gepa     # Solo proyecto gepa_standalone
-  ./analyze roi --volume 5000              # ROI para 5000 llamadas
-  ./analyze stats --batches 4              # Evolucion en 4 lotes
-  ./analyze budget --sort cost             # Presupuesto ordenado por costo
+  ./analyze leaderboard                                         # Analisis completo
+  ./analyze leaderboard --graphs                                # Con graficos PNG
+  ./analyze leaderboard --project dspy                          # Solo proyecto dspy_gepa_poc
+  ./analyze leaderboard --case CV --student 4.1-mini --teacher claude
+  ./analyze leaderboard --teacher claude                  # Todos los casos con profesor Claude
+  ./analyze roi --task 4.1-mini --reflection gpt-4o --volume 5000
+  ./analyze stats --student gpt-4.1-mini --batches 4            # Evolucion en 4 lotes filtrados
+  ./analyze budget --teacher gpt-5.4 --sort cost                # Presupuesto filtrado
 
-Filtros comunes a todos los subcomandos:
-  --project {dspy,gepa}   Aislar un solo proyecto (match parcial)
-  --case <texto>          Filtrar por nombre de caso (match parcial)
-  --csv <ruta>            CSV de metricas explicito
-  --no-merge              No combinar multiples CSVs
+Filtros comunes a todos los subcomandos (combinables con AND logico):
+  --project {dspy,gepa}           Aislar un solo proyecto (match por prefijo)
+  --case <texto>                  Filtrar por 'Caso' (busqueda progresiva)
+  --student / --task <texto>      Filtrar por 'Modelo Tarea' (busqueda progresiva)
+  --teacher / --reflection <txt>  Filtrar por 'Modelo Profesor' (busqueda progresiva)
+  --csv <ruta>                    CSV de metricas explicito
+  --no-merge                      No combinar multiples CSVs (error si hay mas de uno)
+
+Busqueda progresiva (subcadena case-insensitive):
+  Acota el resultado extendiendo la cadena: gpt -> gpt-4 -> gpt-4.1 -> gpt-4.1-mini.
+  Nota: 'gpt-4o' coincide con 'azure/gpt-4o' y 'azure/gpt-4o-mini'; 'claude' con
+  toda la familia 'anthropic/claude-*'. Limite conocido: si un nombre completo es
+  subcadena de otro (p. ej. 'azure/gpt-5' en 'azure/gpt-5.4'), '--teacher gpt-5'
+  devuelve ambos; '--teacher gpt-5.4' aisla solo 'azure/gpt-5.4'.
         """,
     )
 
@@ -146,8 +204,15 @@ Filtros comunes a todos los subcomandos:
     )
     p_budget.set_defaults(func=cmd_budget)
 
+    return parser
+
+
+def main(argv: list[str] | None = None):
+    """Main CLI entry point."""
+    parser = build_parser()
+
     # Parse and execute
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not args.command:
         parser.print_help()

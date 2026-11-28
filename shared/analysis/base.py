@@ -165,6 +165,43 @@ def _load_single_csv(csv_path: Path) -> list[dict[str, Any]]:
     return data
 
 
+def filter_metrics(
+    data: list[dict[str, Any]],
+    case_filter: str | None = None,
+    student_filter: str | None = None,
+    teacher_filter: str | None = None,
+) -> list[dict[str, Any]]:
+    """Filter metric rows by case, student model, and teacher model using logical AND.
+
+    Matching uses progressive search (case-insensitive substring after stripping
+    surrounding whitespace) evaluated on raw column values (``Caso``,
+    ``Modelo Tarea``, ``Modelo Profesor``). Empty or whitespace-only filters are
+    treated as inactive. Missing, empty, or ``None`` column values never raise
+    and are excluded whenever the corresponding filter is active.
+
+    Pure function: never mutates ``data`` or its rows and always returns a new
+    list preserving row order.
+    """
+    active_filters = [
+        (column, needle)
+        for column, raw in (
+            ("Caso", case_filter),
+            ("Modelo Tarea", student_filter),
+            ("Modelo Profesor", teacher_filter),
+        )
+        if raw and (needle := raw.strip().lower())
+    ]
+
+    if not active_filters:
+        return list(data)
+
+    return [
+        row
+        for row in data
+        if all(needle in (row.get(column) or "").lower() for column, needle in active_filters)
+    ]
+
+
 def parse_float(value: str) -> float:
     """Convert European decimal format (comma) to float."""
     if not value:

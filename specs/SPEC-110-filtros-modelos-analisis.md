@@ -1,6 +1,6 @@
 # SPEC-110-filtros-modelos-analisis — Filtros combinables por caso, estudiante y profesor en el analisis
 
-Estado: draft
+Estado: active
 Iteracion: 1 (rev. 2026-11-28)
 Relacionada con: [[SPEC-106-roles-intercambiables]] (roles estudiante/profesor/juez en el CSV), [[SPEC-120-costo-real-por-resolucion]] (evaluacion economica por combinacion), docs/ANALISIS_UTILIDADES.md
 
@@ -224,14 +224,14 @@ regulares; coincidencia exacta normalizada sin prefijo; cambios en
 
 | Requisito | Derivado (codigo/test/config) |
 |---|---|
-| FR-001 | `shared/analysis/cli.py::add_common_args`, `cmd_*`; tests de parser CLI y de propagacion de `cmd_*` (pendiente) |
-| FR-002 | `shared/analysis/base.py::filter_metrics`; tests de las 8 combinaciones `AND` (pendiente) |
-| FR-003 | `shared/analysis/base.py::filter_metrics`; tests de case-insensitive, prefijos, espacios, valores faltantes, valor crudo vs default de agrupacion y `--case " "` (pendiente) |
-| FR-004 | `shared/analysis/base.py::filter_metrics`, `shared/analysis/__init__.py`, 4 modulos de `shared/analysis/` (pendiente) |
-| FR-005 | `run(...)` en `leaderboard.py`, `roi_calculator.py`, `stats_evolution.py`, `budget_breakdown.py` (pendiente) |
-| FR-006 | tests de resultado vacio en los 4 modulos, no-escritura en `leaderboard` y grupos todos omitidos en `roi` (pendiente) |
-| FR-007 | `shared/analysis/leaderboard.py::run`; tests sobre tabla, estadisticas, anomalias, archivos CSV/MD y linea `Filtros:` (presente con filtros, ausente sin ellos) (pendiente) |
-| FR-008 | `shared/analysis/cli.py`, `docs/ANALISIS_UTILIDADES.md` (pendiente) |
-| FR-009 | `run(...)` de los 4 modulos, `cmd_*` en `shared/analysis/cli.py`; tests de `--no-merge` (pendiente) |
-| SC-001..SC-004, SC-006, SC-007 | `tests/test_shared_analysis.py` (pendiente) |
-| SC-005 | `./shared/utils/ci_local.sh` (pendiente) |
+| FR-001 | `shared/analysis/cli.py::add_common_args`, `build_parser`, `cmd_*`; `tests/test_shared_analysis.py::test_cli_model_flags_and_aliases`, `test_cli_ambiguous_abbreviations_rejected`, `test_cli_cmd_propagates_filters_and_merge` |
+| FR-002 | `shared/analysis/base.py::filter_metrics`; `tests/test_shared_analysis.py::test_filter_metrics_all_eight_combinations`, `test_project_filter_combines_with_row_filters_and`, `test_stats_filters_by_model_and_recalculates_batch_boundaries`, `test_stats_filters_with_fixed_cuts` |
+| FR-003 | `shared/analysis/base.py::filter_metrics`; `tests/test_shared_analysis.py::test_filter_metrics_progressive_case_insensitive_strip_and_limits`, `test_filter_metrics_missing_empty_and_none_columns`, `test_leaderboard_gpt5_vs_gpt54_scenario`, `test_roi_raw_column_excludes_missing_teacher_default`, `test_budget_raw_column_excludes_missing_teacher_default` |
+| FR-004 | `shared/analysis/base.py::filter_metrics`, `shared/analysis/__init__.py`, `shared/analysis/{leaderboard,roi_calculator,stats_evolution,budget_breakdown}.py`; `tests/test_shared_analysis.py::test_filter_metrics_exported_in_shared_analysis`, `test_filter_metrics_returns_new_list_and_does_not_mutate` |
+| FR-005 | `run(...)` en `shared/analysis/{leaderboard,roi_calculator,stats_evolution,budget_breakdown}.py` (preservando `output_dir` en `leaderboard.run`) |
+| FR-006 | `tests/test_shared_analysis.py::test_leaderboard_no_matches_does_not_create_or_overwrite_files`, `test_roi_empty_after_filter_prints_no_data`, `test_roi_filtered_same_model_preserves_omitted_message`, `test_stats_empty_after_filter_prints_no_data`, `test_budget_empty_after_filter_prints_no_data` |
+| FR-007 | `shared/analysis/leaderboard.py::run`; `tests/test_shared_analysis.py::test_leaderboard_all_eight_filter_combinations`, `test_leaderboard_whitespace_filters_omits_filtros_line`, `test_leaderboard_custom_output_redirects_md_with_filters` |
+| FR-008 | `shared/analysis/cli.py::build_parser`, `docs/ANALISIS_UTILIDADES.md`; `tests/test_shared_analysis.py::test_cli_help_documents_model_filters_and_progressive_search` |
+| FR-009 | `run(..., merge=True)` en los 4 modulos, `cmd_*` en `shared/analysis/cli.py`; `tests/test_shared_analysis.py::test_cli_cmd_propagates_filters_and_merge`, `test_cli_no_merge_with_multiple_csvs` |
+| SC-001..SC-004, SC-006, SC-007 | `tests/test_shared_analysis.py` (58 tests nuevos de SPEC-110; 150 tests en el archivo, todos en verde) |
+| SC-005 | `./shared/utils/ci_local.sh` en verde (0 errores, 2704 tests, 98,41% cobertura) |
